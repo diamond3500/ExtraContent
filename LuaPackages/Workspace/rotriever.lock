@@ -2393,6 +2393,7 @@ dependencies = [
     "RoactAppExperiment RoactAppExperiment 0.1.0",
     "RoactUtils RoactUtils 0.1.0",
     "SharedFlags SharedFlags 0.1.0",
+    "SocialCommon SocialCommon 0.1.0",
     "SocialLuaAnalytics SocialLuaAnalytics 0.1.0",
     "SocialTestHelpers SocialTestHelpers 0.1.0",
     "VerifiedBadges VerifiedBadges 0.8.1",
