@@ -89,6 +89,35 @@ local backpack = ChromeService:register({
 })
 ChromeUtils.setCoreGuiAvailability(backpack, Enum.CoreGuiType.Backpack)
 
+local respawn = ChromeService:register({
+	id = "respawn",
+	label = "CoreScripts.InGameMenu.QuickActions.Respawn",
+	activated = function(self)
+		local SettingsHub = require(RobloxGui.Modules.Settings.SettingsHub)
+		SettingsHub:SetVisibility(true, false, SettingsHub.Instance.ResetCharacterPage)
+		SettingsHub:SwitchToPage(SettingsHub.Instance.ResetCharacterPage)
+	end,
+	components = {
+		Icon = function(props)
+			return CommonIcon("icons/actions/respawn")
+		end,
+	},
+})
+
+function updateRespawn(enabled)
+	if enabled then
+		respawn.availability:available()
+	else
+		respawn.availability:unavailable()
+	end
+end
+
+task.defer(function()
+	local SettingsHub = require(RobloxGui.Modules.Settings.SettingsHub)
+	SettingsHub.RespawnBehaviourChangedEvent.Event:connect(updateRespawn)
+	updateRespawn(SettingsHub:GetRespawnBehaviour())
+end)
+
 -- todo: reduce external boilerplate for a signal sourced directly from ChromeService
 local currentSubMenu = ChromeService:currentSubMenu()
 local submenuVisibility = MappedSignal.new(currentSubMenu:signal(), function()

@@ -20,6 +20,7 @@ local FFlagExperienceChatSiblingZIndexBehavior = game:DefineFastFlag("Experience
 local FFlagAvatarChatCoreScriptSupport = require(RobloxGui.Modules.Flags.FFlagAvatarChatCoreScriptSupport)
 local getFFlagAddApolloClientToExperienceChat = require(RobloxGui.Modules.Flags.getFFlagAddApolloClientToExperienceChat)
 local GetFFlagDisableBubbleChatForExpChat = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagDisableBubbleChatForExpChat
+local ChromeEnabled = require(RobloxGui.Modules.Chrome.Enabled)()
 
 local getIconVoiceIndicator
 local onClickedVoiceIndicator
@@ -35,6 +36,10 @@ if FFlagAvatarChatCoreScriptSupport then
 	onClickedCameraIndicator = require(RobloxGui.Modules.VoiceChat.Components.onClickedCameraIndicator)
 	getPermissions = require(RobloxGui.Modules.VoiceChat.Components.getPermissions)
 	selfViewListenerChanged = require(RobloxGui.Modules.VoiceChat.Components.selfViewListenerChanged)
+end
+
+if ChromeEnabled then
+	getPermissions = require(RobloxGui.Modules.VoiceChat.Components.getPermissions)
 end
 
 local screenGui = Instance.new("ScreenGui")
