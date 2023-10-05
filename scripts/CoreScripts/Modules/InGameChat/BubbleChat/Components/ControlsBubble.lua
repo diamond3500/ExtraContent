@@ -26,7 +26,6 @@ local Constants = require(Modules.InGameChat.BubbleChat.Constants)
 local SelfViewAPI = require(Modules.SelfView.publicApi)
 local toggleSelfViewSignal = require(Modules.SelfView.toggleSelfViewSignal)
 local Analytics = require(Modules.SelfView.Analytics).new()
-local FFlagUWPAvatarChatFixes = require(Modules.Flags.FFlagUWPAvatarChatFixes)
 local FFlagBubbleSizingFix = require(Modules.Flags.FFlagBubbleSizingFix)
 local GetFFlagLocalMutedNilFix = require(Modules.Flags.GetFFlagLocalMutedNilFix)
 local GetFFlagMicHandlingParity = require(Modules.Flags.GetFFlagMicHandlingParity)
@@ -229,8 +228,7 @@ function ControlsBubble:didMount()
 end
 
 function ControlsBubble:render()
-	local shouldShowVoiceIndicator = self.props.hasMicPermissions
-		and (not FFlagUWPAvatarChatFixes or self.props.voiceEnabled)
+	local shouldShowVoiceIndicator = self.props.hasMicPermissions and self.props.voiceEnabled
 	local shouldShowCameraIndicator = self:shouldShowCameraIndicator()
 	local icon, imageSet = self:getMicIcon()
 	local chatSettings = self.props.chatSettings

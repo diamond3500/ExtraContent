@@ -88,11 +88,11 @@ local function FriendListItem(props: Props)
 		coroutine.wrap(function()
 			local invokeIrisInviteRemoteEvent =
 				RobloxReplicatedStorage:WaitForChild("ContactListInvokeIrisInvite", math.huge) :: RemoteEvent
-			invokeIrisInviteRemoteEvent:FireServer(tag, tonumber(props.userId))
+			invokeIrisInviteRemoteEvent:FireServer(tag, tonumber(props.userId), props.combinedName)
 		end)()
 
 		props.dismissCallback()
-	end, dependencyArray(props.dismissCallback, props.userId))
+	end, dependencyArray(props.combinedName, props.dismissCallback, props.userId))
 
 	local playerContext = React.useMemo(function()
 		local icon = Images["component_assets/circle_26_stroke_3"]

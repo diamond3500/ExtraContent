@@ -416,6 +416,7 @@ local function MuteToggles(props: Props)
 			}, {
 				UIPadding = Roact.createElement("UIPadding", {
 					PaddingLeft = if style.UIBloxThemeEnabled then UDim.new(0, 6) else UDim.new(0, 11),
+					PaddingTop = UDim.new(0, 4),
 				}),
 				TextLabel = Roact.createElement(StyledTextLabel, {
 					text = muteLabel,

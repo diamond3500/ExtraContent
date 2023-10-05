@@ -184,7 +184,7 @@ local function CallHistoryItem(props: Props)
 		coroutine.wrap(function()
 			local invokeIrisInviteRemoteEvent =
 				RobloxReplicatedStorage:WaitForChild("ContactListInvokeIrisInvite", math.huge) :: RemoteEvent
-			invokeIrisInviteRemoteEvent:FireServer(tag, tonumber(participant.userId))
+			invokeIrisInviteRemoteEvent:FireServer(tag, tonumber(participant.userId), combinedName)
 		end)()
 
 		props.dismissCallback()
