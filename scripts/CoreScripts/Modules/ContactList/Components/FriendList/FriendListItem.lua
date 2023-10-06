@@ -31,6 +31,8 @@ local Interactable = UIBlox.Core.Control.Interactable
 local ImageSetLabel = UIBlox.Core.ImageSet.Label
 local useStyle = UIBlox.Core.Style.useStyle
 
+local OpenOrUpdateCFM = require(ContactList.Actions.OpenOrUpdateCFM)
+
 local rng = Random.new()
 
 export type Props = {
@@ -171,9 +173,16 @@ local function FriendListItem(props: Props)
 			PaddingTop = UDim.new(0, PADDING.Y),
 		}),
 
-		ProfileImage = React.createElement(ImageSetLabel, {
+		ProfileImage = React.createElement("ImageButton", {
 			Size = UDim2.fromOffset(PROFILE_SIZE, PROFILE_SIZE),
 			Image = image,
+			[React.Event.MouseButton2Up] = function()
+				dispatch(OpenOrUpdateCFM(props.userId))
+			end,
+			[React.Event.TouchTap] = function()
+				dispatch(OpenOrUpdateCFM(props.userId))
+			end,
+			AutoButtonColor = false,
 		}, {
 			UICorner = React.createElement("UICorner", {
 				CornerRadius = UDim.new(1, 0),

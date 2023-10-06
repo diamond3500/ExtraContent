@@ -16,6 +16,7 @@ local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 
 local ContactList = RobloxGui.Modules.ContactList
 local dependencies = require(ContactList.dependencies)
+local useDispatch = dependencies.Hooks.useDispatch
 local UIBlox = dependencies.UIBlox
 local getStandardSizeAvatarHeadShotRbxthumb = dependencies.getStandardSizeAvatarHeadShotRbxthumb
 
@@ -30,6 +31,8 @@ local useStyle = UIBlox.Core.Style.useStyle
 local CallState = require(ContactList.Enums.CallState)
 
 local rng = Random.new()
+
+local OpenOrUpdateCFM = require(ContactList.Actions.OpenOrUpdateCFM)
 
 local PADDING_IN_BETWEEN = 12
 local PROFILE_SIZE = 68
@@ -162,6 +165,8 @@ local function CallHistoryItem(props: Props)
 	local theme = style.Theme
 	local font = style.Font
 
+	local dispatch = useDispatch()
+
 	local itemBackgroundTheme, setItemBackgroundTheme = React.useState("BackgroundDefault")
 	local onItemStateChanged = React.useCallback(function(oldState, newState)
 		if newState == ControlState.Pressed then
@@ -225,9 +230,16 @@ local function CallHistoryItem(props: Props)
 			PaddingTop = UDim.new(0, PADDING.Y),
 		}),
 
-		ProfileImage = React.createElement(ImageSetLabel, {
+		ProfileImage = React.createElement("ImageButton", {
 			Size = UDim2.fromOffset(PROFILE_SIZE, PROFILE_SIZE),
 			Image = image,
+			[React.Event.MouseButton2Up] = function()
+				dispatch(OpenOrUpdateCFM(props.localUserId))
+			end,
+			[React.Event.TouchTap] = function()
+				dispatch(OpenOrUpdateCFM(props.localUserId))
+			end,
+			AutoButtonColor = false,
 		}, {
 			UICorner = React.createElement("UICorner", {
 				CornerRadius = UDim.new(1, 0),

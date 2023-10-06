@@ -20,6 +20,7 @@ local FFlagExperienceChatSiblingZIndexBehavior = game:DefineFastFlag("Experience
 local FFlagAvatarChatCoreScriptSupport = require(RobloxGui.Modules.Flags.FFlagAvatarChatCoreScriptSupport)
 local getFFlagAddApolloClientToExperienceChat = require(RobloxGui.Modules.Flags.getFFlagAddApolloClientToExperienceChat)
 local GetFFlagDisableBubbleChatForExpChat = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagDisableBubbleChatForExpChat
+local FFlagDevicePermissionsToastInjectionForExpChat = game:DefineFastFlag("DevicePermissionsToastInjectionForExpChat", false)
 local ChromeEnabled = require(RobloxGui.Modules.Chrome.Enabled)()
 
 local getIconVoiceIndicator
@@ -32,10 +33,15 @@ end
 local onClickedCameraIndicator
 local getPermissions
 local selfViewListenerChanged
+local displayCameraDeniedToast
 if FFlagAvatarChatCoreScriptSupport then
 	onClickedCameraIndicator = require(RobloxGui.Modules.VoiceChat.Components.onClickedCameraIndicator)
 	getPermissions = require(RobloxGui.Modules.VoiceChat.Components.getPermissions)
 	selfViewListenerChanged = require(RobloxGui.Modules.VoiceChat.Components.selfViewListenerChanged)
+
+	if FFlagDevicePermissionsToastInjectionForExpChat then
+		displayCameraDeniedToast = require(RobloxGui.Modules.InGameChat.BubbleChat.Helpers.displayCameraDeniedToast)
+	end
 end
 
 if ChromeEnabled then
@@ -75,6 +81,7 @@ ExperienceChat.mountClientApp({
 	getIconVoiceIndicator = if getIconVoiceIndicator then getIconVoiceIndicator else nil,
 	onClickedVoiceIndicator = if onClickedVoiceIndicator then onClickedVoiceIndicator else nil,
 	onClickedCameraIndicator = if onClickedCameraIndicator then onClickedCameraIndicator else nil,
+	displayCameraDeniedToast = if displayCameraDeniedToast then displayCameraDeniedToast else nil,
 	getPermissions = if getPermissions then getPermissions else nil,
 	selfViewListenerChanged = if selfViewListenerChanged then selfViewListenerChanged else nil,
 	defaultTargetTextChannel = if createdDefaultChannels then findTextChannel("RBXGeneral") else nil,

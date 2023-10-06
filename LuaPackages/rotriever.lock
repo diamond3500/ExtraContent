@@ -151,7 +151,7 @@ dependencies = [
     "StringUtilities roblox/string-utilities 1.0.0 url+https://github.com/roblox/string-utilities",
     "TagUtils TagUtils 0.1.0 url+https://github.com/roblox/luau-tag-utils",
     "Thumbnailing Thumbnailing aedc93a1 git+https://github.com/roblox/thumbnailing#main",
-    "UGCValidation UGCValidation 1.8.3 url+https://github.com/roblox/ugc-validation",
+    "UGCValidation UGCValidation 1.8.4 url+https://github.com/roblox/ugc-validation",
     "UIBlox UIBlox e9d83703 git+https://github.com/roblox/uiblox#master",
     "UrlBuilder UrlBuilder f7c32346 git+https://github.com/roblox/url-builder#master",
     "UsageTracker UsageTracker 0.1.1 url+https://github.com/roblox/usage-tracker-lua",
@@ -2215,8 +2215,8 @@ dependencies = ["Collections Collections 1.2.3 url+https://github.com/roblox/lua
 
 [[package]]
 name = "UGCValidation"
-version = "1.8.3"
-commit = "ff0e23aa6f130acc3cd62fa6034443ee3f2fe0ec"
+version = "1.8.4"
+commit = "daf39459d1dd886ee871884d0569b63d8aace532"
 source = "url+https://github.com/roblox/ugc-validation"
 dependencies = [
     "Cryo <patched> CryoProxy 92eeeafa git+https://github.com/roblox/cryo-upgrade#main",

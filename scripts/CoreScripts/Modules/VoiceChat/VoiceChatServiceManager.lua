@@ -71,6 +71,7 @@ local FFlagAlwaysSetupVoiceListeners = game:DefineFastFlag("AlwaysSetupVoiceList
 local DebugShowAudioDeviceInputDebugger = game:DefineFastFlag("DebugShowAudioDeviceInputDebugger", false)
 local FFlagOverwriteIsMutedLocally = game:DefineFastFlag("OverwriteIsMutedLocally", false)
 local FFlagVoiceMuteUnmuteAnalytics = game:DefineFastFlag("VoiceMuteUnmuteAnalytics", false)
+local FFlagHideVoiceUIUntilInputExists = game:DefineFastFlag("HideVoiceUIUntilInputExists", false)
 
 local Constants = require(CorePackages.AppTempCommon.VoiceChat.Constants)
 local VoiceConstants = require(RobloxGui.Modules.VoiceChat.Constants)
@@ -159,6 +160,7 @@ local VoiceChatServiceManager = {
 	muteAllChanged = if GetFFlagMuteAllEvent() then Instance.new("BindableEvent") else nil,
 	mutedNonFriends = if FFlagMuteNonFriendsEvent then Instance.new("BindableEvent") else nil,
 	userAgencySelected = if GetFFlagShowMuteToggles() then Instance.new("BindableEvent") else nil,
+	audioDeviceInputAdded = if FFlagHideVoiceUIUntilInputExists then Instance.new("BindableEvent") else nil,
 	sendMuteEvent = nil,
 	muteAll = false,
 	mutedPlayers = {} :: { [number]: boolean },
@@ -307,7 +309,9 @@ function VoiceChatServiceManager:_asyncInit()
 			return Promise.reject()
 		else
 			self:watchSignalR()
-			return Promise.resolve()
+			return if FFlagHideVoiceUIUntilInputExists
+				then self:CheckAudioInputExists()
+				else Promise.resolve()
 		end
 	end)
 end
@@ -334,6 +338,25 @@ function VoiceChatServiceManager:asyncInit()
 	else
 		return self:_asyncInit()
 	end
+end
+
+local inputsExistPromise
+function VoiceChatServiceManager:CheckAudioInputExists()
+	log:trace("Checking for AudioDeviceInput")
+	if not inputsExistPromise then
+		inputsExistPromise = Promise.new(function(resolve, _)
+			if #Cryo.Dictionary.keys(self.audioDevices) > 0 then
+				log:trace("Found existing AudioDeviceInput")
+				resolve()
+			else
+				self.audioDeviceInputAdded.Event:Connect(function()
+					log:trace("Found new AudioDeviceInput")
+					resolve()
+				end)
+			end
+		end)
+	end
+	return inputsExistPromise
 end
 
 function VoiceChatServiceManager:getService()
@@ -1122,6 +1145,9 @@ end
 
 function VoiceChatServiceManager:onInstanceAdded(inst: Instance)
 	if inst:IsA("AudioDeviceInput") then
+		if FFlagHideVoiceUIUntilInputExists then
+			self.audioDeviceInputAdded:Fire(inst)
+		end
 		local inst: AudioDeviceInput = inst
 		log:debug("Found new audio device instance for {}", inst.Player and inst.Player.Name)
 		self.audioDevices[inst] = self:CreateAudioDeviceData(inst)

@@ -24,6 +24,9 @@ local function ConfigureFriendMenu()
 			},
 		},
 		background = theme.BackgroundUIDefault,
+		width = UDim.new(0, 352),
+		position = UDim2.new(0.5, 0, 0.5, 0),
+		anchorPoint = Vector2.new(0.5, 0.5),
 	})
 end
 

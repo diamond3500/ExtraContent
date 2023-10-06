@@ -82,6 +82,7 @@ export type ChromeAnalytics = {
 	_resetWindowTrackers: (integrationId: Types.IntegrationId) -> nil,
 	_defaultWindowTrackers: (integrationId: Types.IntegrationId) -> nil,
 	_setWindowLastPosition: (integrationId: Types.IntegrationId, position: Vector2) -> nil,
+	_calculateWindowAbsolutePosition: (startingPosition: UDim2, windowSize: UDim2) -> Vector2,
 }
 
 local ChromeAnalytics = {} :: ChromeAnalytics
@@ -170,7 +171,13 @@ function ChromeAnalytics.new(): ChromeAnalytics
 					integration.windowSize:get()
 				)
 
-				integration.windowSize:connect(function(newWindowSize: UDim2)
+				integration.windowSize:connect(function(newState: any)
+					-- Window Size could also trigger with boolean when it changes
+					if typeof(newState) ~= "UDim2" then
+						return
+					end
+
+					local newWindowSize = integration.windowSize:get()
 					local windowStatus = self._tracker:get(getTrackerName(TRACKER_NAME_WINDOW_STATUS, integrationId))
 					local windowSizeTracker = getTrackerName(TRACKER_NAME_WINDOW_SIZE_PREFIX, integrationId)
 
@@ -204,6 +211,15 @@ function ChromeAnalytics.new(): ChromeAnalytics
 	self._sendEvent = function(eventName: string, eventProperties: any)
 		local props = Cryo.Dictionary.join(getDynamicEventProps(), self._defaultProps, eventProperties or {})
 		AnalyticsService:SendEventDeferred(self._target, self._context, eventName, props)
+	end
+
+	self._calculateWindowAbsolutePosition = function(startingPosition: UDim2, windowSize: UDim2): Vector2
+		local screenWidth = self._defaultProps.screen_width
+		local screenHeight = self._defaultProps.screen_height
+		return Vector2.new(
+			startingPosition.X.Scale * screenWidth + startingPosition.X.Offset - windowSize.Width.Offset / 2,
+			startingPosition.Y.Scale * screenHeight + startingPosition.Y.Offset - windowSize.Height.Offset / 2
+		)
 	end
 
 	self._setWindowLastPosition = function(integrationId: Types.IntegrationId, position: Vector2)
@@ -330,9 +346,30 @@ function ChromeAnalytics:onIconTouchEnded(
 end
 
 function ChromeAnalytics:onWindowOpened(integrationId: Types.IntegrationId)
+	local integration = getIntegration(integrationId)
 	local windowStatus = self._tracker:get(getTrackerName(TRACKER_NAME_WINDOW_STATUS, integrationId))
-	if windowStatus ~= STATUS.ACTIVE then
+
+	if integration and windowStatus ~= STATUS.ACTIVE then
 		self._defaultWindowTrackers(integrationId)
+		local iconDragStatus = self._tracker:get(getTrackerName(TRACKER_NAME_ICON_DRAG_STATUS, integrationId))
+
+		-- Window is opened but only record its position in case its not being activaly dragged from the Icon
+		if iconDragStatus ~= DRAG_STATUS.DRAGGED then
+			local windowPositionTrackerName = getTrackerName(TRACKER_NAME_WINDOW_DEFAULT_POSITION_PREFIX, integrationId)
+			if
+				not self._tracker:get(windowPositionTrackerName)
+				and integration.windowSize
+				and integration.startingWindowPosition
+			then
+				local windowSize = integration.windowSize:get()
+				if windowSize then
+					local windowStartingPosition =
+						self._calculateWindowAbsolutePosition(integration.startingWindowPosition, windowSize)
+					self:setWindowDefaultPosition(integrationId, windowStartingPosition)
+				end
+			end
+		end
+
 		self._sendEvent(Constants.ANALYTICS.WINDOW_OPENED, {
 			integration_id = integrationId,
 		})
@@ -366,7 +403,7 @@ function ChromeAnalytics:onWindowDrag(integrationId: Types.IntegrationId, window
 	local dragStatus = self._tracker:get(windowTrackerName)
 	local integration = getIntegration(integrationId)
 
-	if windowPosition and integration and integration.windowSize and dragStatus == DRAG_STATUS.STARTED then
+	if integration and integration.windowSize and dragStatus == DRAG_STATUS.STARTED then
 		local touchBeginPosition: Vector2 =
 			self._tracker:get(getTrackerName(TRACKER_NAME_WINDOW_LAST_POSITION_PREFIX, integrationId))
 
@@ -439,11 +476,6 @@ function ChromeAnalytics:onWindowResize(integrationId: Types.IntegrationId, curr
 		local positionTrackerName = getTrackerName(TRACKER_NAME_WINDOW_LAST_POSITION_PREFIX, integrationId)
 		local previousWindowSize: UDim2 = self._tracker:get(sizeTrackerName)
 		local previousWindowPosition: Vector2? = self._tracker:get(positionTrackerName)
-
-		if typeof(previousWindowSize) ~= "UDim2" then
-			-- TODO APPEXP-999 figure out how come it could end up being boolean
-			previousWindowSize = UDim2.new()
-		end
 
 		local currentWindowPosition: Vector2? = nil
 		if previousWindowPosition then

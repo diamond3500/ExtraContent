@@ -64,7 +64,27 @@ local emotes = ChromeService:register({
 		end,
 	},
 })
-ChromeUtils.setCoreGuiAvailability(emotes, Enum.CoreGuiType.EmotesMenu)
+
+local coreGuiEmoteAvailable = false
+local emoteMounted = EmotesMenuMaster.MenuIsVisible
+
+function updateEmoteAvailability()
+	if coreGuiEmoteAvailable and emoteMounted then
+		emotes.availability:available()
+	else
+		emotes.availability:unavailable()
+	end
+end
+
+ChromeUtils.setCoreGuiAvailability(emotes, Enum.CoreGuiType.EmotesMenu, function(available)
+	coreGuiEmoteAvailable = available
+	updateEmoteAvailability()
+end)
+
+EmotesMenuMaster.MenuVisibilityChanged.Event:Connect(function()
+	emoteMounted = EmotesMenuMaster.MenuIsVisible
+	updateEmoteAvailability()
+end)
 
 local backpackVisibility = MappedSignal.new(BackpackModule.StateChanged.Event, function()
 	return BackpackModule.IsOpen
