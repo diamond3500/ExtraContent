@@ -6,6 +6,8 @@ lockfile_format_version = 4
 name = "AbuseReportMenu"
 version = "0.1.0"
 dependencies = [
+    "AdIdentification TnSAdIdentification 0.1.0",
+    "AvatarIdentification TnSAvatarIdentification 0.1.0",
     "Cryo Cryo 0.1.0",
     "JestConfigs JestConfigs 0.1.0",
     "JestGlobals JestGlobals3 0.1.0",
@@ -14,6 +16,7 @@ dependencies = [
     "RoactRodux RoactRodux 0.1.0",
     "RoactUtils RoactUtils 0.1.0",
     "Rodux Rodux 0.1.0",
+    "Screenshot TnSScreenshot 0.1.0",
     "Style Style 0.1.0",
     "UIBlox UIBlox 0.1.0",
     "VerifiedBadges VerifiedBadges 0.8.1",

@@ -76,16 +76,16 @@ local function Initialize()
 	this.ShouldShowHubBar = true
 
 	local abuseReportMenu = Roact.createElement(AbuseReportMenu, {
-		hideContainer = function()
+		hideReportTab = function()
 			this:HideMenu()
 		end,
-		showContainer = function()
+		showReportTab = function()
 			this:ShowMenu()
 		end,
-		registerOnContainerHidden = function(onHiddenCallback)
+		registerOnReportTabHidden = function(onHiddenCallback)
 			this._onHiddenCallback = onHiddenCallback
 		end,
-		registerOnContainerDisplayed = function(onDisplayedCallback)
+		registerOnReportTabDisplayed = function(onDisplayedCallback)
 			this._onDisplayedCallback = onDisplayedCallback
 		end,
 		onReportComplete = function(text)
