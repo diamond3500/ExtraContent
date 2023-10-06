@@ -98,8 +98,8 @@ dependencies = [
     "Dash Dash 0.1.9 url+https://github.com/roblox/dash",
     "DataLoader DataLoader 0.2.0 url+https://github.com/roblox/data-loader-lua",
     "DeveloperTools DeveloperTools 0.2.7 url+https://github.com/roblox/developer-tools",
-    "ExperienceChat ExperienceChat 8090c668 git+https://github.com/roblox/lua-experience-chat#v4.2.0",
-    "ExperienceChat_New ExperienceChat 58d00f83 git+https://github.com/roblox/lua-experience-chat#v4.2.2",
+    "ExperienceChat ExperienceChat 58d00f83 git+https://github.com/roblox/lua-experience-chat#v4.2.2",
+    "ExperienceChat_New ExperienceChat 9597afe5 git+https://github.com/roblox/lua-experience-chat#v4.2.3",
     "FitFrame RoactFitComponents 2.0.0 url+https://github.com/roblox/roact-fit-components",
     "GraphQL GraphQL 15.6.1 url+https://github.com/roblox/graphql-lua",
     "GraphqlToolsUtils Utils 0.3.0 url+https://github.com/roblox/graphql-tools-lua",
@@ -313,9 +313,9 @@ dependencies = [
 
 [[package]]
 name = "ExperienceChat"
-version = "4.2.0"
-commit = "8090c668552290171cfd83ab042d2eef9782938d"
-source = "git+https://github.com/roblox/lua-experience-chat#v4.2.0"
+version = "4.2.2"
+commit = "58d00f837cb359f344918745789a1ea6f70125c0"
+source = "git+https://github.com/roblox/lua-experience-chat#v4.2.2"
 dependencies = [
     "ApolloClient ApolloClient 0.3.8 url+https://github.com/roblox/apollo-client-lua",
     "EmojiList EmojiList 79876374 git+https://github.com/roblox/emoji-list#1.0.0",
@@ -335,9 +335,9 @@ dependencies = [
 
 [[package]]
 name = "ExperienceChat"
-version = "4.2.2"
-commit = "58d00f837cb359f344918745789a1ea6f70125c0"
-source = "git+https://github.com/roblox/lua-experience-chat#v4.2.2"
+version = "4.2.3"
+commit = "9597afe5f38ef4b74a8b3c9033a0347fff0bba7c"
+source = "git+https://github.com/roblox/lua-experience-chat#v4.2.3"
 dependencies = [
     "ApolloClient ApolloClient 0.3.8 url+https://github.com/roblox/apollo-client-lua",
     "EmojiList EmojiList 79876374 git+https://github.com/roblox/emoji-list#1.0.0",
