@@ -104,7 +104,6 @@ local ABUSE_TYPES_PLAYER = {
 	"Cheating/Exploiting",
 	"Personal Question",
 	"Offsite Links",
-	"Meanie",
 }
 
 local ABUSE_TYPES_PLAYER_VOICE = {
