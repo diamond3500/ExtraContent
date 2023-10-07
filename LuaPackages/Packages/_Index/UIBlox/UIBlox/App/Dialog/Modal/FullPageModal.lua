@@ -34,7 +34,7 @@ FullPageModal.validateProps = t.strictInterface({
 	-- Used to set the left/right margin's of the middle content in the modal
 	marginSize = t.optional(t.number),
 	-- Button stack validates the contents.
-	-- See [ButtonStack](../Button/ButtonStack.md) for more information.
+	-- See [[ButtonStack]] for more information.
 	buttonStackProps = t.optional(t.table),
 	-- A function that is called to render content in the footer.
 	footerContent = t.optional(t.callback),

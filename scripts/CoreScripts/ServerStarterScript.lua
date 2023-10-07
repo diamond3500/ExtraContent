@@ -36,6 +36,12 @@ initify(CorePackages)
 initify(RobloxGui.Modules)
 
 --[[ Add Server CoreScript ]]--
+
+-- OpenCloud
+if game:DefineFastFlag("OpenCloudCoreScriptLuaEnabled", false) then
+    ScriptContext:AddCoreScriptLocal("ServerCoreScripts/OpenCloud/OpenCloudV2", script.Parent)
+end
+
 ScriptContext:AddCoreScriptLocal("ServerCoreScripts/ServerInGameMenu", script.Parent)
 ScriptContext:AddCoreScriptLocal("ServerCoreScripts/ServerSocialScript", script.Parent)
 

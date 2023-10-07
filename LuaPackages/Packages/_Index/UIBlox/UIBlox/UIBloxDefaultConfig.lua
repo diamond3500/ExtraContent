@@ -66,9 +66,6 @@ return {
 	-- Link button use uiblox selecton image
 	linkButtonUseSelectionImage = false,
 
-	-- Removes default value for player tile name
-	removeDefaultValueForPlayerTileName = false,
-
 	-- Work around automatic size bug in StatGroup
 	useStatGroupManualSize = false,
 
