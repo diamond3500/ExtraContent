@@ -9,6 +9,7 @@ local CallProtocol = require(CorePackages.Workspace.Packages.CallProtocol)
 local Sounds = require(CorePackages.Workspace.Packages.SoundManager).Sounds
 local SoundGroups = require(CorePackages.Workspace.Packages.SoundManager).SoundGroups
 local SoundManager = require(CorePackages.Workspace.Packages.SoundManager).SoundManager
+local UserProfiles = require(CorePackages.Workspace.Packages.UserProfiles)
 
 local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 
@@ -79,23 +80,23 @@ local function CallBar(passedProps: Props)
 	end)
 	local callStatus = useSelector(selectCallStatus)
 
-	local selectOtherEndParticipant = React.useCallback(function(state: any)
+	local selectOtherParticipantId = React.useCallback(function(state: any)
 		local currentCall = state.Call.currentCall
 		if currentCall then
 			if localUserId == currentCall.callerId then
-				return { userId = currentCall.calleeId, displayName = currentCall.calleeDisplayName }
+				return currentCall.calleeId
 			else
-				return { userId = currentCall.callerId, displayName = currentCall.callerDisplayName }
+				return currentCall.callerId
 			end
 		end
 
 		return nil :: any
 	end)
-	local otherEndParticipant = useSelector(selectOtherEndParticipant)
+	local otherParticipantId = useSelector(selectOtherParticipantId)
 
 	local image
-	if otherEndParticipant then
-		image = getStandardSizeAvatarHeadShotRbxthumb(otherEndParticipant.userId)
+	if otherParticipantId then
+		image = getStandardSizeAvatarHeadShotRbxthumb(otherParticipantId)
 	end
 
 	local callStatusText = getTextFromCallStatus(callStatus)
@@ -110,6 +111,16 @@ local function CallBar(passedProps: Props)
 			props.callProtocol:cancelCall(callId)
 		end
 	end, { callStatus, props.callProtocol })
+
+	local namesFetch = UserProfiles.Hooks.useUserProfilesFetch({
+		userIds = { tostring(otherParticipantId) },
+		query = UserProfiles.Queries.userProfilesCombinedNameAndUsernameByUserIds,
+	})
+
+	local combinedName = ""
+	if namesFetch.data then
+		combinedName = UserProfiles.Selectors.getCombinedNameFromId(namesFetch.data, otherParticipantId)
+	end
 
 	return React.createElement("Frame", {
 		Size = UDim2.fromOffset(props.size.X, props.size.Y),
@@ -167,9 +178,7 @@ local function CallBar(passedProps: Props)
 				BorderSizePixel = 0,
 				Font = font.CaptionHeader.Font,
 				LayoutOrder = 1,
-				Text = if otherEndParticipant and otherEndParticipant.displayName
-					then otherEndParticipant.displayName
-					else "",
+				Text = combinedName,
 				TextColor3 = theme.TextEmphasis.Color,
 				TextSize = font.BaseSize * font.CaptionHeader.RelativeSize,
 				TextTransparency = theme.TextEmphasis.Transparency,

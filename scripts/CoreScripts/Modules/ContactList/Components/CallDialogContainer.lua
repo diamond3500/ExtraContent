@@ -6,6 +6,7 @@ local React = require(CorePackages.Packages.React)
 local Roact = require(CorePackages.Roact)
 local Cryo = require(CorePackages.Packages.Cryo)
 local CallProtocol = require(CorePackages.Workspace.Packages.CallProtocol)
+local UserProfiles = require(CorePackages.Workspace.Packages.UserProfiles)
 
 local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 
@@ -15,9 +16,6 @@ local OpenOrUpdateDialog = require(ContactList.Actions.OpenOrUpdateDialog)
 local dependencies = require(ContactList.dependencies)
 local UIBlox = dependencies.UIBlox
 
-local GetUserV2FromUserId = dependencies.NetworkingUsers.GetUserV2FromUserId
-
-local dependencyArray = dependencies.Hooks.dependencyArray
 local useSelector = dependencies.Hooks.useSelector
 local useDispatch = dependencies.Hooks.useDispatch
 
@@ -48,13 +46,6 @@ local function CallDialogContainer(passedProps: Props)
 	local dispatch = useDispatch()
 
 	local containerSize, setContainerSize = React.useState(Vector2.new(0, 0))
-	local busyCalleeUserId, setBusyCalleeUserId = React.useState(nil)
-
-	local busyCalleeDisplayName = useSelector(function(state)
-		return if busyCalleeUserId and state.Users.byUserId[tostring(busyCalleeUserId)]
-			then state.Users.byUserId[tostring(busyCalleeUserId)].displayName
-			else nil
-	end) :: string?
 
 	local title = useSelector(function(state)
 		return state.Dialog.title
@@ -81,9 +72,25 @@ local function CallDialogContainer(passedProps: Props)
 				if params.errorType == ErrorType.CallerIsInAnotherCall.rawValue() then
 					dispatch(OpenOrUpdateDialog("Couldn't make call", "You're already on a call."))
 				elseif params.errorType == ErrorType.CalleeIsInAnotherCall.rawValue() then
-					setBusyCalleeUserId(params.callInfo.calleeId)
+					local calleeId = params.callInfo.calleeId
+					local namesFetch = UserProfiles.Hooks.useUserProfilesFetch({
+						userIds = { tostring(calleeId) },
+						query = UserProfiles.Queries.userProfilesCombinedNameAndUsernameByUserIds,
+					})
+					-- The name should be cached since it must have been loaded
+					-- for the call to be placed.
+					if namesFetch.data then
+						local combinedName = UserProfiles.Selectors.getCombinedNameFromId(namesFetch.data, calleeId)
+						dispatch(
+							OpenOrUpdateDialog(
+								"Caller is busy",
+								combinedName
+									.. " is currently busy and can't receive your call right now. Please try again later."
+							)
+						)
+					end
 				else
-					dispatch(OpenOrUpdateDialog("Oh No!", "Something went wrong. Please try again later."))
+					dispatch(OpenOrUpdateDialog("Oh no!", "Something went wrong. Please try again later."))
 				end
 			end
 		end)
@@ -92,26 +99,6 @@ local function CallDialogContainer(passedProps: Props)
 			callMessageConn:Disconnect()
 		end
 	end, { props.callProtocol })
-
-	React.useEffect(function()
-		if busyCalleeUserId and not busyCalleeDisplayName then
-			-- Make network request if user's display name was not cached
-			dispatch(GetUserV2FromUserId.API(busyCalleeUserId))
-		end
-	end, dependencyArray(busyCalleeUserId, busyCalleeDisplayName))
-
-	React.useEffect(function()
-		if busyCalleeDisplayName then
-			dispatch(
-				OpenOrUpdateDialog(
-					"Caller is busy",
-					busyCalleeDisplayName
-						.. " is currently busy and can't receive your call right now. Please try again later."
-				)
-			)
-			setBusyCalleeUserId(nil)
-		end
-	end, { busyCalleeDisplayName })
 
 	return React.createElement(Roact.Portal, {
 		target = CoreGui :: Instance,

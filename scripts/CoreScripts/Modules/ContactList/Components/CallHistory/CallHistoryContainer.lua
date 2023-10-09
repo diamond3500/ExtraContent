@@ -159,12 +159,11 @@ local function CallHistoryContainer(props: Props)
 			SortOrder = Enum.SortOrder.LayoutOrder,
 		})
 
-		for i, caller in ipairs(callRecords) do
+		for i, callRecord in ipairs(callRecords) do
 			entries[i] = React.createElement(CallHistoryItem, {
-				caller = caller,
+				callRecord = callRecord,
 				localUserId = localUserId,
 				showDivider = i ~= #callRecords,
-				useUserProfilesFetch = true,
 				dismissCallback = props.dismissCallback,
 				layoutOrder = i,
 			})
