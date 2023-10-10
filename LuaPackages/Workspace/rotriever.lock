@@ -186,6 +186,7 @@ dependencies = ["JestGlobals JestGlobals 0.1.0"]
 name = "AuthenticationProtocol"
 version = "0.1.0"
 dependencies = [
+    "JestGlobals JestGlobals 0.1.0",
     "LuauPolyfill LuauPolyfill 0.1.0",
     "MessageBus MessageBus 0.1.0",
     "Promise Promise 0.1.0",
@@ -310,6 +311,7 @@ dependencies = [
 name = "ContactsProtocol"
 version = "0.1.0"
 dependencies = [
+    "JestGlobals JestGlobals 0.1.0",
     "MessageBus MessageBus 0.1.0",
     "Promise Promise 0.1.0",
     "t t 0.1.0",
@@ -319,6 +321,7 @@ dependencies = [
 name = "CredentialsProtocol"
 version = "0.1.0"
 dependencies = [
+    "JestGlobals JestGlobals 0.1.0",
     "MessageBus MessageBus 0.1.0",
     "Promise Promise 0.1.0",
     "t t 0.1.0",
@@ -440,6 +443,7 @@ name = "ExperienceService"
 version = "0.1.0"
 dependencies = [
     "Cryo Cryo 0.1.0",
+    "JestGlobals JestGlobals 0.1.0",
     "LoggingProtocol LoggingProtocol 0.1.0",
     "MessageBus MessageBus 0.1.0",
     "t t 0.1.0",
@@ -782,6 +786,7 @@ version = "0.1.0"
 name = "IdentityProtocol"
 version = "0.1.0"
 dependencies = [
+    "JestGlobals JestGlobals 0.1.0",
     "MessageBus MessageBus 0.1.0",
     "Promise Promise 0.1.0",
     "SharedFlags SharedFlags 0.1.0",
@@ -923,6 +928,7 @@ dependencies = [
 name = "LinkingProtocol"
 version = "0.1.0"
 dependencies = [
+    "JestGlobals JestGlobals 0.1.0",
     "LuauPolyfill LuauPolyfill 0.1.0",
     "MessageBus MessageBus 0.1.0",
     "Promise Promise 0.1.0",
@@ -986,9 +992,9 @@ version = "0.1.0"
 name = "MessageBus"
 version = "0.1.0"
 dependencies = [
+    "JestGlobals JestGlobals 0.1.0",
     "LuauPolyfill LuauPolyfill 0.1.0",
     "t t 0.1.0",
-    "tutils tutils 0.1.0",
 ]
 
 [[package]]
@@ -1029,6 +1035,7 @@ dependencies = [
 name = "NativeUtilProtocol"
 version = "0.1.0"
 dependencies = [
+    "JestGlobals JestGlobals 0.1.0",
     "MessageBus MessageBus 0.1.0",
     "Promise Promise 0.1.0",
     "SharedFlags SharedFlags 0.1.0",
@@ -1201,6 +1208,7 @@ dependencies = [
 name = "PermissionsProtocol"
 version = "0.1.0"
 dependencies = [
+    "JestGlobals JestGlobals 0.1.0",
     "MessageBus MessageBus 0.1.0",
     "Promise Promise 0.1.0",
     "t t 0.1.0",
@@ -1585,6 +1593,7 @@ version = "0.1.0"
 name = "SMSProtocol"
 version = "0.1.0"
 dependencies = [
+    "JestGlobals JestGlobals 0.1.0",
     "MessageBus MessageBus 0.1.0",
     "Promise Promise 0.1.0",
     "t t 0.1.0",
@@ -2500,6 +2509,7 @@ dependencies = [
 name = "VideoProtocol"
 version = "0.1.0"
 dependencies = [
+    "JestGlobals JestGlobals 0.1.0",
     "MessageBus MessageBus 0.1.0",
     "t t 0.1.0",
 ]

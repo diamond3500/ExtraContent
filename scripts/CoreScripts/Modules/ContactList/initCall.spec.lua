@@ -14,14 +14,20 @@ return function()
 	local function createMockCallProtocol(state: string, instanceId: string)
 		local MockCallProtocol = {}
 
+		local mockCallModel = {
+			status = state,
+			callerId = Players.LocalPlayer and Players.LocalPlayer.UserId or 0,
+			calleeId = Players.LocalPlayer and Players.LocalPlayer.UserId or 0,
+			callId = "CALL_ID",
+			instanceId = instanceId,
+		}
+
 		function MockCallProtocol:getCallState()
-			return Promise.resolve({
-				status = state,
-				callerId = Players.LocalPlayer and Players.LocalPlayer.UserId or 0,
-				calleeId = Players.LocalPlayer and Players.LocalPlayer.UserId or 0,
-				callId = "CALL_ID",
-				instanceId = instanceId,
-			})
+			return Promise.resolve(mockCallModel)
+		end
+
+		function MockCallProtocol:listenToHandleMicAndCamChanged(callback)
+			callback(mockCallModel)
 		end
 
 		return MockCallProtocol

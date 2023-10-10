@@ -54,10 +54,9 @@ end
 
 SocialService.PromptInviteRequested:Connect(function(player, experienceInviteOptions: Instance?)
 	local newGameInviteModalEnabled = false
+	local layer = GetFStringGameInviteMenuLayer()
 	if GetFFlagLuaInExperienceCoreScriptsGameInviteUnification() and FFlagLuaEnableGameInviteModalInvitePrompt then
-		local layer = GetFStringGameInviteMenuLayer()
 		local layerData = IXPServiceWrapper:GetLayerData(layer)
-		IXPServiceWrapper:LogUserLayerExposure(layer)
 		newGameInviteModalEnabled = (
 			layerData
 			and (
@@ -88,6 +87,7 @@ SocialService.PromptInviteRequested:Connect(function(player, experienceInviteOpt
 			local trigger = GetCustomizedInvitePromptTrigger(options)
 			--new flow only handles multi invite
 			if trigger == GameInviteConstants.Triggers.DeveloperMultiple then
+				IXPServiceWrapper:LogUserLayerExposure(layer)
 				GameInviteModalManager:openModal({
 					trigger = trigger :: any,
 				}, options)
