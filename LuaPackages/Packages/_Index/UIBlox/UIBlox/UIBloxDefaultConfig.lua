@@ -130,4 +130,10 @@ return {
 
 	-- enable trace level log
 	enableTraceLevelLog = false,
+
+	-- Bugfix for the fixed-height basemenu's outer frame is selectable
+	fixFixedHeightMenuFrameSelectable = false,
+
+	-- Switch the LoadableImage default loading strategy to default.
+	makeDefaultLoadingStrategyDefault = false,
 }

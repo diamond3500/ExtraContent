@@ -12,6 +12,9 @@ local RobloxTranslator = require(RobloxGui.Modules.RobloxTranslator)
 
 local log = require(RobloxGui.Modules.Logger):new(script.Name)
 
+local CallProtocol = require(CorePackages.Workspace.Packages.CallProtocol).CallProtocol.default
+local CallProtocolEnums = require(CorePackages.Workspace.Packages.CallProtocol).Enums
+
 local FFlagEnableSyncAudioWithVoiceChatMuteState = game:DefineFastFlag("EnableSyncAudioWithVoiceChatMuteState", false)
 local FFlagEnableFacialAnimationKickPlayerWhenServerDisabled = game:DefineFastFlag("EnableFacialAnimationKickPlayerWhenServerDisabled", false)
 local FFlagFacialAnimationStreamingServiceUsePlayerThrottling = game:GetEngineFeature("FacialAnimationStreamingServiceUsePlayerThrottling")
@@ -598,8 +601,31 @@ function InitializeFacialAnimationStreaming(settings)
 		end)
 	end
 
-	InitializeVoiceChat()
-	heartbeatStats.Initialize()
+	if GetFFlagIrisSettingsEnabled() then
+		CallProtocol:getCallState():andThen(function(params)
+			if not facialAnimationStreamingInited then
+				return
+			end
+
+			if
+				params.status ~= CallProtocolEnums.CallStatus.Idle.rawValue()
+				and params.status ~= CallProtocolEnums.CallStatus.Ringing.rawValue()
+			then
+				-- If call exist, respect the cam settings for calling
+				FaceAnimatorService.VideoAnimationEnabled = params.camEnabled
+			elseif FFlagFaceAnimatorDisableVideoByDefault then
+				-- At start, turn off video until user turns it on manually.
+				-- This is what Settings should use to re-enable camera when user presses camera button.
+				FaceAnimatorService.VideoAnimationEnabled = false
+			end
+
+			InitializeVoiceChat()
+			heartbeatStats.Initialize()
+		end)
+	else
+		InitializeVoiceChat()
+		heartbeatStats.Initialize()
+	end
 end
 
 function CleanupFacialAnimationStreaming()

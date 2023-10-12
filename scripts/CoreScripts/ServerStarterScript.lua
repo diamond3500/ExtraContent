@@ -157,6 +157,11 @@ if GetFFlagContactListEnabled() then
 	ScriptContext:AddCoreScriptLocal("ServerCoreScripts/ServerContactList", script.Parent)
 end
 
+local GetFFlagPlayerViewCapabilityEnabled = require(RobloxGui.Modules.Common.Flags.GetFFlagPlayerViewCapabilityEnabled)
+if GetFFlagPlayerViewCapabilityEnabled() then
+	ScriptContext:AddCoreScriptLocal("ServerCoreScripts/PlayerViewCapability", script.Parent)
+end
+
 local GetFFlagEnableVoiceDefaultServerScript =
 	require(RobloxGui.Modules.Common.Flags.GetFFlagEnableVoiceDefaultServerScript)
 

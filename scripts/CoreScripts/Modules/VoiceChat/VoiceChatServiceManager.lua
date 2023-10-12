@@ -51,6 +51,7 @@ local GetFFlagVoiceChatReportOutOfOrderSequence =
 local GetFFlagAvatarChatServiceEnabled = require(RobloxGui.Modules.Flags.GetFFlagAvatarChatServiceEnabled)
 local GetFFlagVoiceChatServiceManagerUseAvatarChat =
 	require(RobloxGui.Modules.Flags.GetFFlagVoiceChatServiceManagerUseAvatarChat)
+local GetFFlagMutedNotSendOnLeavingOrEnded = require(RobloxGui.Modules.Flags.GetFFlagMutedNotSendOnLeavingOrEnded)
 local FFlagAvatarChatCoreScriptSupport = require(RobloxGui.Modules.Flags.FFlagAvatarChatCoreScriptSupport)
 local GetFFlagMuteAllEvent = require(RobloxGui.Modules.Flags.GetFFlagMuteAllEvent)
 local GetFFlagLuaConsumePlayerModerated = require(RobloxGui.Modules.Flags.GetFFlagLuaConsumePlayerModerated)
@@ -1486,13 +1487,24 @@ function VoiceChatServiceManager:SetupParticipantListeners()
 		self.stateConnection = self.service.StateChanged:Connect(function(oldState, newState)
 			local inFailedState = newState == (Enum :: any).VoiceChatState.Failed
 			local inConnectingState = newState == (Enum :: any).VoiceChatState.Joining
+			local inLeavingState = newState == (Enum :: any).VoiceChatState.Leaving
+			local inEndedState = newState == (Enum :: any).VoiceChatState.Ended
 			local newMuted = self.service:IsPublishPaused()
 			if GetFFlagEnableErrorIconFix() then
-				if newMuted ~= self.localMuted and not inFailedState and not inConnectingState then
-					self.localMuted = newMuted
-					self.muteChanged:Fire(newMuted)
-				elseif inConnectingState then
-					self.localMuted = nil
+				if GetFFlagMutedNotSendOnLeavingOrEnded() then
+					if newMuted ~= self.localMuted and not inFailedState and not inConnectingState and not inLeavingState and not inEndedState then
+						self.localMuted = newMuted
+						self.muteChanged:Fire(newMuted)
+					elseif inConnectingState or inLeavingState or inEndedState then
+						self.localMuted = nil
+					end
+				else
+					if newMuted ~= self.localMuted and not inFailedState and not inConnectingState then
+						self.localMuted = newMuted
+						self.muteChanged:Fire(newMuted)
+					elseif inConnectingState then
+						self.localMuted = nil
+					end
 				end
 			else
 				if newMuted ~= self.localMuted then

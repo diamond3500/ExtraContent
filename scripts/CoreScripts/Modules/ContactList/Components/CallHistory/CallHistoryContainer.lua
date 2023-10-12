@@ -230,11 +230,10 @@ local function CallHistoryContainer(props: Props)
 		else Roact.createFragment({
 			React.createElement("ScrollingFrame", {
 				Size = UDim2.fromScale(1, 1),
-				AutomaticCanvasSize = Enum.AutomaticSize.Y,
 				BackgroundColor3 = theme.BackgroundDefault.Color,
 				BackgroundTransparency = theme.BackgroundDefault.Transparency,
 				BorderSizePixel = 0,
-				CanvasSize = UDim2.new(),
+				CanvasSize = UDim2.new(1, 0, 0, #children * Constants.ITEM_HEIGHT),
 				ElasticBehavior = Enum.ElasticBehavior.Never,
 				ScrollingDirection = Enum.ScrollingDirection.Y,
 				ScrollingEnabled = not overscrolling and props.scrollingEnabled,

@@ -225,10 +225,10 @@ local function CallHistoryItem(props: Props)
 			Size = UDim2.fromOffset(PROFILE_SIZE, PROFILE_SIZE),
 			Image = image,
 			[React.Event.MouseButton2Up] = function()
-				dispatch(OpenOrUpdateCFM(props.localUserId))
+				dispatch(OpenOrUpdateCFM(otherParticipantId, combinedName))
 			end,
 			[React.Event.TouchTap] = function()
-				dispatch(OpenOrUpdateCFM(props.localUserId))
+				dispatch(OpenOrUpdateCFM(otherParticipantId, combinedName))
 			end,
 			AutoButtonColor = false,
 		}, {

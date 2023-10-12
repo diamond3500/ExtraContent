@@ -2213,6 +2213,7 @@ dependencies = [
     "JestConfigs JestConfigs 0.1.0",
     "JestGlobals JestGlobals3 0.1.0",
     "LinkingProtocol LinkingProtocol 0.1.0",
+    "Loggers Loggers 0.1.0",
     "LoggingProtocol LoggingProtocol 0.1.0",
     "LuauPolyfill LuauPolyfill 0.1.0",
     "MessageBus MessageBus 0.1.0",
