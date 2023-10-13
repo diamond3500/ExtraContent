@@ -16,10 +16,14 @@ local AvailabilitySignal = utils.AvailabilitySignal
 local Types = require(script.Parent.Types)
 
 local GetFFlagEnableUnibarSneakPeak = require(script.Parent.Parent.Flags.GetFFlagEnableUnibarSneakPeak)
+local GetFFlagEnableUnibarMaxDefaultOpen = require(script.Parent.Parent.Flags.GetFFlagEnableUnibarMaxDefaultOpen)
+local GetFFlagSelfViewMultiTouchFix = require(script.Parent.Parent.Flags.GetFFlagSelfViewMultiTouchFix)
 
 local NOTIFICATION_INDICATOR_DISPLAY_TIME_SEC = 1.5
 local NOTIFICATION_INDICATOR_IDLE_COOLDOWN_TIME_SEC = 10
 local CHROME_INTERACTED_KEY = "ChromeInteracted"
+local CHROME_SEEN_COUNT_KEY = "ChromeSeenCount"
+local MAX_CHROME_SEEN_COUNT = 3
 
 -- todo: Consider how ChromeService could support multiple UI at the same time, not only the Unibar
 --       Does there need to be another layer "IntegrationsService" that ChromeService can pull from?
@@ -44,6 +48,7 @@ export type ObservableIntegrationId = utils.ObservableValue<string?>
 export type ObservableWindowList = utils.ObservableValue<Types.WindowList>
 
 export type ObservableDragConnection = utils.ObservableValue<{ current: RBXScriptConnection? }?>
+type DragConnectionObjectType = any
 
 function noop() end
 
@@ -78,7 +83,12 @@ export type ChromeService = {
 	configureReset: (ChromeService) -> (),
 	configureMenu: (ChromeService, menuConfig: Types.MenuConfig) -> (),
 	configureSubMenu: (ChromeService, parent: Types.IntegrationId, menuConfig: Types.IntegrationIdList) -> (),
-	gesture: (ChromeService, componentId: Types.IntegrationId, connection: { current: RBXScriptConnection? }?) -> (),
+	gesture: (
+		ChromeService,
+		componentId: Types.IntegrationId,
+		connection: { current: RBXScriptConnection? }?,
+		inputObject: InputObject?
+	) -> (),
 	withinCurrentTopLevelMenu: (
 		ChromeService,
 		componentId: Types.IntegrationId
@@ -87,6 +97,7 @@ export type ChromeService = {
 	isMostRecentlyUsed: (ChromeService, componentId: Types.IntegrationId) -> boolean,
 	setRecentlyUsed: (ChromeService, componentId: Types.IntegrationId, force: boolean?) -> (),
 	storeChromeInteracted: (ChromeService) -> (),
+	storeChromeSeen: (ChromeService) -> (),
 	activate: (ChromeService, componentId: Types.IntegrationId) -> (),
 	toggleWindow: (ChromeService, componentId: Types.IntegrationId) -> (),
 	isWindowOpen: (ChromeService, componentId: Types.IntegrationId) -> boolean,
@@ -117,7 +128,7 @@ export type ChromeService = {
 	_subMenuConfig: { [Types.IntegrationId]: Types.IntegrationIdList },
 	_subMenuNotifications: { [Types.IntegrationId]: utils.NotifySignal },
 	_menuList: ObservableMenuList,
-	_dragConnection: { [Types.IntegrationId]: { current: RBXScriptConnection? }? },
+	_dragConnection: { [Types.IntegrationId]: DragConnectionObjectType },
 	_windowPositions: { [Types.IntegrationId]: UDim2? },
 	_windowList: ObservableWindowList,
 	_totalNotifications: utils.NotifySignal,
@@ -133,6 +144,7 @@ export type ChromeService = {
 	_onIntegrationStatusChanged: SignalLib.Signal,
 
 	_lastInputToOpenMenu: Enum.UserInputType,
+	_chromeSeenCount: number,
 
 	_localization: any,
 	_localizedLabelKeys: {
@@ -155,8 +167,9 @@ local DummyIntegration = {
 function ChromeService.new(): ChromeService
 	local localeId = LocalizationService.RobloxLocaleId
 	local self = {}
-	self._status = if GetFFlagEnableUnibarSneakPeak()
-		then getInitialStatus()
+	self._chromeSeenCount = if GetFFlagEnableUnibarMaxDefaultOpen() then getChromeSeenCount() else 0
+	self._status = if GetFFlagEnableUnibarSneakPeak() or GetFFlagEnableUnibarMaxDefaultOpen()
+		then getInitialStatus(self._chromeSeenCount)
 		else utils.ObservableValue.new(ChromeService.MenuStatus.Closed)
 	self._currentSubMenu = utils.ObservableValue.new(nil)
 	self._selectedItem = utils.ObservableValue.new(nil)
@@ -195,19 +208,55 @@ function ChromeService.new(): ChromeService
 		service:updateScreenSize(screenSize, ViewportUtil.mobileDevice:get())
 	end, true)
 
+	if GetFFlagEnableUnibarMaxDefaultOpen() then
+		service:storeChromeSeen()
+	end
+
 	return service
 end
 
--- Get initial status of menu - opened if never interacted with before, closed otherwise
-function getInitialStatus()
+-- Get how many times user has seen chrome from local storage
+function getChromeSeenCount(): number
+	if GetFFlagEnableUnibarMaxDefaultOpen() and LocalStore.isEnabled() then
+		local chromeSeenCount = LocalStore.loadForLocalPlayer(CHROME_SEEN_COUNT_KEY)
+		if chromeSeenCount and tonumber(chromeSeenCount) then
+			return chromeSeenCount
+		end
+	end
+
+	return 0
+end
+
+-- Get initial status of menu: closed if interacted with before or seen enough times, open otherwise
+function getInitialStatus(chromeSeenCount: number): ObservableMenuStatus
 	if LocalStore.isEnabled() then
-		local storedStatus = LocalStore.loadForLocalPlayer(CHROME_INTERACTED_KEY)
-		if storedStatus then
+		if GetFFlagEnableUnibarSneakPeak() then
+			local storedStatus = LocalStore.loadForLocalPlayer(CHROME_INTERACTED_KEY)
+			if storedStatus then
+				return utils.ObservableValue.new(ChromeService.MenuStatus.Closed)
+			end
+		end
+
+		if GetFFlagEnableUnibarMaxDefaultOpen() and chromeSeenCount >= MAX_CHROME_SEEN_COUNT then
 			return utils.ObservableValue.new(ChromeService.MenuStatus.Closed)
 		end
 	end
 
 	return utils.ObservableValue.new(ChromeService.MenuStatus.Open)
+end
+
+-- store that unibar was interacted with after anything activated
+function ChromeService:storeChromeInteracted()
+	if GetFFlagEnableUnibarSneakPeak() and LocalStore.isEnabled() then
+		LocalStore.storeForLocalPlayer(CHROME_INTERACTED_KEY, true)
+	end
+end
+
+-- store how many times the unibar has now been seen up to the max
+function ChromeService:storeChromeSeen()
+	if GetFFlagEnableUnibarMaxDefaultOpen() and LocalStore.isEnabled() and self._chromeSeenCount + 1 < math.huge then
+		LocalStore.storeForLocalPlayer(CHROME_SEEN_COUNT_KEY, self._chromeSeenCount + 1)
+	end
 end
 
 function ChromeService:updateScreenSize(screenSize: Vector2, isMobileDevice: boolean)
@@ -779,9 +828,22 @@ function ChromeService:configureSubMenu(parent: Types.IntegrationId, menuConfig:
 	self:updateMenuList()
 end
 
-function ChromeService:gesture(componentId: Types.IntegrationId, connection: { current: RBXScriptConnection? }?)
-	if self._integrations[componentId] then
-		self._dragConnection[componentId] = connection
+function ChromeService:gesture(
+	componentId: Types.IntegrationId,
+	connection: { current: RBXScriptConnection? }?,
+	inputObject: InputObject?
+)
+	if GetFFlagSelfViewMultiTouchFix() then
+		if self._integrations[componentId] then
+			self._dragConnection[componentId] = {
+				connection = connection,
+				inputObject = inputObject,
+			}
+		end
+	else
+		if self._integrations[componentId] then
+			self._dragConnection[componentId] = connection
+		end
 	end
 end
 
@@ -853,13 +915,6 @@ end
 
 function ChromeService:updateWindowPosition(componentId: Types.IntegrationId, position: UDim2)
 	self._windowPositions[componentId] = position
-end
-
--- store that unibar was interacted with after anything activated
-function ChromeService:storeChromeInteracted()
-	if GetFFlagEnableUnibarSneakPeak() and LocalStore.isEnabled() then
-		LocalStore.storeForLocalPlayer(CHROME_INTERACTED_KEY, true)
-	end
 end
 
 function ChromeService:activate(componentId: Types.IntegrationId)

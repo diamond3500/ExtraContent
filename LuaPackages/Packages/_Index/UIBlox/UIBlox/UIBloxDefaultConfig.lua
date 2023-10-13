@@ -136,4 +136,7 @@ return {
 
 	-- Switch the LoadableImage default loading strategy to default.
 	makeDefaultLoadingStrategyDefault = false,
+
+	-- Fix VerticalScrollView error on Event.SelectionChanged
+	fixVerticalScrollViewOnSelectionChanged = false,
 }

@@ -7,6 +7,7 @@ name = "AbuseReportMenu"
 version = "0.1.0"
 dependencies = [
     "AdIdentification TnSAdIdentification 0.1.0",
+    "Analytics Analytics 0.1.0",
     "AvatarIdentification TnSAvatarIdentification 0.1.0",
     "Cryo Cryo 0.1.0",
     "JestConfigs JestConfigs 0.1.0",
@@ -419,6 +420,16 @@ dependencies = [
     "UniversalAppPolicy UniversalAppPolicy 0.1.0",
     "UrlBuilder UrlBuilder 0.1.0",
     "UserProfiles UserProfiles 0.1.0",
+]
+
+[[package]]
+name = "ErrorReporters"
+version = "0.1.0"
+dependencies = [
+    "Cryo Cryo 0.1.0",
+    "JestConfigs JestConfigs 0.1.0",
+    "JestGlobals JestGlobals3 0.1.0",
+    "t t 0.1.0",
 ]
 
 [[package]]

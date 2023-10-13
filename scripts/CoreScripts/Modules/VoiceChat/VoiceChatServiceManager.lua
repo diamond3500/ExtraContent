@@ -71,6 +71,7 @@ local DebugShowAudioDeviceInputDebugger = game:DefineFastFlag("DebugShowAudioDev
 local FFlagOverwriteIsMutedLocally = game:DefineFastFlag("OverwriteIsMutedLocally", false)
 local FFlagVoiceMuteUnmuteAnalytics = game:DefineFastFlag("VoiceMuteUnmuteAnalytics", false)
 local FFlagHideVoiceUIUntilInputExists = game:DefineFastFlag("HideVoiceUIUntilInputExists", false)
+local FFlagFixMissingPermissionsAnalytics = game:DefineFastFlag("FixMissingPermissionsAnalytics", false)
 
 local Constants = require(CorePackages.AppTempCommon.VoiceChat.Constants)
 local VoiceConstants = require(RobloxGui.Modules.VoiceChat.Constants)
@@ -561,6 +562,7 @@ function VoiceChatServiceManager:voicePermissionGranted(permissionResponse)
 	local permissionGranted = false
 	-- If the return value is a table, that means multiple permissions have different values.
 	if typeof(permissionResponse) == "table" then
+		-- This currently panics every time that permissionResponse.missingPermissions is nil
 		local hasMicPermissionsResponse = permissionResponse.status == PermissionsProtocol.Status.AUTHORIZED
 			or not Cryo.List.find(
 				permissionResponse.missingPermissions,
@@ -978,6 +980,9 @@ function VoiceChatServiceManager:CheckAndShowPermissionPrompt()
 		if self.voiceEnabled or userEligible then
 			-- we already checked and requested permissions above. If we got here then Mic permissions were denied.
 			if FFlagAvatarChatCoreScriptSupport then
+				if FFlagFixMissingPermissionsAnalytics then
+					self:_reportJoinFailed("missingPermissions")				
+				end
 				self:showPrompt(VoiceChatPromptType.Permission)
 			else
 				return self.PermissionsService

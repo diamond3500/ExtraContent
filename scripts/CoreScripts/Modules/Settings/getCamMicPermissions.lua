@@ -217,7 +217,11 @@ local function getCamMicPermissions(callback, permissionsToRequest: Array<string
 		if requestPermissionsQueue[1] then
 			local nextRequest = requestPermissionsQueue[1]
 			table.remove(requestPermissionsQueue, 1)
-			getCamMicPermissions(nextRequest.callback, nextRequest.permsToCheck, shouldNotRequestPerms)
+			if getFFlagDecoupleHasAndRequestPermissions() then
+				getCamMicPermissions(nextRequest.callback, nextRequest.permissionsToRequest, nextRequest.shouldNotRequestPerms)
+			else
+				getCamMicPermissions(nextRequest.callback, nextRequest.permsToCheck)
+			end
 		end
 	end
 

@@ -25,10 +25,18 @@ local function Initialize()
 
 	this._onHiddenCallback = function() end
 	this._onDisplayedCallback = function() end
+	this._onSettingsHiddenCallback = function() end
 
 	function this:SetHub(newHubRef)
 		-- Keep a reference to the hub so we can open and close the whole menu from here
 		this.HubRef = newHubRef
+
+		this.HubRef.SettingsShowSignal:connect(function(isOpen)
+			if not isOpen then
+				this._onSettingsHiddenCallback()
+			end
+		end)
+
 		return this
 	end
 
@@ -87,6 +95,9 @@ local function Initialize()
 		end,
 		registerOnReportTabDisplayed = function(onDisplayedCallback)
 			this._onDisplayedCallback = onDisplayedCallback
+		end,
+		registerOnSettingsHidden = function(onSettingsHiddenCallback)
+			this._onSettingsHiddenCallback = onSettingsHiddenCallback
 		end,
 		onReportComplete = function(text)
 			this:showAlert(text,"Ok", function()
