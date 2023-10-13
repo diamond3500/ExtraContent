@@ -34,6 +34,7 @@ local ContactListSearchBar = require(ContactList.Components.ContactListSearchBar
 
 local SetCurrentPage = require(ContactList.Actions.SetCurrentPage)
 local SetCurrentTag = require(ContactList.Actions.SetCurrentTag)
+local OpenOrUpdateDialog = require(ContactList.Actions.OpenOrUpdateDialog)
 
 local Pages = require(ContactList.Enums.Pages)
 
@@ -84,11 +85,35 @@ local function ContactListContainer()
 			local promptIrisInviteRequestedConn = SocialService.PromptIrisInviteRequested:Connect(
 				function(player: any, tag: string)
 					if localPlayer and localPlayer.UserId == player.UserId then
-						dispatch(SetCurrentTag(tag))
-						dispatch(SetCurrentPage(Pages.CallHistory))
+						local UserInputService = game:GetService("UserInputService")
+						local platformEnum = UserInputService:GetPlatform()
+						if
+							platformEnum == Enum.Platform.Windows
+							or platformEnum == Enum.Platform.UWP
+							or platformEnum == Enum.Platform.OSX
+							or platformEnum == Enum.Platform.IOS
+							or platformEnum == Enum.Platform.Android
+						then
+							dispatch(SetCurrentTag(tag))
+							dispatch(SetCurrentPage(Pages.CallHistory))
 
-						if GetFFlagCorescriptsSoundManagerEnabled() then
-							SoundManager:PlaySound(Sounds.Swipe.Name, { Volume = 0.5, SoundGroup = SoundGroups.Iris })
+							if GetFFlagCorescriptsSoundManagerEnabled() then
+								SoundManager:PlaySound(
+									Sounds.Swipe.Name,
+									{ Volume = 0.5, SoundGroup = SoundGroups.Iris }
+								)
+							end
+						else
+							dispatch(OpenOrUpdateDialog(
+								"Oh No!",
+								-- Todo: Localization
+								"Calling is currently not supported on your device. Please try again later.",
+								nil,
+								nil,
+								function()
+									SocialService:InvokeIrisInvitePromptClosed(localPlayer)
+								end
+							))
 						end
 					end
 				end

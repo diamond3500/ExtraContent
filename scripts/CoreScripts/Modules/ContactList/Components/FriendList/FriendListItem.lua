@@ -39,6 +39,8 @@ export type Props = {
 	userId: number | string,
 	userName: string,
 	combinedName: string,
+	userPresenceType: string?,
+	lastLocation: string?,
 	dismissCallback: () -> (),
 	layoutOrder: number?,
 	showDivider: boolean,
@@ -58,8 +60,10 @@ local function FriendListItem(props: Props)
 	local dispatch = useDispatch()
 
 	React.useEffect(function()
-		dispatch(GetPresencesFromUserIds.API({ props.userId }))
-	end, { props.userId })
+		if props.userPresenceType == nil then
+			dispatch(GetPresencesFromUserIds.API({ props.userId }))
+		end
+	end, dependencyArray(props.userId, props.userPresenceType))
 
 	local selectUserPresence = React.useCallback(function(state: any)
 		return state.Presence.byUserId[tostring(props.userId)]
@@ -103,29 +107,31 @@ local function FriendListItem(props: Props)
 		local iconSize = 12
 		local text = "Offline" -- TODO(IRIS-864): Localization.
 		local textColorStyle = style.Theme.TextMuted
-		if presence then
-			if presence.userPresenceType == EnumPresenceType.Online then
-				icon = Images["component_assets/circle_16"]
-				iconColor = style.Theme.OnlineStatus.Color
-				iconTransparency = style.Theme.OnlineStatus.Transparency
-				text = "Online" -- TODO(IRIS-864): Localization.
-				textColorStyle = style.Theme.TextMuted
-				iconSize = 12
-			elseif presence.userPresenceType == EnumPresenceType.InGame then
-				icon = Images["icons/menu/games_small"]
-				iconColor = style.Theme.IconEmphasis.Color
-				iconTransparency = style.Theme.IconEmphasis.Transparency
-				text = presence.lastLocation
-				textColorStyle = theme.TextEmphasis
-				iconSize = 16
-			elseif presence.userPresenceType == EnumPresenceType.InStudio then
-				icon = Images["icons/logo/studiologo_small"]
-				iconColor = style.Theme.TextDefault.Color
-				iconTransparency = style.Theme.TextDefault.Transparency
-				text = "Roblox Studio" -- TODO(IRIS-864): Localization.
-				textColorStyle = style.Theme.TextMuted
-				iconSize = 16
-			end
+
+		local userPresenceType = props.userPresenceType or (presence and presence.userPresenceType) or nil
+		local lastLocation = props.lastLocation or (presence and presence.lastLocation) or ""
+
+		if userPresenceType == EnumPresenceType.Online then
+			icon = Images["component_assets/circle_16"]
+			iconColor = style.Theme.OnlineStatus.Color
+			iconTransparency = style.Theme.OnlineStatus.Transparency
+			text = "Online" -- TODO(IRIS-864): Localization.
+			textColorStyle = style.Theme.TextMuted
+			iconSize = 12
+		elseif userPresenceType == EnumPresenceType.InGame then
+			icon = Images["icons/menu/games_small"]
+			iconColor = style.Theme.IconEmphasis.Color
+			iconTransparency = style.Theme.IconEmphasis.Transparency
+			text = lastLocation
+			textColorStyle = theme.TextEmphasis
+			iconSize = 16
+		elseif userPresenceType == EnumPresenceType.InStudio then
+			icon = Images["icons/logo/studiologo_small"]
+			iconColor = style.Theme.TextDefault.Color
+			iconTransparency = style.Theme.TextDefault.Transparency
+			text = "Roblox Studio" -- TODO(IRIS-864): Localization.
+			textColorStyle = style.Theme.TextMuted
+			iconSize = 16
 		end
 
 		return React.createElement(PlayerContext, {

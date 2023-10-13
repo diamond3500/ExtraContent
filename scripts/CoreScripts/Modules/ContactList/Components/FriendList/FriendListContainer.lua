@@ -18,15 +18,19 @@ local ContactList = RobloxGui.Modules.ContactList
 local dependencies = require(ContactList.dependencies)
 local UIBlox = dependencies.UIBlox
 local dependencyArray = dependencies.Hooks.dependencyArray
+local useSelector = dependencies.Hooks.useSelector
 local useDispatch = dependencies.Hooks.useDispatch
 
 local FindFriendsFromUserId = dependencies.NetworkingFriends.FindFriendsFromUserId
 local SearchFriendsByQuery = dependencies.NetworkingFriends.SearchFriendsByQuery
+local GetSuggestedCallees = dependencies.NetworkingCall.GetSuggestedCallees
+local RoduxCall = dependencies.RoduxCall
 
 local useStyle = UIBlox.Core.Style.useStyle
 local LoadingSpinner = UIBlox.App.Loading.LoadingSpinner
 
 local FriendListItem = require(ContactList.Components.FriendList.FriendListItem)
+local SectionHeader = require(ContactList.Components.FriendList.SectionHeader)
 local NoItemView = require(ContactList.Components.common.NoItemView)
 local Constants = require(ContactList.Components.common.Constants)
 
@@ -49,9 +53,11 @@ local function FriendListContainer(props: Props)
 	-- Using refs instead of state since state might not be updated in time.
 	-- These are set to loading and fetching to prepare for the initial fetch.
 	local isLoading = React.useRef(true)
+	local isLoadingSuggestedCallees = React.useRef(true)
 	local scrollingFrameRef = React.useRef(nil)
 	local initialPositionY = React.useRef(0)
 	local status, setStatus = React.useState(RetrievalStatus.Fetching)
+	local suggestedCalleesStatus, setSuggestedCalleesStatus = React.useState(RetrievalStatus.Fetching)
 	local overscrolling, setOverscrolling = React.useState(false)
 	local friends, setFriends = React.useState({})
 	local nextPageCursor, setNextPageCursor = React.useState(nil)
@@ -60,6 +66,16 @@ local function FriendListContainer(props: Props)
 	local trimmedSearchText = React.useMemo(function()
 		return string.gsub(props.searchText, "%s+", "")
 	end, { props.searchText })
+
+	local getSuggestedCallees = React.useCallback(function()
+		isLoadingSuggestedCallees.current = true
+		setSuggestedCalleesStatus(RetrievalStatus.Fetching)
+		dispatch(GetSuggestedCallees.API()):andThen(function()
+			setSuggestedCalleesStatus(RetrievalStatus.Done)
+		end, function()
+			setSuggestedCalleesStatus(RetrievalStatus.Failed)
+		end)
+	end, {})
 
 	-- Note: Careful about dependencies to this function or else we might have
 	-- an infinite render.
@@ -129,10 +145,46 @@ local function FriendListContainer(props: Props)
 	end, dependencyArray(getFriends))
 
 	React.useEffect(function()
+		getSuggestedCallees()
+
+		return function()
+			dispatch(RoduxCall.Actions.ClearSuggestedCallees())
+		end
+	end, { getSuggestedCallees })
+
+	React.useEffect(function()
 		if status ~= RetrievalStatus.Fetching then
 			isLoading.current = false
 		end
 	end, { status })
+
+	React.useEffect(function()
+		if suggestedCalleesStatus ~= RetrievalStatus.Fetching then
+			isLoadingSuggestedCallees.current = false
+		end
+	end, { suggestedCalleesStatus })
+
+	local selectSuggestedCallees = React.useCallback(function(state: any)
+		return state.Call.suggestedCallees.suggestedCallees
+	end, {})
+
+	local suggestedCallees = useSelector(
+		selectSuggestedCallees,
+		function(newSuggestedCallees: any, oldSuggestedCallees: any)
+			if #newSuggestedCallees ~= #oldSuggestedCallees then
+				-- Shortcut for unmatched list lengths.
+				return false
+			else
+				-- Check to see if callees list was changed.
+				for i, callee in ipairs(newSuggestedCallees) do
+					if callee.userId ~= oldSuggestedCallees[i].userId then
+						return false
+					end
+				end
+				return true
+			end
+		end
+	) or {}
 
 	-- TODO(IRIS-864): Localization.
 	local noFriendsText = React.useMemo(function()
@@ -183,8 +235,17 @@ local function FriendListContainer(props: Props)
 		return tostring(friend.id)
 	end)
 
+	local suggestedCalleeIds = Cryo.List.map(suggestedCallees, function(suggestedCallee)
+		return tostring(suggestedCallee.userId)
+	end)
+
 	local namesFetch = UserProfiles.Hooks.useUserProfilesFetch({
 		userIds = friendIds,
+		query = UserProfiles.Queries.userProfilesCombinedNameAndUsernameByUserIds,
+	})
+
+	local suggestedCalleeNamesFetch = UserProfiles.Hooks.useUserProfilesFetch({
+		userIds = suggestedCalleeIds,
 		query = UserProfiles.Queries.userProfilesCombinedNameAndUsernameByUserIds,
 	})
 
@@ -192,55 +253,112 @@ local function FriendListContainer(props: Props)
 		setOverscrolling(false)
 	end, {})
 
-	local children: any = React.useMemo(function()
-		local entries: any = {}
-		entries["UIListLayout"] = React.createElement("UIListLayout", {
-			FillDirection = Enum.FillDirection.Vertical,
-			SortOrder = Enum.SortOrder.LayoutOrder,
-		})
+	local children: any = React.useMemo(
+		function()
+			local entries: any = {}
+			entries["UIListLayout"] = React.createElement("UIListLayout", {
+				FillDirection = Enum.FillDirection.Vertical,
+				SortOrder = Enum.SortOrder.LayoutOrder,
+			})
 
-		for i, friend in ipairs(friends) do
-			local combinedName = ""
-			local userName = ""
-			if namesFetch.data then
-				combinedName = UserProfiles.Selectors.getCombinedNameFromId(namesFetch.data, friend.id)
-				userName = UserProfiles.Selectors.getUsernameFromId(namesFetch.data, friend.id)
-				userName = UserProfiles.Formatters.formatUsername(userName)
+			if #suggestedCallees ~= 0 and trimmedSearchText == "" then
+				-- TODO(IRIS-864): Localization.
+				entries["SuggestedHeader"] = React.createElement(SectionHeader, {
+					name = "Suggested",
+					description = "Friends with devices and settings set for an optimal call experience.",
+					layoutOrder = #entries + 1,
+				})
+
+				for i, callee in ipairs(suggestedCallees) do
+					local combinedName = ""
+					local userName = ""
+					if suggestedCalleeNamesFetch.data then
+						combinedName =
+							UserProfiles.Selectors.getCombinedNameFromId(suggestedCalleeNamesFetch.data, callee.userId)
+						userName =
+							UserProfiles.Selectors.getUsernameFromId(suggestedCalleeNamesFetch.data, callee.userId)
+						userName = UserProfiles.Formatters.formatUsername(userName)
+					end
+
+					local index = #entries + 1
+
+					entries[index] = React.createElement(FriendListItem, {
+						userId = callee.id,
+						combinedName = combinedName,
+						userName = userName,
+						userPresenceType = callee.userPresenceType,
+						lastLocation = callee.lastLocation,
+						dismissCallback = props.dismissCallback,
+						layoutOrder = index,
+						showDivider = i ~= #suggestedCallees,
+					})
+				end
 			end
 
-			entries[i] = React.createElement(FriendListItem, {
-				userId = friend.id,
-				combinedName = combinedName,
-				userName = userName,
-				dismissCallback = props.dismissCallback,
-				layoutOrder = i,
-				showDivider = i ~= #friends,
-			})
-		end
-
-		if nextPageCursor ~= nil then
-			-- This renders an extra component like refresh button or a loading
-			-- indicator. We do not want either when there is no next page.
-			local index = #entries + 1
-			if status == RetrievalStatus.Failed then
-				entries[index] = noFriendsText
-			else
-				entries[index] = React.createElement("Frame", {
-					Size = UDim2.new(1, 0, 0, Constants.ITEM_HEIGHT),
-					BackgroundTransparency = 1,
-					LayoutOrder = index,
-				}, {
-					LoadingSpinner = React.createElement(LoadingSpinner, {
-						size = UDim2.fromOffset(48, 48),
-						position = UDim2.fromScale(0.5, 0.5),
-						anchorPoint = Vector2.new(0.5, 0.5),
-					}),
+			if #friends ~= 0 then
+				-- TODO(IRIS-864): Localization.
+				entries["FriendsHeader"] = React.createElement(SectionHeader, {
+					name = "Friends",
+					description = "Friends who may or may not have devices and settings for an optimal call experience.",
+					layoutOrder = #entries + 1,
 				})
 			end
-		end
 
-		return entries
-	end, dependencyArray(friends, nextPageCursor, noFriendsText, status, namesFetch.data))
+			for i, friend in ipairs(friends) do
+				local combinedName = ""
+				local userName = ""
+				if namesFetch.data then
+					combinedName = UserProfiles.Selectors.getCombinedNameFromId(namesFetch.data, friend.id)
+					userName = UserProfiles.Selectors.getUsernameFromId(namesFetch.data, friend.id)
+					userName = UserProfiles.Formatters.formatUsername(userName)
+				end
+
+				local index = #entries + 1
+
+				entries[index] = React.createElement(FriendListItem, {
+					userId = friend.id,
+					combinedName = combinedName,
+					userName = userName,
+					dismissCallback = props.dismissCallback,
+					layoutOrder = index,
+					showDivider = i ~= #friends,
+				})
+			end
+
+			if nextPageCursor ~= nil then
+				-- This renders an extra component like refresh button or a loading
+				-- indicator. We do not want either when there is no next page.
+				local index = #entries + 1
+				if status == RetrievalStatus.Failed then
+					entries[index] = noFriendsText
+				else
+					entries[index] = React.createElement("Frame", {
+						Size = UDim2.new(1, 0, 0, Constants.ITEM_HEIGHT),
+						BackgroundTransparency = 1,
+						LayoutOrder = index,
+					}, {
+						LoadingSpinner = React.createElement(LoadingSpinner, {
+							size = UDim2.fromOffset(48, 48),
+							position = UDim2.fromScale(0.5, 0.5),
+							anchorPoint = Vector2.new(0.5, 0.5),
+						}),
+					})
+				end
+			end
+
+			return entries
+		end,
+		dependencyArray(
+			friends,
+			nextPageCursor,
+			noFriendsText,
+			status,
+			namesFetch.data,
+			suggestedCallees,
+			suggestedCalleeNamesFetch.data,
+			trimmedSearchText
+		)
+	)
 
 	local onFetchNextPage = React.useCallback(function(f)
 		if
@@ -265,7 +383,8 @@ local function FriendListContainer(props: Props)
 		end
 	end, dependencyArray(children, onFetchNextPage))
 
-	return if #friends == 0 and status == RetrievalStatus.Fetching
+	return if (#friends == 0 and status == RetrievalStatus.Fetching)
+			or (#suggestedCallees == 0 and suggestedCalleesStatus == RetrievalStatus.Fetching)
 		then React.createElement("Frame", {
 			Size = UDim2.new(1, 0, 0, Constants.ITEM_HEIGHT),
 			BackgroundTransparency = 1,

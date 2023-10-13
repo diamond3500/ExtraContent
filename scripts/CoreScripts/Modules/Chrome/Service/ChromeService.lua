@@ -17,6 +17,8 @@ local Types = require(script.Parent.Types)
 
 local GetFFlagEnableUnibarSneakPeak = require(script.Parent.Parent.Flags.GetFFlagEnableUnibarSneakPeak)
 local GetFFlagEnableUnibarMaxDefaultOpen = require(script.Parent.Parent.Flags.GetFFlagEnableUnibarMaxDefaultOpen)
+local EnableInGameMenuChromeWithoutSeenClose =
+	require(script.Parent.Parent.Flags.GetFFlagEnableInGameMenuChromeWithoutSeenClose)
 local GetFFlagSelfViewMultiTouchFix = require(script.Parent.Parent.Flags.GetFFlagSelfViewMultiTouchFix)
 
 local NOTIFICATION_INDICATOR_DISPLAY_TIME_SEC = 1.5
@@ -208,7 +210,7 @@ function ChromeService.new(): ChromeService
 		service:updateScreenSize(screenSize, ViewportUtil.mobileDevice:get())
 	end, true)
 
-	if GetFFlagEnableUnibarMaxDefaultOpen() then
+	if GetFFlagEnableUnibarMaxDefaultOpen() and not EnableInGameMenuChromeWithoutSeenClose() then
 		service:storeChromeSeen()
 	end
 
@@ -237,7 +239,11 @@ function getInitialStatus(chromeSeenCount: number): ObservableMenuStatus
 			end
 		end
 
-		if GetFFlagEnableUnibarMaxDefaultOpen() and chromeSeenCount >= MAX_CHROME_SEEN_COUNT then
+		if
+			GetFFlagEnableUnibarMaxDefaultOpen()
+			and chromeSeenCount >= MAX_CHROME_SEEN_COUNT
+			and not EnableInGameMenuChromeWithoutSeenClose()
+		then
 			return utils.ObservableValue.new(ChromeService.MenuStatus.Closed)
 		end
 	end

@@ -27,7 +27,9 @@ return function()
 	local FriendListContainer = require(ContactList.Components.FriendList.FriendListContainer)
 
 	local dependencies = require(ContactList.dependencies)
+	local EnumPresenceType = dependencies.RoduxCall.Enums.PresenceType
 	local NetworkingFriends = dependencies.NetworkingFriends
+	local NetworkingCall = dependencies.NetworkingCall
 	local PresenceModel = dependencies.RoduxPresence.Models.Presence
 
 	beforeAll(function(c: any)
@@ -43,6 +45,23 @@ return function()
 				},
 				NextPage = nextPageCursor,
 				PreviousPage = nil,
+			}
+		end
+
+		c.mockGetSuggestedCallees = function()
+			return {
+				suggestedCallees = {
+					{
+						userId = "00000000",
+						userPresenceType = EnumPresenceType.Online,
+						lastLocation = "Roblox Connect",
+					},
+					{
+						userId = "11111111",
+						userPresenceType = EnumPresenceType.Offline,
+						lastLocation = "Iris (Staging)",
+					},
+				},
 			}
 		end
 
@@ -94,6 +113,9 @@ return function()
 					},
 				},
 			},
+			Call = {
+				suggestedCallees = c.mockGetSuggestedCallees(),
+			},
 		}, {
 			Rodux.thunkMiddleware,
 		})
@@ -102,6 +124,13 @@ return function()
 		NetworkingFriends.FindFriendsFromUserId.Mock.reply(function()
 			return {
 				responseBody = c.mockFindFriendsFromUserId(nil),
+			}
+		end)
+
+		NetworkingCall.GetSuggestedCallees.Mock.clear()
+		NetworkingCall.GetSuggestedCallees.Mock.reply(function()
+			return {
+				responseBody = c.mockGetSuggestedCallees(),
 			}
 		end)
 
@@ -125,8 +154,87 @@ return function()
 		local folder = Instance.new("Folder")
 		local instance = Roact.mount(element, folder)
 		local containerElement = folder:FindFirstChildOfClass("ScrollingFrame") :: ScrollingFrame
-		-- UIListLayout + 2 friend items
-		expect(#containerElement:GetChildren()).toBe(3)
+		-- 1 UIListLayout + 1 friend section header + 2 friend items + 1 suggested callees section header + 2 suggested callees
+		expect(#containerElement:GetChildren()).toBe(7)
+		Roact.unmount(instance)
+	end)
+
+	it("should still show friends if friends fetch succeeds but suggested callees fetch fails", function(c: any)
+		local store = Rodux.Store.new(Reducer, {
+			NetworkStatus = {
+				["https://friends.roblox.com/v1/users/12345678/friends"] = "Done",
+			},
+			Presence = {
+				byUserId = {
+					["00000000"] = PresenceModel.format(PresenceModel.mock()),
+					["11111111"] = PresenceModel.format(PresenceModel.mock()),
+				},
+			},
+			Users = {
+				byUserId = {
+					["00000000"] = {
+						id = "00000000",
+						username = "user name 0",
+						displayName = "display name 0",
+						hasVerifiedBadge = false,
+					},
+					["11111111"] = {
+						id = "11111111",
+						username = "user name 1",
+						displayName = "display name 1",
+						hasVerifiedBadge = false,
+					},
+				},
+			},
+			Friends = {
+				byUserId = {
+					["12345678"] = {
+						"00000000",
+						"11111111",
+					},
+				},
+			},
+			Call = {
+				suggestedCallees = {},
+			},
+		}, {
+			Rodux.thunkMiddleware,
+		})
+
+		NetworkingFriends.FindFriendsFromUserId.Mock.clear()
+		NetworkingFriends.FindFriendsFromUserId.Mock.reply(function()
+			return {
+				responseBody = c.mockFindFriendsFromUserId(nil),
+			}
+		end)
+
+		NetworkingCall.GetSuggestedCallees.Mock.clear()
+		NetworkingCall.GetSuggestedCallees.Mock.replyWithError(function()
+			return "error"
+		end)
+
+		local element = Roact.createElement(RoactRodux.StoreProvider, {
+			store = store,
+		}, {
+			StyleProvider = Roact.createElement(UIBlox.Core.Style.Provider, {}, {
+				ApolloProvider = Roact.createElement(ApolloProvider, {
+					client = c.mockApolloClient,
+				}, {
+					FriendListContainer = Roact.createElement(FriendListContainer, {
+						isSmallScreen = false,
+						dismissCallback = function() end,
+						scrollingEnabled = true,
+						searchText = "",
+					}),
+				}),
+			}),
+		})
+
+		local folder = Instance.new("Folder")
+		local instance = Roact.mount(element, folder)
+		local containerElement = folder:FindFirstChildOfClass("ScrollingFrame") :: ScrollingFrame
+		-- 1 UIListLayout + 1 friend section header + 2 friend items
+		expect(#containerElement:GetChildren()).toBe(4)
 		Roact.unmount(instance)
 	end)
 
@@ -217,7 +325,7 @@ return function()
 		end)
 	end)
 
-	it("should show error state if fetch fails", function(c: any)
+	it("should show error state if friends fetch fails", function(c: any)
 		local store = Rodux.Store.new(Reducer, {}, {
 			Rodux.thunkMiddleware,
 		})

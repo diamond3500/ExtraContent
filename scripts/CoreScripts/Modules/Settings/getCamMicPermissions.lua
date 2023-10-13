@@ -35,6 +35,7 @@ local FFlagAvatarChatCoreScriptSupport = require(CoreGui.RobloxGui.Modules.Flags
 local GetFFlagSelfieViewEnabled = require(CoreGui.RobloxGui.Modules.SelfieView.Flags.GetFFlagSelfieViewEnabled)
 local GetFFlagAvatarChatServiceEnabled = require(RobloxGui.Modules.Flags.GetFFlagAvatarChatServiceEnabled)
 local getFFlagDecoupleHasAndRequestPermissions = require(RobloxGui.Modules.Flags.getFFlagDecoupleHasAndRequestPermissions)
+local getFFlagPermissionsEarlyOutStallsQueue = require(RobloxGui.Modules.Flags.getFFlagPermissionsEarlyOutStallsQueue)
 local AvatarChatService : any = if GetFFlagAvatarChatServiceEnabled() then game:GetService("AvatarChatService") else nil
 
 type Table = { [any]: any }
@@ -86,6 +87,10 @@ local function requestPermissions(allowedSettings : AllowedSettings, callback, i
 		}
 
 		callback(response)
+		if getFFlagPermissionsEarlyOutStallsQueue() then
+			inProgress = false
+			invokeNextRequest()
+		end
 		return
 	end
 
@@ -239,6 +244,7 @@ local function getCamMicPermissions(callback, permissionsToRequest: Array<string
 		table.insert(requestPermissionsQueue, {
 			callback = callback,
 			permissionsToRequest = permissionsToRequest,
+			shouldNotRequestPerms = getFFlagDecoupleHasAndRequestPermissions() and shouldNotRequestPerms,
 		})
 
 		return
