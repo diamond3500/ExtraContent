@@ -1,3 +1,5 @@
 {
-    "robloxLsp.workspace.maxPreload": 8000
+    "robloxLsp.workspace.maxPreload": 8000,
+    "editor.suggest.snippetsPreventQuickSuggestions": false,
+    "aiXcoder.showTrayIcon": true
 }
