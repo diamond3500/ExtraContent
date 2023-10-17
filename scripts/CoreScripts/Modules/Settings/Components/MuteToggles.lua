@@ -32,6 +32,7 @@ local DropdownMenu = require(Modules.Settings.Components.DropdownMenu)
 local FFlagMuteNonFriendsEvent = require(RobloxGui.Modules.Flags.FFlagMuteNonFriendsEvent)
 local GetFFlagUseFriendsPropsInMuteToggles =
 	require(RobloxGui.Modules.Settings.Flags.GetFFlagUseFriendsPropsInMuteToggles)
+local GetFFlagRetryMutingNonFriends = require(RobloxGui.Modules.Settings.Flags.GetFFlagRetryMutingNonFriends)
 
 local MUTE_ICON_SIZE = 38
 local MUTE_TOGGLES_HEIGHT = 40
@@ -125,14 +126,7 @@ local function MuteToggles(props: Props)
 		VoiceChatServiceManager:MuteAll(false, Constants.VOICE_CONTEXT_TYPE.MUTE_TOGGLES)
 	end)
 
-	local muteNonFriends = React.useCallback(function()
-		local friendsList = if GetFFlagUseFriendsPropsInMuteToggles() then props.playersFriends else usersFriends
-		local nonFriends = {}
-		for userId, isFriend in pairs(friendsList) do
-			if not isFriend then
-				table.insert(nonFriends, userId)
-			end
-		end
+	local muteNonFriends = React.useCallback(function(nonFriends)
 		if not Cryo.isEmpty(nonFriends) then
 			VoiceChatServiceManager:ToggleMuteSome(
 				nonFriends,
@@ -146,14 +140,7 @@ local function MuteToggles(props: Props)
 		end
 	end)
 
-	local unmuteFriends = React.useCallback(function()
-		local friendsList = if GetFFlagUseFriendsPropsInMuteToggles() then props.playersFriends else usersFriends
-		local friends = {}
-		for userId, isFriend in pairs(friendsList) do
-			if isFriend then
-				table.insert(friends, userId)
-			end
-		end
+	local unmuteFriends = React.useCallback(function(friends)
 		if not Cryo.isEmpty(friends) then
 			VoiceChatServiceManager:ToggleMuteSome(
 				friends,
@@ -169,8 +156,21 @@ local function MuteToggles(props: Props)
 		if index == Options.Nobody then
 			muteNobody()
 		elseif index == Options.NonFriends and not (isLoadingFriends or loadingFriendsError) then
-			unmuteFriends()
-			muteNonFriends()
+			local friendsList = if GetFFlagUseFriendsPropsInMuteToggles() then props.playersFriends else usersFriends
+			local nonFriends = {}
+			local friends = {}
+			for userId, isFriend in pairs(friendsList) do
+				table.insert(if isFriend then friends else nonFriends, userId)
+			end
+			unmuteFriends(friends)
+			muteNonFriends(nonFriends)
+
+			if GetFFlagRetryMutingNonFriends() then
+				task.delay(0.25, function()
+					VoiceChatServiceManager:EnsureCorrectMuteState(nonFriends, true)
+					VoiceChatServiceManager:EnsureCorrectMuteState(friends, false)
+				end)
+			end
 		else
 			muteAllUsers()
 		end

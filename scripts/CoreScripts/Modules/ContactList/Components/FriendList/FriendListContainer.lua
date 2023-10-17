@@ -4,15 +4,20 @@ local CorePackages = game:GetService("CorePackages")
 local HttpService = game:GetService("HttpService")
 local UserInputService = game:GetService("UserInputService")
 
+local ApolloClientModule = require(CorePackages.Packages.ApolloClient)
 local Cryo = require(CorePackages.Packages.Cryo)
 local React = require(CorePackages.Packages.React)
 local Roact = require(CorePackages.Roact)
+
+local Promise = require(CorePackages.AppTempCommon.LuaApp.Promise)
 
 local ExternalEventConnection = require(CorePackages.Workspace.Packages.RoactUtils).ExternalEventConnection
 local RetrievalStatus = require(CorePackages.Workspace.Packages.Http).Enum.RetrievalStatus
 local UserProfiles = require(CorePackages.Workspace.Packages.UserProfiles)
 
 local RobloxGui = CoreGui:WaitForChild("RobloxGui")
+
+local useApolloClient = ApolloClientModule.useApolloClient
 
 local ContactList = RobloxGui.Modules.ContactList
 local dependencies = require(ContactList.dependencies)
@@ -24,7 +29,6 @@ local useDispatch = dependencies.Hooks.useDispatch
 local FindFriendsFromUserId = dependencies.NetworkingFriends.FindFriendsFromUserId
 local SearchFriendsByQuery = dependencies.NetworkingFriends.SearchFriendsByQuery
 local GetSuggestedCallees = dependencies.NetworkingCall.GetSuggestedCallees
-local RoduxCall = dependencies.RoduxCall
 
 local useStyle = UIBlox.Core.Style.useStyle
 local LoadingSpinner = UIBlox.App.Loading.LoadingSpinner
@@ -46,6 +50,7 @@ export type Props = {
 }
 
 local function FriendListContainer(props: Props)
+	local apolloClient = useApolloClient()
 	local dispatch = useDispatch()
 	local style = useStyle()
 	local theme = style.Theme
@@ -53,29 +58,20 @@ local function FriendListContainer(props: Props)
 	-- Using refs instead of state since state might not be updated in time.
 	-- These are set to loading and fetching to prepare for the initial fetch.
 	local isLoading = React.useRef(true)
-	local isLoadingSuggestedCallees = React.useRef(true)
 	local scrollingFrameRef = React.useRef(nil)
 	local initialPositionY = React.useRef(0)
 	local status, setStatus = React.useState(RetrievalStatus.Fetching)
-	local suggestedCalleesStatus, setSuggestedCalleesStatus = React.useState(RetrievalStatus.Fetching)
 	local overscrolling, setOverscrolling = React.useState(false)
 	local friends, setFriends = React.useState({})
 	local nextPageCursor, setNextPageCursor = React.useState(nil)
 	local currentGuid = React.useRef("")
+	-- Cache this because we just fetch once. Given the catch, this promise will
+	-- succeed. We can inspect the result to see if it is a true success.
+	local requestSuggestedCallees = React.useRef(dispatch(GetSuggestedCallees.API()):catch(function() end))
 
 	local trimmedSearchText = React.useMemo(function()
 		return string.gsub(props.searchText, "%s+", "")
 	end, { props.searchText })
-
-	local getSuggestedCallees = React.useCallback(function()
-		isLoadingSuggestedCallees.current = true
-		setSuggestedCalleesStatus(RetrievalStatus.Fetching)
-		dispatch(GetSuggestedCallees.API()):andThen(function()
-			setSuggestedCalleesStatus(RetrievalStatus.Done)
-		end, function()
-			setSuggestedCalleesStatus(RetrievalStatus.Failed)
-		end)
-	end, {})
 
 	-- Note: Careful about dependencies to this function or else we might have
 	-- an infinite render.
@@ -94,30 +90,68 @@ local function FriendListContainer(props: Props)
 					return
 				end
 
-				local request = if trimmedSearchText == ""
-					then FindFriendsFromUserId.API(
-						localUserId,
-						{ userSort = "CombinedName", cursor = cursor, limit = 20 }
-					)
-					else SearchFriendsByQuery.API(
-						localUserId,
-						{ userSort = "CombinedName", cursor = cursor, limit = 20, query = trimmedSearchText }
-					)
+				local requestFriends = dispatch(
+					if trimmedSearchText == ""
+						then FindFriendsFromUserId.API(
+							localUserId,
+							{ userSort = "CombinedName", cursor = cursor, limit = 20 }
+						)
+						else SearchFriendsByQuery.API(
+							localUserId,
+							{ userSort = "CombinedName", cursor = cursor, limit = 20, query = trimmedSearchText }
+						)
+				)
 
-				dispatch(request):andThen(function(result)
+				Promise.all({ requestFriends, requestSuggestedCallees.current }):andThen(function(result)
 					if currentGuid.current ~= guid then
 						return
 					end
 
-					-- TODO (joshli): Need to validate that this fetch is for
-					-- the relevant cursor.
-					for _, friend in ipairs(result.responseBody.PageItems) do
-						table.insert(currentFriends, friend)
+					local responseFriends = result[1]
+					local responseSuggestedCallees = result[2]
+
+					local updatedFriends = {}
+					for _, friend in ipairs(currentFriends) do
+						table.insert(updatedFriends, friend)
+					end
+					for _, friend in ipairs(responseFriends.responseBody.PageItems) do
+						table.insert(updatedFriends, friend)
 					end
 
-					setFriends(currentFriends)
-					setNextPageCursor(result.responseBody.NextCursor)
-					setStatus(RetrievalStatus.Done)
+					local userIds = Cryo.List.map(updatedFriends, function(friend)
+						return tostring(friend.id)
+					end)
+
+					if trimmedSearchText == "" and responseSuggestedCallees ~= nil then
+						-- We catch this error. So we just know if it
+						-- succeeds based on whether the response exists.
+						for _, suggestedCallee in ipairs(responseSuggestedCallees.responseBody.suggestedCallees) do
+							table.insert(userIds, tostring(suggestedCallee.userId))
+						end
+					end
+
+					apolloClient
+						:query({
+							query = UserProfiles.Queries.userProfilesCombinedNameAndUsernameByUserIds,
+							variables = {
+								userIds = userIds,
+							},
+						})
+						:andThen(function()
+							if currentGuid.current ~= guid then
+								return
+							end
+							-- Friend names fetched, update the list with this page.
+							setFriends(updatedFriends)
+							setNextPageCursor(responseFriends.responseBody.NextCursor)
+							setStatus(RetrievalStatus.Done)
+						end)
+						:catch(function(error)
+							if currentGuid.current ~= guid then
+								return
+							end
+							setStatus(RetrievalStatus.Failed)
+						end)
 				end, function()
 					if currentGuid.current ~= guid then
 						return
@@ -145,24 +179,10 @@ local function FriendListContainer(props: Props)
 	end, dependencyArray(getFriends))
 
 	React.useEffect(function()
-		getSuggestedCallees()
-
-		return function()
-			dispatch(RoduxCall.Actions.ClearSuggestedCallees())
-		end
-	end, { getSuggestedCallees })
-
-	React.useEffect(function()
 		if status ~= RetrievalStatus.Fetching then
 			isLoading.current = false
 		end
 	end, { status })
-
-	React.useEffect(function()
-		if suggestedCalleesStatus ~= RetrievalStatus.Fetching then
-			isLoadingSuggestedCallees.current = false
-		end
-	end, { suggestedCalleesStatus })
 
 	local selectSuggestedCallees = React.useCallback(function(state: any)
 		return state.Call.suggestedCallees.suggestedCallees
@@ -231,21 +251,15 @@ local function FriendListContainer(props: Props)
 		end
 	end, {})
 
-	local friendIds = Cryo.List.map(friends, function(friend)
-		return tostring(friend.id)
-	end)
-
-	local suggestedCalleeIds = Cryo.List.map(suggestedCallees, function(suggestedCallee)
-		return tostring(suggestedCallee.userId)
+	local namesUserIds = React.useMemo(function()
+		local users = Cryo.List.join(friends, suggestedCallees)
+		return Cryo.List.map(users, function(user)
+			return tostring(user.id or user.userId)
+		end)
 	end)
 
 	local namesFetch = UserProfiles.Hooks.useUserProfilesFetch({
-		userIds = friendIds,
-		query = UserProfiles.Queries.userProfilesCombinedNameAndUsernameByUserIds,
-	})
-
-	local suggestedCalleeNamesFetch = UserProfiles.Hooks.useUserProfilesFetch({
-		userIds = suggestedCalleeIds,
+		userIds = namesUserIds,
 		query = UserProfiles.Queries.userProfilesCombinedNameAndUsernameByUserIds,
 	})
 
@@ -272,18 +286,16 @@ local function FriendListContainer(props: Props)
 				for i, callee in ipairs(suggestedCallees) do
 					local combinedName = ""
 					local userName = ""
-					if suggestedCalleeNamesFetch.data then
-						combinedName =
-							UserProfiles.Selectors.getCombinedNameFromId(suggestedCalleeNamesFetch.data, callee.userId)
-						userName =
-							UserProfiles.Selectors.getUsernameFromId(suggestedCalleeNamesFetch.data, callee.userId)
+					if namesFetch.data then
+						combinedName = UserProfiles.Selectors.getCombinedNameFromId(namesFetch.data, callee.userId)
+						userName = UserProfiles.Selectors.getUsernameFromId(namesFetch.data, callee.userId)
 						userName = UserProfiles.Formatters.formatUsername(userName)
 					end
 
 					local index = #entries + 1
 
 					entries[index] = React.createElement(FriendListItem, {
-						userId = callee.id,
+						userId = callee.userId,
 						combinedName = combinedName,
 						userName = userName,
 						userPresenceType = callee.userPresenceType,
@@ -355,7 +367,6 @@ local function FriendListContainer(props: Props)
 			status,
 			namesFetch.data,
 			suggestedCallees,
-			suggestedCalleeNamesFetch.data,
 			trimmedSearchText
 		)
 	)
@@ -383,8 +394,7 @@ local function FriendListContainer(props: Props)
 		end
 	end, dependencyArray(children, onFetchNextPage))
 
-	return if (#friends == 0 and status == RetrievalStatus.Fetching)
-			or (#suggestedCallees == 0 and suggestedCalleesStatus == RetrievalStatus.Fetching)
+	return if #friends == 0 and status == RetrievalStatus.Fetching
 		then React.createElement("Frame", {
 			Size = UDim2.new(1, 0, 0, Constants.ITEM_HEIGHT),
 			BackgroundTransparency = 1,
@@ -397,7 +407,7 @@ local function FriendListContainer(props: Props)
 		})
 		elseif #friends == 0 then noFriendsText
 		else Roact.createFragment({
-			React.createElement("ScrollingFrame", {
+			FriendsScrollingFrame = React.createElement("ScrollingFrame", {
 				Size = UDim2.fromScale(1, 1),
 				AutomaticCanvasSize = Enum.AutomaticSize.Y,
 				BackgroundColor3 = theme.BackgroundDefault.Color,

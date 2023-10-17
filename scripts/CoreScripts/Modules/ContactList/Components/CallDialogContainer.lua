@@ -117,7 +117,7 @@ local function CallDialogContainer(passedProps: Props)
 				elseif params.errorType == ErrorType.CalleeIsInAnotherCall.rawValue() then
 					dispatch(
 						OpenOrUpdateDialog(
-							"Caller is busy",
+							"Friend is busy",
 							"{calleeCombinedName} is currently busy and can't receive your call right now. Please try again later.",
 							callerId,
 							calleeId

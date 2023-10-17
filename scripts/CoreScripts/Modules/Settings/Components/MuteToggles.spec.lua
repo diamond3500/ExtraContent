@@ -56,7 +56,7 @@ return function()
 	end)
 
 	it("should get the user's friends list and get players in experience when mounted/rendered", function()
-		game:SetFastFlagForTesting("UseFriendsPropsInMuteToggles", false)
+		game:SetFastFlagForTesting("UseFriendsPropsInMuteToggles2", false)
 		local mockGetFriendsAsync = jest.fn()
 		local mockGetPlayers = jest.fn()
 		local element = Roact.createElement(UIBlox.Core.Style.Provider, {}, {

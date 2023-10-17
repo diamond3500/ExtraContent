@@ -1,5 +1,5 @@
-game:DefineFastFlag("ShowMuteToggles6", false)
+game:DefineFastFlag("ShowMuteToggles7", false)
 
 return function()
-	return game:GetFastFlag("ShowMuteToggles6")
+	return game:GetFastFlag("ShowMuteToggles7")
 end

@@ -32,6 +32,7 @@ local ImageSetLabel = UIBlox.Core.ImageSet.Label
 local useStyle = UIBlox.Core.Style.useStyle
 
 local OpenOrUpdateCFM = require(ContactList.Actions.OpenOrUpdateCFM)
+local CanMakeCallWithModal = require(ContactList.Components.CanMakeCallWithModal)
 
 local rng = Random.new()
 
@@ -89,6 +90,12 @@ local function FriendListItem(props: Props)
 	local image = getStandardSizeAvatarHeadShotRbxthumb(tostring(props.userId))
 
 	local startCall = React.useCallback(function()
+		local canMakeCall, action = CanMakeCallWithModal()
+		if not canMakeCall then
+			dispatch(action)
+			return
+		end
+
 		SoundManager:PlaySound(Sounds.Select.Name, { Volume = 0.5, SoundGroup = SoundGroups.Iris })
 
 		coroutine.wrap(function()
@@ -108,8 +115,17 @@ local function FriendListItem(props: Props)
 		local text = "Offline" -- TODO(IRIS-864): Localization.
 		local textColorStyle = style.Theme.TextMuted
 
-		local userPresenceType = props.userPresenceType or (presence and presence.userPresenceType) or nil
-		local lastLocation = props.lastLocation or (presence and presence.lastLocation) or ""
+		local userPresenceType
+		local lastLocation
+		if presence then
+			userPresenceType = presence.userPresenceType
+			lastLocation = presence.lastLocation
+		else
+			userPresenceType = if props.userPresenceType
+				then EnumPresenceType.fromRawValue(props.userPresenceType)
+				else EnumPresenceType.Offline
+			lastLocation = props.lastLocation or ""
+		end
 
 		if userPresenceType == EnumPresenceType.Online then
 			icon = Images["component_assets/circle_16"]

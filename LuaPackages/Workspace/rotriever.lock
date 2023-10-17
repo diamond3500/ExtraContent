@@ -77,10 +77,13 @@ dependencies = [
 name = "AccountSelector"
 version = "0.1.0"
 dependencies = [
+    "Dash Dash 0.1.0",
     "JestConfigs JestConfigs 0.1.0",
     "JestGlobals JestGlobals3 0.1.0",
     "React React 0.1.0",
+    "Style Style 0.1.0",
     "UIBlox UIBlox 0.1.0",
+    "UserLib UserLib 0.1.0",
 ]
 
 [[package]]

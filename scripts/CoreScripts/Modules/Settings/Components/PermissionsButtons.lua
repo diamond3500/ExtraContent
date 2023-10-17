@@ -16,10 +16,13 @@ local VideoCaptureService = game:GetService("VideoCaptureService")
 local Roact = require(CorePackages.Roact)
 local UIBlox = require(CorePackages.UIBlox)
 local t = require(CorePackages.Packages.t)
+local PermissionsProtocol = require(CorePackages.Workspace.Packages.PermissionsProtocol).PermissionsProtocol.default
 
 local toggleSelfViewSignal = require(RobloxGui.Modules.SelfView.toggleSelfViewSignal)
 local selfViewVisibilityUpdatedSignal = require(RobloxGui.Modules.SelfView.selfViewVisibilityUpdatedSignal)
 local getCamMicPermissions = require(RobloxGui.Modules.Settings.getCamMicPermissions)
+local isCamEnabledForUserAndPlace = require(RobloxGui.Modules.Settings.isCamEnabledForUserAndPlace)
+local displayCameraDeniedToast = require(RobloxGui.Modules.InGameChat.BubbleChat.Helpers.displayCameraDeniedToast)
 local SelfViewAPI = require(RobloxGui.Modules.SelfView.publicApi)
 
 local ExternalEventConnection = UIBlox.Utility.ExternalEventConnection
@@ -39,6 +42,7 @@ local GetFFlagUpdateSelfieViewOnBan = require(RobloxGui.Modules.Flags.GetFFlagUp
 local GetFFlagShowMicConnectingIconAndToast = require(RobloxGui.Modules.Flags.GetFFlagShowMicConnectingIconAndToast)
 local FFlagACPermissionButtonFix = game:DefineFastFlag("ACPermissionButtonFix", false)
 local FFlagMuteNonFriendsEvent = require(RobloxGui.Modules.Flags.FFlagMuteNonFriendsEvent)
+local getFFlagDoNotPromptCameraPermissionsOnMount = require(RobloxGui.Modules.Flags.getFFlagDoNotPromptCameraPermissionsOnMount)
 
 local GetFFlagVoiceTextOverflowFix = require(RobloxGui.Modules.Flags.GetFFlagVoiceTextOverflowFix)
 local Analytics = require(RobloxGui.Modules.SelfView.Analytics).new()
@@ -186,6 +190,27 @@ function PermissionsButtons:init()
 		})
 	end
 
+	-- toggle video permissions and request device permissions if denied
+	self.onVideoButtonPressed = function()
+		if getFFlagDoNotPromptCameraPermissionsOnMount() and not self.state.hasCameraPermissions then
+			-- If the user has not granted permissions
+			local callback = function(response)
+				self:setState({
+					hasCameraPermissions = response.hasCameraPermissions,
+				})
+				if response.hasCameraPermissions then
+					self:toggleVideo()
+				else
+					displayCameraDeniedToast()
+				end
+			end
+			getCamMicPermissions(callback, { PermissionsProtocol.Permissions.CAMERA_ACCESS :: string })
+		else
+			-- If the user has granted camera deveice permissions
+			self:toggleVideo()
+		end
+	end
+
 	-- toggle self view visibility
 	self.toggleSelfView = function()
 		toggleSelfViewSignal:fire()
@@ -248,6 +273,34 @@ function PermissionsButtons:getPermissions()
 	getCamMicPermissions(callback)
 end
 
+--[[
+	Check if Roblox has permissions for mic access only.
+]]
+function PermissionsButtons:getMicPermission()
+	local callback = function(response)
+		self:setState({
+			hasMicPermissions = response.hasMicPermissions,
+		})
+	end
+	getCamMicPermissions(callback, { PermissionsProtocol.Permissions.MICROPHONE_ACCESS :: string })
+end
+
+--[[
+	Check if Roblox has permissions for camera access only without requesting.
+]]
+function PermissionsButtons:getCameraPermissionWithoutRequest()
+	local callback = function(response)
+		self:setState({
+			hasCameraPermissions = response.hasCameraPermissions,
+		})
+	end
+	getCamMicPermissions(callback, { PermissionsProtocol.Permissions.CAMERA_ACCESS :: string }, true)
+end
+
+function PermissionsButtons:getCameraButtonVisibleAtMount()
+	return isCamEnabledForUserAndPlace()
+end
+
 function PermissionsButtons:didUpdate(prevProps, prevState)
 	local coreGuiState = StarterGui:GetCoreGuiEnabled(Enum.CoreGuiType.SelfView)
 	if self.state.hasCameraPermissions ~= prevState.hasCameraPermissions or self.state.hasMicPermissions ~= prevState.hasMicPermissions then
@@ -258,10 +311,18 @@ function PermissionsButtons:didUpdate(prevProps, prevState)
 end
 
 function PermissionsButtons:didMount()
-	self:getPermissions()
+	if getFFlagDoNotPromptCameraPermissionsOnMount() then
+		self:getMicPermission()
+		self:getCameraPermissionWithoutRequest()
+	else
+		self:getPermissions()
+	end
 end
 
 function PermissionsButtons:isShowingPermissionButtons()
+	if getFFlagDoNotPromptCameraPermissionsOnMount() then
+		return self.state.hasMicPermissions or self.state.hasCameraPermissions or self.state.showSelfView or self:getCameraButtonVisibleAtMount()
+	end
 	return self.state.hasMicPermissions or self.state.hasCameraPermissions or self.state.showSelfView
 end
 
@@ -271,6 +332,11 @@ function PermissionsButtons:render()
 		shouldShowMicButtons = self.state.hasMicPermissions and not VoiceChatServiceManager:VoiceChatEnded()
 	end
 	local shouldShowCameraButtons = self.state.hasCameraPermissions
+	if getFFlagDoNotPromptCameraPermissionsOnMount() then
+		-- Show the camera button if the camera is enabled + eligible in user settings and camera is enabled in experience
+		shouldShowCameraButtons = self:getCameraButtonVisibleAtMount()
+	end
+
 	local showMuteAll = if GetFFlagInvertMuteAllPermissionButton() then not self.state.allPlayersMuted else self.state.allPlayersMuted
 	local isTopCloseButton = (not self.props.isPortrait
 		and not self.props.isTenFootInterface
@@ -345,7 +411,7 @@ function PermissionsButtons:render()
 			EnableVideoButton = shouldShowCameraButtons and Roact.createElement(PermissionButton, {
 				LayoutOrder = 3,
 				image = if self.state.cameraEnabled then VIDEO_IMAGE else VIDEO_OFF_IMAGE,
-				callback = self.toggleVideo,
+				callback = if getFFlagDoNotPromptCameraPermissionsOnMount() then self.onVideoButtonPressed else self.toggleVideo,
 				useNewMenuTheme = self.props.useNewMenuTheme,
 			}),
 			EnableSelfViewButton = self.state.showSelfView and Roact.createElement(PermissionButton, {

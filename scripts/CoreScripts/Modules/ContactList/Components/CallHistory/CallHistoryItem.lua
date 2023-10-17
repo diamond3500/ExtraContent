@@ -33,6 +33,7 @@ local CallState = require(ContactList.Enums.CallState)
 local rng = Random.new()
 
 local OpenOrUpdateCFM = require(ContactList.Actions.OpenOrUpdateCFM)
+local CanMakeCallWithModal = require(ContactList.Components.CanMakeCallWithModal)
 
 local PADDING_IN_BETWEEN = 12
 local PROFILE_SIZE = 68
@@ -175,6 +176,12 @@ local function CallHistoryItem(props: Props)
 	local tag = useSelector(selectTag)
 
 	local startCall = React.useCallback(function()
+		local canMakeCall, action = CanMakeCallWithModal()
+		if not canMakeCall then
+			dispatch(action)
+			return
+		end
+
 		SoundManager:PlaySound(Sounds.Select.Name, { Volume = 0.5, SoundGroup = SoundGroups.Iris })
 
 		coroutine.wrap(function()

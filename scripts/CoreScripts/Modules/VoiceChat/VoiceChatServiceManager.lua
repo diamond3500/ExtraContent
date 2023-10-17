@@ -1336,6 +1336,34 @@ function VoiceChatServiceManager:FireMuteNonFriendsEvent()
 	end
 end
 
+function VoiceChatServiceManager:EnsureCorrectMuteState(userIds: { number }, muteState: boolean)
+	local userIdSet: { [number]: boolean } = {}
+	for _, userId in userIds do
+		-- If the user does not have the correct isMutedLocally state, we need to override it so
+		-- the UI updates correctly
+		local participant = self.participants[tostring(userId)]
+		if participant and participant.isMutedLocally ~= muteState then
+			if GetFFlagVoiceUseAudioRoutingAPI() then
+				userIdSet[userId] = true
+				self.mutedPlayers[userId] = muteState
+			else
+				self.service:SubscribePause(userId, muteState)
+			end
+
+			participant.isMutedLocally = muteState
+			self.participantsUpdate:Fire(self.participants)
+		end
+	end
+
+	if GetFFlagVoiceUseAudioRoutingAPI() then
+		for device in self.audioDevices do
+			if device.Player and userIdSet[device.Player.UserId] then
+				device.Active = not muteState
+			end
+		end
+	end
+end
+
 function VoiceChatServiceManager:FireUserAgencySelectedEvent(muteState: boolean)
 	if GetFFlagShowMuteToggles() then
 		self.userAgencySelected:Fire(muteState)

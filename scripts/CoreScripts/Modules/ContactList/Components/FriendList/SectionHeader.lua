@@ -8,6 +8,7 @@ local ContactList = RobloxGui.Modules.ContactList
 local dependencies = require(ContactList.dependencies)
 
 local UIBlox = dependencies.UIBlox
+local Colors = UIBlox.App.Style.Colors
 local useStyle = UIBlox.Core.Style.useStyle
 local Interactable = UIBlox.Core.Control.Interactable
 local TooltipOrientation = UIBlox.App.Dialog.Enum.TooltipOrientation
@@ -79,9 +80,9 @@ local function SectionHeader(props: Props)
 			}, {
 				Label = React.createElement(ImageSetLabel, {
 					Size = UDim2.fromScale(1, 1),
-					Image = Images["icons/actions/info"],
 					BackgroundTransparency = 1,
-					ImageTransparency = 1,
+					Image = Images["icons/actions/info"],
+					ImageColor3 = Colors.White,
 				}),
 			})
 		end),

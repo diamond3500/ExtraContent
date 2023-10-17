@@ -63,6 +63,7 @@ local FFlagSelfViewChecks2 = game:DefineFastFlag("SelfViewChecks2", false)
 local FFlagSelfViewUseRealBoundingBox = game:DefineFastFlag("SelfViewUseRealBoundingBox", false)
 local FFlagSelfViewChecks3 = game:DefineFastFlag("SelfViewChecks3", false)
 local FFlagSelfViewAdaptToScreenOrientationChange = game:DefineFastFlag("SelfViewAdaptToScreenOrientationChange", false)
+local FFlagSelfViewImprovedUpdateCloneTriggering = game:DefineFastFlag("SelfViewImprovedUpdateCloneTriggering", false)
 
 local CorePackages = game:GetService("CorePackages")
 local CharacterUtility = require(CorePackages.Thumbnailing).CharacterUtility
@@ -268,7 +269,23 @@ local ALLOWLISTED_INSTANCE_TYPES = {
 	PackageLink = "PackageLink",
 }
 
-log:trace("Self View 08-31-2023__1!!")
+--we want to trigger UpdateClone which recreates the clone fresh as rarely as possible (performance optimization),
+--so for triggering dirty on DescendantAdded or DescendantRemoving we only trigger it for things which make a visual difference
+--as to avoid unnecessary refreshes (e.g. Sound objects etc getting added to player avatar should not cause recreating the clone)
+local TYPES_TRIGGERING_DIRTY_ON_ADDREMOVE = {
+	Accessory = "Accessory",
+	CharacterMesh = "CharacterMesh",
+	Decal = "Decal",
+	MeshPart = "MeshPart",
+	Pants = "Pants",
+	Part = "Part",
+	Shirt = "Shirt",
+	ShirtGraphic = "ShirtGraphic",
+	SpecialMesh = "SpecialMesh",
+	SurfaceAppearance = "SurfaceAppearance",
+}
+
+log:trace("Self View 10-13-2023__1!!")
 
 local observerInstances = {}
 local Observer = {
@@ -280,6 +297,7 @@ local Observer = {
 	Color = "Color",
 	CharacterAdded = "CharacterAdded",
 	CharacterRemoving = "CharacterRemoving",
+	HumanoidStateChanged = "HumanoidStateChanged",
 }
 
 function getRelativePosition(uiObject)
@@ -1226,7 +1244,7 @@ local onUpdateTrackerMode = function()
 	then
 		currentTrackerMode = Enum.TrackerMode.AudioVideo --"AV2C"
 	end
-	debugPrint(
+	log:trace(
 		"Self View: onUpdateTrackerMode(), currentTrackerMode: "
 			.. tostring(currentTrackerMode)
 			.. ",cachedMode:"
@@ -1902,6 +1920,25 @@ function updateCachedHeadColor(headRefParam)
 	end
 end
 
+--we add this so after custom switch to ragdoll behaviour and getting back up done by some devs the self view refreshes to show the avatar fine again
+function addHumanoidStateChangedObserver(humanoid)
+	if not humanoid then
+		return
+	end
+	if not observerInstances[Observer.HumanoidStateChanged] then
+		observerInstances[Observer.HumanoidStateChanged] = humanoid.StateChanged:Connect(function(_oldState, newState)
+			--debugPrint("1_oldState: " .. tostring(_oldState) .. ",newState: " .. tostring(newState))
+			--come back from ragdoll state:
+			if _oldState == Enum.HumanoidStateType.PlatformStanding and newState == Enum.HumanoidStateType.Running then
+				setCloneDirty(true)
+			end
+			if newState == Enum.HumanoidStateType.GettingUp then
+				setCloneDirty(true)
+			end
+		end)
+	end
+end
+
 local function characterAdded(character)
 	headRef = getHead(character)
 	updateCachedHeadColor(headRef)
@@ -1911,6 +1948,13 @@ local function characterAdded(character)
 	clearObserver(Observer.DescendantRemoving)
 	clearObserver(Observer.HeadSize)
 	clearObserver(Observer.Color)
+
+	if FFlagSelfViewImprovedUpdateCloneTriggering then
+		local humanoid = character:FindFirstChild("Humanoid")
+		if humanoid then
+			addHumanoidStateChangedObserver(humanoid)
+		end
+	end
 
 	-- listen for updates on the original character's structure
 	observerInstances[Observer.DescendantAdded] = character.DescendantAdded:Connect(function(descendant)
@@ -1932,7 +1976,25 @@ local function characterAdded(character)
 			end
 		end
 
-		setCloneDirty(true)
+		if FFlagSelfViewImprovedUpdateCloneTriggering then
+
+			if descendant.Name == "Humanoid" or descendant:IsA("Humanoid") then
+				local humanoid = descendant
+				addHumanoidStateChangedObserver(humanoid)
+			end
+
+			--we only want to refresh the avatar self view clone on descendant added if the descendant is actually visible
+			--this is to avoid unneccessary refreshes in case of a dev for example adding a Sound object to the avatar or some part which is for gameplay logic and turned transparent
+			if descendant:IsA("MeshPart") or descendant:IsA("Part") or descendant:IsA("Decal") then
+				if descendant.Transparency < 1 then
+					setCloneDirty(true)
+				end
+			elseif TYPES_TRIGGERING_DIRTY_ON_ADDREMOVE[descendant.ClassName] then
+				setCloneDirty(true)
+			end
+		else
+			setCloneDirty(true)
+		end
 	end)
 	observerInstances[Observer.DescendantRemoving] = character.DescendantRemoving:Connect(function(descendant)
 		--these checks are to avoid unnecessary additional refreshes
@@ -1943,8 +2005,21 @@ local function characterAdded(character)
 					return
 				end
 			end
+			if not FFlagSelfViewImprovedUpdateCloneTriggering then
+				setCloneDirty(true)
+			end
+		end
 
-			setCloneDirty(true)
+		if FFlagSelfViewImprovedUpdateCloneTriggering then
+			--we only want to refresh the avatar self view clone on descendant removed if the descendant was actually visible
+			--this is to avoid unneccessary refreshes
+			if descendant:IsA("MeshPart") or descendant:IsA("Part") or descendant:IsA("Decal") then
+				if descendant.Transparency < 1 then
+					setCloneDirty(true)
+				end
+			elseif TYPES_TRIGGERING_DIRTY_ON_ADDREMOVE[descendant.ClassName] then
+				setCloneDirty(true)
+			end
 		end
 	end)
 
@@ -1969,6 +2044,13 @@ end
 local function onCharacterAdded(character)
 	playerCharacterAddedConnection:Disconnect()
 	ReInit(Players.LocalPlayer)
+	if FFlagSelfViewImprovedUpdateCloneTriggering then
+		clearObserver(Observer.HumanoidStateChanged)
+		local humanoid = character:FindFirstChild("Humanoid")
+		if humanoid then
+			addHumanoidStateChangedObserver(humanoid)
+		end	
+	end
 end
 
 --we don't want Self View to get closed when just swapping avatars
@@ -2518,6 +2600,9 @@ function Initialize(player)
 	Players.PlayerAdded:Connect(playerAdded)
 	Players.PlayerRemoving:Connect(function(player)
 		if player == Players.LocalPlayer then
+			if FFlagSelfViewImprovedUpdateCloneTriggering then
+				clearObserver(Observer.HumanoidStateChanged)
+			end
 			clearObserver(Observer.CharacterAdded)
 			clearObserver(Observer.CharacterRemoving)
 			clearClone()
