@@ -44,6 +44,11 @@ local function CallBarContainer(passedProps: Props)
 	end, {})
 	local currentCallStatus = useSelector(selectCurrentCallStatus)
 
+	local selectActiveUtc = React.useCallback(function(state: any)
+		return if state.Call.currentCall ~= nil then state.Call.currentCall.activeUtc else 0
+	end)
+	local activeUtc = useSelector(selectActiveUtc)
+
 	local hideCallBarAndEndCall = React.useCallback(function()
 		pcall(function()
 			if callBarRef and callBarRef.current then
@@ -62,8 +67,6 @@ local function CallBarContainer(passedProps: Props)
 			end
 		end)
 	end, {})
-
-	local createdUtc, setCreatedUtc = React.useState(os.time())
 
 	React.useEffect(function()
 		-- We just listen for the transitions we care about here. However, it is
@@ -113,8 +116,6 @@ local function CallBarContainer(passedProps: Props)
 
 		props.callProtocol:getCallState():andThen(function(params)
 			dispatch(RoduxCall.Actions.UpdateCall(params))
-
-			setCreatedUtc(params.createdUtc)
 		end)
 
 		return function()
@@ -179,7 +180,7 @@ local function CallBarContainer(passedProps: Props)
 			CallBar = React.createElement(CallBar, {
 				size = CALL_BAR_SIZE,
 				callBarRef = callBarRef,
-				createdUtc = createdUtc,
+				activeUtc = activeUtc,
 			}),
 		})
 		else nil

@@ -35,7 +35,7 @@ export type Props = {
 	callProtocol: CallProtocol.CallProtocolModule | nil,
 	size: Vector2,
 	callBarRef: { current: GuiObject? } | nil,
-	createdUtc: number,
+	activeUtc: number,
 }
 
 local PROFILE_SIZE = 36
@@ -125,11 +125,11 @@ local function CallBar(passedProps: Props)
 
 	React.useEffect(function()
 		local callDurationTimerConnection = RunService.Heartbeat:Connect(function()
-			if not props.createdUtc then
+			if not props.activeUtc then
 				return
 			end
 
-			local duration = os.time() - (props.createdUtc / 1000)
+			local duration = os.time() - (props.activeUtc / 1000)
 			local durationString = formatDuration(duration)
 
 			setCurrentCallDuration(durationString)

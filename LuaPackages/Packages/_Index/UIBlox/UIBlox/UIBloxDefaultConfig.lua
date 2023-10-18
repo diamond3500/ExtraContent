@@ -23,6 +23,9 @@ return {
 	-- indicate whether fix for tooltip color styles is enabled
 	enableTooltipColorStylesFix = false,
 
+	-- Enable BackgroundContrast background for RateCount
+	enableRateCountBackgroundContrast = false,
+
 	-- if true, uses the new KeyLabelV2
 	useNewKeyLabel = false,
 
@@ -139,4 +142,7 @@ return {
 
 	-- Fix VerticalScrollView error on Event.SelectionChanged
 	fixVerticalScrollViewOnSelectionChanged = false,
+
+	-- Add gamepad support to LinkButton
+	enableLinkButtonGamepadSupport = false,
 }
