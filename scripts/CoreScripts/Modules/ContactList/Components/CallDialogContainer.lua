@@ -73,18 +73,16 @@ local function CallDialogContainer(passedProps: Props)
 	local callerCombinedName = ""
 	local calleeCombinedName = ""
 	local hasCallParticipantInfo = callerId ~= 0 and calleeId ~= 0
-	if hasCallParticipantInfo then
-		local namesFetch = UserProfiles.Hooks.useUserProfilesFetch({
-			userIds = { tostring(callerId), tostring(calleeId) },
-			query = UserProfiles.Queries.userProfilesCombinedNameByUserIds,
-		})
+	local namesFetch = UserProfiles.Hooks.useUserProfilesFetch({
+		userIds = if hasCallParticipantInfo then { tostring(callerId), tostring(calleeId) } else {},
+		query = UserProfiles.Queries.userProfilesCombinedNameByUserIds,
+	})
 
-		-- The name should be cached since it must have been loaded for the call to
-		-- be placed.
-		if namesFetch.data then
-			callerCombinedName = UserProfiles.Selectors.getCombinedNameFromId(namesFetch.data, tostring(callerId))
-			calleeCombinedName = UserProfiles.Selectors.getCombinedNameFromId(namesFetch.data, tostring(calleeId))
-		end
+	-- The name should be cached since it must have been loaded for the call to
+	-- be placed.
+	if hasCallParticipantInfo and namesFetch.data then
+		callerCombinedName = UserProfiles.Selectors.getCombinedNameFromId(namesFetch.data, tostring(callerId))
+		calleeCombinedName = UserProfiles.Selectors.getCombinedNameFromId(namesFetch.data, tostring(calleeId))
 	end
 
 	local formattedBodyText = React.useMemo(function()

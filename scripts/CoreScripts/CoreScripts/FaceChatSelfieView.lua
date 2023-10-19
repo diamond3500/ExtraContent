@@ -105,6 +105,11 @@ local GetFFlagAvatarChatServiceEnabled = require(RobloxGui.Modules.Flags.GetFFla
 local GetFFlagIrisGyroEnabled = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagIrisGyroEnabled
 local GetFFlagSelfViewPositionDragFixEnabled = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagSelfViewPositionDragFixEnabled
 local AvatarChatService = if GetFFlagAvatarChatServiceEnabled() then game:GetService("AvatarChatService") else nil
+local PermissionsProtocol = require(CorePackages.Workspace.Packages.PermissionsProtocol).PermissionsProtocol.default
+local getFFlagDoNotPromptCameraPermissionsOnMount = require(RobloxGui.Modules.Flags.getFFlagDoNotPromptCameraPermissionsOnMount)
+
+local isCamEnabledForUserAndPlace = require(RobloxGui.Modules.Settings.isCamEnabledForUserAndPlace)
+local displayCameraDeniedToast = require(RobloxGui.Modules.InGameChat.BubbleChat.Helpers.displayCameraDeniedToast)
 
 local UIBlox = require(CorePackages.UIBlox)
 local Images = UIBlox.App.ImageSet.Images
@@ -367,13 +372,18 @@ end
 
 function updateSelfViewButtonVisibility()
 	local numButtonsShowing = 0
-	if hasCameraPermissions then
-		numButtonsShowing += 1
+	if getFFlagDoNotPromptCameraPermissionsOnMount() then
+		if isCamEnabledForUserAndPlace() then
+			numButtonsShowing += 1
+		end
+	else
+		if hasCameraPermissions then
+			numButtonsShowing += 1
+		end
 	end
 	if getShouldShowMicButton() then
 		numButtonsShowing += 1
 	end
-
 	--frame should only be nil here when this gets called before Self View got initialized (which should only happen in early voice chat fail in studio)
 	--we catch that case to avoid output window spam
 	if frame ~= nil or not FFlagOnlyUpdateButtonsWhenInitialized then
@@ -388,7 +398,12 @@ function updateSelfViewButtonVisibility()
 		end
 		if camButton then
 			camButton.Size = UDim2.new(sizeXScale, -4, 1, -4)
-			camButton.Visible = hasCameraPermissions
+
+			local isCameraButtonVisible = hasCameraPermissions
+			if getFFlagDoNotPromptCameraPermissionsOnMount() then
+				isCameraButtonVisible = isCamEnabledForUserAndPlace()
+			end
+			camButton.Visible = isCameraButtonVisible
 		end
 
 	end
@@ -534,6 +549,29 @@ function getPermissions()
 	getCamMicPermissions(callback)
 end
 
+-- Check that the user's device has given Roblox mic permissions and request if not granted.
+function getMicPermission()
+	local callback = function(response)
+		hasMicPermissions = response.hasMicPermissions
+
+		if hasMicPermissions and not vCInitialized then
+			initVoiceChatServiceManager()
+			vCInitialized = true
+		end
+	end
+	getCamMicPermissions(callback, { PermissionsProtocol.Permissions.MICROPHONE_ACCESS :: string })
+end
+
+-- Check that the user's device has given Roblox camera permissions without requesting if not granted.
+function getCameraPermissionWithoutRequest()
+	local callback = function(response)
+		hasCameraPermissions = response.hasCameraPermissions
+	end
+
+	local shouldNotRequestPerms = true
+	getCamMicPermissions(callback, { PermissionsProtocol.Permissions.CAMERA_ACCESS :: string }, shouldNotRequestPerms)
+end
+
 local function removeChild(model, childName)
 	local child = model:FindFirstChild(childName)
 	if child then
@@ -636,7 +674,7 @@ local function inputBegan(frame, inputObj)
 			-- Reset AnchorPoint back to (0, 0) in the case that the frame's anchor point has been adjusted
 			frame.AnchorPoint = Vector2.new(0, 0)
 		end
-		
+
 		local inputType = inputObject.UserInputType
 
 		-- Multiple touches should not affect dragging the Self View. Only the original touch.
@@ -862,18 +900,50 @@ local function createViewport()
 	camButton.BackgroundTransparency = 1
 	camButton.LayoutOrder = 1
 	camButton.ZIndex = 3
-	camButton.Visible = hasCameraPermissions
+
+	local isCameraButtonVisible = hasCameraPermissions
+	if getFFlagDoNotPromptCameraPermissionsOnMount() then
+		isCameraButtonVisible = isCamEnabledForUserAndPlace()
+	end
+	camButton.Visible = isCameraButtonVisible
 	camButton.Activated:Connect(function()
 		debugPrint("Self View: camButton.Activated(), hasCameraPermissions:" .. tostring(hasCameraPermissions))
-		if hasCameraPermissions then
+		local toggleVideo = function()
 			if not FaceAnimatorService or not FaceAnimatorService:IsStarted() then
 				updateVideoButton(false)
 				return
 			end
 			FaceAnimatorService.VideoAnimationEnabled = not FaceAnimatorService.VideoAnimationEnabled
 			Analytics:setLastCtx("SelfView")
+		end
+
+		if getFFlagDoNotPromptCameraPermissionsOnMount() then
+			if hasCameraPermissions then
+				-- User has given camera device permissions
+				toggleVideo()
+			else
+				-- User has not given camera permissions so request them
+				local callback = function(response)
+					hasCameraPermissions = response.hasCameraPermissions
+
+					if response.hasCameraPermissions then
+						-- User authorized in the permission prompt
+						toggleVideo()
+					else
+						-- User denied in the permission prompt
+						displayCameraDeniedToast()
+						updateVideoButton(false)
+					end
+				end
+
+				getCamMicPermissions(callback, { PermissionsProtocol.Permissions.CAMERA_ACCESS :: string })
+			end
 		else
-			updateVideoButton(false)
+			if hasCameraPermissions then
+				toggleVideo()
+			else
+				updateVideoButton(false)
+			end
 		end
 	end)
 
@@ -2049,7 +2119,7 @@ local function onCharacterAdded(character)
 		local humanoid = character:FindFirstChild("Humanoid")
 		if humanoid then
 			addHumanoidStateChangedObserver(humanoid)
-		end	
+		end
 	end
 end
 
@@ -2592,7 +2662,13 @@ function Initialize(player)
 		triggerAnalyticsReportUserAccountSettings_deprecated(player.UserId)
 	end
 
-	getPermissions()
+	if getFFlagDoNotPromptCameraPermissionsOnMount() then
+		getMicPermission()
+		getCameraPermissionWithoutRequest()
+		updateSelfViewButtonVisibility()
+	else
+		getPermissions()
+	end
 	createViewport()
 
 	playerAdded(player)

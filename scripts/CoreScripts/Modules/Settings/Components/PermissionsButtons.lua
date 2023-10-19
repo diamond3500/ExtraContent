@@ -93,6 +93,12 @@ function PermissionsButtons:init()
 	local isUsingCamera = FaceAnimatorService and FaceAnimatorService:IsStarted() and FaceAnimatorService.VideoAnimationEnabled and VideoCaptureService.Active
 	local microphoneEnabled = if VoiceChatServiceManager.localMuted ~= nil and not VoiceChatServiceManager.localMuted then true else false
 
+	local showSelfView = FFlagAvatarChatCoreScriptSupport and StarterGui:GetCoreGuiEnabled(Enum.CoreGuiType.SelfView)
+		and (self.state.hasCameraPermissions or self.state.hasMicPermissions)
+	if getFFlagDoNotPromptCameraPermissionsOnMount() then
+		showSelfView = FFlagAvatarChatCoreScriptSupport and StarterGui:GetCoreGuiEnabled(Enum.CoreGuiType.SelfView)
+			and (isCamEnabledForUserAndPlace() or self.state.hasMicPermissions or self.state.hasCameraPermissions)
+	end
 	self:setState({
 		allPlayersMuted = false,
 		microphoneEnabled = microphoneEnabled,
@@ -100,7 +106,7 @@ function PermissionsButtons:init()
 		voiceServiceInitialized = false,
 		cameraEnabled = isUsingCamera,
 		selfViewOpen = self.props.selfViewOpen,
-		showSelfView = FFlagAvatarChatCoreScriptSupport and StarterGui:GetCoreGuiEnabled(Enum.CoreGuiType.SelfView) and (self.state.hasCameraPermissions or self.state.hasMicPermissions),
+		showSelfView = showSelfView,
 		hasCameraPermissions = false,
 		hasMicPermissions = false,
 	})
@@ -234,8 +240,14 @@ function PermissionsButtons:init()
 	self.onCoreGuiChanged = function()
 		local coreGuiState = StarterGui:GetCoreGuiEnabled(Enum.CoreGuiType.SelfView)
 		if self.state.showSelfView ~= coreGuiState then
+			local showSelfView = FFlagAvatarChatCoreScriptSupport and coreGuiState
+				and (self.state.hasCameraPermissions or self.state.hasMicPermissions)
+			if getFFlagDoNotPromptCameraPermissionsOnMount() then
+				showSelfView = FFlagAvatarChatCoreScriptSupport and StarterGui:GetCoreGuiEnabled(Enum.CoreGuiType.SelfView)
+					and (isCamEnabledForUserAndPlace() or self.state.hasMicPermissions or self.state.hasCameraPermissions)
+			end
 			self:setState({
-				showSelfView = FFlagAvatarChatCoreScriptSupport and coreGuiState and (self.state.hasCameraPermissions or self.state.hasMicPermissions),
+				showSelfView = showSelfView,
 			})
 		end
 	end
@@ -304,8 +316,14 @@ end
 function PermissionsButtons:didUpdate(prevProps, prevState)
 	local coreGuiState = StarterGui:GetCoreGuiEnabled(Enum.CoreGuiType.SelfView)
 	if self.state.hasCameraPermissions ~= prevState.hasCameraPermissions or self.state.hasMicPermissions ~= prevState.hasMicPermissions then
+		local showSelfView = FFlagAvatarChatCoreScriptSupport and coreGuiState
+			and (self.state.hasCameraPermissions or self.state.hasMicPermissions)
+		if getFFlagDoNotPromptCameraPermissionsOnMount() then
+			showSelfView = FFlagAvatarChatCoreScriptSupport and StarterGui:GetCoreGuiEnabled(Enum.CoreGuiType.SelfView) and
+				(isCamEnabledForUserAndPlace() or self.state.hasMicPermissions or self.state.hasCameraPermissions)
+		end
 		self:setState({
-			showSelfView = FFlagAvatarChatCoreScriptSupport and coreGuiState and (self.state.hasCameraPermissions or self.state.hasMicPermissions),
+			showSelfView = showSelfView,
 		})
 	end
 end

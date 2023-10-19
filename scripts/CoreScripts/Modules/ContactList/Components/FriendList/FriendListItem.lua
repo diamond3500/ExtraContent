@@ -9,8 +9,10 @@ local React = require(CorePackages.Packages.React)
 local Sounds = require(CorePackages.Workspace.Packages.SoundManager).Sounds
 local SoundGroups = require(CorePackages.Workspace.Packages.SoundManager).SoundGroups
 local SoundManager = require(CorePackages.Workspace.Packages.SoundManager).SoundManager
+local UserProfiles = require(CorePackages.Workspace.Packages.UserProfiles)
 local GetFFlagCorescriptsSoundManagerEnabled =
 	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagCorescriptsSoundManagerEnabled
+local GetFFlagSoundManagerRefactor = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagSoundManagerRefactor
 local ContactList = RobloxGui.Modules.ContactList
 local dependencies = require(ContactList.dependencies)
 local dependencyArray = dependencies.Hooks.dependencyArray
@@ -60,6 +62,12 @@ local function FriendListItem(props: Props)
 
 	local dispatch = useDispatch()
 
+	local friend = {
+		userId = props.userId,
+		userName = props.userName,
+		combinedName = props.combinedName,
+	}
+
 	React.useEffect(function()
 		if props.userPresenceType == nil then
 			dispatch(GetPresencesFromUserIds.API({ props.userId }))
@@ -96,7 +104,11 @@ local function FriendListItem(props: Props)
 			return
 		end
 
-		SoundManager:PlaySound(Sounds.Select.Name, { Volume = 0.5, SoundGroup = SoundGroups.Iris })
+		if GetFFlagSoundManagerRefactor() then
+			SoundManager:PlaySound(Sounds.Select.Name, { Volume = 0.5 }, SoundGroups.Iris)
+		else
+			SoundManager:PlaySound_old(Sounds.Select.Name, { Volume = 0.5, SoundGroup = SoundGroups.Iris })
+		end
 
 		coroutine.wrap(function()
 			local invokeIrisInviteRemoteEvent =
@@ -170,11 +182,18 @@ local function FriendListItem(props: Props)
 			and inputObject.UserInputType == Enum.UserInputType.MouseMovement
 			and GetFFlagCorescriptsSoundManagerEnabled()
 		then
-			SoundManager:PlaySound(Sounds.Hover.Name, {
-				Volume = 0.5 + rng:NextNumber(-0.25, 0.25),
-				PlaybackSpeed = 1 + rng:NextNumber(-0.5, 0.5),
-				SoundGroup = SoundGroups.Iris,
-			})
+			if GetFFlagSoundManagerRefactor() then
+				SoundManager:PlaySound(Sounds.Hover.Name, {
+					Volume = 0.5 + rng:NextNumber(-0.25, 0.25),
+					PlaybackSpeed = 1 + rng:NextNumber(-0.5, 0.5),
+				}, SoundGroups.Iris)
+			else
+				SoundManager:PlaySound_old(Sounds.Hover.Name, {
+					Volume = 0.5 + rng:NextNumber(-0.25, 0.25),
+					PlaybackSpeed = 1 + rng:NextNumber(-0.5, 0.5),
+					SoundGroup = SoundGroups.Iris,
+				})
+			end
 		end
 	end, {})
 
@@ -199,10 +218,10 @@ local function FriendListItem(props: Props)
 			Size = UDim2.fromOffset(PROFILE_SIZE, PROFILE_SIZE),
 			Image = image,
 			[React.Event.MouseButton2Up] = function()
-				dispatch(OpenOrUpdateCFM(props.userId, props.combinedName))
+				dispatch(OpenOrUpdateCFM(friend))
 			end,
 			[React.Event.TouchTap] = function()
-				dispatch(OpenOrUpdateCFM(props.userId, props.combinedName))
+				dispatch(OpenOrUpdateCFM(friend))
 			end,
 			AutoButtonColor = false,
 		}, {
@@ -259,7 +278,7 @@ local function FriendListItem(props: Props)
 					BorderSizePixel = 0,
 					Font = font.CaptionBody.Font,
 					LayoutOrder = 2,
-					Text = props.userName,
+					Text = UserProfiles.Formatters.formatUsername(props.userName),
 					TextColor3 = theme.TextDefault.Color,
 					TextSize = font.BaseSize * font.CaptionBody.RelativeSize,
 					TextTransparency = theme.TextDefault.Transparency,

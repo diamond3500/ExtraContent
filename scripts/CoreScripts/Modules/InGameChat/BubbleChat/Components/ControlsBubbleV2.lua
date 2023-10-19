@@ -119,9 +119,6 @@ function ControlsBubble:init()
 		if getFFlagDoNotPromptCameraPermissionsOnMount() and not self.props.hasCameraPermissions then
 			-- If the user has not granted permissions
 			local callback = function(response)
-				self:setState({
-					hasCameraPermissions = response.hasCameraPermissions,
-				})
 				if response.hasCameraPermissions then
 					self:toggleVideo()
 					self.props.setCameraPermissionStateFromControl(response.hasCameraPermissions)

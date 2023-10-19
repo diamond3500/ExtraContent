@@ -10,6 +10,7 @@ local SoundGroups = require(CorePackages.Workspace.Packages.SoundManager).SoundG
 local SoundManager = require(CorePackages.Workspace.Packages.SoundManager).SoundManager
 local GetFFlagCorescriptsSoundManagerEnabled =
 	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagCorescriptsSoundManagerEnabled
+local GetFFlagSoundManagerRefactor = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagSoundManagerRefactor
 local UserProfiles = require(CorePackages.Workspace.Packages.UserProfiles)
 
 local RobloxGui = CoreGui:WaitForChild("RobloxGui")
@@ -142,6 +143,7 @@ local function CallHistoryItem(props: Props)
 
 	local combinedName = ""
 	local userName = ""
+	local otherParticipant = nil
 	local namesFetch = UserProfiles.Hooks.useUserProfilesFetch({
 		userIds = { tostring(otherParticipantId) },
 		query = UserProfiles.Queries.userProfilesCombinedNameAndUsernameByUserIds,
@@ -150,6 +152,11 @@ local function CallHistoryItem(props: Props)
 	if namesFetch.data then
 		combinedName = UserProfiles.Selectors.getCombinedNameFromId(namesFetch.data, otherParticipantId)
 		userName = UserProfiles.Selectors.getUsernameFromId(namesFetch.data, otherParticipantId)
+		otherParticipant = {
+			userId = otherParticipantId,
+			userName = userName,
+			combinedName = combinedName,
+		}
 		userName = UserProfiles.Formatters.formatUsername(userName)
 	end
 
@@ -182,7 +189,11 @@ local function CallHistoryItem(props: Props)
 			return
 		end
 
-		SoundManager:PlaySound(Sounds.Select.Name, { Volume = 0.5, SoundGroup = SoundGroups.Iris })
+		if GetFFlagSoundManagerRefactor() then
+			SoundManager:PlaySound(Sounds.Select.Name, { Volume = 0.5 }, SoundGroups.Iris)
+		else
+			SoundManager:PlaySound_old(Sounds.Select.Name, { Volume = 0.5, SoundGroup = SoundGroups.Iris })
+		end
 
 		coroutine.wrap(function()
 			local invokeIrisInviteRemoteEvent =
@@ -199,11 +210,18 @@ local function CallHistoryItem(props: Props)
 			and inputObject.UserInputType == Enum.UserInputType.MouseMovement
 			and GetFFlagCorescriptsSoundManagerEnabled()
 		then
-			SoundManager:PlaySound(Sounds.Hover.Name, {
-				Volume = 0.5 + rng:NextNumber(-0.25, 0.25),
-				PlaybackSpeed = 1 + rng:NextNumber(-0.5, 0.5),
-				SoundGroup = SoundGroups.Iris,
-			})
+			if GetFFlagSoundManagerRefactor() then
+				SoundManager:PlaySound(Sounds.Hover.Name, {
+					Volume = 0.5 + rng:NextNumber(-0.25, 0.25),
+					PlaybackSpeed = 1 + rng:NextNumber(-0.5, 0.5),
+				}, SoundGroups.Iris)
+			else
+				SoundManager:PlaySound_old(Sounds.Hover.Name, {
+					Volume = 0.5 + rng:NextNumber(-0.25, 0.25),
+					PlaybackSpeed = 1 + rng:NextNumber(-0.5, 0.5),
+					SoundGroup = SoundGroups.Iris,
+				})
+			end
 		end
 	end, {})
 
@@ -232,10 +250,10 @@ local function CallHistoryItem(props: Props)
 			Size = UDim2.fromOffset(PROFILE_SIZE, PROFILE_SIZE),
 			Image = image,
 			[React.Event.MouseButton2Up] = function()
-				dispatch(OpenOrUpdateCFM(otherParticipantId, combinedName))
+				dispatch(OpenOrUpdateCFM(otherParticipant))
 			end,
 			[React.Event.TouchTap] = function()
-				dispatch(OpenOrUpdateCFM(otherParticipantId, combinedName))
+				dispatch(OpenOrUpdateCFM(otherParticipant))
 			end,
 			AutoButtonColor = false,
 		}, {

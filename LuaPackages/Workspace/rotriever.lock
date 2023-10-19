@@ -80,6 +80,7 @@ dependencies = [
     "Dash Dash 0.1.0",
     "JestConfigs JestConfigs 0.1.0",
     "JestGlobals JestGlobals3 0.1.0",
+    "Localization Localization 0.1.0",
     "React React 0.1.0",
     "Style Style 0.1.0",
     "UIBlox UIBlox 0.1.0",

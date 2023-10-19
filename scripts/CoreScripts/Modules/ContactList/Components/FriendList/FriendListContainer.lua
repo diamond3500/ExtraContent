@@ -286,10 +286,10 @@ local function FriendListContainer(props: Props)
 				for i, callee in ipairs(suggestedCallees) do
 					local combinedName = ""
 					local userName = ""
+
 					if namesFetch.data then
 						combinedName = UserProfiles.Selectors.getCombinedNameFromId(namesFetch.data, callee.userId)
 						userName = UserProfiles.Selectors.getUsernameFromId(namesFetch.data, callee.userId)
-						userName = UserProfiles.Formatters.formatUsername(userName)
 					end
 
 					local index = #entries + 1
@@ -322,7 +322,6 @@ local function FriendListContainer(props: Props)
 				if namesFetch.data then
 					combinedName = UserProfiles.Selectors.getCombinedNameFromId(namesFetch.data, friend.id)
 					userName = UserProfiles.Selectors.getUsernameFromId(namesFetch.data, friend.id)
-					userName = UserProfiles.Formatters.formatUsername(userName)
 				end
 
 				local index = #entries + 1

@@ -97,6 +97,12 @@ elseif FFlagAvatarChatCoreScriptSupport then
 	ExperienceChat.GlobalFlags.AvatarChatEnabled = true
 end
 
+local getFFlagDoNotPromptCameraPermissionsOnMount = require(RobloxGui.Modules.Flags.getFFlagDoNotPromptCameraPermissionsOnMount)
+if getFFlagDoNotPromptCameraPermissionsOnMount() then
+	local ExperienceChat = require(CorePackages.ExperienceChat)
+	ExperienceChat.GlobalFlags.DoNotPromptCameraPermissionsOnMount = true
+end
+
 local Screenshots = require(CorePackages.Workspace.Packages.Screenshots)
 local FFlagScreenshotsFeaturesEnabledForAll = Screenshots.Flags.FFlagScreenshotsFeaturesEnabledForAll
 local FFlagScreenshotSharingEnableExperiment = Screenshots.Flags.FFlagScreenshotSharingEnableExperiment
