@@ -72,6 +72,8 @@ local FFlagOverwriteIsMutedLocally = game:DefineFastFlag("OverwriteIsMutedLocall
 local FFlagVoiceMuteUnmuteAnalytics = game:DefineFastFlag("VoiceMuteUnmuteAnalytics", false)
 local FFlagHideVoiceUIUntilInputExists = game:DefineFastFlag("HideVoiceUIUntilInputExists", false)
 local FFlagFixMissingPermissionsAnalytics = game:DefineFastFlag("FixMissingPermissionsAnalytics", false)
+local FFlagUseAudioInstanceAdded = game:DefineFastFlag("UseAudioInstanceAdded", false)
+	and game:GetEngineFeature("AudioInstanceAddedApiEnabled")
 
 local Constants = require(CorePackages.AppTempCommon.VoiceChat.Constants)
 local VoiceConstants = require(RobloxGui.Modules.VoiceChat.Constants)
@@ -1157,9 +1159,15 @@ end
 function VoiceChatServiceManager:hookupAudioDeviceInputListener()
 	log:debug("Hooking up audio device listeners")
 	local localPlayer = PlayersService.LocalPlayer
-	game.DescendantAdded:Connect(function(inst)
-		self:onInstanceAdded(inst)
-	end)
+	if FFlagUseAudioInstanceAdded then
+		SoundService.AudioInstanceAdded:Connect(function(inst)
+			self:onInstanceAdded(inst)
+		end)
+	else
+		game.DescendantAdded:Connect(function(inst)
+			self:onInstanceAdded(inst)
+		end)
+	end
 
 	local localAudioDevice = localPlayer:FindFirstChildOfClass("AudioDeviceInput")
 	log:debug("Found local user audio device {}", localAudioDevice)

@@ -1,7 +1,6 @@
 --!strict
 local CoreGui = game:GetService("CoreGui")
 local CorePackages = game:GetService("CorePackages")
-local RobloxReplicatedStorage = game:GetService("RobloxReplicatedStorage")
 
 local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 
@@ -34,7 +33,8 @@ local ImageSetLabel = UIBlox.Core.ImageSet.Label
 local useStyle = UIBlox.Core.Style.useStyle
 
 local OpenOrUpdateCFM = require(ContactList.Actions.OpenOrUpdateCFM)
-local CanMakeCallWithModal = require(ContactList.Components.CanMakeCallWithModal)
+
+local useStartCallCallback = require(ContactList.Hooks.useStartCallCallback)
 
 local rng = Random.new()
 
@@ -97,27 +97,7 @@ local function FriendListItem(props: Props)
 
 	local image = getStandardSizeAvatarHeadShotRbxthumb(tostring(props.userId))
 
-	local startCall = React.useCallback(function()
-		local canMakeCall, action = CanMakeCallWithModal()
-		if not canMakeCall then
-			dispatch(action)
-			return
-		end
-
-		if GetFFlagSoundManagerRefactor() then
-			SoundManager:PlaySound(Sounds.Select.Name, { Volume = 0.5 }, SoundGroups.Iris)
-		else
-			SoundManager:PlaySound_old(Sounds.Select.Name, { Volume = 0.5, SoundGroup = SoundGroups.Iris })
-		end
-
-		coroutine.wrap(function()
-			local invokeIrisInviteRemoteEvent =
-				RobloxReplicatedStorage:WaitForChild("ContactListInvokeIrisInvite", math.huge) :: RemoteEvent
-			invokeIrisInviteRemoteEvent:FireServer(tag, tonumber(props.userId), props.combinedName)
-		end)()
-
-		props.dismissCallback()
-	end, dependencyArray(props.combinedName, props.dismissCallback, props.userId))
+	local startCall = useStartCallCallback(tag, props.userId, props.combinedName, props.dismissCallback)
 
 	local playerContext = React.useMemo(function()
 		local icon = Images["component_assets/circle_26_stroke_3"]

@@ -52,12 +52,13 @@ local FFlagDebugAllowControlButtonsNoVoiceChat = game:DefineFastFlag("DebugAllow
 local FFlagVRMoveVoiceIndicatorToBottomBar = require(RobloxGui.Modules.Flags.FFlagVRMoveVoiceIndicatorToBottomBar)
 
 local IXPServiceWrapper = require(RobloxGui.Modules.Common.IXPServiceWrapper)
-local FFlagEasierUnmuting = game:DefineFastFlag("EasierUnmuting2", false)
+local FFlagEasierUnmuting = game:DefineFastFlag("EasierUnmuting3", false)
 local FFlagEasierUnmutingBasedOnCamera = game:DefineFastFlag("EasierUnmutingBasedOnCamera", false)
 local FFlagEasierUnmutingHideIfMuted = game:DefineFastFlag("EasierUnmutingHideIfMuted", false)
 local FIntEasierUnmutingDisplayDistance = game:DefineFastInt("EasierUnmutingDisplayDistance", 20)
 local FStringEasierUnmutingIXPLayerName = game:DefineFastString("EasierUnmutingIXPLayerName", "Voice.UserAgency")
 local FStringEasierUnmutingIXPLayerValue = game:DefineFastString("EasierUnmutingIXPLayerValue", "VoiceUserAgencyEnabled")
+local FFlagEasierUnmutingFixNonexistentCharacter = game:DefineFastFlag("EasierUnmutingFixNonexistentCharacter", false)
 local getFFlagDoNotPromptCameraPermissionsOnMount = require(RobloxGui.Modules.Flags.getFFlagDoNotPromptCameraPermissionsOnMount)
 
 local BubbleChatBillboard = Roact.PureComponent:extend("BubbleChatBillboard")
@@ -90,18 +91,41 @@ function getEasierUnmutingDistance(adorneePosition): number | nil
 		return nil
 	end
 
-	local humanoidRootPart = Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-	local cameraPosition = workspace.CurrentCamera and workspace.CurrentCamera.CFrame.Position
+	if FFlagEasierUnmutingFixNonexistentCharacter then
+		local humanoidRootPart = Players.LocalPlayer
+			and Players.LocalPlayer.Character
+			and Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+		
+		local humanoidRootPartPosition = humanoidRootPart
+			and humanoidRootPart.CFrame
+			and humanoidRootPart.CFrame.Position
 
-	if FFlagEasierUnmutingBasedOnCamera or not humanoidRootPart then
-		if not cameraPosition then
-			return nil
+		local cameraPosition = workspace.CurrentCamera
+			and workspace.CurrentCamera.CFrame.Position
+
+		if FFlagEasierUnmutingBasedOnCamera or not humanoidRootPartPosition then
+			if not cameraPosition then
+				return nil
+			end
+
+			return (adorneePosition - cameraPosition).Magnitude
 		end
 
-		return (adorneePosition - cameraPosition).Magnitude
+		return (adorneePosition - humanoidRootPartPosition).Magnitude
+	else
+		local humanoidRootPart = Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+		local cameraPosition = workspace.CurrentCamera and workspace.CurrentCamera.CFrame.Position
+	
+		if FFlagEasierUnmutingBasedOnCamera or not humanoidRootPart then
+			if not cameraPosition then
+				return nil
+			end
+	
+			return (adorneePosition - cameraPosition).Magnitude
+		end
+	
+		return (adorneePosition - humanoidRootPart.CFrame.Position).Magnitude
 	end
-
-	return (adorneePosition - humanoidRootPart.CFrame.Position).Magnitude
 end
 
 function BubbleChatBillboard:init()

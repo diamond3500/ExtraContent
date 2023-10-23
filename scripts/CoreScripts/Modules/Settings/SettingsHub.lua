@@ -82,8 +82,6 @@ local GetFFlagShareGamePageNullCheckEnabled = require(RobloxGui.Modules.Settings
 local FFlagAvatarChatCoreScriptSupport = require(RobloxGui.Modules.Flags.FFlagAvatarChatCoreScriptSupport)
 local GetFFlagVoiceRecordingIndicatorsEnabled = require(RobloxGui.Modules.Flags.GetFFlagVoiceRecordingIndicatorsEnabled)
 local GetFFlagEnableTeleportBackButton = require(RobloxGui.Modules.Flags.GetFFlagEnableTeleportBackButton)
-local GetFFlagVoiceChatToggleMuteAnalytics = require(RobloxGui.Modules.Settings.Flags.GetFFlagVoiceChatToggleMuteAnalytics)
-local GetFFlagEnableLeaveHomeResumeAnalytics = require(RobloxGui.Modules.Flags.GetFFlagEnableLeaveHomeResumeAnalytics)
 local GetFFlagEnableAccessibilitySettingsEffectsInCoreScripts = require(RobloxGui.Modules.Flags.GetFFlagEnableAccessibilitySettingsEffectsInCoreScripts)
 local ChromeEnabled = require(RobloxGui.Modules.Chrome.Enabled)()
 local FFlagLuaEnableGameInviteModalSettingsHub = game:DefineFastFlag("LuaEnableGameInviteModalSettingsHub", false)
@@ -284,10 +282,7 @@ local function CreateSettingsHub()
 	this.OpenStateChangedCount = 0
 	this.BottomButtonFrame = nil
 
-	local voiceAnalytics
-	if GetFFlagVoiceChatToggleMuteAnalytics() then
-		voiceAnalytics = VoiceAnalytics.new(AnalyticsService, "SettingsHub")
-	end
+	local voiceAnalytics = VoiceAnalytics.new(AnalyticsService, "SettingsHub")
 
 	if GetFFlagVoiceRecordingIndicatorsEnabled() then
 		this.isMuted = nil
@@ -1747,14 +1742,12 @@ local function CreateSettingsHub()
 
 		local resumeFunc = function()
 			setVisibilityInternal(false)
-			if GetFFlagEnableLeaveHomeResumeAnalytics() then
-				AnalyticsService:SetRBXEventStream(
-					Constants.AnalyticsTargetName,
-					Constants.AnalyticsResumeGameName,
-					Constants.AnalyticsMenuActionName,
-					{ source = if Theme.UIBloxThemeEnabled then Constants.AnalyticsResumeShieldSource else Constants.AnalyticsResumeButtonSource }
-				)
-			end
+			AnalyticsService:SetRBXEventStream(
+				Constants.AnalyticsTargetName,
+				Constants.AnalyticsResumeGameName,
+				Constants.AnalyticsMenuActionName,
+				{ source = if Theme.UIBloxThemeEnabled then Constants.AnalyticsResumeShieldSource else Constants.AnalyticsResumeButtonSource }
+			)
 		end
 
 		if Theme.UIBloxThemeEnabled then

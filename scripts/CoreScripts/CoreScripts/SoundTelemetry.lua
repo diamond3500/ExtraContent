@@ -289,13 +289,15 @@ if shouldHookupSoundEvents then
 		end
 	end
 
-	SoundService.AudioInstanceAdded:Connect(function(instance)		
-		local shouldTrack = instance:IsA("Sound") -- TODO: Add support for AudioListener here when we're ready
+	if game:GetEngineFeature("AudioInstanceAddedApiEnabled") then
+		SoundService.AudioInstanceAdded:Connect(function(instance)		
+			local shouldTrack = instance:IsA("Sound") -- TODO: Add support for AudioListener here when we're ready
 
-		if shouldTrack and not trackedSounds[instance :: Sound] then
-			hookupSoundEvents(instance :: Sound)
-		end
-	end)
+			if shouldTrack and not trackedSounds[instance :: Sound] then
+				hookupSoundEvents(instance :: Sound)
+			end
+		end)
+	end
 end
 
 if GetFFlagEnableSoundSessionTelemetry() then

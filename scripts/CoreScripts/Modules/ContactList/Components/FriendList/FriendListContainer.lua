@@ -38,6 +38,8 @@ local SectionHeader = require(ContactList.Components.FriendList.SectionHeader)
 local NoItemView = require(ContactList.Components.common.NoItemView)
 local Constants = require(ContactList.Components.common.Constants)
 
+local BlockingUtility = require(RobloxGui.Modules.BlockingUtility)
+
 local Players = game:GetService("Players")
 local localPlayer = Players.LocalPlayer :: Player
 local localUserId: number = localPlayer and localPlayer.UserId or 0
@@ -72,6 +74,10 @@ local function FriendListContainer(props: Props)
 	local trimmedSearchText = React.useMemo(function()
 		return string.gsub(props.searchText, "%s+", "")
 	end, { props.searchText })
+
+	local lastRemovedFriend = useSelector(function(state)
+		return state.LastRemovedFriend.lastRemovedFriendId
+	end)
 
 	-- Note: Careful about dependencies to this function or else we might have
 	-- an infinite render.
@@ -166,7 +172,7 @@ local function FriendListContainer(props: Props)
 				delay(secondTimeout, request)
 			end
 		end
-	end, dependencyArray(trimmedSearchText))
+	end, dependencyArray(trimmedSearchText, lastRemovedFriend))
 
 	React.useEffect(function()
 		getFriends({}, "")
@@ -238,7 +244,6 @@ local function FriendListContainer(props: Props)
 
 	local touchMoved = React.useCallback(function(touch: InputObject)
 		local delta = touch.Position.Y - initialPositionY.current :: number
-
 		if
 			delta > Constants.TOUCH_SLOP
 			and scrollingFrameRef.current
@@ -277,13 +282,25 @@ local function FriendListContainer(props: Props)
 
 			if #suggestedCallees ~= 0 and trimmedSearchText == "" then
 				-- TODO(IRIS-864): Localization.
-				entries["SuggestedHeader"] = React.createElement(SectionHeader, {
+				--[[
+					Only incrementing numbers are counted when measuring the size of the entries table with #entries.
+					String keys like "suggestedHeader" do not contribute to the #entries count.
+				]]
+				--
+				entries[#entries + 1] = React.createElement(SectionHeader, {
 					name = "Suggested",
 					description = "Friends with devices and settings set for an optimal call experience.",
 					layoutOrder = #entries + 1,
 				})
 
+				local filteredSuggestedCallees = {}
 				for i, callee in ipairs(suggestedCallees) do
+					if not BlockingUtility:IsPlayerBlockedByUserId(callee.userId) then
+						table.insert(filteredSuggestedCallees, callee)
+					end
+				end
+
+				for i, callee in ipairs(filteredSuggestedCallees) do
 					local combinedName = ""
 					local userName = ""
 
@@ -292,31 +309,37 @@ local function FriendListContainer(props: Props)
 						userName = UserProfiles.Selectors.getUsernameFromId(namesFetch.data, callee.userId)
 					end
 
-					local index = #entries + 1
-
-					entries[index] = React.createElement(FriendListItem, {
+					entries[#entries + 1] = React.createElement(FriendListItem, {
 						userId = callee.userId,
 						combinedName = combinedName,
 						userName = userName,
 						userPresenceType = callee.userPresenceType,
 						lastLocation = callee.lastLocation,
 						dismissCallback = props.dismissCallback,
-						layoutOrder = index,
-						showDivider = i ~= #suggestedCallees,
+						layoutOrder = #entries + 1,
+						showDivider = i ~= #filteredSuggestedCallees,
 					})
+					-- end
 				end
 			end
 
 			if #friends ~= 0 then
 				-- TODO(IRIS-864): Localization.
-				entries["FriendsHeader"] = React.createElement(SectionHeader, {
+				entries[#entries + 1] = React.createElement(SectionHeader, {
 					name = "Friends",
 					description = "Friends who may or may not have devices and settings for an optimal call experience.",
 					layoutOrder = #entries + 1,
 				})
 			end
 
+			local filteredFriends = {}
 			for i, friend in ipairs(friends) do
+				if not BlockingUtility:IsPlayerBlockedByUserId(friend.id) then
+					table.insert(filteredFriends, friend)
+				end
+			end
+
+			for i, friend in ipairs(filteredFriends) do
 				local combinedName = ""
 				local userName = ""
 				if namesFetch.data then
@@ -324,16 +347,15 @@ local function FriendListContainer(props: Props)
 					userName = UserProfiles.Selectors.getUsernameFromId(namesFetch.data, friend.id)
 				end
 
-				local index = #entries + 1
-
-				entries[index] = React.createElement(FriendListItem, {
+				entries[#entries + 1] = React.createElement(FriendListItem, {
 					userId = friend.id,
 					combinedName = combinedName,
 					userName = userName,
 					dismissCallback = props.dismissCallback,
-					layoutOrder = index,
-					showDivider = i ~= #friends,
+					layoutOrder = #entries + 1,
+					showDivider = i ~= #filteredFriends,
 				})
+				-- end
 			end
 
 			if nextPageCursor ~= nil then

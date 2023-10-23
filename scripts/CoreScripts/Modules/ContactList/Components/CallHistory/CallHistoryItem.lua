@@ -2,7 +2,8 @@
 local CoreGui = game:GetService("CoreGui")
 local CorePackages = game:GetService("CorePackages")
 local LocalizationService = game:GetService("LocalizationService")
-local RobloxReplicatedStorage = game:GetService("RobloxReplicatedStorage")
+
+local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 
 local React = require(CorePackages.Packages.React)
 local Sounds = require(CorePackages.Workspace.Packages.SoundManager).Sounds
@@ -13,15 +14,12 @@ local GetFFlagCorescriptsSoundManagerEnabled =
 local GetFFlagSoundManagerRefactor = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagSoundManagerRefactor
 local UserProfiles = require(CorePackages.Workspace.Packages.UserProfiles)
 
-local RobloxGui = CoreGui:WaitForChild("RobloxGui")
-
 local ContactList = RobloxGui.Modules.ContactList
 local dependencies = require(ContactList.dependencies)
 local useDispatch = dependencies.Hooks.useDispatch
 local UIBlox = dependencies.UIBlox
 local getStandardSizeAvatarHeadShotRbxthumb = dependencies.getStandardSizeAvatarHeadShotRbxthumb
 
-local dependencyArray = dependencies.Hooks.dependencyArray
 local useSelector = dependencies.Hooks.useSelector
 
 local ControlState = UIBlox.Core.Control.Enum.ControlState
@@ -34,7 +32,8 @@ local CallState = require(ContactList.Enums.CallState)
 local rng = Random.new()
 
 local OpenOrUpdateCFM = require(ContactList.Actions.OpenOrUpdateCFM)
-local CanMakeCallWithModal = require(ContactList.Components.CanMakeCallWithModal)
+
+local useStartCallCallback = require(ContactList.Hooks.useStartCallCallback)
 
 local PADDING_IN_BETWEEN = 12
 local PROFILE_SIZE = 68
@@ -182,27 +181,7 @@ local function CallHistoryItem(props: Props)
 	end, {})
 	local tag = useSelector(selectTag)
 
-	local startCall = React.useCallback(function()
-		local canMakeCall, action = CanMakeCallWithModal()
-		if not canMakeCall then
-			dispatch(action)
-			return
-		end
-
-		if GetFFlagSoundManagerRefactor() then
-			SoundManager:PlaySound(Sounds.Select.Name, { Volume = 0.5 }, SoundGroups.Iris)
-		else
-			SoundManager:PlaySound_old(Sounds.Select.Name, { Volume = 0.5, SoundGroup = SoundGroups.Iris })
-		end
-
-		coroutine.wrap(function()
-			local invokeIrisInviteRemoteEvent =
-				RobloxReplicatedStorage:WaitForChild("ContactListInvokeIrisInvite", math.huge) :: RemoteEvent
-			invokeIrisInviteRemoteEvent:FireServer(tag, tonumber(otherParticipantId), combinedName)
-		end)()
-
-		props.dismissCallback()
-	end, dependencyArray(otherParticipantId, props.dismissCallback))
+	local startCall = useStartCallCallback(tag, otherParticipantId, combinedName, props.dismissCallback)
 
 	local onHovered = React.useCallback(function(_: any, inputObject: InputObject?)
 		if

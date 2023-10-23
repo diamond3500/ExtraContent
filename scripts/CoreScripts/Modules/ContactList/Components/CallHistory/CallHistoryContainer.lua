@@ -25,6 +25,7 @@ local RoduxCall = dependencies.RoduxCall
 local dependencyArray = dependencies.Hooks.dependencyArray
 local useDispatch = dependencies.Hooks.useDispatch
 local UIBlox = dependencies.UIBlox
+local useSelector = dependencies.Hooks.useSelector
 
 local useStyle = UIBlox.Core.Style.useStyle
 local LoadingSpinner = UIBlox.App.Loading.LoadingSpinner
@@ -32,6 +33,8 @@ local LoadingSpinner = UIBlox.App.Loading.LoadingSpinner
 local CallHistoryItem = require(ContactList.Components.CallHistory.CallHistoryItem)
 local NoItemView = require(ContactList.Components.common.NoItemView)
 local Constants = require(ContactList.Components.common.Constants)
+
+local BlockingUtility = require(RobloxGui.Modules.BlockingUtility)
 
 local Players = game:GetService("Players")
 local localPlayer = Players.LocalPlayer
@@ -58,6 +61,10 @@ local function CallHistoryContainer(props: Props)
 	local overscrolling, setOverscrolling = React.useState(false)
 	local callRecords, setCallRecords = React.useState({})
 	local nextPageCursor, setNextPageCursor = React.useState("")
+
+	local lastRemovedFriend = useSelector(function(state)
+		return state.LastRemovedFriend.lastRemovedFriendId
+	end)
 
 	local getCallRecords = React.useCallback(function(currentRecords, cursor)
 		isLoading.current = true
@@ -99,7 +106,7 @@ local function CallHistoryContainer(props: Props)
 				setStatus(RetrievalStatus.Failed)
 			end
 		)
-	end, {})
+	end, { lastRemovedFriend })
 
 	React.useEffect(function()
 		getCallRecords({}, "")
@@ -173,11 +180,24 @@ local function CallHistoryContainer(props: Props)
 			SortOrder = Enum.SortOrder.LayoutOrder,
 		})
 
+		local filteredCallRecords = {}
 		for i, callRecord in ipairs(callRecords) do
+			-- Get the participant that is not the local user
+			local otherParticipantId = callRecord.participants[1].userId
+			if otherParticipantId == localUserId then
+				otherParticipantId = callRecord.participants[2].userId
+			end
+
+			if not BlockingUtility:IsPlayerBlockedByUserId(otherParticipantId) then
+				table.insert(filteredCallRecords, callRecord)
+			end
+		end
+
+		for i, callRecord in ipairs(filteredCallRecords) do
 			entries[i] = React.createElement(CallHistoryItem, {
 				callRecord = callRecord,
 				localUserId = localUserId,
-				showDivider = i ~= #callRecords,
+				showDivider = i ~= #filteredCallRecords,
 				dismissCallback = props.dismissCallback,
 				layoutOrder = i,
 			})
