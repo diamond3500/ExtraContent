@@ -20,6 +20,7 @@ local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 local useApolloClient = ApolloClientModule.useApolloClient
 
 local ContactList = RobloxGui.Modules.ContactList
+local RobloxTranslator = require(RobloxGui.Modules.RobloxTranslator)
 local dependencies = require(ContactList.dependencies)
 local UIBlox = dependencies.UIBlox
 local dependencyArray = dependencies.Hooks.dependencyArray
@@ -212,15 +213,14 @@ local function FriendListContainer(props: Props)
 		end
 	) or {}
 
-	-- TODO(IRIS-864): Localization.
 	local noFriendsText = React.useMemo(function()
 		local message
 		if status == RetrievalStatus.Failed then
-			message = "Something went wrong! Please try again."
+			message = RobloxTranslator:FormatByKey("Feature.Call.Error.Title.GenericLong")
 		elseif props.searchText ~= "" then
-			message = "No friends found"
+			message = RobloxTranslator:FormatByKey("Feature.Call.Description.NoFriendsFound")
 		else
-			message = "Add friends on Roblox to make a call"
+			message = RobloxTranslator:FormatByKey("Feature.Call.Prompt.AddFriends")
 		end
 
 		return React.createElement(NoItemView, {
@@ -281,15 +281,14 @@ local function FriendListContainer(props: Props)
 			})
 
 			if #suggestedCallees ~= 0 and trimmedSearchText == "" then
-				-- TODO(IRIS-864): Localization.
 				--[[
 					Only incrementing numbers are counted when measuring the size of the entries table with #entries.
 					String keys like "suggestedHeader" do not contribute to the #entries count.
 				]]
 				--
 				entries[#entries + 1] = React.createElement(SectionHeader, {
-					name = "Suggested",
-					description = "Friends with devices and settings set for an optimal call experience.",
+					name = RobloxTranslator:FormatByKey("Feature.Call.Label.Suggested"),
+					description = RobloxTranslator:FormatByKey("Feature.Call.Description.SuggestedFriends"),
 					layoutOrder = #entries + 1,
 				})
 
@@ -324,10 +323,9 @@ local function FriendListContainer(props: Props)
 			end
 
 			if #friends ~= 0 then
-				-- TODO(IRIS-864): Localization.
 				entries[#entries + 1] = React.createElement(SectionHeader, {
-					name = "Friends",
-					description = "Friends who may or may not have devices and settings for an optimal call experience.",
+					name = RobloxTranslator:FormatByKey("Feature.Call.Label.Friends"),
+					description = RobloxTranslator:FormatByKey("Feature.Call.Description.Friends"),
 					layoutOrder = #entries + 1,
 				})
 			end

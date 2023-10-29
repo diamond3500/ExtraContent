@@ -87,6 +87,7 @@ local ChromeEnabled = require(RobloxGui.Modules.Chrome.Enabled)()
 local FFlagLuaEnableGameInviteModalSettingsHub = game:DefineFastFlag("LuaEnableGameInviteModalSettingsHub", false)
 local GetFFlagLuaInExperienceCoreScriptsGameInviteUnification = require(RobloxGui.Modules.Flags.GetFFlagLuaInExperienceCoreScriptsGameInviteUnification)
 local GetFStringGameInviteMenuLayer = require(CorePackages.Workspace.Packages.SharedFlags).GetFStringGameInviteMenuLayer
+local GetFFlagFixSettingsHubVRBackgroundError =  require(RobloxGui.Modules.Settings.Flags.GetFFlagFixSettingsHubVRBackgroundError)
 
 --[[ SERVICES ]]
 local RobloxReplicatedStorage = game:GetService("RobloxReplicatedStorage")
@@ -3168,7 +3169,13 @@ local function CreateSettingsHub()
 		this.Shield.BackgroundTransparency = 1
 
 		if UserInputService.VREnabled then
-			this.FullscreenGui.Enabled = false
+			if GetFFlagFixSettingsHubVRBackgroundError() then
+				if this.FullscreenGui then
+					this.FullscreenGui.Enabled = false
+				end
+			else
+				this.FullscreenGui.Enabled = false
+			end
 		end
 	end
 

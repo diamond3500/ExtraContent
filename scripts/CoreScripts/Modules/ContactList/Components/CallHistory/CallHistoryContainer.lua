@@ -17,6 +17,7 @@ local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 local useApolloClient = ApolloClientModule.useApolloClient
 
 local ContactList = RobloxGui.Modules.ContactList
+local RobloxTranslator = require(RobloxGui.Modules.RobloxTranslator)
 local SetCurrentPage = require(ContactList.Actions.SetCurrentPage)
 local Pages = require(ContactList.Enums.Pages)
 local dependencies = require(ContactList.dependencies)
@@ -130,11 +131,10 @@ local function CallHistoryContainer(props: Props)
 
 	local noRecordsComponent = React.useMemo(function()
 		local message
-		-- TODO(IRIS-864): Localization.
 		if status == RetrievalStatus.Failed then
-			message = "Something went wrong! Please try again."
+			message = RobloxTranslator:FormatByKey("Feature.Call.Error.Title.GenericLong")
 		else
-			message = "Your friends are waiting for your call!"
+			message = RobloxTranslator:FormatByKey("Feature.Call.Prompt.FirstCall")
 		end
 
 		return React.createElement(NoItemView, {
