@@ -24,7 +24,11 @@ local useVoiceState = require(RobloxGui.Modules.VoiceChat.Hooks.useVoiceState)
 local Constants = require(RobloxGui.Modules.InGameChat.BubbleChat.Constants)
 local VoiceChatServiceManager = require(RobloxGui.Modules.VoiceChat.VoiceChatServiceManager).default
 
-local GetFFlagEnableChromeMicShimmer = require(RobloxGui.Modules.Chrome.Flags.GetFFlagEnableChromeMicShimmer)
+local GetFFlagRemoveInGameChatBubbleChatReferences = require(RobloxGui.Modules.Flags.GetFFlagRemoveInGameChatBubbleChatReferences)
+
+if GetFFlagRemoveInGameChatBubbleChatReferences() then
+	Constants = require(RobloxGui.Modules.VoiceChat.Constants) :: any
+end
 
 local DEFAULT_SIZE = UDim2.fromOffset(28, 28)
 
@@ -73,6 +77,7 @@ type VoiceIndicatorProps = {
 	iconTransparency: any?,
 	onClicked: any?,
 	size: UDim2?,
+	selectable: boolean?,
 	userId: number | string,
 	disable: boolean?,
 	showConnectingShimmer: boolean?
@@ -89,6 +94,7 @@ end
 local function VoiceIndicator(props: VoiceIndicatorProps)
 	local voiceState = useVoiceState(props.userId, props.disable or false)
 	local level, setLevel = React.useBinding(0)
+	local selectable = if props.selectable ~= nil then props.selectable else true
 	local voiceStateBinding, setVoiceStateBinding = React.useBinding(voiceState)
 	local voiceStateAndLevel = useJoinBinding({ voiceStateBinding, level })
 	local renderStepName = React.useRef(GenerateGUID()).current or ""
@@ -96,7 +102,7 @@ local function VoiceIndicator(props: VoiceIndicatorProps)
 
 	local isTalking = voiceState == Constants.VOICE_STATE.TALKING
 	local isConnecting = voiceState == Constants.VOICE_STATE.CONNECTING
-	local showShimmer = GetFFlagEnableChromeMicShimmer() and props.showConnectingShimmer == true
+	local showShimmer = props.showConnectingShimmer == true
 	local shimmerGradientRef = React.useRef(nil :: UIGradient?)
 
 	React.useEffect(function()
@@ -148,6 +154,7 @@ local function VoiceIndicator(props: VoiceIndicatorProps)
 		BorderSizePixel = 0,
 		Image = imageMapFunc,
 		ImageTransparency = imageTransparency,
+		Selectable = selectable,
 		SelectionImageObject = useSelectionCursor(CursorKind.RoundedRectNoInset),
 		Visible = visible,
 		[Roact.Event.Activated] = props.onClicked,

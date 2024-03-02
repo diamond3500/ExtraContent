@@ -38,33 +38,18 @@ end
 local newTrackerStreamAnimation = nil
 local cloneStreamTrack = nil
 
+local EngineFeatureAvatarJointUpgrade = game:GetEngineFeature("AvatarJointUpgradeFeature")
 local EngineFeatureHasFeatureLoadStreamAnimationForSelfieViewApiEnabled = game:GetEngineFeature("LoadStreamAnimationForSelfieViewApiEnabled")
+local EngineFeatureAnimatorAndADFRefactorInternal = game:GetEngineFeature("AnimatorAndADFRefactorInternal")
+local EngineFeaturePlayerViewRemoteEventSupport = game:GetEngineFeature("PlayerViewRemoteEventSupport")
 local FacialAnimationStreamingService = game:GetService("FacialAnimationStreamingServiceV2")
 local AnalyticsService = game:GetService("RbxAnalyticsService")
 local CollectionService = game:GetService("CollectionService")
 local VRService = game:GetService("VRService")
-local FFlagFacialAnimationShowInfoMessageWhenNoDynamicHead = game:DefineFastFlag("FacialAnimationShowInfoMessageWhenNoDynamicHead", false)
-local FFlagUseLoadStreamAnimationForClone = game:DefineFastFlag("UseLoadStreamAnimationForClone", false)
-local FFlagSelfViewFixCloneOrientation = game:DefineFastFlag("SelfViewFixCloneOrientation", false)
-local FFlagSelfViewMakeClonePartsNonTransparent = game:DefineFastFlag("SelfViewMakeClonePartsNonTransparent", false)
-local FFlagSelfViewMakeClonePartsNonTransparent2 = game:DefineFastFlag("SelfViewMakeClonePartsNonTransparent2", false)
-local FFlagSelfViewCleanupImprovements = game:DefineFastFlag("SelfViewCleanupImprovements", false)
-local FFlagSelfViewDontHideOnSwapCharacter = game:DefineFastFlag("SelfViewDontHideOnSwapCharacter", false)
-local FFlagSelfViewCleanupOnClosing = game:DefineFastFlag("SelfViewCleanupOnClosing", false)
-local FFlagAvatarChatSelfViewShowDefaultCursor = game:DefineFastFlag("AvatarChatSelfViewShowDefaultCursor", false)
-local FFlagFaceChatSelfieViewShowOutlinedMicrophoneWhenIdle = game:DefineFastFlag("FaceChatSelfieViewShowOutlinedMicrophoneWhenIdle", false)
-local FFlagDisableSelfViewReactingToSetCoreGuiEnabled = game:DefineFastFlag("DisableSelfViewReactingToSetCoreGuiEnabled", false)
-local FFlagSanitizeSelfView = game:DefineFastFlag("SanitizeSelfView", false)
-local FFlagSanitizeSelfViewStrict2 = game:DefineFastFlag("SanitizeSelfViewStrict2", false)
-local FFlagRemoveTagsFromSelfViewClone = game:DefineFastFlag("RemoveTagsFromSelfViewClone", false)
-local FFlagOnlyUpdateButtonsWhenInitialized = game:DefineFastFlag("OnlyUpdateButtonsWhenInitialized", false)
-local FFlagSelfViewChecks = game:DefineFastFlag("SelfViewChecks", false)
-local FFlagSelfViewChecks2 = game:DefineFastFlag("SelfViewChecks2", false)
-local FFlagSelfViewUseRealBoundingBox = game:DefineFastFlag("SelfViewUseRealBoundingBox", false)
-local FFlagSelfViewChecks3 = game:DefineFastFlag("SelfViewChecks3", false)
-local FFlagSelfViewAdaptToScreenOrientationChange = game:DefineFastFlag("SelfViewAdaptToScreenOrientationChange", false)
-local FFlagSelfViewImprovedUpdateCloneTriggering = game:DefineFastFlag("SelfViewImprovedUpdateCloneTriggering", false)
 local FFlagSelfViewCameraDefaultButtonInViewPort = game:DefineFastFlag("SelfViewCameraDefaultButtonInViewPort", false)
+local FFlagSelfViewLookUpHumanoidByType = game:DefineFastFlag("SelfViewLookUpHumanoidByType", false)
+local FFlagSelfViewHumanoidNilCheck = game:DefineFastFlag("SelfViewHumanoidNilCheck", false)
+local FFlagSelfViewMoreNilChecks = game:DefineFastFlag("SelfViewMoreNilChecks", false)
 
 local CorePackages = game:GetService("CorePackages")
 local CharacterUtility = require(CorePackages.Thumbnailing).CharacterUtility
@@ -108,9 +93,22 @@ local GetFFlagSelfViewPositionDragFixEnabled = require(CorePackages.Workspace.Pa
 local AvatarChatService = if GetFFlagAvatarChatServiceEnabled() then game:GetService("AvatarChatService") else nil
 local PermissionsProtocol = require(CorePackages.Workspace.Packages.PermissionsProtocol).PermissionsProtocol.default
 local getFFlagDoNotPromptCameraPermissionsOnMount = require(RobloxGui.Modules.Flags.getFFlagDoNotPromptCameraPermissionsOnMount)
+local GetFFlagJoinWithoutMicPermissions = require(RobloxGui.Modules.Flags.GetFFlagJoinWithoutMicPermissions)
+
+local getFFlagEnableAlwaysAvailableCamera = require(RobloxGui.Modules.Flags.getFFlagEnableAlwaysAvailableCamera)
+local FFlagMockFTUXAlwaysAvailableCameraUser = game:DefineFastFlag("MockOpenSelfViewForCameraUser", false)
+local GetFFlagRemoveInGameChatBubbleChatReferences = require(RobloxGui.Modules.Flags.GetFFlagRemoveInGameChatBubbleChatReferences)
+local globalShowSelfViewFunction = nil
+local FIntSelfViewTooltipLifetime = game:DefineFastInt("SelfViewTooltipLifetime", 10)
+local mountSelfViewOnCloseTooltip = require(RobloxGui.Modules.SelfView.mountSelfViewOnCloseTooltip)
+local mountSelfViewOnOpenTooltip = require(RobloxGui.Modules.SelfView.mountSelfViewOnOpenTooltip)
+local mountedOnOpenTooltipInstance = nil
 
 local isCamEnabledForUserAndPlace = require(RobloxGui.Modules.Settings.isCamEnabledForUserAndPlace)
 local displayCameraDeniedToast = require(RobloxGui.Modules.InGameChat.BubbleChat.Helpers.displayCameraDeniedToast)
+if GetFFlagRemoveInGameChatBubbleChatReferences() then
+	displayCameraDeniedToast = require(RobloxGui.Modules.VoiceChat.Helpers.displayCameraDeniedToast)
+end
 
 local UIBlox = require(CorePackages.UIBlox)
 local Images = UIBlox.App.ImageSet.Images
@@ -200,8 +198,17 @@ local isVoiceConnecting = true
 local cloneCamUpdatePosEvery = 1
 local hasCameraPermissions = false
 local hasMicPermissions = false
+local voiceChatServiceEnabled = false
 local function getShouldShowMicButton()
-	return hasMicPermissions and not VoiceChatServiceManager:VoiceChatEnded()
+	if GetFFlagJoinWithoutMicPermissions() then
+		-- This makes sure that the mic button is still shown when the user is connecting to voice chat, but hidden when the user gets banned
+		return voiceChatServiceEnabled
+			and (not VoiceChatServiceManager:VoiceChatEnded() or isVoiceConnecting)
+	elseif getFFlagEnableAlwaysAvailableCamera() then
+		return hasMicPermissions
+	else
+		return hasMicPermissions and not VoiceChatServiceManager:VoiceChatEnded()
+	end
 end
 local cachedHasCameraPermissions = false
 local cachedHasMicPermissions = false
@@ -248,6 +255,8 @@ local ALLOWLISTED_INSTANCE_TYPES = {
 	Accessory = "Accessory",
 	Animator = "Animator",
 	Attachment = "Attachment",
+	AnimationConstraint = EngineFeatureAvatarJointUpgrade and "AnimationConstraint" or nil,
+	BallSocketConstraint = EngineFeatureAvatarJointUpgrade and "BallSocketConstraint" or nil,
 	BodyColors = "BodyColors",
 	CharacterMesh = "CharacterMesh",
 	Decal = "Decal",
@@ -291,7 +300,7 @@ local TYPES_TRIGGERING_DIRTY_ON_ADDREMOVE = {
 	SurfaceAppearance = "SurfaceAppearance",
 }
 
-log:trace("Self View 10-13-2023__1!!")
+log:trace("Self View 02-14-2024__1!!")
 
 local observerInstances = {}
 local Observer = {
@@ -305,6 +314,61 @@ local Observer = {
 	CharacterRemoving = "CharacterRemoving",
 	HumanoidStateChanged = "HumanoidStateChanged",
 }
+
+function getShouldDisplaySelfieView()
+	local shouldDisplaySelfieView = false
+
+	if FFlagMockFTUXAlwaysAvailableCameraUser then
+		return true
+	end
+
+	-- todo: remove pcall when ShowSelfieViewForCameraUser added to appstorageservice
+	pcall(function()
+		local savedState = AppStorageService:GetItem("ShowSelfieViewForCameraUser")
+		if savedState == "true" then
+			shouldDisplaySelfieView = true
+		end
+	end)
+
+
+	return shouldDisplaySelfieView
+end
+
+function setSelfieViewDisplayInAppStorage(newState)
+	-- todo: remove pcall when ShowSelfieViewForCameraUser added to appstorageservice
+	pcall(function()
+		AppStorageService:SetItem("ShowSelfieViewForCameraUser", if newState then "true" else "false")
+	end)
+end
+
+function shouldDisplaySelfViewTooltip(tooltipName)
+	if not getFFlagEnableAlwaysAvailableCamera() or not isCamEnabledForUserAndPlace() then
+		-- If always available camera is not on or user is not a camera user, never render tooltips
+		return false
+	end
+
+	local shouldDisplayTooltip = false
+
+	if FFlagMockFTUXAlwaysAvailableCameraUser then
+		return true
+	end
+
+	pcall(function()
+		shouldDisplayTooltip = AppStorageService:GetItem(tooltipName) == "true"
+	end)
+	return shouldDisplayTooltip
+end
+
+function displaySelfieViewByDefault()
+	if
+		getFFlagEnableAlwaysAvailableCamera()
+		and isCamEnabledForUserAndPlace()
+		and getShouldDisplaySelfieView()
+		and globalShowSelfViewFunction ~= nil
+	then
+		globalShowSelfViewFunction(true)
+	end
+end
 
 function getRelativePosition(uiObject)
 	if not uiObject.Parent then
@@ -361,14 +425,7 @@ end
 
 function getShouldBeEnabledCoreGuiSetting()
 	--debugPrint("Self View: getShouldBeEnabledCoreGuiSetting(): StarterGui:GetCoreGuiEnabled(Enum.CoreGuiType.SelfView): "..tostring(StarterGui:GetCoreGuiEnabled(Enum.CoreGuiType.SelfView)))
-
-	if FFlagDisableSelfViewReactingToSetCoreGuiEnabled then
-		return true
-	else
-		return (
-			StarterGui:GetCoreGuiEnabled(Enum.CoreGuiType.All) or StarterGui:GetCoreGuiEnabled(Enum.CoreGuiType.SelfView)
-		)
-	end
+	return true
 end
 
 function updateSelfViewButtonVisibility()
@@ -387,7 +444,7 @@ function updateSelfViewButtonVisibility()
 	end
 	--frame should only be nil here when this gets called before Self View got initialized (which should only happen in early voice chat fail in studio)
 	--we catch that case to avoid output window spam
-	if frame ~= nil or not FFlagOnlyUpdateButtonsWhenInitialized then
+	if frame ~= nil then
 		local micButton = frame:FindFirstChild(MIC_NAME, true)
 		local camButton = frame:FindFirstChild(CAM_NAME, true)
 		-- If Camera is not available, the mic button should fill the Self View.
@@ -429,6 +486,10 @@ end
 function initVoiceChatServiceManager()
 	do
 		local cachedMicState = VoiceChatServiceManager.VOICE_STATE.MUTED
+		if getFFlagEnableAlwaysAvailableCamera() then
+			--correct default state is connecting, fix was needed to make it update icon when switching from connecting to muted when showing self view on experience start
+			cachedMicState = VoiceChatServiceManager.VOICE_STATE.CONNECTING
+		end
 		local cachedLevel = 0
 
 		local function updateMicIcon(state, level)
@@ -442,7 +503,7 @@ function initVoiceChatServiceManager()
 			if state == VoiceChatServiceManager.VOICE_STATE.MUTED then
 				micIcon.Size = UDim2.fromOffset(32, 32)
 				micIcon.Image = MIC_OFF_IMAGE.Image
-				if not FFlagSelfViewChecks3 or micIcon.ImageRectOffset ~= MIC_OFF_IMAGE.ImageRectOffset then
+				if micIcon.ImageRectOffset ~= MIC_OFF_IMAGE.ImageRectOffset then
 					micIcon.ImageRectOffset = MIC_OFF_IMAGE.ImageRectOffset
 				end
 				micIcon.ImageRectSize = MIC_OFF_IMAGE.ImageRectSize
@@ -454,17 +515,15 @@ function initVoiceChatServiceManager()
 				micIcon.ImageRectSize = Vector2.new(0, 0)
 			end
 
-			if FFlagFaceChatSelfieViewShowOutlinedMicrophoneWhenIdle then
-				micIcon.Position = UDim2.new(0.5, 0, 0.5, 0)
+			micIcon.Position = UDim2.new(0.5, 0, 0.5, 0)
 
-				if state == VoiceChatServiceManager.VOICE_STATE.INACTIVE then
-					micIcon.Size = UDim2.fromOffset(19, 19)
-					micIcon.Image = MIC_INACTIVE_IMAGE.Image
-					micIcon.ImageRectOffset = MIC_INACTIVE_IMAGE.ImageRectOffset
-					micIcon.ImageRectSize = MIC_INACTIVE_IMAGE.ImageRectSize
-				elseif state == VoiceChatServiceManager.VOICE_STATE.TALKING then
-					micIcon.Position = UDim2.new(0.5, 0, 0.5, -1)
-				end
+			if state == VoiceChatServiceManager.VOICE_STATE.INACTIVE then
+				micIcon.Size = UDim2.fromOffset(19, 19)
+				micIcon.Image = MIC_INACTIVE_IMAGE.Image
+				micIcon.ImageRectOffset = MIC_INACTIVE_IMAGE.ImageRectOffset
+				micIcon.ImageRectSize = MIC_INACTIVE_IMAGE.ImageRectSize
+			elseif state == VoiceChatServiceManager.VOICE_STATE.TALKING then
+				micIcon.Position = UDim2.new(0.5, 0, 0.5, -1)
 			end
 		end
 
@@ -505,6 +564,11 @@ function initVoiceChatServiceManager()
 			:andThen(function()
 				local voiceService = VoiceChatServiceManager:getService()
 				if voiceService then
+					if GetFFlagJoinWithoutMicPermissions() then
+						voiceChatServiceEnabled = true
+					end
+					--trigger opening self view here (too) so it shows mic button (, too, if cam also enabled), needed here again to show both buttons on self view showing on place start
+					displaySelfieViewByDefault()
 				voiceService.StateChanged:Connect(function(_oldState, newState)
 					local voiceManagerState = LOCAL_STATE_MAP[newState]
 					if GetFFlagShowMicConnectingIconAndToast() then
@@ -547,20 +611,26 @@ function getPermissions()
 			vCInitialized = true
 		end
 	end
-	getCamMicPermissions(callback)
+	getCamMicPermissions(callback, nil, nil, "FaceChatSelfieView.getPermissions")
 end
 
 -- Check that the user's device has given Roblox mic permissions and request if not granted.
 function getMicPermission()
 	local callback = function(response)
 		hasMicPermissions = response.hasMicPermissions
-
-		if hasMicPermissions and not vCInitialized then
-			initVoiceChatServiceManager()
-			vCInitialized = true
+		if GetFFlagJoinWithoutMicPermissions() then
+			if not vCInitialized then
+				initVoiceChatServiceManager()
+				vCInitialized = true
+			end
+		else
+			if hasMicPermissions and not vCInitialized then
+				initVoiceChatServiceManager()
+				vCInitialized = true
+			end
 		end
 	end
-	getCamMicPermissions(callback, { PermissionsProtocol.Permissions.MICROPHONE_ACCESS :: string })
+	getCamMicPermissions(callback, { PermissionsProtocol.Permissions.MICROPHONE_ACCESS :: string }, nil, "FaceChatSelfieView.getMicPermission")
 end
 
 -- Check that the user's device has given Roblox camera permissions without requesting if not granted.
@@ -600,7 +670,7 @@ local function disconnectListeners()
 end
 
 function constrainTargetPositionToScreen(uiObject, screenSize, targetPosition)
-	if FFlagSelfViewChecks and uiObject == nil then
+	if uiObject == nil then
 		return
 	end
 
@@ -618,7 +688,7 @@ end
 
 -- Update the position of the Self View frame based on dragging.
 local function processDrag(frame, inputPosition, dragStartPosition, frameStartPosition)
-	if FFlagSelfViewChecks3 and not frame.Parent then
+	if not frame.Parent then
 		return
 	end
 
@@ -633,11 +703,9 @@ local function processDrag(frame, inputPosition, dragStartPosition, frameStartPo
 end
 
 local function mouseEntered()
-	if FFlagAvatarChatSelfViewShowDefaultCursor then
-		if not VRService.VREnabled then
-			didOverrideMouse = true
-			MouseIconOverrideService.push(INGAME_SELFVIEW_CUSOR_OVERRIDE_KEY, Enum.OverrideMouseIconBehavior.ForceShow)
-		end
+	if not VRService.VREnabled then
+		didOverrideMouse = true
+		MouseIconOverrideService.push(INGAME_SELFVIEW_CUSOR_OVERRIDE_KEY, Enum.OverrideMouseIconBehavior.ForceShow)
 	end
 end
 
@@ -760,6 +828,104 @@ function connectToScreenOrientationChange()
 
 end
 
+function clearObserver(observerId)
+	if observerInstances[observerId] then
+		observerInstances[observerId]:Disconnect()
+		observerInstances[observerId] = nil
+	end
+end
+
+local function clearAllObservers()
+	for observerInstance in observerInstances do
+		clearObserver(observerInstance)
+	end
+end
+
+function clearCloneCharacter()
+	if clone then
+		clone:Destroy()
+		clone = nil
+	end
+
+	if cloneAnchor == nil then
+		return
+	end
+
+	local noRefClone = cloneAnchor:FindFirstChild(cloneCharacterName)
+	if noRefClone then
+		noRefClone:Destroy()
+	end
+
+	createCloneAnchor()
+end
+
+function clearClone()
+	debugPrint("Self View: clearClone()")
+	-- clear listeners
+	stopRenderStepped()
+	clearObserver(Observer.AnimationPlayed)
+	clearObserver(Observer.AnimationPlayedCoreScript)
+	if videoAnimationPropertyChangedSingalConnection then
+		videoAnimationPropertyChangedSingalConnection:Disconnect()
+		videoAnimationPropertyChangedSingalConnection = nil
+	end
+
+	if audioAnimationPropertyChangedSingalConnection then
+		audioAnimationPropertyChangedSingalConnection:Disconnect()
+		audioAnimationPropertyChangedSingalConnection = nil
+	end
+
+	if videoCaptureServiceStartedConnection then
+		videoCaptureServiceStartedConnection:Disconnect()
+		videoCaptureServiceStartedConnection = nil
+	end
+
+	if videoCaptureServiceStoppedConnection then
+		videoCaptureServiceStoppedConnection:Disconnect()
+		videoCaptureServiceStoppedConnection = nil
+	end
+
+	if videoCaptureServiceDevicesChangedConnection then
+		videoCaptureServiceDevicesChangedConnection:Disconnect()
+		videoCaptureServiceDevicesChangedConnection = nil
+	end
+
+	foundStreamTrack = nil
+	cachedMode = nil
+	cloneAnimator = nil
+	cloneAnimationTracks = {}
+	-- clear objects
+	clearCloneCharacter()
+end	
+
+local function setIsOpen(shouldBeOpen)
+	debugPrint("Self View: setIsOpen(): " .. tostring(shouldBeOpen))
+	isOpen = shouldBeOpen
+	setSelfieViewDisplayInAppStorage(shouldBeOpen)
+
+	if isOpen then
+		ReInit(Players.LocalPlayer)
+	else
+		headRef = nil
+		cachedHeadColor = nil
+		cachedHeadSize = nil
+		clearAllObservers()
+		clearObserver(Observer.CharacterAdded)
+		clearObserver(Observer.CharacterRemoving)
+		clearClone()
+		if playerScreenOrientationConnection then
+			playerScreenOrientationConnection:Disconnect()
+			playerScreenOrientationConnection = nil
+		end
+
+		prepMicAndCamPropertyChangedSignalHandler()
+
+		indicatorCircle.Visible = debug
+
+		trackSelfViewSessionAsNeeded()
+	end
+end	
+
 local function createViewport()
 	--TODO: this UI setup could be changed to roact setup before MVP release, to evaluate pros/ cons
 	--(also regarding aspect this may tween towards worldspace UI above player head once closed in progressed iteration)
@@ -795,14 +961,14 @@ local function createViewport()
 	frame.InputBegan:Connect(function(input)
 		inputBegan(frame, input)
 	end)
-	if FFlagAvatarChatSelfViewShowDefaultCursor then
-		frame.MouseEnter:Connect(function()
-			mouseEntered()
-		end)
-		frame.MouseLeave:Connect(function()
-			mouseLeft()
-		end)
-	end
+	
+	frame.MouseEnter:Connect(function()
+		mouseEntered()
+	end)
+	frame.MouseLeave:Connect(function()
+		mouseLeft()
+	end)
+	
 	-- TODO AVBURST-10067 Disconnect event when applicable.
 	--gets enabled once we have a usable avatar
 	frame.Visible = false
@@ -886,7 +1052,7 @@ local function createViewport()
 					return
 				end
 			end
-			VoiceChatServiceManager:ToggleMic()
+			VoiceChatServiceManager:ToggleMic("LegacySelfView")
 			Analytics:setLastCtx("SelfView")
 			if voiceAnalytics then
 				voiceAnalytics:onToggleMuteSelf(not VoiceChatServiceManager.localMuted)
@@ -1104,6 +1270,25 @@ local function createViewport()
 			end
 			frame.Active = true
 			frame.Visible = true
+
+			if shouldDisplaySelfViewTooltip("ShowSelfieViewOpenedTooltip") then
+				mountedOnOpenTooltipInstance = mountSelfViewOnOpenTooltip({
+					fallbackText = "Use your camera to make your avatar smile and move just like you",
+					translationKey = "Feature.Avatar.Message.FTUXSelfieViewOpenedTooltip",
+					anchorPoint = frame.AnchorPoint,
+					position = frame.Position,
+					size = frame.Size,
+					bottomButtonsFramePosition = bottomButtonsFrame.Position,
+					bottomButtonsFrameSize = bottomButtonsFrame.Size,
+					aspectRatio = aspectRatioConstraint.AspectRatio,
+					maxSize = sizeConstraint.MaxSize,
+					minSize = sizeConstraint.MinSize,
+					tooltipLifetime = FIntSelfViewTooltipLifetime,
+				})
+				pcall(function()
+					AppStorageService:SetItem("ShowSelfieViewOpenedTooltip", "false")
+				end)
+			end
 		else
 			micButton.Position = UDim2.new(0, 40, 0, -1)
 			micButton.Size = UDim2.new(0, 34, 0, 34)
@@ -1117,44 +1302,43 @@ local function createViewport()
 			frame.Active = false
 			frame.Visible = false
 
-			if FFlagSelfViewCleanupImprovements then
-				if FFlagSelfViewCleanupOnClosing then
-					if cloneStreamTrack then
-						local onTrackStoppedConnection = nil
-						local tempCloneStreamTrack = cloneStreamTrack
-						local tempNewTrackerStreamAnimation = newTrackerStreamAnimation
-						onTrackStoppedConnection = cloneStreamTrack.Stopped:Connect(function()
-							tempCloneStreamTrack:Destroy()
+			if cloneStreamTrack then
+				local onTrackStoppedConnection = nil
+				local tempCloneStreamTrack = cloneStreamTrack
+				local tempNewTrackerStreamAnimation = newTrackerStreamAnimation
+				onTrackStoppedConnection = cloneStreamTrack.Stopped:Connect(function()
+					tempCloneStreamTrack:Destroy()
 
-							if tempNewTrackerStreamAnimation then
-								tempNewTrackerStreamAnimation:Destroy()
-							end
+					if tempNewTrackerStreamAnimation then
+						tempNewTrackerStreamAnimation:Destroy()
+					end
 
-							onTrackStoppedConnection:Disconnect()
-						end)
+					onTrackStoppedConnection:Disconnect()
+				end)
 
-						cloneStreamTrack:Stop(0.0)
-						cloneStreamTrack = nil
-					elseif newTrackerStreamAnimation then
-						newTrackerStreamAnimation:Destroy()
-						newTrackerStreamAnimation = nil
-					end
-				else
-					if cloneStreamTrack then
-						cloneStreamTrack:Stop()
-						cloneStreamTrack:Destroy()
-						cloneStreamTrack = nil
-					end
-					if newTrackerStreamAnimation then
-						newTrackerStreamAnimation:Destroy()
-						newTrackerStreamAnimation = nil
-					end
-				end
+				cloneStreamTrack:Stop(0.0)
+				cloneStreamTrack = nil
+			elseif newTrackerStreamAnimation then
+				newTrackerStreamAnimation:Destroy()
+				newTrackerStreamAnimation = nil
+			end	
+
+			if shouldDisplaySelfViewTooltip("ShowSelfieViewClosedTooltip") then
+				mountSelfViewOnCloseTooltip({
+					fallbackText = "You can find your camera and self-view controls here",
+					translationKey = "Feature.Avatar.Message.FTUXSelfieViewClosedTooltip",
+					tooltipLifetime = FIntSelfViewTooltipLifetime,
+				})
+				pcall(function()
+					AppStorageService:SetItem("ShowSelfieViewClosedTooltip", "false")
+				end)
 			end
 		end
 
 		bottomButtonsFrame.Visible = isOpen
 	end
+
+	globalShowSelfViewFunction = showSelfView
 
 	closeButton.Activated:Connect(function()
 		showSelfView(not isOpen)
@@ -1167,48 +1351,51 @@ local function createViewport()
 		showSelfView(not isOpen)
 	end)
 
-	if game:GetEngineFeature("EnableSelfViewToggleApi") then
-		if selfViewVisibleConnection then
-			selfViewVisibleConnection:Disconnect()
-			selfViewVisibleConnection = nil
-		end
-		if selfViewHiddenConnection then
-			selfViewHiddenConnection:Disconnect()
-			selfViewHiddenConnection = nil
-		end
-		selfViewVisibleConnection = SocialService.SelfViewVisible:Connect(function(selfViewPosition)
-			-- Calling showSelfView when self view is already visible is no-op
-			if not isOpen then
-				-- use current position
-				local newSelfViewPosition = nil
-				local anchorPoint = nil
-				if selfViewPosition == Enum.SelfViewPosition.TopLeft then
-					newSelfViewPosition = UDim2.new(0, SELF_VIEW_POSITION_OFFSET, 0, SELF_VIEW_POSITION_OFFSET)
-					anchorPoint = Vector2.new(0, 0)
-				elseif selfViewPosition == Enum.SelfViewPosition.TopRight then
-					newSelfViewPosition = UDim2.new(1, -SELF_VIEW_POSITION_OFFSET, 0, SELF_VIEW_POSITION_OFFSET)
-					anchorPoint = Vector2.new(1, 0)
-				elseif selfViewPosition == Enum.SelfViewPosition.BottomLeft then
-					newSelfViewPosition = UDim2.new(0, SELF_VIEW_POSITION_OFFSET, 1, -SELF_VIEW_POSITION_OFFSET)
-					anchorPoint = Vector2.new(0, 1)
-				elseif selfViewPosition == Enum.SelfViewPosition.BottomRight then
-					newSelfViewPosition = UDim2.new(1, -SELF_VIEW_POSITION_OFFSET, 1, -SELF_VIEW_POSITION_OFFSET)
-					anchorPoint = Vector2.new(1, 1)
-				end
-				showSelfView(true, newSelfViewPosition, anchorPoint)
-				if newSelfViewPosition ~= nil then
-					local value = frame.AbsolutePosition.X .. "," .. frame.AbsolutePosition.Y
-					AppStorageService:SetItem("SelfViewPosition", value)
-				end
-			end
-		end)
-		selfViewHiddenConnection = SocialService.SelfViewHidden:Connect(function()
-			-- Calling hideSelfView when self view is not visible is no-op
-			if isOpen then
-				showSelfView(false)
-			end
-		end)
+	if selfViewVisibleConnection then
+		selfViewVisibleConnection:Disconnect()
+		selfViewVisibleConnection = nil
 	end
+	if selfViewHiddenConnection then
+		selfViewHiddenConnection:Disconnect()
+		selfViewHiddenConnection = nil
+	end
+	selfViewVisibleConnection = SocialService.SelfViewVisible:Connect(function(selfViewPosition)
+		-- Calling showSelfView when self view is already visible is no-op
+		if not isOpen then
+			-- use current position
+			local newSelfViewPosition = nil
+			local anchorPoint = nil
+			if selfViewPosition == Enum.SelfViewPosition.TopLeft then
+				newSelfViewPosition = UDim2.new(0, SELF_VIEW_POSITION_OFFSET, 0, SELF_VIEW_POSITION_OFFSET)
+				anchorPoint = Vector2.new(0, 0)
+			elseif selfViewPosition == Enum.SelfViewPosition.TopRight then
+				newSelfViewPosition = UDim2.new(1, -SELF_VIEW_POSITION_OFFSET, 0, SELF_VIEW_POSITION_OFFSET)
+				anchorPoint = Vector2.new(1, 0)
+			elseif selfViewPosition == Enum.SelfViewPosition.BottomLeft then
+				newSelfViewPosition = UDim2.new(0, SELF_VIEW_POSITION_OFFSET, 1, -SELF_VIEW_POSITION_OFFSET)
+				anchorPoint = Vector2.new(0, 1)
+			elseif selfViewPosition == Enum.SelfViewPosition.BottomRight then
+				newSelfViewPosition = UDim2.new(1, -SELF_VIEW_POSITION_OFFSET, 1, -SELF_VIEW_POSITION_OFFSET)
+				anchorPoint = Vector2.new(1, 1)
+			end
+			showSelfView(true, newSelfViewPosition, anchorPoint)
+			if newSelfViewPosition ~= nil then
+				local value = frame.AbsolutePosition.X .. "," .. frame.AbsolutePosition.Y
+				AppStorageService:SetItem("SelfViewPosition", value)
+			end
+		end
+	end)
+	selfViewHiddenConnection = SocialService.SelfViewHidden:Connect(function()
+		-- Calling hideSelfView when self view is not visible is no-op
+		if isOpen then
+			if getFFlagEnableAlwaysAvailableCamera() and mountedOnOpenTooltipInstance then
+				-- If we have mounted a tooltip and the developer calls this API, we want to unmount the tooltip
+				mountedOnOpenTooltipInstance.unmount()
+				mountedOnOpenTooltipInstance = nil
+			end
+			showSelfView(false)
+		end
+	end)
 
 	uiCorner = Instance.new("UICorner")
 	uiCorner.Parent = closeButton
@@ -1233,18 +1420,13 @@ local function createViewport()
 
 	viewportCamera = Instance.new("Camera")
 
-	if FFlagSelfViewChecks2 then
-		viewportCamera.FieldOfView = SELF_VIEW_CAMERA_FIELD_OF_VIEW
-	else
-		viewportCamera.FieldOfView = 55
-	end
+	viewportCamera.FieldOfView = SELF_VIEW_CAMERA_FIELD_OF_VIEW
+
 	viewportFrame.CurrentCamera = viewportCamera
 	viewportCamera.Parent = viewportFrame
 
-	if FFlagSelfViewAdaptToScreenOrientationChange then
-		if not playerScreenOrientationConnection then
-			connectToScreenOrientationChange()
-		end
+	if not playerScreenOrientationConnection then
+		connectToScreenOrientationChange()
 	end
 end
 
@@ -1388,78 +1570,6 @@ local onUpdateTrackerMode = function()
 	cachedMode = currentTrackerMode
 end
 
-local function clearObserver(observerId)
-	if observerInstances[observerId] then
-		observerInstances[observerId]:Disconnect()
-		observerInstances[observerId] = nil
-	end
-end
-
-local function clearAllObservers()
-	for observerInstance in observerInstances do
-		clearObserver(observerInstance)
-	end
-end
-
-function clearCloneCharacter()
-	if clone then
-		clone:Destroy()
-		clone = nil
-	end
-
-	if FFlagSelfViewChecks2 then
-		if cloneAnchor == nil then
-			return
-		end
-	end
-
-	local noRefClone = cloneAnchor:FindFirstChild(cloneCharacterName)
-	if noRefClone then
-		noRefClone:Destroy()
-	end
-
-	createCloneAnchor()
-end
-
-local function clearClone()
-	debugPrint("Self View: clearClone()")
-	-- clear listeners
-	stopRenderStepped()
-	clearObserver(Observer.AnimationPlayed)
-	clearObserver(Observer.AnimationPlayedCoreScript)
-	if videoAnimationPropertyChangedSingalConnection then
-		videoAnimationPropertyChangedSingalConnection:Disconnect()
-		videoAnimationPropertyChangedSingalConnection = nil
-	end
-
-	if audioAnimationPropertyChangedSingalConnection then
-		audioAnimationPropertyChangedSingalConnection:Disconnect()
-		audioAnimationPropertyChangedSingalConnection = nil
-	end
-
-	if videoCaptureServiceStartedConnection then
-		videoCaptureServiceStartedConnection:Disconnect()
-		videoCaptureServiceStartedConnection = nil
-	end
-
-	if videoCaptureServiceStoppedConnection then
-		videoCaptureServiceStoppedConnection:Disconnect()
-		videoCaptureServiceStoppedConnection = nil
-	end
-
-	if videoCaptureServiceDevicesChangedConnection then
-		videoCaptureServiceDevicesChangedConnection:Disconnect()
-		videoCaptureServiceDevicesChangedConnection = nil
-	end
-
-	foundStreamTrack = nil
-	cachedMode = nil
-	cloneAnimator = nil
-	cloneAnimationTracks = {}
-	-- clear objects
-	clearCloneCharacter()
-end
-
 local function syncTrack(animator, track)
 	if not animator or not track.Animation then
 		return
@@ -1470,13 +1580,13 @@ local function syncTrack(animator, track)
 	if track.Animation:IsA("Animation") then
 		--regular animation sync handled further below
 	elseif track.Animation:IsA("TrackerStreamAnimation") then
-		if FFlagUseLoadStreamAnimationForClone and EngineFeatureHasFeatureLoadStreamAnimationForSelfieViewApiEnabled then
-			log:trace("FFlagUseLoadStreamAnimationForClone: using LoadStreamAnimationForClone!")
+		if EngineFeatureHasFeatureLoadStreamAnimationForSelfieViewApiEnabled then
+			log:trace("using LoadStreamAnimationForClone!")
 			newTrackerStreamAnimation = Instance.new("TrackerStreamAnimation")
 			cloneStreamTrack = animator:LoadStreamAnimationForSelfieView_deprecated(newTrackerStreamAnimation, Players.LocalPlayer)
 			cloneTrack = cloneStreamTrack
 		else
-			log:trace("animator:LoadStreamAnimation, not FFlagUseLoadStreamAnimationForClone")
+			log:trace("animator:LoadStreamAnimation, not EngineFeatureHasFeatureLoadStreamAnimationForSelfieViewApiEnabled")
 			cloneTrack = animator:LoadStreamAnimation(track.Animation)
 		end
 		foundStreamTrack = true
@@ -1502,10 +1612,8 @@ end
 
 -- Finds the FaceControls instance attached to the rig
 function getFaceControls(rig)
-	if FFlagSelfViewChecks2 then
-		if rig == nil then
-			return
-		end
+	if rig == nil then
+		return
 	end
 	return rig:FindFirstChildWhichIsA("FaceControls", true)
 end
@@ -1528,10 +1636,8 @@ function getNeck(character, head)
 end
 
 function findObjectOfNameAndTypeName(name, typeName, character)
-	if FFlagSelfViewChecks then
-		if character == nil then
-			return nil
-		end
+	if character == nil then
+		return nil
 	end
 	local descendants = character:GetDescendants()
 	for _, child in descendants do
@@ -1561,16 +1667,9 @@ function getHead(character)
 
 		--last resort fallback attempt, could return other object types in worst case (like a Pose called Head if the avatar has AnimSaves in it)
 		if not head then
-			if FFlagSelfViewChecks then
-				--having the fallback of just returning any object type which is called "Head" was too loose as it could be some object type which doesn't have features we need later on and cause errors then
-				--so we only fall back to looking for a Head Part if Head MeshPart was not found.
-				head = findObjectOfNameAndTypeName("Head", "Part", character)
-			else
-				head = character:FindFirstChild("Head", true)
-				if head and head:IsA("Pose") then
-					head = nil
-				end
-			end
+			--having the fallback of just returning any object type which is called "Head" was too loose as it could be some object type which doesn't have features we need later on and cause errors then
+			--so we only fall back to looking for a Head Part if Head MeshPart was not found.
+			head = findObjectOfNameAndTypeName("Head", "Part", character)
 		end
 	end
 
@@ -1588,9 +1687,35 @@ function getAnimator(character, timeOut)
 
 	local humanoid = nil
 	if timeOut > 0 then
-		humanoid = character:WaitForChild("Humanoid", timeOut)
+		if FFlagSelfViewLookUpHumanoidByType then
+			if FFlagSelfViewHumanoidNilCheck then
+				local maybeHumanoid = character:WaitForChild("Humanoid", timeOut)
+				if maybeHumanoid then
+					if maybeHumanoid:IsA("Humanoid") then
+						humanoid = maybeHumanoid
+					else
+						humanoid = character:FindFirstChildWhichIsA("Humanoid")
+					end
+				else
+					humanoid = character:FindFirstChildWhichIsA("Humanoid")
+				end
+			else
+				local maybeHumanoid = character:WaitForChild("Humanoid", timeOut)
+				if maybeHumanoid:IsA("Humanoid") then
+					humanoid = maybeHumanoid
+				else
+					humanoid = character:FindFirstChildWhichIsA("Humanoid")
+				end
+			end
+		else
+			humanoid = character:WaitForChild("Humanoid", timeOut)
+		end
 	else
-		humanoid = character:FindFirstChild("Humanoid")
+		if FFlagSelfViewLookUpHumanoidByType then
+			humanoid = character:FindFirstChildWhichIsA("Humanoid")
+		else
+			humanoid = character:FindFirstChild("Humanoid")
+		end
 	end
 
 	if humanoid ~= nil then
@@ -1646,12 +1771,7 @@ local function sanitize(clone)
 		return
 	end
 
-	if FFlagSanitizeSelfViewStrict2 then
-		removeInstancesStrict(clone)
-	else
-		disableScripts(clone)
-		removeUI(clone)
-	end
+	removeInstancesStrict(clone)
 end
 
 function removeTagsFromSelfViewClone(clone)
@@ -1695,11 +1815,9 @@ local function updateClone(player)
 	--need to wait here for character else sometimes error on respawn
 	local character = player.Character or player.CharacterAdded:Wait()
 
-	if FFlagSelfViewChecks2 then
-		--should not be possible, but very rarely it can happen that player character is nil here despite the above check, in that case return
-		if not character then
-			return
-		end
+	--should not be possible, but very rarely it can happen that player character is nil here despite the above check, in that case return
+	if not character then
+		return
 	end
 
 	debugPrint("Self View: updateClone(): character:" .. tostring(character))
@@ -1714,72 +1832,41 @@ local function updateClone(player)
 
 	local orgHead = getHead(character)
 
-	if not FFlagSelfViewChecks then
-		if not orgHead then
-			return
-		end
-	end
-
 	clone = character:Clone()
-
-	--remove tags in Self View clone of avatar as it may otherwise cause gameplay issues
-	if FFlagRemoveTagsFromSelfViewClone then
-		removeTagsFromSelfViewClone(clone)
+	
+	if FFlagSelfViewMoreNilChecks and clone == nil then
+		return
 	end
+	
+	--remove tags in Self View clone of avatar as it may otherwise cause gameplay issues
+	removeTagsFromSelfViewClone(clone)
 
 	--resetting the joints orientations in the clone since it can happen that body/head IK like code was applied on the player avatar
 	--and we want to start with default pose setup in clone, else issues with clone avatar (parts) orientation etc
-	if FFlagSelfViewFixCloneOrientation then
-		for _, part in ipairs( clone:GetDescendants()) do
-			if part:IsA("Motor6D") then
-				part.C0 = CFrame.new(part.C0.Position)
-				part.C1 = CFrame.new(part.C1.Position)
-			end
+	for _, part in ipairs( clone:GetDescendants()) do
+		if part:IsA("Motor6D") then
+			part.C0 = CFrame.new(part.C0.Position)
+			part.C1 = CFrame.new(part.C1.Position)
 		end
 	end
 
-	if FFlagSelfViewChecks2 then
-		--it could happen that the head was made transparent during gameplay, which is in some experiences done when entering a car for example
-		--we still want to show the self view avatar's head in that case (also because sometimes exiting vehicles would not cause a refresh of the self view and the head would stay transparent then)
-		--but we also want to respect it if the head was transparent to begin with on first usage like for a headless head look
-		for _, part in ipairs(clone:GetDescendants()) do
-			if part:IsA("Decal") then
+	--it could happen that the head was made transparent during gameplay, which is in some experiences done when entering a car for example
+	--we still want to show the self view avatar's head in that case (also because sometimes exiting vehicles would not cause a refresh of the self view and the head would stay transparent then)
+	--but we also want to respect it if the head was transparent to begin with on first usage like for a headless head look
+	for _, part in ipairs(clone:GetDescendants()) do
+		if part:IsA("Decal") then
+			part.Transparency = 0
+		elseif part:IsA("MeshPart") then
+			if (part.Parent and part.Parent:IsA("Accessory")) or (table.find(r15bodyPartsToShow, part.Name)) then
+				if not table.find(partsOrgTransparency, part.MeshId) then
+					partsOrgTransparency[part.MeshId] = part.Transparency
+				else
+					part.Transparency = partsOrgTransparency[part.MeshId]
+				end
+			end
+		elseif part:IsA("Part") then
+			if (part.Parent and part.Parent:IsA("Accessory")) or (table.find(r15bodyPartsToShow, part.Name)) then
 				part.Transparency = 0
-			elseif part:IsA("MeshPart") then
-				if (part.Parent and part.Parent:IsA("Accessory")) or (table.find(r15bodyPartsToShow, part.Name)) then
-					if not table.find(partsOrgTransparency, part.MeshId) then
-						partsOrgTransparency[part.MeshId] = part.Transparency
-					else
-						part.Transparency = partsOrgTransparency[part.MeshId]
-					end
-				end
-			elseif part:IsA("Part") then
-				if (part.Parent and part.Parent:IsA("Accessory")) or (table.find(r15bodyPartsToShow, part.Name)) then
-					part.Transparency = 0
-				end
-			end
-		end
-	else
-		if FFlagSelfViewMakeClonePartsNonTransparent and not FFlagSelfViewMakeClonePartsNonTransparent2 then
-			for _, part in ipairs( clone:GetDescendants()) do
-				if part:IsA("MeshPart") or part:IsA("Decal") then
-					part.Transparency = 0
-				end
-			end
-		end
-		if FFlagSelfViewMakeClonePartsNonTransparent and FFlagSelfViewMakeClonePartsNonTransparent2 then
-			for _, part in ipairs(clone:GetDescendants()) do
-				if part:IsA("Decal") then
-					part.Transparency = 0
-				elseif part:IsA("MeshPart") then
-					if (part.Parent and part.Parent:IsA("Accessory")) or (table.find(r15bodyPartsToShow, part.Name)) then
-						part.Transparency = 0
-					end
-				elseif part:IsA("Part") then
-					if (part.Parent and part.Parent:IsA("Accessory")) or (table.find(r6bodyPartsToShow, part.Name)) then
-						part.Transparency = 0
-					end
-				end
 			end
 		end
 	end
@@ -1791,9 +1878,8 @@ local function updateClone(player)
 	removeChild(clone, "Animate")
 	removeChild(clone, "Health")
 
-	if FFlagSanitizeSelfView then
-		sanitize(clone)
-	end
+	sanitize(clone)
+
 	for index, script in pairs(clone:GetDescendants()) do
 		if script:IsA("BaseScript") then
 			script:Destroy()
@@ -1824,13 +1910,13 @@ local function updateClone(player)
 		--focus viewport frame camera on upper body
 		--viewportCamera.CFrame = cloneRootPart.CFrame * CFrame.new(0,1.5,-2) * CFrame.Angles(math.rad(10),math.rad(180),0)--comment out for work in progress
 
-		if orgHead or not FFlagSelfViewChecks then
-			if FFlagSelfViewUseRealBoundingBox then
-				--we want to focus the cam on head + hat accessories bounding box
-				--and we don't use rig:GetBoundingBox() because when Game Settings/Avatar/Collision is set to inner box,
-				--it does not return the visual mesh's bounding box
-				--and hence is then too small for some heads (like Piggy)
-				local head = getHead(clone)
+		if orgHead then
+			--we want to focus the cam on head + hat accessories bounding box
+			--and we don't use rig:GetBoundingBox() because when Game Settings/Avatar/Collision is set to inner box,
+			--it does not return the visual mesh's bounding box
+			--and hence is then too small for some heads (like Piggy)
+			local head = getHead(clone)
+			if not FFlagSelfViewMoreNilChecks or head then
 				local headTargetCFrame = CFrameUtility.CalculateTargetCFrame(head.CFrame)
 				local minHeadExtent, maxHeadExtent = CharacterUtility.CalculateHeadExtents(clone, headTargetCFrame)
 				local oMin, oMax = Vector3.new(minHeadExtent.X, minHeadExtent.Y, minHeadExtent.Z), Vector3.new(maxHeadExtent.X, maxHeadExtent.Y, maxHeadExtent.Z)
@@ -1842,48 +1928,12 @@ local function updateClone(player)
 
 				local dummyModel = Instance.new("Model")
 				dummyModel.Parent = clone
-				local head = getHead(clone)
 				character.Archivable = true
 				headClone = head:Clone()
 				headClone.CanCollide = false
 				headClone.Parent = dummyModel
 
 				headCloneNeck = getNeck(clone, headClone)
-				local rootPart = headClone
-				headCloneRootFrame = rootPart.CFrame
-				headClone:Destroy()
-				local center = headCloneRootFrame.Position + headCloneRootFrame.LookVector * (width * DEFAULT_CAM_DISTANCE)
-				viewportCamera.CFrame = CFrame.lookAt(center + DEFAULT_SELF_VIEW_CAM_OFFSET, headCloneRootFrame.Position)
-				viewportCamera.Focus = headCloneRootFrame
-				character.Archivable = previousArchivableValue
-				dummyModel:Destroy()
-			else
-				--GetExtentsSize is only usable on models, so putting head into model:
-				--todo: only run this if head found, also look for head with descendents if not found
-				local dummyModel = Instance.new("Model")
-				dummyModel.Parent = clone
-				local head = getHead(clone)
-				character.Archivable = true
-				headClone = head:Clone()
-				headClone.CanCollide = false
-				headClone.Parent = dummyModel
-				--if the user has a hat on, we take that into consideration for the cam framing now as there are many bigger heads and masks
-				--which are of type hat accessory which the users put on their head and we want that to be still properly framed in the self view
-				if FFlagSelfViewChecks2 then
-					for _, accessory in pairs(clone:GetChildren()) do
-						if accessory:IsA("Accessory") and accessory.AccessoryType == Enum.AccessoryType.Hat then
-							local hatClone = accessory:Clone()
-							hatClone.Parent = dummyModel
-						end
-					end
-				end
-				headCloneNeck = getNeck(clone, headClone)
-				local rig = dummyModel
-				local extents = rig:GetExtentsSize()
-				headHeight = extents.Y
-				local width = math.min(extents.X, extents.Y)
-				width = math.min(extents.X, extents.Z)
-				cframe, boundsSize = rig:GetBoundingBox()
 				local rootPart = headClone
 				headCloneRootFrame = rootPart.CFrame
 				headClone:Destroy()
@@ -1911,48 +1961,59 @@ local function updateClone(player)
 	end
 
 	debugPrint("Self View: clone:" .. tostring(clone))
-	local cloneHumanoid = clone:FindFirstChild("Humanoid")
+	local cloneHumanoid = nil
+	if FFlagSelfViewLookUpHumanoidByType then
+		cloneHumanoid = clone:FindFirstChildWhichIsA("Humanoid")
+	else
+		cloneHumanoid = clone:FindFirstChild("Humanoid")
+	end
 	if cloneHumanoid then
 		cloneHumanoid.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
 	end
 	cloneAnimator = getAnimator(clone, 0)
 
-	--prep sync streaming tracks
+	-- --prep sync streaming tracks
 	if cloneAnimator then
-		-- clear cloned tracks
-		local clonedTracks = cloneAnimator:GetPlayingAnimationTracks()
-		local coreScriptTracks = cloneAnimator:GetPlayingAnimationTracksCoreScript()
+		if not EngineFeatureAnimatorAndADFRefactorInternal then
+			-- clear cloned tracks
+			local clonedTracks = cloneAnimator:GetPlayingAnimationTracks()
+			local coreScriptTracks = cloneAnimator:GetPlayingAnimationTracksCoreScript()
 
-		for index, track in ipairs(clonedTracks) do
-			if track ~= nil then
-				track:Stop(0)
-				track:Destroy()
+			for index, track in ipairs(clonedTracks) do
+				if track ~= nil then
+					track:Stop(0)
+					track:Destroy()
+				end
 			end
-		end
 
-		for index, track in ipairs(coreScriptTracks) do
-			if track ~= nil then
-				track:Stop(0)
-				track:Destroy()
+			for index, track in ipairs(coreScriptTracks) do
+				if track ~= nil then
+					track:Stop(0)
+					track:Destroy()
+				end
 			end
-		end
 
-		if newTrackerStreamAnimation then
-			newTrackerStreamAnimation:Destroy()
-			newTrackerStreamAnimation = nil
+			if newTrackerStreamAnimation then
+				newTrackerStreamAnimation:Destroy()
+				newTrackerStreamAnimation = nil
+			end
 		end
 
 		if animator then
-			-- clone tracks manually
-			for index, track in ipairs(animator:GetPlayingAnimationTracksCoreScript()) do
-				syncTrack(cloneAnimator, track)
-			end
-
-			observerInstances[Observer.AnimationPlayedCoreScript] = animator.AnimationPlayedCoreScript:Connect(
-				function(track)
+			if EngineFeatureAnimatorAndADFRefactorInternal then
+				cloneAnimator:SynchronizeWith(animator)
+			else
+				-- clone tracks manually
+				for index, track in ipairs(animator:GetPlayingAnimationTracksCoreScript()) do
 					syncTrack(cloneAnimator, track)
 				end
-			)
+
+				observerInstances[Observer.AnimationPlayedCoreScript] = animator.AnimationPlayedCoreScript:Connect(
+					function(track)
+						syncTrack(cloneAnimator, track)
+					end
+				)
+			end
 
 			gotUsableClone = true
 
@@ -1982,16 +2043,11 @@ function updateCachedHeadColor(headRefParam)
 	end)
 
 	if hasHeadColor then
-		if FFlagSelfViewChecks then
-			cachedHeadColor = headRefParam.Color
-			local hasHeadSize = pcall(function()
-				hasProperty(headRefParam, "Size")
-			end)
-			if hasHeadSize then
-				cachedHeadSize = headRefParam.Size
-			end
-		else
-			cachedHeadColor = headRefParam.Color
+		cachedHeadColor = headRefParam.Color
+		local hasHeadSize = pcall(function()
+			hasProperty(headRefParam, "Size")
+		end)
+		if hasHeadSize then
 			cachedHeadSize = headRefParam.Size
 		end
 	end
@@ -2026,11 +2082,14 @@ local function characterAdded(character)
 	clearObserver(Observer.HeadSize)
 	clearObserver(Observer.Color)
 
-	if FFlagSelfViewImprovedUpdateCloneTriggering then
-		local humanoid = character:FindFirstChild("Humanoid")
-		if humanoid then
-			addHumanoidStateChangedObserver(humanoid)
-		end
+	local humanoid = nil
+	if FFlagSelfViewLookUpHumanoidByType then
+		humanoid = character:FindFirstChildWhichIsA("Humanoid")
+	else
+		humanoid = character:FindFirstChild("Humanoid")
+	end
+	if humanoid then
+		addHumanoidStateChangedObserver(humanoid)
 	end
 
 	-- listen for updates on the original character's structure
@@ -2041,7 +2100,7 @@ local function characterAdded(character)
 
 			updateCachedHeadColor(headRef)
 
-			if FFlagFacialAnimationShowInfoMessageWhenNoDynamicHead and not noDynamicHeadEquippedInfoShown then
+			if not noDynamicHeadEquippedInfoShown then
 				if descendant:IsA("MeshPart") then
 					local faceControls = descendant:WaitForChild("FaceControls", 0.5)
 					if faceControls == nil then
@@ -2053,23 +2112,25 @@ local function characterAdded(character)
 			end
 		end
 
-		if FFlagSelfViewImprovedUpdateCloneTriggering then
-
+		if FFlagSelfViewLookUpHumanoidByType then
+			if descendant:IsA("Humanoid") then
+				local humanoid = descendant
+				addHumanoidStateChangedObserver(humanoid)
+			end
+		else
 			if descendant.Name == "Humanoid" or descendant:IsA("Humanoid") then
 				local humanoid = descendant
 				addHumanoidStateChangedObserver(humanoid)
 			end
+		end
 
-			--we only want to refresh the avatar self view clone on descendant added if the descendant is actually visible
-			--this is to avoid unneccessary refreshes in case of a dev for example adding a Sound object to the avatar or some part which is for gameplay logic and turned transparent
-			if descendant:IsA("MeshPart") or descendant:IsA("Part") or descendant:IsA("Decal") then
-				if descendant.Transparency < 1 then
-					setCloneDirty(true)
-				end
-			elseif TYPES_TRIGGERING_DIRTY_ON_ADDREMOVE[descendant.ClassName] then
+		--we only want to refresh the avatar self view clone on descendant added if the descendant is actually visible
+		--this is to avoid unneccessary refreshes in case of a dev for example adding a Sound object to the avatar or some part which is for gameplay logic and turned transparent
+		if descendant:IsA("MeshPart") or descendant:IsA("Part") or descendant:IsA("Decal") then
+			if descendant.Transparency < 1 then
 				setCloneDirty(true)
 			end
-		else
+		elseif TYPES_TRIGGERING_DIRTY_ON_ADDREMOVE[descendant.ClassName] then
 			setCloneDirty(true)
 		end
 	end)
@@ -2082,21 +2143,15 @@ local function characterAdded(character)
 					return
 				end
 			end
-			if not FFlagSelfViewImprovedUpdateCloneTriggering then
-				setCloneDirty(true)
-			end
 		end
-
-		if FFlagSelfViewImprovedUpdateCloneTriggering then
-			--we only want to refresh the avatar self view clone on descendant removed if the descendant was actually visible
-			--this is to avoid unneccessary refreshes
-			if descendant:IsA("MeshPart") or descendant:IsA("Part") or descendant:IsA("Decal") then
-				if descendant.Transparency < 1 then
-					setCloneDirty(true)
-				end
-			elseif TYPES_TRIGGERING_DIRTY_ON_ADDREMOVE[descendant.ClassName] then
+		--we only want to refresh the avatar self view clone on descendant removed if the descendant was actually visible
+		--this is to avoid unneccessary refreshes
+		if descendant:IsA("MeshPart") or descendant:IsA("Part") or descendant:IsA("Decal") then
+			if descendant.Transparency < 1 then
 				setCloneDirty(true)
 			end
+		elseif TYPES_TRIGGERING_DIRTY_ON_ADDREMOVE[descendant.ClassName] then
+			setCloneDirty(true)
 		end
 	end)
 
@@ -2121,22 +2176,15 @@ end
 local function onCharacterAdded(character)
 	playerCharacterAddedConnection:Disconnect()
 	ReInit(Players.LocalPlayer)
-	if FFlagSelfViewImprovedUpdateCloneTriggering then
-		clearObserver(Observer.HumanoidStateChanged)
-		local humanoid = character:FindFirstChild("Humanoid")
-		if humanoid then
-			addHumanoidStateChangedObserver(humanoid)
-		end
+	clearObserver(Observer.HumanoidStateChanged)
+	local humanoid = nil
+	if FFlagSelfViewLookUpHumanoidByType then
+		humanoid = character:FindFirstChildWhichIsA("Humanoid")
+	else
+		humanoid = character:FindFirstChild("Humanoid")
 	end
-end
-
---we don't want Self View to get closed when just swapping avatars
---(it still auto hides hwne no usabled avatar found for some time)
-local function onCharacterRemoved(player)
-	if not FFlagSelfViewDontHideOnSwapCharacter then
-		debugPrint("Self View: onCharacterRemoved()")
-		setIsOpen(false)
-		playerCharacterRemovingConnection:Disconnect()
+	if humanoid then
+		addHumanoidStateChangedObserver(humanoid)
 	end
 end
 
@@ -2159,12 +2207,6 @@ function playerAdded(player)
 
 		--handle respawn:
 		playerCharacterAddedConnection = player.CharacterAdded:Connect(onCharacterAdded)
-
-		if not FFlagSelfViewDontHideOnSwapCharacter then
-			playerCharacterRemovingConnection = player.CharacterRemoving:Connect(function()
-				onCharacterRemoved(player)
-			end)
-		end
 
 		characterAdded(currentCharacter)
 
@@ -2337,17 +2379,6 @@ function startRenderStepped(player)
 				headRef = getHead(character)
 			end
 
-			if not FFlagSelfViewChecks then
-				if headRef == nil then
-					gotUsableClone = false
-				end
-			end
-
-			local currentStreamTrackWeight
-			if GetFFlagIrisGyroEnabled() then
-				currentStreamTrackWeight = 1
-			end
-
 			if headRef then
 				local animator = getAnimator(character, 0)
 
@@ -2355,27 +2386,28 @@ function startRenderStepped(player)
 				if cloneAnimator ~= nil and animator ~= nil then
 					gotUsableClone = true
 
-					local playingAnims = cloneAnimator:GetPlayingAnimationTracks()
-					for _, track in pairs(playingAnims) do
-						if track ~= nil then
-							track:Stop(0)
+					if not EngineFeatureAnimatorAndADFRefactorInternal then
+						local playingAnims = cloneAnimator:GetPlayingAnimationTracks()
+						for _, track in pairs(playingAnims) do
+							if track ~= nil then
+								track:Stop(0)
+							end
 						end
-					end
 
-					local orgPlayingTracks = animator:GetPlayingAnimationTracks()
+						local orgPlayingTracks = animator:GetPlayingAnimationTracks()
 
-					local anim = nil
-					orgAnimationTracks = {}
-					for index, value in ipairs(orgPlayingTracks) do
-						anim = value.Animation
-						if anim then
-							if anim:IsA("Animation") then
-								if FFlagSelfViewChecks3 then
+						local anim = nil
+						orgAnimationTracks = {}
+						for index, value in ipairs(orgPlayingTracks) do
+							anim = value.Animation
+							if anim then
+								if anim:IsA("Animation") then
 									--avoid error "LoadAnimation requires the asset id to not be empty"
 									if anim.AnimationId ~= "" then
 										orgAnimationTracks[anim.AnimationId] = value
 										if not cloneAnimationTracks[anim.AnimationId] then
-											cloneAnimationTracks[anim.AnimationId] = cloneAnimator:LoadAnimation(anim)
+											cloneAnimationTracks[anim.AnimationId] =
+												cloneAnimator:LoadAnimation(anim)
 										end
 										local cloneAnimationTrack = cloneAnimationTracks[anim.AnimationId] --cloneAnimator:LoadAnimation(anim)
 
@@ -2384,51 +2416,33 @@ function startRenderStepped(player)
 										cloneAnimationTrack.Priority = value.Priority
 										cloneAnimationTrack:AdjustWeight(value.WeightCurrent, 0.1)
 									end
-								else
-									orgAnimationTracks[anim.AnimationId] = value
-									if not cloneAnimationTracks[anim.AnimationId] then
-										cloneAnimationTracks[anim.AnimationId] = cloneAnimator:LoadAnimation(anim)
-									end
-									local cloneAnimationTrack = cloneAnimationTracks[anim.AnimationId] --cloneAnimator:LoadAnimation(anim)
-
-									cloneAnimationTrack:Play()
-									cloneAnimationTrack.TimePosition = value.TimePosition
-									cloneAnimationTrack.Priority = value.Priority
-									cloneAnimationTrack:AdjustWeight(value.WeightCurrent, 0.1)
 								end
 							end
 						end
-					end
 
-					--clear meanwhile not anymore playing track
-					for trackId in cloneAnimationTracks do
-						local track = cloneAnimationTracks[trackId]
-						if track then
-							anim = track.Animation
-							if anim then
-								if not orgAnimationTracks[anim.AnimationId] then
-									if FFlagSelfViewChecks then
+						--clear meanwhile not anymore playing track
+						for trackId in cloneAnimationTracks do
+							local track = cloneAnimationTracks[trackId]
+							if track then
+								anim = track.Animation
+								if anim then
+									if not orgAnimationTracks[anim.AnimationId] then					
 										if cloneAnimationTracks[anim.AnimationId] ~= nil then
 											cloneAnimationTracks[anim.AnimationId]:Stop(0)
 										end
-									else
-										cloneAnimationTracks[anim.AnimationId]:Stop(0)
+										cloneAnimationTracks[anim.AnimationId] = nil
 									end
-									cloneAnimationTracks[anim.AnimationId] = nil
 								end
 							end
 						end
-					end
 
-					for index, track in ipairs(animator:GetPlayingAnimationTracksCoreScript()) do
-						local playingAnims = cloneAnimator:GetPlayingAnimationTracksCoreScript()
-						for i, trackS in pairs(playingAnims) do
-							if trackS.Animation:IsA("TrackerStreamAnimation") then
-								trackS.Priority = track.Priority
-								trackS:AdjustWeight(track.WeightCurrent, 0)
 
-								if GetFFlagIrisGyroEnabled() then
-									currentStreamTrackWeight = track.WeightCurrent
+						for index, track in ipairs(animator:GetPlayingAnimationTracksCoreScript()) do
+							local playingAnims = cloneAnimator:GetPlayingAnimationTracksCoreScript()
+							for i, trackS in pairs(playingAnims) do
+								if trackS.Animation:IsA("TrackerStreamAnimation") then
+									trackS.Priority = track.Priority
+									trackS:AdjustWeight(track.WeightCurrent, 0)
 								end
 							end
 						end
@@ -2437,24 +2451,22 @@ function startRenderStepped(player)
 			end
 
 			local camOrientationWeight
-			local trackerWeight
 			local trackerData
 			if GetFFlagIrisGyroEnabled() then
 				camOrientationWeight = 0.5
-				trackerWeight = 1
 				trackerData = nil
 				-- When a device has accelerometer, we make self view orientation a hybrid of:
 				-- 1. Face rotation
 				-- 2. Camera orientation
 
-				if UserInputService.AccelerometerEnabled then
+				local platformEnum = UserInputService:GetPlatform()
+				if platformEnum == Enum.Platform.IOS or platformEnum == Enum.Platform.Android then
 					if cloneAnimator ~= nil then
 						local playingAnims = cloneAnimator:GetPlayingAnimationTracksCoreScript()
 						for i, trackS in pairs(playingAnims) do
 							if trackS.Animation:IsA("TrackerStreamAnimation") then
 								-- poll tracker data
 								_, trackerData, _ = trackS:GetTrackerData()
-								trackS:AdjustWeight(math.clamp(trackerWeight * currentStreamTrackWeight, 0.001, currentStreamTrackWeight), 0)
 							end
 						end
 					end
@@ -2521,22 +2533,41 @@ function startRenderStepped(player)
 						debugPrint("Self View: no neck found")
 					end
 
-					if GetFFlagIrisGyroEnabled() and trackerData ~= nil then
-						local offset = Vector3.new(0, 0.105, -(boundsSize.Z + 1))
-						local x, y, z = trackerData:ToEulerAnglesXYZ()
-						-- Cam orientation will be an inverse of the head rotation
-						local angle = CFrame.Angles(-x * camOrientationWeight, -y * camOrientationWeight, -z * camOrientationWeight)
-						viewportCamera.CFrame = CFrame.lookAt(angle * (center + offset), centerLowXimpact)
-					else
-						if FFlagSelfViewChecks2 then
-							local offset = Vector3.new(0, (headHeight * 0.25), -((boundsSize.Z) + 1))
-							viewportCamera.CFrame = CFrame.lookAt(center + offset, centerLowXimpact)
-							viewportCamera.Focus = headClone.CFrame
+					if GetFFlagIrisGyroEnabled() and (trackerData ~= nil or EngineFeaturePlayerViewRemoteEventSupport) then
+						if EngineFeaturePlayerViewRemoteEventSupport then
+							local cframe = game:GetService("PlayerViewService"):GetDeviceCameraCFrameForSelfView()
+							local boundingBox = cframe.Position
+							local x, y, z = cframe:ToEulerAnglesYXZ()
+							local rotation = CFrame.fromEulerAnglesYXZ(x, y, z)
+							local distanceRatio = 0
+
+							if boundingBox.Z > 0.0 then
+								distanceRatio = math.clamp(0.5 - (boundingBox.Z * 3), -0.5, 0.5)
+							end
+
+							local distance = -(boundsSize.Z + 1)
+							-- Round to 2 decimal points
+							local offset = Vector3.new(0, 0.105, math.floor((distance + (distanceRatio * distance)) * 100) / 100)
+
+							viewportCamera.CFrame = viewportCamera.CFrame:lerp(
+								CFrame.lookAt(rotation * (center + offset), centerLowXimpact),
+								0.5
+							)
 						else
 							local offset = Vector3.new(0, 0.105, -(boundsSize.Z + 1))
-							viewportCamera.CFrame = CFrame.lookAt(center + offset, centerLowXimpact)
-							viewportCamera.Focus = headClone.CFrame
+							local x, y, z = trackerData:ToEulerAnglesXYZ()
+							-- Cam orientation will be an inverse of the head rotation
+							local angle = CFrame.Angles(
+								-x * camOrientationWeight,
+								-y * camOrientationWeight,
+								-z * camOrientationWeight
+							)
+							viewportCamera.CFrame = CFrame.lookAt(angle * (center + offset), centerLowXimpact)
 						end
+					else
+						local offset = Vector3.new(0, (headHeight * 0.25), -((boundsSize.Z) + 1))
+						viewportCamera.CFrame = CFrame.lookAt(center + offset, centerLowXimpact)
+						viewportCamera.Focus = headClone.CFrame
 					end
 				end
 			end
@@ -2683,9 +2714,7 @@ function Initialize(player)
 	Players.PlayerAdded:Connect(playerAdded)
 	Players.PlayerRemoving:Connect(function(player)
 		if player == Players.LocalPlayer then
-			if FFlagSelfViewImprovedUpdateCloneTriggering then
-				clearObserver(Observer.HumanoidStateChanged)
-			end
+			clearObserver(Observer.HumanoidStateChanged)
 			clearObserver(Observer.CharacterAdded)
 			clearObserver(Observer.CharacterRemoving)
 			clearClone()
@@ -2698,72 +2727,9 @@ function Initialize(player)
 	startRenderStepped(player)
 
 	initialized = true
-end
 
-function setIsOpen(shouldBeOpen)
-	debugPrint("Self View: setIsOpen(): " .. tostring(shouldBeOpen))
-	isOpen = shouldBeOpen
-
-	if isOpen then
-		ReInit(Players.LocalPlayer)
-	else
-		headRef = nil
-		cachedHeadColor = nil
-		cachedHeadSize = nil
-		clearAllObservers()
-		clearObserver(Observer.CharacterAdded)
-		clearObserver(Observer.CharacterRemoving)
-		clearClone()
-		if playerScreenOrientationConnection then
-			playerScreenOrientationConnection:Disconnect()
-			playerScreenOrientationConnection = nil
-		end
-
-		prepMicAndCamPropertyChangedSignalHandler()
-
-		indicatorCircle.Visible = debug
-
-		trackSelfViewSessionAsNeeded()
-	end
-end
-
---comment in to test Self View not getting shown (as wanted) if CoreGuiType.SelfView is already set disabled before we get to init Self View
---StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.SelfView, false)
-
---toggle Self View based on whether it is enabled via SetCoreGuiEnabled
-if not FFlagDisableSelfViewReactingToSetCoreGuiEnabled then
-	--toggle Self View based on whether it is enabled via SetCoreGuiEnabled
-	StarterGui.CoreGuiChangedSignal:Connect(function(coreGuiType, newState)
-		if coreGuiType == Enum.CoreGuiType.All or (coreGuiType == Enum.CoreGuiType.SelfView) then
-			local shouldBeEnabledCoreGuiSetting = getShouldBeEnabledCoreGuiSetting()
-
-			Analytics:reportSelfViewEnabledInCoreGuiState(shouldBeEnabledCoreGuiSetting)
-
-			debugPrint(
-				"Self View: CoreGuiChangedSignal: shouldBeEnabledCoreGuiSetting: "
-					.. tostring(shouldBeEnabledCoreGuiSetting)
-			)
-			--when disable call comes in we always do it, when enable call comes in only if not visible already
-			if not newState or (frame ~= nil and frame.Visible ~= newState) then
-				if newState then
-					if initialized then
-						ReInit(Players.LocalPlayer)
-					else
-						Initialize(Players.LocalPlayer)
-					end
-				else
-					if initialized then
-						debugPrint("Self View: triggering shutting down because shouldBeEnabledCoreGuiSetting is false")
-						setIsOpen(false)
-						stopRenderStepped()
-						if frame then
-							frame.Visible = false
-						end
-					end
-				end
-			end
-		end
-	end)
+	--trigger opening self view here so it shows if cam enabled (before even voice enabled, as to be independent of voice/mic enabled/available)
+	displaySelfieViewByDefault()
 end
 
 Initialize(Players.LocalPlayer)

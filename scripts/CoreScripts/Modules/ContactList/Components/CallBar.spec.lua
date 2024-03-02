@@ -10,6 +10,9 @@ return function()
 	local RoactRodux = require(CorePackages.RoactRodux)
 	local UIBlox = require(CorePackages.UIBlox)
 
+	local LocalizationProvider = require(CorePackages.Workspace.Packages.Localization).LocalizationProvider
+	local Localization = require(CorePackages.Workspace.Packages.InExperienceLocales).Localization
+
 	local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 
 	local ContactList = RobloxGui.Modules.ContactList
@@ -23,14 +26,14 @@ return function()
 		local store = Rodux.Store.new(Reducer, {
 			Call = {
 				currentCall = {
-					status = RoduxCall.Enums.Status.Active.rawValue(),
+					status = RoduxCall.Enums.Status.Active,
 					callerId = 11111111,
 					calleeId = 12345678,
 					placeId = 789,
 					reservedServerAccessCode = "accessCode",
 					callId = "12345",
-					callerDisplayName = "Display Name 1",
-					calleeDisplayName = "Display Name 2",
+					callerCombinedName = "Display Name 1",
+					calleeCombinedName = "Display Name 2",
 					gameInstanceId = "gameId",
 					createdUtc = os.time(),
 					activeUtc = os.time(),
@@ -44,9 +47,14 @@ return function()
 			store = store,
 		}, {
 			StyleProvider = Roact.createElement(UIBlox.Core.Style.Provider, {}, {
-				CallBar = Roact.createElement(CallBar, {
-					size = Vector2.new(200, 44),
-					activeUtc = os.time(),
+				LocalizationProvider = Roact.createElement(LocalizationProvider, {
+					localization = Localization.new("en-us"),
+				}, {
+					CallBar = Roact.createElement(CallBar, {
+						size = Vector2.new(200, 44),
+						activeUtc = os.time(),
+						position = UDim2.new(0.5, -100, 0, 0),
+					}),
 				}),
 			}),
 		})

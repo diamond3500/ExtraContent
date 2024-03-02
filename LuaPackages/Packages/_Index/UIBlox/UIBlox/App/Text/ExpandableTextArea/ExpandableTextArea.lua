@@ -4,7 +4,6 @@ local Text = ExpandableTextAreaRoot.Parent
 local App = Text.Parent
 local UIBlox = App.Parent
 local Packages = UIBlox.Parent
-local UIBloxConfig = require(Packages.UIBlox.UIBloxConfig)
 local Roact = require(Packages.Roact)
 local Cryo = require(Packages.Cryo)
 local RoactGamepad = require(Packages.RoactGamepad)
@@ -19,6 +18,9 @@ local ExpandableTextUtils = require(UIBlox.Core.Text.ExpandableText.ExpandableTe
 
 local CursorKind = require(App.SelectionImage.CursorKind)
 local withSelectionCursorProvider = require(App.SelectionImage.withSelectionCursorProvider)
+local useCursorByType = require(App.SelectionCursor.useCursorByType)
+local CursorType = require(App.SelectionCursor.CursorType)
+local UIBloxConfig = require(UIBlox.UIBloxConfig)
 
 local DEFAULT_PADDING_TOP = 30
 local PADDING_TOP = DEFAULT_PADDING_TOP
@@ -58,6 +60,8 @@ ExpandableTextArea.validateProps = t.strictInterface({
 	NextSelectionLeft = t.optional(t.table),
 	NextSelectionRight = t.optional(t.table),
 	frameRef = t.optional(t.table),
+	-- Selection cursor
+	selectionCursor = if UIBloxConfig.migrateToNewSelectionCursor then t.optional(t.any) else nil,
 })
 
 ExpandableTextArea.defaultProps = {
@@ -159,8 +163,10 @@ function ExpandableTextArea:render()
 				LayoutOrder = layoutOrder,
 				Position = position,
 				Size = width and UDim2.new(width.Scale, width.Offset, 0, 0) or UDim2.new(1, 0, 0, 0),
-				AutomaticSize = if UIBloxConfig.fixExpandableTextAreaChildSizing then Enum.AutomaticSize.Y else nil,
-				SelectionImageObject = getSelectionCursor(CursorKind.RoundedRect),
+				AutomaticSize = Enum.AutomaticSize.Y,
+				SelectionImageObject = if UIBloxConfig.migrateToNewSelectionCursor
+					then self.props.selectionCursor
+					else getSelectionCursor(CursorKind.RoundedRect),
 				[Roact.Ref] = ref,
 				[Roact.Change.AbsoluteSize] = function(rbx)
 					if self.state.frameWidth ~= rbx.AbsoluteSize.X then
@@ -274,6 +280,12 @@ function ExpandableTextArea:render()
 end
 
 return Roact.forwardRef(function(props, ref)
+	local selectionCursor = useCursorByType(CursorType.RoundedRect)
+	if UIBloxConfig.migrateToNewSelectionCursor then
+		props = Cryo.Dictionary.join({
+			selectionCursor = selectionCursor,
+		}, props)
+	end
 	return Roact.createElement(
 		ExpandableTextArea,
 		Cryo.Dictionary.join(props, {

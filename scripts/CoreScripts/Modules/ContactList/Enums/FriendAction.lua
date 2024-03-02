@@ -1,13 +1,7 @@
-local CoreGui = game:GetService("CoreGui")
+local FriendAction = {
+	NoAction = "" :: "",
+	Block = "Block" :: "Block",
+	Unfriend = "Unfriend" :: "Unfriend",
+}
 
-local RobloxGui = CoreGui:WaitForChild("RobloxGui")
-
-local ContactList = RobloxGui.Modules.ContactList
-local dependencies = require(ContactList.dependencies)
-local enumerate = dependencies.enumerate
-
-return enumerate(script.Name, {
-	NoAction = "",
-	Block = "Block",
-	Unfriend = "Unfriend",
-})
+return FriendAction

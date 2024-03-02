@@ -34,9 +34,13 @@ local LocalizationProvider = require(CorePackages.Workspace.Packages.Localizatio
 local utility = require(RobloxGui.Modules.Settings.Utility)
 
 local reportAbuseMenu = require(RobloxGui.Modules.Settings.Pages.ReportAbuseMenu)
+local reportAbuseMenuNew = require(RobloxGui.Modules.Settings.Pages.ReportAbuseMenuNewContainerPage)
 local SocialUtil = require(RobloxGui.Modules:WaitForChild("SocialUtil"))
 local Diag = require(CorePackages.Workspace.Packages.Analytics).AnalyticsReporters.Diag
-local EventStream = require(CorePackages.AppTempCommon.Temp.EventStream)
+local GetFFlagRemoveAppTempCommonTemp =
+    require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagRemoveAppTempCommonTemp
+local DEPRECATED_EventStream = require(CorePackages.AppTempCommon.Temp.EventStream)
+local EventStream = require(CorePackages.Workspace.Packages.Analytics).AnalyticsReporters.EventStream
 local ShareGameIcons = require(ShareGameDirectory.Spritesheets.ShareGameIcons)
 local isTenFootInterface = require(RobloxGui.Modules.TenFootInterface):IsEnabled()
 local RobloxTranslator = require(RobloxGui.Modules.RobloxTranslator)
@@ -50,13 +54,19 @@ local log = require(RobloxGui.Modules.Logger):new(script.Name)
 local MuteToggles = require(RobloxGui.Modules.Settings.Components.MuteToggles)
 local IXPServiceWrapper = require(RobloxGui.Modules.Common.IXPServiceWrapper)
 
-local FFlagShowAddFriendButtonForXboxUA = game:DefineFastFlag("ShowAddFriendButtonForXboxUA", false)
+local FFlagUpdateFriendLabelOnChange = game:DefineFastFlag("UpdateFriendLabelOnChange", false)
+local FFlagFixPlayersExtremeTruncation = game:DefineFastFlag("FixPlayersExtremeTruncation", false)
 local GetFFlagLuaInExperienceCoreScriptsGameInviteUnification = require(RobloxGui.Modules.Flags.GetFFlagLuaInExperienceCoreScriptsGameInviteUnification)
+local isRoactAbuseReportMenuEnabled = require(RobloxGui.Modules.TrustAndSafety.isRoactAbuseReportMenuEnabled)
 
 local GameInviteAnalyticsManager
 if GetFFlagLuaInExperienceCoreScriptsGameInviteUnification() then
 	GameInviteAnalyticsManager = require(CorePackages.Workspace.Packages.GameInvite).GameInviteAnalyticsManager
 end
+
+local _, PlatformFriendsService = pcall(function()
+	return game:GetService('PlatformFriendsService')
+end)
 
 	------------ Constants -------------------
 local Theme = require(script.Parent.Parent.Theme)
@@ -98,6 +108,7 @@ local BUTTON_ROW_HEIGHT = PLAYER_ROW_HEIGHT
 local USERNAME_POSITION = 0.5
 local USERNAME_POSITION_PORTRAIT = 0.275
 local RIGHT_SIDE_BUTTON_PAD = -4
+local LABEL_POSX = 60
 
 if Theme.UIBloxThemeEnabled then
 	RIGHT_SIDE_BUTTON_PAD = -12
@@ -108,7 +119,6 @@ local FULL_SIZE_SHARE_GAME_BUTTON_SIZE = UDim2.new(1, -10, 0, BUTTON_ROW_HEIGHT)
 local HALF_SIZE_SHARE_GAME_BUTTON_SIZE = UDim2.new(0.5, -10, 0, BUTTON_ROW_HEIGHT)
 
 ------------ Variables -------------------
-local platform = UserInputService:GetPlatform()
 local PageInstance = nil
 local localPlayer = PlayersService.LocalPlayer
 while not localPlayer do
@@ -120,9 +130,6 @@ end
 local success, result = pcall(function() return settings():GetFFlag('UseNotificationsLocalization') end)
 local FFlagUseNotificationsLocalization = success and result
 local FFlagExtendedExpMenuPortraitLayout = require(RobloxGui.Modules.Flags.FFlagExtendedExpMenuPortraitLayout)
-local getFFlagEnableVoiceChatPlayersList = require(RobloxGui.Modules.Flags.GetFFlagEnableVoiceChatPlayersList)
-local getFFlagPlayerListApolloClientEnabled = require(RobloxGui.Modules.Flags.getFFlagPlayerListApolloClientEnabled)
-local getIsUserProfileOnPlayersListEnabled = require(RobloxGui.Modules.Flags.getIsUserProfileOnPlayersListEnabled)
 local GetFFlagVoiceChatUILogging = require(RobloxGui.Modules.Flags.GetFFlagVoiceChatUILogging)
 local GetFFlagOldMenuNewIcons = require(RobloxGui.Modules.Flags.GetFFlagOldMenuNewIcons)
 local GetFFlagPauseMuteFix = require(RobloxGui.Modules.Flags.GetFFlagPauseMuteFix)
@@ -131,12 +138,12 @@ local GetFFlagOldMenuUseSpeakerIcons = require(RobloxGui.Modules.Flags.GetFFlagO
 local GetFFlagInviteTextTruncateFix = require(RobloxGui.Modules.Flags.GetFFlagInviteTextTruncateFix)
 local FFlagAvatarChatCoreScriptSupport = require(RobloxGui.Modules.Flags.FFlagAvatarChatCoreScriptSupport)
 local GetFFlagVoiceRecordingIndicatorsEnabled = require(RobloxGui.Modules.Flags.GetFFlagVoiceRecordingIndicatorsEnabled)
-local GetFFlagVoiceTextOverflowFix = require(RobloxGui.Modules.Flags.GetFFlagVoiceTextOverflowFix)
 local GetFFlagShowMuteToggles = require(RobloxGui.Modules.Settings.Flags.GetFFlagShowMuteToggles)
 local GetFFlagWrapBlockModalScreenInProvider = require(RobloxGui.Modules.Flags.GetFFlagWrapBlockModalScreenInProvider)
 local GetFFlagMuteTogglesEnableIXP = require(RobloxGui.Modules.Settings.Flags.GetFFlagMuteTogglesEnableIXP)
 local GetFStringMuteTogglesIXPLayerName = require(RobloxGui.Modules.Settings.Flags.GetFStringMuteTogglesIXPLayerName)
 local GetFFlagUseFriendsPropsInMuteToggles = require(RobloxGui.Modules.Settings.Flags.GetFFlagUseFriendsPropsInMuteToggles)
+local GetFFlagFixInviteTextVisibility = require(RobloxGui.Modules.Settings.Flags.GetFFlagFixInviteTextVisibility)
 
 local isEngineTruncationEnabledForIngameSettings = require(RobloxGui.Modules.Flags.isEngineTruncationEnabledForIngameSettings)
 local EngineFeatureVoiceChatMultistreamSubscriptionsEnabled = game:GetEngineFeature("VoiceChatMultistreamSubscriptionsEnabled")
@@ -145,7 +152,6 @@ local FFlagPlayerListRefactorUsernameFormatting = game:DefineFastFlag("PlayerLis
 
 local FFlagEnablePlatformName = game:DefineFastFlag("EnablePlatformName", false)
 local FFlagCheckForNilUserIdOnPlayerList = game:DefineFastFlag("CheckForNilUserIdOnPlayerList", false)
-local FFlagFixPlayersLoadingState = game:DefineFastFlag("FixPlayersLoadingState", false)
 local ChromeEnabled = require(RobloxGui.Modules.Chrome.Enabled)()
 
 if GetFFlagOldMenuNewIcons() then
@@ -251,19 +257,9 @@ local function Initialize()
 				end
 			end
 
-			if FFlagShowAddFriendButtonForXboxUA then
-				if not (platform == Enum.Platform.XBoxOne and game:GetEngineFeature("XboxUniversalApp") == false) then
-					friendLabel, friendLabelText = utility:MakeStyledButton("FriendStatus", "Add Friend", UDim2.new(0, 182, 0, Theme.ButtonHeight), addFriendFunc)
-					friendLabelText.ZIndex = 3
-					friendLabelText.Position = friendLabelText.Position + UDim2.new(0,0,0,1)
-				end
-			else
-				if platform ~= Enum.Platform.XBoxOne then
-					friendLabel, friendLabelText = utility:MakeStyledButton("FriendStatus", "Add Friend", UDim2.new(0, 182, 0, Theme.ButtonHeight), addFriendFunc)
-					friendLabelText.ZIndex = 3
-					friendLabelText.Position = friendLabelText.Position + UDim2.new(0,0,0,1)
-				end
-			end
+			friendLabel, friendLabelText = utility:MakeStyledButton("FriendStatus", "Add Friend", UDim2.new(0, 182, 0, Theme.ButtonHeight), addFriendFunc)
+			friendLabelText.ZIndex = 3
+			friendLabelText.Position = friendLabelText.Position + UDim2.new(0,0,0,1)
 		end
 
 		if friendLabel then
@@ -367,25 +363,6 @@ local function Initialize()
 	local playersFriends = {}
 	local voiceAnalytics = VoiceAnalytics.new(AnalyticsService, "Players")
 
-	local function friendStatusCreate(playerLabel, player)
-		local friendLabelParent = nil
-		if playerLabel then
-			friendLabelParent = playerLabel:FindFirstChild("RightSideButtons")
-		end
-
-		if friendLabelParent then
-			-- remove any previous friend status labels
-			for _, item in pairs(friendLabelParent:GetChildren()) do
-				if item and item.Name == "FriendStatus" then
-					if GuiService.SelectedCoreObject == item then
-						GuiService.SelectedCoreObject = shareGameButton
-					end
-					item:Destroy()
-				end
-			end
-		end
-	end
-
 	local function resizeFriendButton(parent, player, isPortrait, wasIsPortrait)
 		local friendLabel = parent:FindFirstChild("FriendStatus")
 		if friendLabel and isPortrait == wasIsPortrait then
@@ -418,6 +395,30 @@ local function Initialize()
 			friendLabel.LayoutOrder = 5
 			friendLabel.Selectable = true
 			friendLabel.Parent = parent
+		end
+	end
+
+	local function friendStatusCreate(playerLabel, player)
+		local friendLabelParent = nil
+		if playerLabel then
+			friendLabelParent = playerLabel:FindFirstChild("RightSideButtons")
+		end
+
+		if friendLabelParent then
+			-- remove any previous friend status labels
+			for _, item in pairs(friendLabelParent:GetChildren()) do
+				if item and item.Name == "FriendStatus" then
+					if GuiService.SelectedCoreObject == item then
+						GuiService.SelectedCoreObject = shareGameButton
+					end
+					item:Destroy()
+				end
+			end
+
+			if FFlagUpdateFriendLabelOnChange then
+				-- create a new friend label with updated status
+				resizeFriendButton(friendLabelParent, player, utility:IsPortrait(), nil)
+			end
 		end
 	end
 
@@ -762,7 +763,7 @@ local function Initialize()
 			GetFFlagPauseMuteFix() and UDim2.new(1, 0, 1, 0) or UDim2.new(1 / 5, -5, 4 / 5, 0),
 			GetFFlagPauseMuteFix() and UDim2.new(1, -6, 1, -4) or UDim2.new(0.5, -6, 0.65, -4),
 			function ()
-				VoiceChatServiceManager:ToggleMic()
+				VoiceChatServiceManager:ToggleMic("InGameMenuPlayers")
 				if voiceAnalytics then
 					voiceAnalytics:onToggleMuteSelf(isLocalPlayerMutedState)
 				end
@@ -847,7 +848,11 @@ local function Initialize()
 
 			if showRightSideButtons(player) then
 				local reportPlayerFunction = function()
-					reportAbuseMenu:ReportPlayer(player, "MenuPlayerList")
+					if isRoactAbuseReportMenuEnabled() then
+						reportAbuseMenuNew:ReportPlayer(player, "MenuPlayerList")
+					else
+						reportAbuseMenu:ReportPlayer(player, "MenuPlayerList")
+					end
 				end
 
 				local reportButton = utility:MakeStyledImageButton("ReportPlayer", REPORT_PLAYER_IMAGE,
@@ -914,31 +919,27 @@ local function Initialize()
 		icon.Parent = frame
 
 		local textLabel = Instance.new("TextLabel")
-		if FFlagFixPlayersLoadingState then
-			textLabel.Text = ""
-		end
+		textLabel.Text = ""
 		textLabel.TextXAlignment = Enum.TextXAlignment.Left
 		textLabel.Font = Theme.font(Enum.Font.SourceSans, "DisplayName")
 		textLabel.FontSize = hasSecondRow and Theme.fontSize(Enum.FontSize.Size36, "DisplayName") or Theme.fontSize(Enum.FontSize.Size24, "DisplayName")
 		textLabel.TextColor3 = Color3.new(1, 1, 1)
 		textLabel.BackgroundTransparency = 1
-		textLabel.Position = hasSecondRow and UDim2.new(0, 60, 0.5, -10) or UDim2.new(0, 60, .5, 0)
+		textLabel.Position = hasSecondRow and UDim2.new(0, LABEL_POSX, 0.5, -10) or UDim2.new(0, LABEL_POSX, .5, 0)
 		textLabel.Size = UDim2.new(0, 0, 0, 0)
 		textLabel.ZIndex = 3
 		textLabel.Parent = frame
 
 		if hasSecondRow then
 			local secondRow = Instance.new("TextLabel")
-			if FFlagFixPlayersLoadingState then
-				secondRow.Text = ""
-			end
+			secondRow.Text = ""
 			secondRow.Name = "SecondRow"
 			secondRow.TextXAlignment = Enum.TextXAlignment.Left
 			secondRow.Font = Theme.font(Enum.Font.SourceSans)
 			secondRow.FontSize = Theme.fontSize(Enum.FontSize.Size24, "Username")
 			secondRow.TextColor3 = Color3.fromRGB(162, 162, 162)
 			secondRow.BackgroundTransparency = 1
-			secondRow.Position = UDim2.new(0, 60, .5, 12)
+			secondRow.Position = UDim2.new(0, LABEL_POSX, .5, 12)
 			secondRow.Size = UDim2.new(0, 0, 0, 0)
 			secondRow.ZIndex = 3
 			secondRow.Parent = frame
@@ -959,7 +960,10 @@ local function Initialize()
 			if not shouldShowMuteToggles then
 				frame.Size = HALF_SIZE_SHARE_GAME_BUTTON_SIZE
 			end
-			if GetFFlagInviteTextTruncateFix() then
+			if FFlagFixPlayersExtremeTruncation then
+				textLabel.Size = UDim2.new(1, -LABEL_POSX, 0, 0)
+				textLabel.TextTruncate = Enum.TextTruncate.AtEnd
+			elseif GetFFlagInviteTextTruncateFix() then
 				textLabel.Size = UDim2.new(0.5, 0, 0, 0)
 				textLabel.TextTruncate = Enum.TextTruncate.AtEnd
 			end
@@ -1006,6 +1010,21 @@ local function Initialize()
 		frame.SelectionLost:connect(function() setIsHighlighted(false) end)
 		frame.SelectionImageObject = frame:Clone()
 
+		if GetFFlagFixInviteTextVisibility() and Theme.UIBloxThemeEnabled then 
+			local SelectionOverrideObject = utility:Create'Frame'{
+					BackgroundTransparency = Theme.transparency("PlayerRowSelection"),
+					BorderSizePixel = 0,
+					Size = UDim2.new(1, 0, 1, 0),
+					BackgroundColor3 = Theme.color("PlayerRowSelection")
+				}
+			utility:Create'UICorner'{
+				CornerRadius = Theme.DefaultCornerRadius,
+				Parent = SelectionOverrideObject,
+			}
+		
+			frame.SelectionImageObject = SelectionOverrideObject
+		end
+
 		return frame
 	end
 
@@ -1017,10 +1036,8 @@ local function Initialize()
 		local textLabel = frame.TextLabel
 		local icon = frame.Icon
 
-		if GetFFlagVoiceTextOverflowFix() then
-			textLabel.Size = UDim2.new(0.5, 0, 0, 0)
-			textLabel.TextTruncate = Enum.TextTruncate.AtEnd
-		end
+		textLabel.Size = if FFlagFixPlayersExtremeTruncation then UDim2.new(1, -LABEL_POSX, 0, 0) else UDim2.new(0.5, 0, 0, 0)
+		textLabel.TextTruncate = Enum.TextTruncate.AtEnd
 		textLabel.Font = Theme.font(Enum.Font.SourceSansSemibold, "Semibold")
 		textLabel.AutoLocalize = false
 		textLabel.Text = RobloxTranslator:FormatByKey("Feature.SettingsHub.Action.MuteAll")
@@ -1058,6 +1075,21 @@ local function Initialize()
 		frame.SelectionGained:connect(function() setIsHighlighted(true) end)
 		frame.SelectionLost:connect(function() setIsHighlighted(false) end)
 		frame.SelectionImageObject = frame:Clone()
+
+		if GetFFlagFixInviteTextVisibility() and Theme.UIBloxThemeEnabled then 
+			local SelectionOverrideObject = utility:Create'Frame'{
+					BackgroundTransparency = Theme.transparency("PlayerRowSelection"),
+					BorderSizePixel = 0,
+					Size = UDim2.new(1, 0, 1, 0),
+					BackgroundColor3 = Theme.color("PlayerRowSelection")
+				}
+			utility:Create'UICorner'{
+				CornerRadius = Theme.DefaultCornerRadius,
+				Parent = SelectionOverrideObject,
+			}
+		
+			frame.SelectionImageObject = SelectionOverrideObject
+		end
 
 		return frame
 	end
@@ -1107,7 +1139,7 @@ local function Initialize()
 		inspectButton.Parent = parent
 	end
 
-	local function resizePlatformName(parent, consoleName)
+	local function resizePlatformName(parent, consoleName, consoleUserId)
 		local platformNameContainer = parent:FindFirstChild("PlatformNameContainer")
 
 		if platformNameContainer then
@@ -1131,8 +1163,19 @@ local function Initialize()
 		platformNameContainer.LayoutOrder = -1
 		platformNameContainer.Parent = parent
 
-		-- TODO: create onActivated function to open gamer card
 		local onActivated = nil
+		if
+			game:GetEngineFeature("PlatformFriendsService") and
+			game:GetEngineFeature("PlatformFriendsProfile") and
+			PlatformFriendsService and
+			PlatformFriendsService:IsProfileEnabled() and
+			consoleUserId and
+			consoleUserId ~= ""
+		then
+			onActivated = function()
+				PlatformFriendsService:ShowProfile(consoleUserId)
+			end
+		end
 
 		-- create platform name
 		local consoleNameContainer, consoleNameText = utility:MakeStyledButton("consoleNameContainer", consoleName, UDim2.new(0, 0, 0, Theme.ButtonHeight), onActivated)
@@ -1259,18 +1302,18 @@ local function Initialize()
 				local maxPlayerNameSize = reportFlag.AbsolutePosition.X - 20 - frame.NameLabel.AbsolutePosition.X
 				frame.NameLabel.Text = "@" .. player.Name
 				frame.DisplayNameLabel.Text = player.DisplayName
-				if getFFlagPlayerListApolloClientEnabled() and getIsUserProfileOnPlayersListEnabled() and combinedName then
+				if combinedName then
 					frame.DisplayNameLabel.Text = combinedName
 				end
 
 
 				local newDisplayNameLength = utf8.len(player.DisplayName)
-				if getFFlagPlayerListApolloClientEnabled() and getIsUserProfileOnPlayersListEnabled() and combinedName then
+				if combinedName then
 					newDisplayNameLength = utf8.len(combinedName)
 				end
 
 				while frame.NameLabel.TextBounds.X > maxPlayerNameSize and newDisplayNameLength > 0 do
-					if getFFlagPlayerListApolloClientEnabled() and getIsUserProfileOnPlayersListEnabled() and combinedName then
+					if combinedName then
 						local offset = utf8.offset(combinedName, newDisplayNameLength)
 						frame.NameLabel.Text = string.sub(combinedName, 1, offset) .. "..."
 					else
@@ -1319,55 +1362,35 @@ local function Initialize()
 						reportFlagAddedConnection = frame.RightSideButtons.ChildAdded:connect(function(child)
 							if child.Name == leftMostButton then
 								child.Changed:connect(function(prop)
-									if getFFlagPlayerListApolloClientEnabled() and getIsUserProfileOnPlayersListEnabled() then
-										reportFlagChangedWithCombinedName(child, "AbsolutePosition")
-									else
-										reportFlagChanged(child, "AbsolutePosition")
-									end
-								end)
-								if getFFlagPlayerListApolloClientEnabled() and getIsUserProfileOnPlayersListEnabled() then
 									reportFlagChangedWithCombinedName(child, "AbsolutePosition")
-								else
-									reportFlagChanged(child, "AbsolutePosition")
-								end
+								end)
+								reportFlagChangedWithCombinedName(child, "AbsolutePosition")
 							end
 						end)
 					end
 					local reportFlag = frame.RightSideButtons:FindFirstChild(leftMostButton)
 					if reportFlag then
 						reportFlag.Changed:connect(function(prop)
-							if getFFlagPlayerListApolloClientEnabled() and getIsUserProfileOnPlayersListEnabled() then
-								reportFlagChangedWithCombinedName(reportFlag, prop)
-							else
-								reportFlagChanged(reportFlag, prop)
-							end
+							reportFlagChangedWithCombinedName(reportFlag, prop)
 						end)
 
-						if getFFlagPlayerListApolloClientEnabled() and getIsUserProfileOnPlayersListEnabled() then
-							reportFlagChangedWithCombinedName(reportFlag, "AbsolutePosition")
-						else
-							reportFlagChanged(reportFlag, "AbsolutePosition")
-						end
+						reportFlagChangedWithCombinedName(reportFlag, "AbsolutePosition")
 					end
 				else
 					frame.NameLabel.Text = "@" .. player.Name
-					if getFFlagPlayerListApolloClientEnabled() and getIsUserProfileOnPlayersListEnabled() then
-						if FFlagCheckForNilUserIdOnPlayerList and not player.UserId then
-							frame.DisplayNameLabel.Text = player.DisplayName
-						else
-							ApolloClient:query({
-								query = UserProfiles.Queries.userProfilesAllNamesByUserIds,
-								variables = {
-									userIds = { tostring(player.UserId) },
-								},
-							}):andThen(function(result)
-								frame.DisplayNameLabel.Text = getCombinedNameFromId(result.data, player.UserId)
-							end):catch(function()
-								frame.DisplayNameLabel.Text = player.DisplayName
-							end)
-						end
-					else
+					if FFlagCheckForNilUserIdOnPlayerList and not player.UserId then
 						frame.DisplayNameLabel.Text = player.DisplayName
+					else
+						ApolloClient:query({
+							query = UserProfiles.Queries.userProfilesAllNamesByUserIds,
+							variables = {
+								userIds = { tostring(player.UserId) },
+							},
+						}):andThen(function(result)
+							frame.DisplayNameLabel.Text = getCombinedNameFromId(result.data, player.UserId)
+						end):catch(function()
+							frame.DisplayNameLabel.Text = player.DisplayName
+						end)
 					end
 				end
 			end)
@@ -1407,23 +1430,19 @@ local function Initialize()
 			frame.NameLabel.Size = nameLabelSize
 			frame.DisplayNameLabel.Size = nameLabelSize
 			frame.NameLabel.Text = if FFlagPlayerListRefactorUsernameFormatting then formatUsername(player.Name) else "@" .. player.Name
-			if getFFlagPlayerListApolloClientEnabled() and getIsUserProfileOnPlayersListEnabled() then
-				if FFlagCheckForNilUserIdOnPlayerList and not player.UserId then
-					frame.DisplayNameLabel.Text = player.DisplayName
-				else
-					ApolloClient:query({
-						query = UserProfiles.Queries.userProfilesAllNamesByUserIds,
-						variables = {
-							userIds = { tostring(player.UserId) },
-						},
-					}):andThen(function(result)
-						frame.DisplayNameLabel.Text = getCombinedNameFromId(result.data, player.UserId)
-					end):catch(function()
-						frame.DisplayNameLabel.Text = player.DisplayName
-					end)
-				end
-			else
+			if FFlagCheckForNilUserIdOnPlayerList and not player.UserId then
 				frame.DisplayNameLabel.Text = player.DisplayName
+			else
+				ApolloClient:query({
+					query = UserProfiles.Queries.userProfilesAllNamesByUserIds,
+					variables = {
+						userIds = { tostring(player.UserId) },
+					},
+				}):andThen(function(result)
+					frame.DisplayNameLabel.Text = getCombinedNameFromId(result.data, player.UserId)
+				end):catch(function()
+					frame.DisplayNameLabel.Text = player.DisplayName
+				end)
 			end
 		end
 
@@ -1546,7 +1565,9 @@ local function Initialize()
 				inviteToGameAnalytics = GameInviteAnalyticsManager:withButtonName(GameInviteAnalyticsManager.ButtonName.SettingsHub)
 			else
 				inviteToGameAnalytics = InviteToGameAnalytics.new()
-					:withEventStream(EventStream.new())
+					:withEventStream(if GetFFlagRemoveAppTempCommonTemp()
+						then EventStream.new(AnalyticsService)
+						else DEPRECATED_EventStream.new())
 					:withDiag(Diag.new(AnalyticsService))
 					:withButtonName(InviteToGameAnalytics.ButtonName.SettingsHub)
 			end
@@ -1594,10 +1615,6 @@ local function Initialize()
 					math.max(1, player.UserId), Enum.ThumbnailSize.Size100x100, Enum.ThumbnailType.AvatarThumbnail)
 				frame.Icon.Image = imageUrl
 
-				if not getFFlagPlayerListApolloClientEnabled() or not getIsUserProfileOnPlayersListEnabled() then
-					frame.DisplayNameLabel.Text = player.DisplayName
-				end
-
 				frame.NameLabel.Text = if FFlagPlayerListRefactorUsernameFormatting then formatUsername(player.Name) else "@" .. player.Name
 
 				frame.ImageTransparency = FRAME_DEFAULT_TRANSPARENCY
@@ -1619,8 +1636,6 @@ local function Initialize()
 					local parent = frame:FindFirstChild("RightSideButtons")
 
 					if FFlagExtendedExpMenuPortraitLayout then
-						local LABEL_POSX = 60
-
 						local firstRow = frame:FindFirstChild("DisplayNameLabel")
 						local secondRow = frame:FindFirstChild("NameLabel")
 						local rightSideListLayout = parent and parent:FindFirstChild("RightSideListLayout")
@@ -1728,52 +1743,55 @@ local function Initialize()
 			end
 		end
 
-		if getFFlagPlayerListApolloClientEnabled() and getIsUserProfileOnPlayersListEnabled() then
-			local playerIds
-			if FFlagCheckForNilUserIdOnPlayerList then
-				playerIds = Cryo.List.filterMap(sortedPlayers, function(player)
-					if not player.UserId then
-						return nil
-					else
-						return tostring(player.UserId)
-					end
-				end)
-			else
-				playerIds = Cryo.List.filter(sortedPlayers, function(player)
+		local playerIds
+		if FFlagCheckForNilUserIdOnPlayerList then
+			playerIds = Cryo.List.filterMap(sortedPlayers, function(player)
+				if not player.UserId then
+					return nil
+				else
 					return tostring(player.UserId)
-				end)
-			end
+				end
+			end)
+		else
+			playerIds = Cryo.List.filter(sortedPlayers, function(player)
+				return tostring(player.UserId)
+			end)
+		end
 
-			ApolloClient:query({
-				query = UserProfiles.Queries.userProfilesAllNamesByUserIds,
-				variables = {
-					userIds = playerIds,
-				},
-			}):andThen(function(response)
-				Cryo.List.map(response.data.userProfiles, function(userProfile)
-					local labelFrame = existingPlayerLabels[userProfile.names.username]
+		ApolloClient:query({
+			query = UserProfiles.Queries.userProfilesAllNamesByUserIds,
+			variables = {
+				userIds = playerIds,
+			},
+		}):andThen(function(response)
+			Cryo.List.map(response.data.userProfiles, function(userProfile)
+				local labelFrame = existingPlayerLabels[userProfile.names.username]
 
-					if labelFrame then
-						labelFrame.DisplayNameLabel.Text = userProfile.names.combinedName
+				if labelFrame then
+					labelFrame.DisplayNameLabel.Text = userProfile.names.combinedName
 
-						if FFlagEnablePlatformName then
-							local rightSideButtons = labelFrame:FindFirstChild("RightSideButtons")
-							local platformName = nil
+					if FFlagEnablePlatformName then
+						local rightSideButtons = labelFrame:FindFirstChild("RightSideButtons")
+						local platformName = nil
 
-							if userProfile.names.platformName ~= "" then
-								platformName = userProfile.names.platformName
-							end
+						if userProfile.names.platformName ~= "" then
+							platformName = userProfile.names.platformName
+						end
+
+						if game:GetEngineFeature("PlatformFriendsService") and game:GetEngineFeature("PlatformFriendsProfile") then
+							resizePlatformName(rightSideButtons, platformName, userProfile.platformProfileId)
+						else
 							resizePlatformName(rightSideButtons, platformName)
 						end
 					end
-				end)
-			end):catch(function()
-				Cryo.List.map(sortedPlayers, function(player)
-					local labelFrame = existingPlayerLabels[player.Name]
-					labelFrame.DisplayNameLabel.Text = player.DisplayName
-				end)
+				end
 			end)
-		end
+		end):catch(function()
+			Cryo.List.map(sortedPlayers, function(player)
+				local labelFrame = existingPlayerLabels[player.Name]
+				labelFrame.DisplayNameLabel.Text = player.DisplayName
+			end)
+		end)
 
 		local frame = 0
 		if voiceChatServiceConnected and not renderSteppedConnected and GetFFlagPlayerListAnimateMic() then
@@ -1824,8 +1842,7 @@ local function Initialize()
 		end
 	end
 
-	if getFFlagEnableVoiceChatPlayersList()
-		and game:GetEngineFeature("VoiceChatSupported")
+	if game:GetEngineFeature("VoiceChatSupported")
 		and not voiceChatServiceConnected
 	then
 		VoiceChatServiceManager:asyncInit():andThen(function()
@@ -1933,18 +1950,16 @@ local function Initialize()
 			reportPlayer:Destroy()
 		end
 
-		if getFFlagEnableVoiceChatPlayersList() then
-			local muteStatus = buttons:FindFirstChild("MuteStatusButton")
-			if muteStatus then
-				if GuiService.SelectedCoreObject == muteStatus then
-					if UserInputService.GamepadEnabled then
-						GuiService.SelectedCoreObject = shareGameButton
-					else
-						GuiService.SelectedCoreObject = nil
-					end
+		local muteStatus = buttons:FindFirstChild("MuteStatusButton")
+		if muteStatus then
+			if GuiService.SelectedCoreObject == muteStatus then
+				if UserInputService.GamepadEnabled then
+					GuiService.SelectedCoreObject = shareGameButton
+				else
+					GuiService.SelectedCoreObject = nil
 				end
-				muteStatus:Destroy()
 			end
+			muteStatus:Destroy()
 		end
 
 		local blockButton = buttons:FindFirstChild("BlockButton")

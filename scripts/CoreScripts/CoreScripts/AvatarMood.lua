@@ -5,15 +5,7 @@
 	// Written by: jcampos and jlem
 	// Description: Avatar's mood controller.
 ]]--
-local userPlayEmoteByIdAnimTrackReturn = game:GetEngineFeature("PlayEmoteAndGetAnimTrackByIdApiEnabled")
-game:DefineFastFlag("EmoteTriggeredSignalEnabledLua2", false)
-game:DefineFastFlag("MoodsHeadRemovedFix", false)
-game:DefineFastFlag("SetDefaultMoodNeutralLua", false)
-game:DefineFastFlag("MoodsRemoveWaitForChild", false)
-game:DefineFastFlag("MoodsAnimatorAddedFix", false)
 game:DefineFastFlag("AvatarMoodSearchForReplacementWhenRemovingAnimator", false)
-
-local FFlagSwitchMoodPriorityWhileStreaming = game:DefineFastFlag("SwitchMoodPriorityWhileStreaming", false)
 
 local Players = game:GetService("Players")
 local CoreGui = game:GetService("CoreGui")
@@ -25,10 +17,6 @@ local log = require(RobloxGui.Modules.Logger):new(script.Name)
 local playerAddedConnection = nil
 local playerRemovingConnection = nil
 local emoteChattedConnection = nil
-
-local defaultMoodId = "rbxassetid://7715106138"
-local defaultMoodAnimation = Instance.new("Animation")
-defaultMoodAnimation.AnimationId = defaultMoodId
 
 local currentMoodAnimationInstance = nil
 local currentMoodTrack = nil
@@ -227,24 +215,16 @@ end
 local function updateCharacterMoodOnAnimatorAdded(character, moodAnimation, humanoid, animator)
 	-- play mood animation
 	currentMoodTrack = animator:LoadAnimation(currentMoodAnimationInstance)
-	if FFlagSwitchMoodPriorityWhileStreaming then
-		currentMoodTrack.Priority = currentMoodTrackPriority
-	else
-		currentMoodTrack.Priority = Enum.AnimationPriority.Core
-	end
+	currentMoodTrack.Priority = currentMoodTrackPriority
 
 	if currentEmoteTrack == nil then
 		currentMoodTrack:Play()
 	end
 
-	if userPlayEmoteByIdAnimTrackReturn then
-		-- listen for emotes
-		disconnectAndRemoveConnection(Connection.EmoteTriggered)
+	-- listen for emotes
+	disconnectAndRemoveConnection(Connection.EmoteTriggered)
 
-		if game:GetFastFlag("EmoteTriggeredSignalEnabledLua2") then
-			connections[Connection.EmoteTriggered] = humanoid.EmoteTriggered:Connect(onEmoteTriggered)
-		end
-	end
+	connections[Connection.EmoteTriggered] = humanoid.EmoteTriggered:Connect(onEmoteTriggered)
 end
 
 local function updateCharacterMoodOnHumanoidAdded(character, moodAnimation, humanoid)
@@ -259,11 +239,7 @@ local function updateCharacterMoodOnHumanoidAdded(character, moodAnimation, huma
 
 	connections[Connection.HumanoidAnimatorAdded] = humanoid.ChildAdded:Connect(function(child)
 		if child.Name == "Animator" then
-			if game:GetFastFlag("MoodsAnimatorAddedFix") then
-				updateCharacterMoodOnAnimatorAdded(character, moodAnimation, humanoid, child)
-			else
-				updateCharacterMoodOnAnimatorAdded(character, moodAnimation, humanoid, animator)
-			end
+			updateCharacterMoodOnAnimatorAdded(character, moodAnimation, humanoid, child)
 		end
 	end)
 end
@@ -277,59 +253,27 @@ local function updateCharacterMood(character, moodAnimation)
 		disconnectAndRemoveConnection(Connection.AnimationInstanceChanged)
 	end
 
-	if game:GetFastFlag("MoodsRemoveWaitForChild") then
-		if connections[Connection.CharacterHumanoidAdded] then
-			disconnectAndRemoveConnection(Connection.CharacterHumanoidAdded)
-		end
-	
-		stopAndDestroyCurrentMoodTrack()
-
-		currentMoodAnimationInstance = moodAnimation
-		connections[Connection.AnimationInstanceChanged] = currentMoodAnimationInstance.Changed:Connect(function(property)
-			updateCharacterMood(character, moodAnimation)
-		end)
-	
-		local humanoid = character:FindFirstChildWhichIsA("Humanoid")
-		if humanoid then
-			updateCharacterMoodOnHumanoidAdded(character, moodAnimation, humanoid)
-		end 
-	
-		connections[Connection.CharacterHumanoidAdded] = character.ChildAdded:Connect(function(child)
-			if child:IsA("Humanoid") then
-				updateCharacterMoodOnHumanoidAdded(character, moodAnimation, humanoid)
-			end
-		end)	
-	else
-		local humanoid = character:WaitForChild("Humanoid")
-		local animator = humanoid:WaitForChild("Animator")
-		stopAndDestroyCurrentMoodTrack()
-	
-		currentMoodAnimationInstance = moodAnimation
-		connections[Connection.AnimationInstanceChanged] = currentMoodAnimationInstance.Changed:Connect(function(property)
-			updateCharacterMood(character, moodAnimation)
-		end)
-	
-		-- play mood animation
-		currentMoodTrack = animator:LoadAnimation(currentMoodAnimationInstance)
-		if FFlagSwitchMoodPriorityWhileStreaming then
-			currentMoodTrack.Priority = currentMoodTrackPriority
-		else
-			currentMoodTrack.Priority = Enum.AnimationPriority.Core
-		end
-	
-		if currentEmoteTrack == nil then
-			currentMoodTrack:Play()
-		end
-	
-		if userPlayEmoteByIdAnimTrackReturn then
-			-- listen for emotes
-			disconnectAndRemoveConnection(Connection.EmoteTriggered)
-	
-			if game:GetFastFlag("EmoteTriggeredSignalEnabledLua2") then
-				connections[Connection.EmoteTriggered] = humanoid.EmoteTriggered:Connect(onEmoteTriggered)
-			end
-		end
+	if connections[Connection.CharacterHumanoidAdded] then
+		disconnectAndRemoveConnection(Connection.CharacterHumanoidAdded)
 	end
+
+	stopAndDestroyCurrentMoodTrack()
+
+	currentMoodAnimationInstance = moodAnimation
+	connections[Connection.AnimationInstanceChanged] = currentMoodAnimationInstance.Changed:Connect(function(property)
+		updateCharacterMood(character, moodAnimation)
+	end)
+
+	local humanoid = character:FindFirstChildWhichIsA("Humanoid")
+	if humanoid then
+		updateCharacterMoodOnHumanoidAdded(character, moodAnimation, humanoid)
+	end
+
+	connections[Connection.CharacterHumanoidAdded] = character.ChildAdded:Connect(function(child)
+		if child:IsA("Humanoid") then
+			updateCharacterMoodOnHumanoidAdded(character, moodAnimation, humanoid)
+		end
+	end)
 end
 
 function initAvatarMood(animateScript)
@@ -359,11 +303,7 @@ function initAvatarMood(animateScript)
 			updateCharacterMood(LocalPlayer.Character, moodAnimation)
 		end)
 	else
-		if game:GetFastFlag("SetDefaultMoodNeutralLua") then
-			stopAndDestroyCurrentMoodTrackConnections()
-		else
-			updateCharacterMood(LocalPlayer.Character, defaultMoodAnimation)
-		end
+		stopAndDestroyCurrentMoodTrackConnections()
 	end
 
 	connections[Connection.AnimateScriptMoodAdded] = animateScript.ChildAdded:Connect(function(child)
@@ -390,11 +330,7 @@ function initAvatarMood(animateScript)
 			if otherMood then
 				updateCharacterMood(LocalPlayer.Character, otherMood:FindFirstChildWhichIsA("Animation"))
 			else
-				if game:GetFastFlag("SetDefaultMoodNeutralLua") then
-					stopAndDestroyCurrentMoodTrackConnections()
-				else
-					updateCharacterMood(LocalPlayer.Character, defaultMoodAnimation)
-				end
+				stopAndDestroyCurrentMoodTrackConnections()
 			end
 		end
 	end)
@@ -514,36 +450,32 @@ local function onCharacterAdded(player, character)
 	connections[Connection.CharacterChildRemoved] = character.ChildRemoved:Connect(function(child)
 		if child.Name == "Head" then
 			stopAndDestroyCurrentMoodTrack()
-			if game:GetFastFlag("MoodsHeadRemovedFix") then
-				local otherHead = character:FindFirstChild("Head")
-				if otherHead then
-					onHeadAdded(otherHead)
-				end
+			local otherHead = character:FindFirstChild("Head")
+			if otherHead then
+				onHeadAdded(otherHead)
 			end
 		end
 	end)
 
-	if FFlagSwitchMoodPriorityWhileStreaming then
-		connections[Connection.DescendantAdded] = character.DescendantAdded:Connect(function(descendant)
-			if descendant:IsA("Animator") then
-				onAnimatorAdded(descendant)
-			end
-		end)
-		local animator = character:FindFirstChildWhichIsA("Animator", true)
-		if animator then
-			onAnimatorAdded(animator)
+	connections[Connection.DescendantAdded] = character.DescendantAdded:Connect(function(descendant)
+		if descendant:IsA("Animator") then
+			onAnimatorAdded(descendant)
 		end
-
-		connections[Connection.DescendantRemoving] = character.DescendantRemoving:Connect(function(descendant)
-			if descendant:IsA("Animator") then
-				if game:GetFastFlag("AvatarMoodSearchForReplacementWhenRemovingAnimator") then
-					onAnimatorRemoving(player, descendant)
-				else
-					onAnimatorRemoving_Deprecated(descendant)
-				end
-			end
-		end)
+	end)
+	local animator = character:FindFirstChildWhichIsA("Animator", true)
+	if animator then
+		onAnimatorAdded(animator)
 	end
+
+	connections[Connection.DescendantRemoving] = character.DescendantRemoving:Connect(function(descendant)
+		if descendant:IsA("Animator") then
+			if game:GetFastFlag("AvatarMoodSearchForReplacementWhenRemovingAnimator") then
+				onAnimatorRemoving(player, descendant)
+			else
+				onAnimatorRemoving_Deprecated(descendant)
+			end
+		end
+	end)
 end
 
 local function onCharacterRemoving(character)

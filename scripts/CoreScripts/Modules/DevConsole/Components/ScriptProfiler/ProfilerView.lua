@@ -6,6 +6,8 @@ local ProfilerUtil = require(script.Parent.ProfilerUtil)
 local getDurations = ProfilerUtil.getDurations
 local formatSessionLength = ProfilerUtil.formatSessionLength
 
+local ProfilerData = require(script.Parent.ProfilerDataFormatV2)
+
 local Components = script.Parent.Parent.Parent.Components
 local HeaderButton = require(Components.HeaderButton)
 local ProfilerViewEntry = require(script.Parent.ProfilerViewEntry)
@@ -24,26 +26,34 @@ local VALUE_PADDING = Constants.ScriptProfilerFormatting.ValuePadding
 
 local ProfilerView = Roact.PureComponent:extend("ProfilerView")
 
-local FFlagScriptProfilerSessionLength = game:DefineFastFlag("ScriptProfilerSessionLength", false)
-
 function ProfilerView:renderChildren()
-	local data = self.props.data
+	local data = self.props.data :: ProfilerData.RootDataFormat
+	assert(data.Version == 2);
 
-	-- Remove with usingV2FormatFlag with ScriptProfilerTreeFormatV2
-	local usingV2FormatFlag = data.Version ~= nil
-	if usingV2FormatFlag then
-		assert(data.Version == 2);
+	local totalDuration = getDurations(data, 0)
+
+	local average = 1
+
+	if self.props.average > 0 then
+		local lengthSecs = self.props.sessionLength / 1000
+		average = lengthSecs / self.props.average
 	end
-
-	local totalDuration = getDurations(data, 0, usingV2FormatFlag)
 
 	return Roact.createElement(ProfilerViewEntry, {
 		layoutOrder = 0,
 		depth = 0,
 		data = data,
-		nodeId = 0,
+		nodeId = self.props.rootNode,
+		nodeName = self.props.rootNodeName,
 		functionId = nil,
-		usingV2FormatFlag = usingV2FormatFlag,
+		average = average,
+		searchTerm = self.props.searchTerm,
+		searchFilter = self.props.searchFilter,
+		showPlugins = self.props.showPlugins,
+		pluginOffsets = self.props.pluginOffsets,
+		showGC = self.props.showGC,
+		gcNodeOffsets = self.props.gcNodeOffsets,
+		pluginGCOffsets = self.props.pluginGCOffsets,
 		percentageRatio = if self.props.showAsPercentages
 			then totalDuration / 100
 			else nil
@@ -56,7 +66,7 @@ function ProfilerView:render()
 	local size = self.props.size
 	local label = nil
 
-	if self.props.profiling then
+	if self.props.profiling and not self.props.data then
 		label = Roact.createElement("TextLabel", {
 			Size = UDim2.new(1, 0, 1, 0),
 			Position = UDim2.new(0, 0, 0, 0),
@@ -76,7 +86,7 @@ function ProfilerView:render()
 		})
 	end
 
-	local sessionLengthText = if FFlagScriptProfilerSessionLength then formatSessionLength(self.props.sessionLength) else nil
+	local sessionLengthText = formatSessionLength(self.props.sessionLength)
 
 	if sessionLengthText then
 		sessionLengthText = "Session Duration: " .. sessionLengthText
@@ -87,7 +97,7 @@ function ProfilerView:render()
 		BackgroundTransparency = 1,
 		LayoutOrder = layoutOrder,
 	}, {
-		FFlagScriptProfilerSessionLength and Roact.createElement("Frame", {
+		SessionInfo = Roact.createElement("Frame", {
 			Size = UDim2.new(1, 0, 0, HEADER_HEIGHT),
 			BackgroundTransparency = 1,
 		}, {
@@ -107,7 +117,7 @@ function ProfilerView:render()
 		Header = 	Roact.createElement("Frame", {
 			Size = UDim2.new(1, 0, 0, HEADER_HEIGHT),
 			BackgroundTransparency = 1,
-			Position = if FFlagScriptProfilerSessionLength then UDim2.new(0, 0, 0, HEADER_HEIGHT) else nil,
+			Position = UDim2.new(0, 0, 0, HEADER_HEIGHT),
 		}, {
 			Name = Roact.createElement(HeaderButton, {
 				text = HEADER_NAMES[1],
@@ -153,8 +163,8 @@ function ProfilerView:render()
 		}),
 
 		Entries = Roact.createElement("ScrollingFrame", {
-			Size = UDim2.new(1, 0, 1, if FFlagScriptProfilerSessionLength then -HEADER_HEIGHT * 2 else -HEADER_HEIGHT),
-			Position = UDim2.new(0, 0, 0, if FFlagScriptProfilerSessionLength then HEADER_HEIGHT * 2 else HEADER_HEIGHT),
+			Size = UDim2.new(1, 0, 1, -HEADER_HEIGHT * 2),
+			Position = UDim2.new(0, 0, 0, HEADER_HEIGHT * 2),
 			BackgroundTransparency = 1,
 			VerticalScrollBarInset = Enum.ScrollBarInset.None,
 			ScrollBarThickness = 5,

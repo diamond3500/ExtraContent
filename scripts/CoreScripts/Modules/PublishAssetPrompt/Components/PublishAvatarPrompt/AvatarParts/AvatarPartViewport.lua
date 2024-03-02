@@ -25,10 +25,9 @@ AvatarPartViewport.validateProps = t.strictInterface({
             R6
         where R15ArtistIntent must at least always have parts
 
-		Or a single MeshPart if isHeadAsset is true
+		Or a single MeshPart or Accessory
     ]]
-	asset = t.union(t.table, t.instanceOf("MeshPart")),
-	isHeadAsset = t.boolean,
+	asset = t.union(t.table, t.instanceOf("MeshPart"), t.instanceOf("Accessory")),
 	viewportSize = t.optional(t.Vector2),
 })
 
@@ -47,12 +46,11 @@ end
 
 -- Showing off a non Head body part uses a mannequin that the part is added onto
 function AvatarPartViewport:addBodyPartMannequinToViewport()
-	local useR15, useR15NewNames, mannequin = MannequinUtility.CreateBodyPartMannequin(self.props.asset)
+	local useR15, useR15NewNames, mannequin =
+		MannequinUtility.CreateBodyPartMannequin(self.props.asset, --[[parentToWorkspace]] false)
 	local faceRight, focusPartNames =
 		MannequinUtility.SetupBodyPartMannequin(useR15, useR15NewNames, mannequin, self.props.asset)
 	mannequin.Parent = self.modelRef:getValue()
-	--ensures all parts under the model update position after rig is made
-	mannequin:MoveTo(Vector3.new(0, 0, 0))
 	local camera = self:createViewportCamera()
 	CameraUtility.SetupBodyPartCamera(mannequin, faceRight, focusPartNames, camera)
 	self.updateCamera(camera)
@@ -62,16 +60,30 @@ end
 function AvatarPartViewport:addHeadModelToViewport()
 	local headModel = MannequinUtility.CreateHeadModel(self.props.asset)
 	headModel.Parent = self.modelRef:getValue()
-	--ensures all parts under the model update position after rig is made
-	headModel:MoveTo(Vector3.new(0, 0, 0))
 	local camera = self:createViewportCamera()
 	CameraUtility.SetupHeadCamera(headModel, camera)
 	self.updateCamera(camera)
 end
 
+-- Showing off eyelashes and eyebrows
+function AvatarPartViewport:addAccessoryToViewport()
+	local accoutrement = self.props.asset
+	local model = Instance.new("Model")
+	accoutrement.Parent = model
+	model.Parent = self.modelRef:getValue()
+	local camera = self:createViewportCamera()
+	CameraUtility.SetupAccessoryCamera(model, camera)
+	self.updateCamera(camera)
+end
+
 function AvatarPartViewport:didMount()
-	if self.props.isHeadAsset then
-		self:addHeadModelToViewport()
+	local asset = self.props.asset
+	if typeof(asset) == "Instance" then
+		if asset:IsA("MeshPart") then
+			self:addHeadModelToViewport()
+		else
+			self:addAccessoryToViewport()
+		end
 	else
 		self:addBodyPartMannequinToViewport()
 	end

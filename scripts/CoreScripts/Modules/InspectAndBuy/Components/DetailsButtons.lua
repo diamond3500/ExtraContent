@@ -16,10 +16,13 @@ local RobloxTranslator = require(CoreGui.RobloxGui.Modules.RobloxTranslator)
 local tutils = require(CorePackages.tutils)
 
 local FFlagEnableFavoriteButtonForUgc = require(InspectAndBuyFolder.Flags.FFlagEnableFavoriteButtonForUgc)
-local FFlagFixInspectAndBuyPremiumPrice = game:DefineFastFlag("FixInspectAndBuyPremiumPrice", false)
 local GetFFlagUseInspectAndBuyControllerBar = require(InspectAndBuyFolder.Flags.GetFFlagUseInspectAndBuyControllerBar)
 local GetCollectibleItemInInspectAndBuyEnabled =
 	require(InspectAndBuyFolder.Flags.GetCollectibleItemInInspectAndBuyEnabled)
+local GetFFlagIBGateUGC4ACollectibleAssetsBundles =
+	require(InspectAndBuyFolder.Flags.GetFFlagIBGateUGC4ACollectibleAssetsBundles)
+local GetFFlagIBEnableCollectiblesSystemSupport =
+	require(InspectAndBuyFolder.Flags.GetFFlagIBEnableCollectiblesSystemSupport)
 
 local DetailsButtons = Roact.PureComponent:extend("DetailsButtons")
 
@@ -41,6 +44,8 @@ end
 
 local function getBuyText(itemInfo, locale, collectibleQuantityLimitReached, collectibleLowestResalePrice)
 	local buyText
+	local isLimited: boolean = itemInfo.isLimited
+		or (GetFFlagIBEnableCollectiblesSystemSupport() and itemInfo.isLimitedUnique)
 
 	if game:GetEngineFeature("CollectibleItemPurchaseResellEnabled") and collectibleLowestResalePrice then
 		buyText = RobloxTranslator:FormatByKeyForLocale(
@@ -63,30 +68,19 @@ local function getBuyText(itemInfo, locale, collectibleQuantityLimitReached, col
 		buyText = itemInfo.price
 	elseif itemInfo.owned then
 		buyText = RobloxTranslator:FormatByKeyForLocale(OWNED_KEY, locale)
-	elseif itemInfo.isLimited then
+	elseif isLimited then
 		buyText = RobloxTranslator:FormatByKeyForLocale(LIMITED_KEY, locale)
-	elseif not itemInfo.isForSale and not itemInfo.isLimited then
+	elseif not itemInfo.isForSale and not isLimited then
 		buyText = RobloxTranslator:FormatByKeyForLocale(OFFSALE_KEY, locale)
 	elseif itemInfo.isForSale then
 		if itemInfo.premiumPricing ~= nil then
-			if FFlagFixInspectAndBuyPremiumPrice then
-				if (Players.LocalPlayer :: Player).MembershipType == Enum.MembershipType.Premium then
-					buyText = itemInfo.premiumPricing.premiumPriceInRobux
-				else
-					if itemInfo.price == nil then
-						buyText = RobloxTranslator:FormatByKeyForLocale(PREMIUM_ONLY_KEY, locale)
-					else
-						buyText = itemInfo.price
-					end
-				end
+			if (Players.LocalPlayer :: Player).MembershipType == Enum.MembershipType.Premium then
+				buyText = itemInfo.premiumPricing.premiumPriceInRobux
 			else
-				if
-					itemInfo.price == nil
-					and (Players.LocalPlayer :: Player).MembershipType ~= Enum.MembershipType.Premium
-				then
+				if itemInfo.price == nil then
 					buyText = RobloxTranslator:FormatByKeyForLocale(PREMIUM_ONLY_KEY, locale)
 				else
-					buyText = itemInfo.premiumPricing.premiumPriceInRobux
+					buyText = itemInfo.price
 				end
 			end
 		else
@@ -138,7 +132,9 @@ function DetailsButtons:render()
 	local locale = self.props.locale
 	local assetInfo = self.props.assetInfo
 	local bundleInfo = self.props.bundleInfo
-	local isLimited = assetInfo.isLimited or false
+	local isLimited = assetInfo.isLimited
+		or (GetFFlagIBEnableCollectiblesSystemSupport() and assetInfo.isLimitedUnique)
+		or false
 	local showRobuxIcon = false
 	local showTryOn = false
 	local creatorId = assetInfo and assetInfo.creatorId or 0
@@ -168,10 +164,11 @@ function DetailsButtons:render()
 		else
 			itemType = Constants.ItemType.Asset
 			itemId = assetInfo.assetId
-			if
-				GetCollectibleItemInInspectAndBuyEnabled()
-				and assetInfo.productType == Constants.ProductType.CollectibleItem
-			then
+			local isLimitedCollectible = if GetFFlagIBEnableCollectiblesSystemSupport()
+				then UtilityFunctions.isLimitedCollectible(assetInfo)
+				else (assetInfo.productType == Constants.ProductType.CollectibleItem)
+
+			if GetCollectibleItemInInspectAndBuyEnabled() and isLimitedCollectible then
 				-- isForSale bit for Collectible Items is already computed in GetProductInfo() where sale location
 				-- and remaining stock are already taken into account.
 				forSale = assetInfo.isForSale
@@ -235,6 +232,13 @@ function DetailsButtons:render()
 		end
 	end
 
+	local hideBuyButton
+	if GetFFlagIBGateUGC4ACollectibleAssetsBundles() then
+		hideBuyButton = UtilityFunctions.isUnlimitedCollectibleAsset(itemType, assetInfo)
+			or UtilityFunctions.isLimitedBundle(itemType, assetInfo)
+			or UtilityFunctions.isUnlimitedCollectibleBundle(itemType, assetInfo)
+	end
+
 	local showControllerBar = GetFFlagUseInspectAndBuyControllerBar()
 		and self.props.detailsInformation.viewingDetails -- only show when item menu is open
 		and self.props.gamepadEnabled
@@ -276,18 +280,20 @@ function DetailsButtons:render()
 			ScaleType = Enum.ScaleType.Slice,
 			SliceCenter = Rect.new(5, 5, 120, 20),
 		}),
-		BuyButton = Roact.createElement(BuyButton, {
-			itemType = itemType,
-			itemId = itemId,
-			showRobuxIcon = showRobuxIcon,
-			forSale = forSale,
-			buyText = buyText,
-			buyButtonRef = self.buyButtonRef,
-			collectibleItemId = collectibleItemId,
-			collectibleLowestAvailableResaleProductId = collectibleLowestAvailableResaleProductId,
-			collectibleLowestAvailableResaleItemInstanceId = collectibleLowestAvailableResaleItemInstanceId,
-			collectibleLowestResalePrice = collectibleLowestResalePrice,
-		}),
+		BuyButton = if GetFFlagIBGateUGC4ACollectibleAssetsBundles() and hideBuyButton
+			then nil
+			else Roact.createElement(BuyButton, {
+				itemType = itemType,
+				itemId = itemId,
+				showRobuxIcon = showRobuxIcon,
+				forSale = forSale,
+				buyText = buyText,
+				buyButtonRef = self.buyButtonRef,
+				collectibleItemId = collectibleItemId,
+				collectibleLowestAvailableResaleProductId = collectibleLowestAvailableResaleProductId,
+				collectibleLowestAvailableResaleItemInstanceId = collectibleLowestAvailableResaleItemInstanceId,
+				collectibleLowestResalePrice = collectibleLowestResalePrice,
+			}),
 	})
 end
 

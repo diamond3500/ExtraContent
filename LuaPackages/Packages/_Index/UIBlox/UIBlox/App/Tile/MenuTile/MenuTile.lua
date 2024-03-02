@@ -1,6 +1,4 @@
 --!nonstrict
-local TextService = game:GetService("TextService")
-
 local MenuTileRoot = script.Parent
 local Tile = MenuTileRoot.Parent
 local App = Tile.Parent
@@ -29,6 +27,10 @@ local validateTypographyInfo = require(UIBlox.Core.Style.Validator.validateTypog
 
 local withStyle = require(UIBlox.Core.Style.withStyle)
 local divideTransparency = require(UIBlox.Utility.divideTransparency)
+local withCursor = require(App.SelectionCursor.withCursor)
+local CursorType = require(App.SelectionCursor.CursorType)
+local UIBloxConfig = require(UIBlox.UIBloxConfig)
+local GetTextSize = require(UIBlox.Core.Text.GetTextSize)
 
 local FULLY_TRANSPARENT = 1
 local LIST_PADDING = UDim.new(0, 12)
@@ -93,7 +95,14 @@ MenuTile.validateProps = t.strictInterface({
 local function withProviders(renderCallback)
 	return withStyle(function(stylePalette)
 		return withSelectionCursorProvider(function(getSelectionCursor)
-			return renderCallback(stylePalette, getSelectionCursor)
+			if UIBloxConfig.migrateToNewSelectionCursor then
+				return withCursor(function(context)
+					local cursor = context.getCursorByType(CursorType.RoundedRect)
+					return renderCallback(stylePalette, getSelectionCursor, cursor)
+				end)
+			else
+				return renderCallback(stylePalette, getSelectionCursor)
+			end
 		end)
 	end)
 end
@@ -147,7 +156,7 @@ function MenuTile:render()
 	local size = self.props.size
 	local title = self.props.title
 
-	return withProviders(function(stylePalette, getSelectionCursor)
+	return withProviders(function(stylePalette, getSelectionCursor, cursor)
 		local theme = stylePalette.Theme
 
 		local styleProps = getStyleProps(self.props.styleProps, stylePalette)
@@ -164,9 +173,11 @@ function MenuTile:render()
 			then titleFont.RelativeSize * stylePalette.Font.BaseSize
 			else titleFont.FontSize
 		local titleTextOneLineSizeY =
-			TextService:GetTextSize(title, titleFontSize, titleFont.Font, Vector2.new(100, titleFontSize)).Y
+			GetTextSize(title, titleFontSize, titleFont.Font, Vector2.new(100, titleFontSize)).Y
 
-		local selectionCursor = getSelectionCursor(CursorKind.RoundedRect)
+		local selectionCursor = if UIBloxConfig.migrateToNewSelectionCursor
+			then cursor
+			else getSelectionCursor(CursorKind.RoundedRect)
 
 		local function onStateChanged(oldState, newState)
 			if newState == ControlState.Hover then

@@ -7,6 +7,7 @@ local Roact = require(Packages.Roact)
 local t = require(Packages.t)
 local LuauPolyfill = require(Packages.LuauPolyfill)
 local Object = LuauPolyfill.Object
+local UIBloxConfig = require(UIBlox.UIBloxConfig)
 
 local withStyle = require(UIBlox.Core.Style.withStyle)
 local GetTextSize = require(UIBlox.Core.Text.GetTextSize)
@@ -16,7 +17,6 @@ local ButtonType = require(UIBlox.App.Button.Enum.ButtonType)
 
 local ResponsiveRow = require(UIBlox.Core.Layout.Responsive.ResponsiveRow)
 local withGridConfig_DEPRECATED = require(UIBlox.Core.Layout.Grid.withGridConfig_DEPRECATED)
-local UIBloxConfig = require(UIBlox.UIBloxConfig)
 
 local HEADER_HEIGHT = 28
 local HEADER_PADDING = 12
@@ -111,6 +111,8 @@ ResponsiveCarousel.validateProps = t.strictInterface({
 	-- Allowed for backwards compatibility only.
 	-- See `FreeFlowCarousel` for details.
 	loadNext = t.optional(t.callback),
+	-- Ref pointing to scrolling frame in [[ResponsiveBaseRow]]
+	scrollingFrameRef = t.optional(t.table),
 
 	carouselRef = t.optional(t.table),
 })
@@ -237,7 +239,7 @@ function ResponsiveCarousel:render()
 				}),
 			ResponsiveCarouselRow = Roact.createElement(ResponsiveRow, {
 				layoutOrder = 2,
-				zIndex = if UIBloxConfig.fixResponsiveCarouselRowZIndex then 2 else nil,
+				zIndex = 2,
 				kind = self.props.kind,
 				scrollable = self.props.scrollable,
 				clipsDescendants = self.props.clipsDescendants,
@@ -251,6 +253,9 @@ function ResponsiveCarousel:render()
 				keyExtractor = self.props.keyExtractor or self.props.identifier,
 				getCellColspan = self.props.getCellColspan,
 				getCellOrder = self.props.getCellOrder,
+				scrollingFrameRef = if UIBloxConfig.responsiveBaseRowScrollingFrameRef
+					then self.props.scrollingFrameRef
+					else nil,
 			}),
 		})
 	end)

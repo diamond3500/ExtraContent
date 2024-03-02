@@ -16,40 +16,49 @@ return {
 		OfflineFriendListItem = function(props)
 			return React.createElement(FriendListItem, {
 				userId = "12345678",
-				userName = "@user name",
-				combinedName = "display name",
+				userName = "user name",
+				combinedName = "combined name",
 				dismissCallback = function() end,
 				showDivider = props.controls.showDivider,
+				itemListIndex = 1,
+				isSuggestedUser = true,
 			})
 		end,
 
 		OnlineFriendListItem = function(props)
 			return React.createElement(FriendListItem, {
 				userId = "11111111",
-				userName = "@user name",
-				combinedName = "display name",
+				userName = "user name",
+				combinedName = "combined name",
 				dismissCallback = function() end,
 				showDivider = props.controls.showDivider,
+				itemListIndex = 1,
+				isSuggestedUser = true,
 			})
 		end,
 
 		InStudioFriendListItem = function(props)
 			return React.createElement(FriendListItem, {
 				userId = "22222222",
-				userName = "@user name",
-				combinedName = "display name",
+				userName = "user name",
+				combinedName = "combined name",
 				dismissCallback = function() end,
 				showDivider = props.controls.showDivider,
+				itemListIndex = 1,
+				isSuggestedUser = true,
 			})
 		end,
 
 		InGameFriendListItem = function(props)
 			return React.createElement(FriendListItem, {
 				userId = "33333333",
-				userName = "@user name",
-				combinedName = "display name",
+				userName = "user name",
+				combinedName = "combined name",
 				dismissCallback = function() end,
 				showDivider = props.controls.showDivider,
+				searchQueryString = "",
+				itemListIndex = 1,
+				isSuggestedUser = false,
 			})
 		end,
 	},
@@ -65,13 +74,13 @@ return {
 			byUserId = {
 				["12345678"] = PresenceModel.format(PresenceModel.mock()),
 				["11111111"] = PresenceModel.format(PresenceModel.mock({
-					userPresenceType = EnumPresenceType.Online.rawValue(),
+					userPresenceType = EnumPresenceType.Online,
 				})),
 				["22222222"] = PresenceModel.format(PresenceModel.mock({
-					userPresenceType = EnumPresenceType.InStudio.rawValue(),
+					userPresenceType = EnumPresenceType.InStudio,
 				})),
 				["33333333"] = PresenceModel.format(PresenceModel.mock({
-					userPresenceType = EnumPresenceType.InGame.rawValue(),
+					userPresenceType = EnumPresenceType.InGame,
 					lastLocation = "Iris",
 				})),
 			},
@@ -80,8 +89,8 @@ return {
 			byUserId = {
 				["12345678"] = {
 					id = "12345678",
-					username = "@user name",
-					combinedName = "display name",
+					username = "user name",
+					combinedName = "combined name",
 					hasVerifiedBadge = false,
 				},
 			},

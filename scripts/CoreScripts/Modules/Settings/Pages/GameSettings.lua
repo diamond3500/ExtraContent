@@ -27,6 +27,10 @@ local UserGameSettings = Settings:GetService("UserGameSettings")
 local Url = require(RobloxGui.Modules.Common.Url)
 local VoiceChatService = nil
 local TextChatService = game:GetService("TextChatService")
+local ExperienceStateCaptureService = nil
+if game:GetEngineFeature("CaptureModeEnabled") then
+	ExperienceStateCaptureService = game:GetService("ExperienceStateCaptureService")
+end
 
 local FFlagAvatarChatCoreScriptSupport = require(RobloxGui.Modules.Flags.FFlagAvatarChatCoreScriptSupport)
 local getCamMicPermissions = require(RobloxGui.Modules.Settings.getCamMicPermissions)
@@ -35,6 +39,8 @@ local isCamEnabledForUserAndPlace = require(RobloxGui.Modules.Settings.isCamEnab
 local PermissionsProtocol = require(CorePackages.Workspace.Packages.PermissionsProtocol).PermissionsProtocol.default
 local cameraDevicePermissionGrantedSignal = require(CoreGui.RobloxGui.Modules.Settings.cameraDevicePermissionGrantedSignal)
 local getFFlagDoNotPromptCameraPermissionsOnMount = require(RobloxGui.Modules.Flags.getFFlagDoNotPromptCameraPermissionsOnMount)
+local GetFFlagSelfViewCameraSettings = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagSelfViewCameraSettings
+
 
 -------------- CONSTANTS --------------
 -- DEPRECATED Remove with FixGraphicsQuality
@@ -87,13 +93,65 @@ local CAMERA_DEVICE_SELECTOR_KEY = "CameraDeviceSelector"
 local CAMERA_DEVICE_FRAME_KEY = "CameraDeviceFrame"
 local CAMERA_DEVICE_INFO_KEY = "CameraDeviceInfo"
 
+----------- LAYOUT ORDER ------------
+-- Recall that layout order values are relative
+local SETTINGS_MENU_LAYOUT_ORDER = {
+	-- Overscan Entry point, console only
+	["OverscanAdjustButton"] = 1,
+	-- Movement and Camera Mode
+	["ShiftLockFrame"] = 10,
+	["CameraModeFrame"] = 11,
+	["MovementModeFrame"] = 12,
+	["GamepadSensitivityFrame"] = 13,
+	-- Experience Language
+	["LanguageSelectorFrame"] = 20,
+	-- Feedback Mode
+	["FeedbackModeButton"] = 30,
+	-- Chat Translation
+	["ChatTranslationFrame"] = 40,
+	["ChatLanguageSelectorFrame"] = 41,
+	["ChatTranslationToggleFrame"] = 42,
+	-- Camera Sensitivity
+	["MouseAdvancedFrame"] = 50,
+	-- Input/Output and Volume
+	["DeviceFrameInput"] = 60,
+	["DeviceFrameOutput"] = 61,
+	["VolumeFrame"] = 62,
+	-- Graphics
+	["FullScreenFrame"] = 70,
+	["GraphicsEnablerFrame"] = 71,
+	["GraphicsQualityFrame"] = 72,
+	["ReducedMotionFrame"] = 73,
+	["PreferredTransparencyFrame"] = 74,
+	["UiNavigationKeyBindEnabledFrame"] = 75,
+	-- Performance
+	["PerformanceStatsFrame"] = 80,
+	["MicroProfilerFrame"] = 81,
+	-- More camera
+	["CameraInvertedFrame"] = 90,
+	[CAMERA_DEVICE_FRAME_KEY] = 91,
+	-- VR, Dev Console, Special
+	["VREnabledFrame"] = 100,
+	["DeveloperConsoleButton"] = 101,
+	["UiToggleRow"] = 200,
+	["UiToggleRowCustom"] = 200, -- Replaces "UiToggleRow" when FFlagUserShowGuiHideToggles == true
+	["UiToggleRowBillboards"] = 201,
+	["UiToggleRowNameplates"] = 202,
+	["FreecamToggleRow"] = 203,
+	["InformationFrame"] = 999, -- Reserved to be last
+}
 -------- CHAT TRANSLATION ----------
 local IXPServiceWrapper = require(RobloxGui.Modules.Common.IXPServiceWrapper)
 
 local GetFFlagChatTranslationSettingEnabled = require(RobloxGui.Modules.Flags.GetFFlagChatTranslationSettingEnabled)
 local GetFStringChatTranslationLayerName = require(RobloxGui.Modules.Flags.GetFStringChatTranslationLayerName)
+local GetFFlagChatTranslationLaunchEnabled = require(RobloxGui.Modules.Flags.GetFFlagChatTranslationLaunchEnabled)
+local GetFFlagChatTranslationHoldoutEnabled = require(RobloxGui.Modules.Flags.GetFFlagChatTranslationHoldoutEnabled)
 
 local ChatTranslationSettingsMoved = game:GetEngineFeature("TextChatServiceSettingsSaved")
+local CreateChatTranslationOptionsWithChatLanguageSwitcher = require(RobloxGui.Modules.Settings.Pages.GameSettingsRowInitializers.ChatTranslationOptionsWithChatLanguageSwitcherInitializer)
+
+local GameBasicSettingsFramerateCap = game:GetEngineFeature("GameBasicSettingsFramerateCap")
 
 ----------- UTILITIES --------------
 local utility = require(RobloxGui.Modules.Settings.Utility)
@@ -149,17 +207,17 @@ local isDesktopClient = (platform == Enum.Platform.Windows) or (platform == Enum
 local isMobileClient = (platform == Enum.Platform.IOS) or (platform == Enum.Platform.Android)
 local UseMicroProfiler = (isMobileClient or isDesktopClient) and canUseMicroProfiler
 
-local GetFFlagEnableVoiceChatDeviceChangeDebounce = require(RobloxGui.Modules.Flags.GetFFlagEnableVoiceChatDeviceChangeDebounce)
 local GetFIntVoiceChatDeviceChangeDebounceDelay = require(RobloxGui.Modules.Flags.GetFIntVoiceChatDeviceChangeDebounceDelay)
 local GetFFlagVoiceChatUILogging = require(RobloxGui.Modules.Flags.GetFFlagVoiceChatUILogging)
 local GetFFlagEnableUniveralVoiceToasts = require(RobloxGui.Modules.Flags.GetFFlagEnableUniveralVoiceToasts)
 local GetFFlagVoiceChatUseSoundServiceInputApi = require(RobloxGui.Modules.Flags.GetFFlagVoiceChatUseSoundServiceInputApi)
 local GetFFlagEnableAudioOutputDevice = require(RobloxGui.Modules.Flags.GetFFlagEnableAudioOutputDevice)
+local FFlagHideEmptyInputDeviceSelector = game:DefineFastFlag("HideEmptyInputDeviceSelector", false)
 local GetFFlagEnableExplicitSettingsChangeAnalytics = require(RobloxGui.Modules.Settings.Flags.GetFFlagEnableExplicitSettingsChangeAnalytics)
-local GetFFlagEnableAccessibilitySettingsInExperienceMenu = require(RobloxGui.Modules.Settings.Flags.GetFFlagEnableAccessibilitySettingsInExperienceMenu)
-local GetFFlagSupportsOverscanPolicy = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagSupportsOverscanPolicy
 local GetFFlagGameSettingsCameraModeFixEnabled = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagGameSettingsCameraModeFixEnabled
 local GetFFlagFixCyclicFullscreenIndexEvent = require(RobloxGui.Modules.Settings.Flags.GetFFlagFixCyclicFullscreenIndexEvent)
+local FFlagDisableFeedbackSoothsayerCheck = game:DefineFastFlag("DisableFeedbackSoothsayerCheck", false)
+local FFlagUserShowGuiHideToggles = game:DefineFastFlag("UserShowGuiHideToggles", false)
 
 local function reportSettingsChangeForAnalytics(fieldName, oldValue, newValue, extraData)
 	if not GetFFlagEnableExplicitSettingsChangeAnalytics() or oldValue == newValue or oldValue == nil or newValue == nil then
@@ -215,15 +273,17 @@ local function reportSettingsForAnalytics()
 	stringTable["show_performance_stats"] = tostring(GameSettings.PerformanceStatsVisible)
 	stringTable["volume"] = tostring( math.floor((GameSettings.MasterVolume * 10) + 0.5) )
 	stringTable["gfx_quality_level"] = tostring(settings().Rendering.QualityLevel)
+	if GameBasicSettingsFramerateCap then
+		stringTable["framerate_cap"] = tostring(GameSettings.FramerateCap)
+	end
+
 	stringTable["fullscreen_enabled"] = tostring(GameSettings:InFullScreen())
 	stringTable["microprofiler_enabled"] = tostring(GameSettings.OnScreenProfilerEnabled)
 	stringTable["microprofiler_webserver_enabled"] = tostring(GameSettings.MicroProfilerWebServerEnabled)
 
-	if GetFFlagEnableAccessibilitySettingsInExperienceMenu() then
-		stringTable["reduced_motion"] = tostring(GameSettings.ReducedMotion)
-		stringTable["preferred_transparency"] = tostring(GameSettings.PreferredTransparency)
-		stringTable["ui_navigation_key_bind_enabled"] = tostring(GameSettings.UiNavigationKeyBindEnabled)
-	end
+	stringTable["reduced_motion"] = tostring(GameSettings.ReducedMotion)
+	stringTable["preferred_transparency"] = tostring(GameSettings.PreferredTransparency)
+	stringTable["ui_navigation_key_bind_enabled"] = tostring(GameSettings.UiNavigationKeyBindEnabled)
 
 	stringTable["universeid"] = tostring(game.GameId)
 	AnalyticsService:SetRBXEventStream(Constants.AnalyticsTargetName, Constants.AnalyticsInGameMenuName, Constants.AnalyticsSettingsChangeName, stringTable)
@@ -269,7 +329,7 @@ local function Initialize()
 
 		this.FullscreenFrame, this.FullscreenLabel, this.FullscreenEnabler =
 			utility:AddNewRow(this, "Fullscreen", "Selector", {"On", "Off"}, fullScreenInit)
-		this.FullscreenFrame.LayoutOrder = if GetFFlagChatTranslationSettingEnabled() then 9 else 8
+		this.FullscreenFrame.LayoutOrder = SETTINGS_MENU_LAYOUT_ORDER["FullScreenFrame"]
 
 		settingsDisabledInVR[this.FullscreenFrame] = true
 
@@ -341,7 +401,7 @@ local function Initialize()
 
 		this.GraphicsEnablerFrame, this.GraphicsEnablerLabel, this.GraphicsQualityEnabler =
 			utility:AddNewRow(this, "Graphics Mode", "Selector", {"Automatic", "Manual"}, graphicsEnablerStart)
-		this.GraphicsEnablerFrame.LayoutOrder = if GetFFlagChatTranslationSettingEnabled() then 10 else 9
+		this.GraphicsEnablerFrame.LayoutOrder = SETTINGS_MENU_LAYOUT_ORDER["GraphicsEnablerFrame"]
 
 		------------------ Gfx Slider GUI Setup  ------------------
 
@@ -360,14 +420,50 @@ local function Initialize()
 			this.mostRecentGraphicsQualityValue = numGraphicsQualityLevels
 
 			this.GraphicsQualityFrame, this.GraphicsQualityLabel, this.GraphicsQualitySlider =
-					utility:AddNewRow(this, "Graphics Quality", "Slider", numGraphicsQualityLevels, 1)
+				utility:AddNewRow(this, "Graphics Quality", "Slider", numGraphicsQualityLevels, 1)
 		else
 			this.GraphicsQualityFrame, this.GraphicsQualityLabel, this.GraphicsQualitySlider =
 				utility:AddNewRow(this, "Graphics Quality", "Slider", GRAPHICS_QUALITY_LEVELS, 1)
 		end
 
-		this.GraphicsQualityFrame.LayoutOrder = if GetFFlagChatTranslationSettingEnabled() then 11 else 10
+		this.GraphicsQualityFrame.LayoutOrder = SETTINGS_MENU_LAYOUT_ORDER["GraphicsQualityFrame"]
 		this.GraphicsQualitySlider:SetMinStep(1)
+
+		------------------ FPS Cap GUI Setup  ------------------
+		if GameBasicSettingsFramerateCap then
+			-- VR is uncapped
+			if not VRService.VREnabled then
+				local framerateCaps = table.clone(Constants.FramerateCaps)
+				local framerateCapsToText = {RobloxTranslator:FormatByKey("InGame.CommonUI.Label.Default")}
+
+				for _, framerate in framerateCaps do
+					table.insert(framerateCapsToText, tostring(framerate))
+				end
+
+				table.insert(framerateCaps, 1, -1)
+
+				this.FramerateCapFrame, this.FramerateCapLabel, this.FramerateCapMode =
+					utility:AddNewRow(
+						this,
+						RobloxTranslator:FormatByKey("Feature.SettingsHub.GameSettings.MaximumFramerate"),
+						"Selector",
+						framerateCapsToText,
+						table.find(framerateCaps, GameSettings.FramerateCap)
+					)
+				this.FramerateCapFrame.LayoutOrder = 12
+
+				this.FramerateCapMode.IndexChanged:Connect(function(newIndex)
+					local oldValue = GameSettings.FramerateCap
+					GameSettings.FramerateCap = tonumber(framerateCaps[newIndex])
+
+					if GetFFlagEnableExplicitSettingsChangeAnalytics() then
+						reportSettingsChangeForAnalytics("framerate_cap", oldValue, GameSettings.FramerateCap)
+					end
+
+					reportSettingsForAnalytics()
+				end)
+			end
+		end
 
 		------------------------------------------------------
 		------------------------- Connection Setup ----------------------------
@@ -664,7 +760,7 @@ local function Initialize()
 
 		this.ReducedMotionFrame, this.ReducedMotionLabel, this.ReducedMotionMode =
 			utility:AddNewRow(this, reducedMotionLabel, "Selector", {onLabel, offLabel}, startIndex, nil, reducedMotionDescription)
-		this.ReducedMotionFrame.LayoutOrder = if GetFFlagChatTranslationSettingEnabled() then 12 else 11
+		this.ReducedMotionFrame.LayoutOrder = SETTINGS_MENU_LAYOUT_ORDER["ReducedMotionFrame"]
 
 		this.ReducedMotionMode.IndexChanged:connect(
 			function(newIndex)
@@ -689,7 +785,7 @@ local function Initialize()
 
 		this.PreferredTransparencyFrame, this.PreferredTransparencyLabel, this.PreferredTransparencySlider =
 			utility:AddNewRow(this, preferredTransparencyLabel, "Slider", 10, startValue, nil, preferredTransparencyDescription, preferredTransparencyLeftLabel, preferredTransparencyRightLabel)
-		this.PreferredTransparencyFrame.LayoutOrder = if GetFFlagChatTranslationSettingEnabled() then 13 else 12
+		this.PreferredTransparencyFrame.LayoutOrder = SETTINGS_MENU_LAYOUT_ORDER["PreferredTransparencyFrame"]
 
 		this.PreferredTransparencySlider.ValueChanged:connect(
 			function(newValue)
@@ -720,7 +816,7 @@ local function Initialize()
 
 		this.UiNavigationKeyBindEnabledFrame, this.UiNavigationKeyBindEnabledLabel, this.UiNavigationKeyBindEnabledMode =
 			utility:AddNewRow(this, uiNavigationKeyBindLabel, "Selector", {onLabel, offLabel}, startIndex, nil, uiNavigationKeyBindDescription)
-		this.UiNavigationKeyBindEnabledFrame.LayoutOrder = if GetFFlagChatTranslationSettingEnabled() then 14 else 13
+		this.UiNavigationKeyBindEnabledFrame.LayoutOrder = SETTINGS_MENU_LAYOUT_ORDER["UiNavigationKeyBindEnabledFrame"]
 
 		this.UiNavigationKeyBindEnabledMode.IndexChanged:connect(
 			function(newIndex)
@@ -753,7 +849,7 @@ local function Initialize()
 
 		this.PerformanceStatsFrame, this.PerformanceStatsLabel, this.PerformanceStatsMode =
 			utility:AddNewRow(this, "Performance Stats", "Selector", {"On", "Off"}, startIndex)
-		this.PerformanceStatsFrame.LayoutOrder = if GetFFlagChatTranslationSettingEnabled() then 15 else 14
+		this.PerformanceStatsFrame.LayoutOrder = SETTINGS_MENU_LAYOUT_ORDER["PerformanceStatsFrame"]
 
 		this.PerformanceStatsOverrideText =
 			utility:Create "TextLabel" {
@@ -805,7 +901,7 @@ local function Initialize()
 	local function createWebServerInformationRow()
 		this.InformationFrame, this.InformationLabel, this.InformationTextBox =
 			utility:AddNewRow(this, "MicroProfiler Information", "TextBox", nil, nil, 5)
-		this.InformationFrame.LayoutOrder = 99 -- I want this always to be the last shown
+		this.InformationFrame.LayoutOrder = SETTINGS_MENU_LAYOUT_ORDER["InformationFrame"]
 
 		-- Override the default position
 		-- todo replace this with TextX and TextYAlignment to centerlise the text
@@ -940,8 +1036,8 @@ local function Initialize()
 
 		local microProfilerLabel = RobloxTranslator:FormatByKey("Feature.SettingsHub.GameSettings.MicroProfiler")
 		this.MicroProfilerFrame, this.MicroProfilerLabel, this.MicroProfilerMode =
-				utility:AddNewRow(this, microProfilerLabel, "Selector", {"On", "Off"}, webServerIndex) -- This can be set to override defualt micro profiler state
-		this.MicroProfilerFrame.LayoutOrder = if GetFFlagChatTranslationSettingEnabled() then 16 else 15
+			utility:AddNewRow(this, microProfilerLabel, "Selector", {"On", "Off"}, webServerIndex) -- This can be set to override defualt micro profiler state
+		this.MicroProfilerFrame.LayoutOrder = SETTINGS_MENU_LAYOUT_ORDER["MicroProfilerFrame"]
 
 		tryContentLabel()
 
@@ -985,7 +1081,7 @@ local function Initialize()
 
 				this.ShiftLockFrame, this.ShiftLockLabel, this.ShiftLockMode =
 					utility:AddNewRow(this, "Shift Lock Switch", "Selector", {"On", "Off"}, startIndex)
-				this.ShiftLockFrame.LayoutOrder = 1
+				this.ShiftLockFrame.LayoutOrder = SETTINGS_MENU_LAYOUT_ORDER["ShiftLockFrame"]
 
 				settingsDisabledInVR[this.ShiftLockFrame] = true
 
@@ -1148,7 +1244,7 @@ local function Initialize()
 			end
 
 			this.CameraModeFrame, this.CameraModeLabel, this.CameraMode = utility:AddNewRow(this, "Camera Mode", "Selector", cameraEnumNames, 1)
-			this.CameraModeFrame.LayoutOrder = 2
+			this.CameraModeFrame.LayoutOrder = SETTINGS_MENU_LAYOUT_ORDER["CameraModeFrame"]
 
 			settingsDisabledInVR[this.CameraMode] = true
 
@@ -1220,7 +1316,7 @@ local function Initialize()
 
 				this.VREnabledFrame, this.VREnabledLabel, this.VREnabledSelector =
 					utility:AddNewRow(this, "VR", "Selector", optionNames, GameSettings.VREnabled and 1 or 2)
-				this.VREnabledFrame.LayoutOrder = if GetFFlagChatTranslationSettingEnabled() then 18 else 17
+				this.VREnabledFrame.LayoutOrder = SETTINGS_MENU_LAYOUT_ORDER["VREnabledFrame"]
 
 				this.VREnabledSelector.IndexChanged:connect(
 					function(newIndex)
@@ -1249,12 +1345,14 @@ local function Initialize()
 		------------------------------------------------------
 		------------------
 		------------------------- Chat Translation -----------
+		-- The below chat translation option is for the dropdown without the chat language switcher
+		-- Only can be removed once EnableTCSChatTranslation and EnableTCSChatTranslationLanguageSwitcher engine features have both been true for all platforms
 		local function createChatTranslationOption()
 			local chatTranslationEnabled = if TextChatService.ChatTranslationEnabled then 1 else 2
 
 			this.ChatTranslationFrame, this.ChatTranslationLabel, this.ChatTranslationEnabler =
 				utility:AddNewRow(this, "Automatic Chat Translation", "Selector", {"On", "Off"}, chatTranslationEnabled)
-			this.ChatTranslationFrame.LayoutOrder = 5
+			this.ChatTranslationFrame.LayoutOrder = SETTINGS_MENU_LAYOUT_ORDER["ChatTranslationFrame"]
 
 			this.ChatTranslationEnabler.IndexChanged:connect(
 				function(newIndex)
@@ -1279,7 +1377,7 @@ local function Initialize()
 
 			this.ChatTranslationToggleFrame, this.ChatTranslationToggleLabel, this.ChatTranslationToggleEnabler =
 				utility:AddNewRow(this, "Option to View Untranslated Message", "Selector", {"On", "Off"}, chatTranslationToggleEnabled)
-			this.ChatTranslationToggleFrame.LayoutOrder = 6
+			this.ChatTranslationToggleFrame.LayoutOrder = SETTINGS_MENU_LAYOUT_ORDER["ChatTranslationToggleFrame"]
 
 			this.ChatTranslationToggleEnabler.IndexChanged:connect(
 				function(newIndex)
@@ -1345,14 +1443,36 @@ local function Initialize()
 			end
 		end
 
-		if GetFFlagChatTranslationSettingEnabled() then
-			local layerName = GetFStringChatTranslationLayerName()
-			local layerData = getChatTranslationLayerData(layerName)
 
-			local success = setUpChatTranslationIxpDefaults(layerData)
+		if game:GetEngineFeature("EnableTCSChatTranslation") and not game:GetEngineFeature("EnableTCSChatTranslationLanguageSwitcher") then
+			if GetFFlagChatTranslationSettingEnabled() then
+				if GetFFlagChatTranslationLaunchEnabled() then
+					if GetFFlagChatTranslationHoldoutEnabled() then
+						local layerName = GetFStringChatTranslationLayerName()
+						local layerData = getChatTranslationLayerData(layerName)
+	
+						if not layerData.ChatTranslationEnabled then
+							if ChatTranslationSettingsMoved then
+								GameSettings.ChatTranslationEnabled = false
+							else
+								pcall(function ()
+									TextChatService.ChatTranslationEnabled = false
+								end)
+							end
+						end
+					end
 
-			if success and layerData.ChatTranslationEnabled then
-				createChatTranslationOption()
+					createChatTranslationOption()
+				else
+					local layerName = GetFStringChatTranslationLayerName()
+					local layerData = getChatTranslationLayerData(layerName)
+		
+					local success = setUpChatTranslationIxpDefaults(layerData)
+		
+					if success and layerData.ChatTranslationEnabled then
+						createChatTranslationOption()
+					end
+				end
 			end
 		end
 
@@ -1395,7 +1515,7 @@ local function Initialize()
 			end
 
 			this.MovementModeFrame, this.MovementModeLabel, this.MovementMode = utility:AddNewRow(this, "Movement Mode", "Selector", movementEnumNames, 1)
-			this.MovementModeFrame.LayoutOrder = 3
+			this.MovementModeFrame.LayoutOrder = SETTINGS_MENU_LAYOUT_ORDER["MovementModeFrame"]
 
 			settingsDisabledInVR[this.MovementMode] = true
 
@@ -1620,6 +1740,71 @@ local function Initialize()
 		)
 	end
 
+	local function createFeedbackModeOptions()
+		local rolesCheckUrl = Url.ROLES_URL .. "v1/users/authenticated/roles"
+		local rolesCheckRequest = HttpService:RequestInternal({
+			Url = rolesCheckUrl,
+			Method = "GET"
+		})
+
+		local function rolesCheckCallback(enableFeedbackUI)
+			if enableFeedbackUI then
+				local function onToggleFeedbackMode()
+					this.HubRef:PopMenu(false, true);
+					if ExperienceStateCaptureService ~= nil then
+						-- In this function ExperienceStateCaptureService should always exist, but just in case we do a nil check before we attempt a toggle
+						ExperienceStateCaptureService:ToggleCaptureMode()
+					end
+				end
+
+				local toggleFeedbackModeButton, toggleFeedbackModeText = nil, nil
+				toggleFeedbackModeButton, toggleFeedbackModeText = utility:MakeStyledButton("toggleFeedbackModeButton", "Give Feedback", UDim2.new(0, 300, 1, -20), onToggleFeedbackMode, this)
+				toggleFeedbackModeButton.ZIndex = 2
+				toggleFeedbackModeButton.Selectable = true
+				toggleFeedbackModeText.ZIndex = 2
+				toggleFeedbackModeButton.Position = UDim2.new(1, -400, 0, 12)
+
+				local row = utility:AddNewRowObject(this, "Give Translation Feedback", toggleFeedbackModeButton)
+				row.LayoutOrder = SETTINGS_MENU_LAYOUT_ORDER["FeedbackModeButton"]
+			end
+		end
+
+		if FFlagDisableFeedbackSoothsayerCheck then
+			-- Skip the roles check and immediate hit the callback as if we passed the soothsayer check
+			rolesCheckCallback(true)
+
+		else
+			rolesCheckRequest:Start(function(reqSuccess, reqResponse)
+				local enableFeedbackUI = false
+				local success = false
+				local err = nil
+				if not reqSuccess then
+					err = "Roles Api Request: Connection error"
+				elseif reqResponse.StatusCode == 401 then
+					err = "Roles Api Request: Unauthorized"
+				elseif reqResponse.StatusCode < 200 or reqResponse.StatusCode >= 400 then
+					err = "Roles Api Status code: " .. reqResponse.StatusCode
+				else
+					-- reqSuccess == true and StatusCode >= 200 and StatusCode < 400
+					success, err = pcall(function()
+						local json = HttpService:JSONDecode(reqResponse.Body)
+						-- Check roles result for soothsayer
+						for _, role in pairs(json.roles) do
+							if role == "Soothsayer" then
+								enableFeedbackUI = true
+							end
+						end
+					end)
+				end
+				if not success then
+					log:warning("Feedback Mode initialization api call failed with url: " .. rolesCheckUrl .. " and with error message: " .. err)
+				end
+
+				rolesCheckCallback(enableFeedbackUI)
+			end)
+		end
+	end
+
 	-- This function is called in SetHub override only if engine flag is enabled
 	local function createTranslationOptions()
 		------------------------------------------------------
@@ -1695,7 +1880,7 @@ local function Initialize()
 				this.LanguageSelectorFrame, this.LanguageSelectorLabel, this.LanguageSelectorMode =
 					utility:AddNewRow(this, "Experience Language", "DropDown", {"Unavailable"}, 1)
 				this.LanguageSelectorMode:SetInteractable(false)
-				this.LanguageSelectorFrame.LayoutOrder = 4
+				this.LanguageSelectorFrame.LayoutOrder = SETTINGS_MENU_LAYOUT_ORDER["LanguageSelectorFrame"]
 			else
 				-- All GET API calls succeeded, so the feature should be enabled
 				-- and starting state calculated
@@ -1729,8 +1914,7 @@ local function Initialize()
 
 				this.LanguageSelectorFrame, this.LanguageSelectorLabel, this.LanguageSelectorMode =
 					utility:AddNewRow(this, "Experience Language", "DropDown", languageOptions, startIndex)
-				this.LanguageSelectorFrame.LayoutOrder = 4
-
+				this.LanguageSelectorFrame.LayoutOrder = SETTINGS_MENU_LAYOUT_ORDER["LanguageSelectorFrame"]
 				-- Perform call to game engine to set the locale to match the
 				-- dropdown selection in the UI
 				if startIndex == 1 then
@@ -2022,11 +2206,55 @@ local function Initialize()
 		end)
 	end
 
+	local function getChatTranslationLayerData(layerName)
+		local chatTranslationLayerData = {
+			ChatTranslationEnabled = false,
+			ChatTranslationToggleEnabled = false,
+		}
+
+		if not layerName or layerName == "" then
+			return chatTranslationLayerData
+		end
+
+		-- Override layer name for channel testing
+		if (layerName == "override") then
+			chatTranslationLayerData.ChatTranslationEnabled = true
+			return chatTranslationLayerData
+		end
+
+		local layerSuccess, layerData = pcall(function()
+			return IXPServiceWrapper:GetLayerData(layerName)
+		end)
+
+		if layerSuccess then
+			chatTranslationLayerData.ChatTranslationEnabled = layerData.chatTranslationEnabled or false
+			chatTranslationLayerData.ChatTranslationToggleEnabled = layerData.chatTranslationToggleEnabled or false
+		end
+
+		return chatTranslationLayerData
+	end
+
+	local function setUpChatTranslationIxpDefaults(layerData)
+		if ChatTranslationSettingsMoved then
+			GameSettings.ChatTranslationEnabled = layerData.ChatTranslationEnabled
+			GameSettings.ChatTranslationToggleEnabled = layerData.ChatTranslationToggleEnabled
+
+			return true
+		else
+			local success, _ = pcall(function ()
+				TextChatService.ChatTranslationEnabled = layerData.ChatTranslationEnabled
+				TextChatService.ChatTranslationToggleEnabled = layerData.ChatTranslationToggleEnabled
+			end)
+
+			return success
+		end
+	end
+
 	local function createVolumeOptions()
 		local startVolumeLevel = math.floor(GameSettings.MasterVolume * 10)
 		this.VolumeFrame, this.VolumeLabel, this.VolumeSlider =
 			utility:AddNewRow(this, "Volume", "Slider", 10, startVolumeLevel)
-		this.VolumeFrame.LayoutOrder = if GetFFlagChatTranslationSettingEnabled() then 8 else 6
+		this.VolumeFrame.LayoutOrder = SETTINGS_MENU_LAYOUT_ORDER["VolumeFrame"]
 
 		-- ROBLOX FIXME: We should express the "Sounds" folder statically in the project config
 		local volumeSound = Instance.new("Sound", (game:GetService("CoreGui").RobloxGui :: any).Sounds)
@@ -2070,7 +2298,7 @@ local function Initialize()
 
 		this.CameraInvertedFrame, _, this.CameraInvertedSelector =
 			utility:AddNewRow(this, "Camera Inverted", "Selector", {"Off", "On"}, initialIndex)
-		this.CameraInvertedFrame.LayoutOrder = if GetFFlagChatTranslationSettingEnabled() then 17 else 16
+		this.CameraInvertedFrame.LayoutOrder = SETTINGS_MENU_LAYOUT_ORDER["CameraInvertedFrame"]
 		settingsDisabledInVR[this.CameraInvertedFrame] = true
 
 		this.CameraInvertedSelector.IndexChanged:connect(
@@ -2156,7 +2384,7 @@ local function Initialize()
 
 		this.MouseAdvancedFrame, this.MouseAdvancedLabel, this.MouseAdvancedEntry =
 			utility:AddNewRow(this, "Camera Sensitivity", "Slider", AdvancedMouseSteps, startMouseLevel)
-		this.MouseAdvancedFrame.LayoutOrder = if GetFFlagChatTranslationSettingEnabled() then 7 else 5
+		this.MouseAdvancedFrame.LayoutOrder = SETTINGS_MENU_LAYOUT_ORDER["MouseAdvancedFrame"]
 		settingsDisabledInVR[this.MouseAdvancedFrame] = true
 
 		this.MouseAdvancedEntry.SliderFrame.Size =
@@ -2302,7 +2530,7 @@ local function Initialize()
 		local SliderLabel = "Camera Sensitivity"
 		this.GamepadSensitivityFrame, this.GamepadSensitivityLabel, this.GamepadSensitivitySlider =
 			utility:AddNewRow(this, SliderLabel, "Slider", GamepadSteps, startGamepadLevel)
-		this.GamepadSensitivityFrame.LayoutOrder = 4
+		this.GamepadSensitivityFrame.LayoutOrder = SETTINGS_MENU_LAYOUT_ORDER["GamepadSensitivityFrame"]
 		this.GamepadSensitivitySlider.ValueChanged:connect(
 			function(newValue)
 				setCameraSensitivity(translateGuiGamepadSensitivityToEngine(newValue))
@@ -2315,16 +2543,9 @@ local function Initialize()
 			-- FIXME: Cyclic module dependency, cast to any to appease typechecker
 			local MenuModule = require(RobloxGui.Modules.Settings.SettingsHub) :: any
 			local overscan
-			if GetFFlagSupportsOverscanPolicy() then
-				if _G.IsLegacyAppShell then
-					overscan = require(RobloxGui.Modules.Shell.Components.Overscan.Overscan)
-				else
-					overscan = require(RobloxGui.Modules.Shell.Components.Overscan10ft.Overscan)
-					overscan = require(RobloxGui.Modules.Settings.Components.OverscanWrapper)(overscan)
-				end
-			else
-				overscan = require(RobloxGui.Modules.Shell.Components.Overscan.Overscan)
-			end
+			overscan = require(RobloxGui.Modules.Shell.Components.Overscan10ft.Overscan)
+			overscan = require(RobloxGui.Modules.Settings.Components.OverscanWrapper)(overscan)
+
 			local roact = require(RobloxGui.Modules.Common.Roact)
 			local overscanComponent = nil
 
@@ -2375,7 +2596,9 @@ local function Initialize()
 		end
 
 		local row = utility:AddNewRowObject(this, "Safe Zone", adjustButton)
+		row.LayoutOrder = SETTINGS_MENU_LAYOUT_ORDER["OverscanAdjustButton"]
 		setButtonRowRef(row)
+
 	end
 
 	local function createDeveloperConsoleOption()
@@ -2398,11 +2621,7 @@ local function Initialize()
 			devConsoleText.Font = Theme.font(Enum.Font.SourceSans)
 			devConsoleButton.Position = UDim2.new(1, -400, 0, 12)
 			local row = utility:AddNewRowObject(this, "Developer Console", devConsoleButton)
-			if game:GetEngineFeature("VideoCaptureService") then
-				row.LayoutOrder = 19
-			else
-				row.LayoutOrder = 18
-			end
+			row.LayoutOrder = SETTINGS_MENU_LAYOUT_ORDER["DeveloperConsoleButton"]
 			setButtonRowRef(row)
 		end
 
@@ -2417,41 +2636,114 @@ local function Initialize()
 			end)
 		end
 	end
-
+	
 	local function createUiToggleOptions()
-		local uiToggleOptions = {
-			"All visible",
-			"Hide nameplates/bubble chat",
-		}
-		this.uiToggleRow, this.uiToggleFrame, this.uiToggleSelector =
-			utility:AddNewRow(this, "BillboardGui Visibility", "Selector", uiToggleOptions, 1)
-		this.uiToggleRow.LayoutOrder = 30 -- Make sure this is last
+		if FFlagUserShowGuiHideToggles then
+			local selectorTypes = {
+				{ label = "Custom", type = Enum.GuiType.Custom, layoutOrderKey = "UiToggleRowCustom" },
+				{ label = "CustomBillboards", type = Enum.GuiType.CustomBillboards, layoutOrderKey = "UiToggleRowBillboards" },
+				{ label = "PlayerNameplates", type = Enum.GuiType.PlayerNameplates, layoutOrderKey = "UiToggleRowNameplates" },
+			}
+			local onLabel = RobloxTranslator:FormatByKey("InGame.CommonUI.Label.On")
+			local offLabel = RobloxTranslator:FormatByKey("InGame.CommonUI.Label.Off")
 
-		this.uiToggleSelector.IndexChanged:connect(
-			function(newIndex)
-				GuiService:ToggleGuiIsVisibleIfAllowed(Enum.GuiType.PlayerNameplates)
+			this.uiToggleSelectors = {}
+
+			for idx, selectorType in selectorTypes do
+				local label = RobloxTranslator:FormatByKey("Feature.SettingsHub.GameSettings.GuiVisibility.ShowGuiType", {
+					GuiType = selectorType.label,
+				})
+				local row, frame, selector = utility:AddNewRow(this, label, "Selector", { onLabel, offLabel }, 1)
+				row.LayoutOrder = SETTINGS_MENU_LAYOUT_ORDER[selectorType.layoutOrderKey]
+
+				selector.IndexChanged:Connect(function(newIndex)
+					local prevIndex = if GuiService:GetGuiIsVisible(selectorType.type) then 1 else 2
+
+					if prevIndex ~= newIndex then
+						GuiService:ToggleGuiIsVisibleIfAllowed(selectorType.type)
+					end
+				end)
+
+				this.uiToggleSelectors[selectorType.label] = {
+					label = label,
+					type = selectorType.type,
+					row = row,
+					frame = frame,
+					selector = selector,
+				}
 			end
-		)
+
+			local freecamLabel = RobloxTranslator:FormatByKey("Feature.SettingsHub.GameSettings.GuiVisibility.Freecam")
+			this.freecamRow, this.freecamFrame, this.freecamSelector = utility:AddNewRow(this, freecamLabel, "Selector", { offLabel, onLabel }, 1)
+			this.freecamRow.LayoutOrder = SETTINGS_MENU_LAYOUT_ORDER["FreecamToggleRow"]
+
+			this.freecamSelector.IndexChanged:Connect(function(newIndex)
+				local enabled = newIndex == 2
+				local freecamScript = LocalPlayer:FindFirstChild("FreecamScript", true)
+				if not freecamScript then
+					warn("Freecam not present")
+					return
+				end
+
+				freecamScript:SetAttribute("FreecamEnabled", enabled)
+			end)
+		else
+			local uiToggleOptions = {
+				"All visible",
+				"Hide nameplates/bubble chat",
+			}
+			this.uiToggleRow, this.uiToggleFrame, this.uiToggleSelector =
+				utility:AddNewRow(this, "BillboardGui Visibility", "Selector", uiToggleOptions, 1)
+			this.uiToggleRow.LayoutOrder = SETTINGS_MENU_LAYOUT_ORDER["UiToggleRow"]
+
+			this.uiToggleSelector.IndexChanged:connect(
+				function(newIndex)
+					GuiService:ToggleGuiIsVisibleIfAllowed(Enum.GuiType.PlayerNameplates)
+				end
+			)
+		end
 	end
 
 	local function updateUiToggleSelection()
-		-- If the toggle doesn't exist, we probably don't have permission to change this
-		if not this.uiToggleSelector then
-			return
-		end
+		if FFlagUserShowGuiHideToggles then
+			-- If the toggle doesn't exist, we probably don't have permission to change this
+			if not this.uiToggleSelectors then
+				return
+			end
 
-		local newIndex
-		if GuiService:GetGuiIsVisible(Enum.GuiType.PlayerNameplates) then
-			newIndex = 1
+			for _, selector in this.uiToggleSelectors do
+				local newIndex = if GuiService:GetGuiIsVisible(selector.type) then 1 else 2
+
+				if newIndex ~= selector.selector:GetSelectedIndex() then
+					selector.selector:SetSelectionIndex(newIndex)
+				end
+			end
+
+			local freecamScript = LocalPlayer:FindFirstChild("FreecamScript", true)
+			if freecamScript then
+				local enabled = freecamScript:GetAttribute("FreecamEnabled")
+				local index = if enabled then 2 else 1
+				this.freecamSelector:SetSelectionIndex(index)
+			end
 		else
-			newIndex = 2
-		end
+			-- If the toggle doesn't exist, we probably don't have permission to change this
+			if not this.uiToggleSelector then
+				return
+			end
 
-		if newIndex == this.uiToggleSelector:GetSelectedIndex() then
-			return
-		end
+			local newIndex
+			if GuiService:GetGuiIsVisible(Enum.GuiType.PlayerNameplates) then
+				newIndex = 1
+			else
+				newIndex = 2
+			end
 
-		this.uiToggleSelector:SetSelectionIndex(newIndex)
+			if newIndex == this.uiToggleSelector:GetSelectedIndex() then
+				return
+			end
+
+			this.uiToggleSelector:SetSelectionIndex(newIndex)
+		end
 	end
 
 	local function isValidDeviceList(deviceNames, deviceGuids, index)
@@ -2524,8 +2816,8 @@ local function Initialize()
 
 		local deviceLabel = (deviceType == VOICE_CHAT_DEVICE_TYPE.Input) and RobloxTranslator:FormatByKey("Feature.SettingsHub.GameSettings.InputDevice") or RobloxTranslator:FormatByKey("Feature.SettingsHub.GameSettings.OutputDevice")
 		this[deviceType.."DeviceFrame"], _, this[deviceType.."DeviceSelector"] =
-				utility:AddNewRow(this, deviceLabel, "Selector", options, selectedIndex)
-		this[deviceType.."DeviceFrame"].LayoutOrder = (deviceType == VOICE_CHAT_DEVICE_TYPE.Input) and 6 or 7
+			utility:AddNewRow(this, deviceLabel, "Selector", options, selectedIndex)
+		this[deviceType.."DeviceFrame"].LayoutOrder = (deviceType == VOICE_CHAT_DEVICE_TYPE.Input) and SETTINGS_MENU_LAYOUT_ORDER["DeviceFrameInput"] or SETTINGS_MENU_LAYOUT_ORDER["DeviceFrameOutput"]
 
 		this[deviceType.."DeviceInfo"] = {
 			Name = selectedIndex > 0 and options[selectedIndex] or nil,
@@ -2541,15 +2833,11 @@ local function Initialize()
 					return
 				end
 
-				local debounceEnabled = GetFFlagEnableVoiceChatDeviceChangeDebounce()
-				local changeDevice = not debounceEnabled
+				local currentInvocation = indexChangedInvocations + 1
+				indexChangedInvocations = currentInvocation
+				wait(indexChangedDelay)
+				local changeDevice = currentInvocation == indexChangedInvocations
 
-				if debounceEnabled then
-					local currentInvocation = indexChangedInvocations + 1
-					indexChangedInvocations = currentInvocation
-					wait(indexChangedDelay)
-					changeDevice = currentInvocation == indexChangedInvocations
-				end
 				if changeDevice then
 					indexChangedInvocations = 0
 					this[deviceType.."DeviceInfo"] = {
@@ -2577,8 +2865,8 @@ local function Initialize()
 
 		local deviceLabel = VideoPromptVideoCamera
 		this[CAMERA_DEVICE_FRAME_KEY], _, this[CAMERA_DEVICE_SELECTOR_KEY] =
-				utility:AddNewRow(this, deviceLabel, "Selector", options, selectedIndex)
-		this[CAMERA_DEVICE_FRAME_KEY].LayoutOrder = 18
+			utility:AddNewRow(this, deviceLabel, "Selector", options, selectedIndex)
+		this[CAMERA_DEVICE_FRAME_KEY].LayoutOrder = SETTINGS_MENU_LAYOUT_ORDER[CAMERA_DEVICE_FRAME_KEY]
 
 		this[CAMERA_DEVICE_INFO_KEY] = {
 			Name = selectedIndex > 0 and options[selectedIndex] or nil,
@@ -2670,7 +2958,15 @@ local function Initialize()
 		else
 
 			if GetFFlagVoiceChatUILogging() then
-				log:warning("Errors in get {} device info", deviceType)
+				if FFlagHideEmptyInputDeviceSelector then
+					if #deviceNames > 0 then
+						log:warning("Errors in get {} device info success: {} VCSSuccess: {}", deviceType, success, VCSSuccess)
+					else
+						log:warning("Empty deviceNames list for {}", deviceType)
+					end
+				else
+					log:warning("Errors in get {} device info", deviceType)
+				end
 			end
 			this[deviceType.."DeviceNames"] = {}
 			this[deviceType.."DeviceGuids"] = {}
@@ -2684,6 +2980,16 @@ local function Initialize()
 		else
 			this[deviceType.."DeviceSelector"]:UpdateOptions(deviceNames)
 			this[deviceType.."DeviceSelector"]:SetSelectionIndex(selectedIndex)
+		end
+
+		if FFlagHideEmptyInputDeviceSelector then
+			if this[deviceType.."DeviceFrame"] then
+				if #deviceNames > 0 then
+					this[deviceType.."DeviceFrame"].Visible = true
+				else
+					this[deviceType.."DeviceFrame"].Visible = false
+				end
+			end
 		end
 	end
 
@@ -2800,7 +3106,7 @@ local function Initialize()
 			cameraPermissionGrantedListener = nil
 		end
 	end
-	if FFlagAvatarChatCoreScriptSupport then
+	if FFlagAvatarChatCoreScriptSupport or GetFFlagSelfViewCameraSettings() then
 		local callback = function(response)
 			this.VideoOptionsEnabled = response.hasCameraPermissions
 		end
@@ -2822,7 +3128,7 @@ local function Initialize()
 				end)
 			end
 		else
-			getCamMicPermissions(callback)
+			getCamMicPermissions(callback, nil, nil, "GameSettings.createDeviceOptions")
 		end
 	end
 
@@ -2890,12 +3196,10 @@ local function Initialize()
 	createVolumeOptions()
 	createGraphicsOptions()
 
-	if GetFFlagEnableAccessibilitySettingsInExperienceMenu() then
-		createReducedMotionOptions()
-		createPreferredTransparencyOptions()
-		if UserInputService.KeyboardEnabled then
-			createUiNavigationKeyBindOptions()
-		end
+	createReducedMotionOptions()
+	createPreferredTransparencyOptions()
+	if UserInputService.KeyboardEnabled then
+		createUiNavigationKeyBindOptions()
 	end
 
 	local canShowPerfStats =  not PolicyService:IsSubjectToChinaPolicies()
@@ -2909,14 +3213,8 @@ local function Initialize()
 		createMicroProfilerOptions()
 	end
 
-	if GetFFlagSupportsOverscanPolicy() then
-		if isTenFootInterface and getAppFeaturePolicies().getSupportsOverscan() then
-			createOverscanOption()
-		end
-	else
-		if isTenFootInterface then
-			createOverscanOption()
-		end
+	if isTenFootInterface and getAppFeaturePolicies().getSupportsOverscan() then
+		createOverscanOption()
 	end
 
 	-- dev console option only shows for place/group place owners
@@ -2977,7 +3275,7 @@ local function Initialize()
 			this.startVolume = GameSettings.MasterVolume
 		end
 
-		if FFlagAvatarChatCoreScriptSupport and this.VideoOptionsEnabled then
+		if (FFlagAvatarChatCoreScriptSupport or GetFFlagSelfViewCameraSettings()) and this.VideoOptionsEnabled then
 			if game:GetEngineFeature("VideoCaptureService") then
 				updateCameraDevices()
 				setupVideoCameraDeviceChangedListener()
@@ -2990,7 +3288,7 @@ local function Initialize()
 	this.CloseSettingsPage = function()
 		this.PageOpen = false
 		teardownDeviceChangedListener()
-		if FFlagAvatarChatCoreScriptSupport then
+		if FFlagAvatarChatCoreScriptSupport or GetFFlagSelfViewCameraSettings() then
 			if game:GetEngineFeature("VideoCaptureService") then
 				teardownVideoCameraDeviceChangedListener()
 			end
@@ -3007,6 +3305,18 @@ local function Initialize()
 		then
 			VoiceChatServiceManager:CheckAndShowNotAudiblePrompt()
 		end
+	end
+
+	local function isFeedbackModeEntryPointEnabled()
+		if RunService:IsStudio() then
+			return false
+		end
+
+		if game:GetEngineFeature("CaptureModeEnabled") == false then
+			return false
+		end
+
+		return true
 	end
 
 	function isLangaugeSelectionDropdownEnabled()
@@ -3037,6 +3347,42 @@ local function Initialize()
 
 		if isLangaugeSelectionDropdownEnabled() then
 			createTranslationOptions()
+		end
+
+		-- Chat translation setting uses dropdowns, which require the hub reference to exist
+		if game:GetEngineFeature("EnableTCSChatTranslation") and game:GetEngineFeature("EnableTCSChatTranslationLanguageSwitcher") then
+			if GetFFlagChatTranslationSettingEnabled() then
+				if GetFFlagChatTranslationLaunchEnabled() then
+					if GetFFlagChatTranslationHoldoutEnabled() then
+						local layerName = GetFStringChatTranslationLayerName()
+						local layerData = getChatTranslationLayerData(layerName)
+
+						if not layerData.ChatTranslationEnabled then
+							if ChatTranslationSettingsMoved then
+								GameSettings.ChatTranslationEnabled = false
+							else
+								pcall(function ()
+									TextChatService.ChatTranslationEnabled = false
+								end)
+							end
+						end
+					end
+					CreateChatTranslationOptionsWithChatLanguageSwitcher(this, SETTINGS_MENU_LAYOUT_ORDER, reportSettingsChangeForAnalytics)
+				else
+					local layerName = GetFStringChatTranslationLayerName()
+					local layerData = getChatTranslationLayerData(layerName)
+
+					local success = setUpChatTranslationIxpDefaults(layerData)
+
+					if success and layerData.ChatTranslationEnabled then
+						CreateChatTranslationOptionsWithChatLanguageSwitcher(this, SETTINGS_MENU_LAYOUT_ORDER, reportSettingsChangeForAnalytics)
+					end
+				end
+			end
+		end
+
+		if isFeedbackModeEntryPointEnabled() then
+			createFeedbackModeOptions()
 		end
 	end
 	return this

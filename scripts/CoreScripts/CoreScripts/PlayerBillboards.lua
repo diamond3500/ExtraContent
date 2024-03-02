@@ -41,10 +41,8 @@ local GameTranslator = require(RobloxGui.Modules.GameTranslator)
 local VoiceChatServiceManager = require(RobloxGui.Modules.VoiceChat.VoiceChatServiceManager).default
 local initVoiceChatStore = require(RobloxGui.Modules.VoiceChat.initVoiceChatStore)
 local GetFFlagEnableVoiceChatVoiceUISync = require(RobloxGui.Modules.Flags.GetFFlagEnableVoiceChatVoiceUISync)
-local GetFFlagBubbleChatDuplicateMessagesFix = require(RobloxGui.Modules.Flags.GetFFlagBubbleChatDuplicateMessagesFix)
-local GetFFlagEnableVoiceChatLocalMuteUI = require(RobloxGui.Modules.Flags.GetFFlagEnableVoiceChatLocalMuteUI)
-local GetFFlagDisableBubbleChatForExpChat = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagDisableBubbleChatForExpChat
 local GetFFlagLocalMutedNilFix = require(RobloxGui.Modules.Flags.GetFFlagLocalMutedNilFix)
+local GetFFlagConsolidateBubbleChat = require(RobloxGui.Modules.Flags.GetFFlagConsolidateBubbleChat)
 local FFlagFixMessageReceivedEventLeak = game:DefineFastFlag("FixMessageReceivedEventLeak", false)
 
 local ExperienceChat = require(CorePackages.ExperienceChat)
@@ -57,58 +55,52 @@ local MALFORMED_DATA_WARNING = "Malformed message data sent to chat event %q. If
 	"check what you are firing to this event"
 
 local chatStore
-if GetFFlagDisableBubbleChatForExpChat() then
-	local SPY_ACTION_WHITELIST = {
-		[VoiceEnabledChanged.name] = function(action)
-			ExperienceChat.Events.VoiceEnabledChanged(action.enabled)
-		end,
+local SPY_ACTION_WHITELIST = {
+	[VoiceEnabledChanged.name] = function(action)
+		ExperienceChat.Events.VoiceEnabledChanged(action.enabled)
+	end,
 
-		[VoiceStateChanged.name] = function(action)
-			ExperienceChat.Events.VoiceStateChanged(action.userId, action.newState)
-		end,
+	[VoiceStateChanged.name] = function(action)
+		ExperienceChat.Events.VoiceStateChanged(action.userId, action.newState)
+	end,
 
-		[ParticipantAdded.name] = function(action)
-			ExperienceChat.Events.VoiceParticipantAdded(action.userId)
-		end,
+	[ParticipantAdded.name] = function(action)
+		ExperienceChat.Events.VoiceParticipantAdded(action.userId)
+	end,
 
-		[ParticipantRemoved.name] = function(action)
-			ExperienceChat.Events.VoiceParticipantRemoved(action.userId)
-		end,
-	}
+	[ParticipantRemoved.name] = function(action)
+		ExperienceChat.Events.VoiceParticipantRemoved(action.userId)
+	end,
+}
 
-	local spyMiddleware = function(nextDispatch)
-		return function(action)
-			local event = SPY_ACTION_WHITELIST[action.type]
-			if event then
-				event(action)
-			end
-
-			nextDispatch(action)
+local spyMiddleware = function(nextDispatch)
+	return function(action)
+		local event = SPY_ACTION_WHITELIST[action.type]
+		if event then
+			event(action)
 		end
-	end
 
-	chatStore = Rodux.Store.new(chatReducer, nil, {
-		Rodux.thunkMiddleware,
-		spyMiddleware,
-	})
-else
-	chatStore = Rodux.Store.new(chatReducer, nil, {
-		Rodux.thunkMiddleware,
-	})
+		nextDispatch(action)
+	end
 end
 
+chatStore = Rodux.Store.new(chatReducer, nil, {
+	Rodux.thunkMiddleware,
+	spyMiddleware,
+})
+
 local gameLoadedConn
-if GetFFlagDisableBubbleChatForExpChat() then
-	local function isTextChatServiceOn()
-		return TextChatService.ChatVersion == Enum.ChatVersion.TextChatService
-	end
-	if game:IsLoaded() and isTextChatServiceOn() then
-		-- If TextChatService is enabled, do not mount legacy BubbleChat
-		return
-	else
-		gameLoadedConn = game.Loaded:Connect(function()
-			if game:IsLoaded() then
-				gameLoadedConn:Disconnect()
+local function isTextChatServiceOn()
+	return TextChatService.ChatVersion == Enum.ChatVersion.TextChatService
+end
+if game:IsLoaded() and isTextChatServiceOn() then
+	-- If TextChatService is enabled, do not mount legacy BubbleChat
+	return
+else
+	gameLoadedConn = game.Loaded:Connect(function()
+		if game:IsLoaded() then
+			gameLoadedConn:Disconnect()
+			if not GetFFlagConsolidateBubbleChat() then
 				if isTextChatServiceOn() then
 					return
 				else
@@ -117,12 +109,8 @@ if GetFFlagDisableBubbleChatForExpChat() then
 					}), CoreGui, "BubbleChat")
 				end
 			end
-		end)
-	end
-else
-	Roact.mount(Roact.createElement(App, {
-		store = chatStore
-	}), CoreGui, "BubbleChat")
+		end
+	end)
 end
 
 local function validateMessageWithWarning(eventName, message)
@@ -184,20 +172,11 @@ local function initBubbleChat()
 				return
 			end
 
-			if GetFFlagBubbleChatDuplicateMessagesFix() then
-				local id = tostring(messageData.ID)
-				if chatStore:getState().messages[id] then
-					chatStore:dispatch(SetMessageText(id, messageData.Message))
-				else
-					chatStore:dispatch(AddMessageFromEvent(messageData))
-				end
+			local id = tostring(messageData.ID)
+			if chatStore:getState().messages[id] then
+				chatStore:dispatch(SetMessageText(id, messageData.Message))
 			else
-				if messageData.FromSpeaker == Players.LocalPlayer.Name then
-					local id = tostring(messageData.ID)
-					chatStore:dispatch(SetMessageText(id, messageData.Message))
-				else
-					chatStore:dispatch(AddMessageFromEvent(messageData))
-				end
+				chatStore:dispatch(AddMessageFromEvent(messageData))
 			end
 		end)
 	end))
@@ -251,44 +230,6 @@ local function initBubbleChat()
 	end
 
 	chattedConn = Chat.Chatted:Connect(addMessage)
-
-	if not GetFFlagDisableBubbleChatForExpChat() then
-
-		local TextChatService = game:GetService("TextChatService")
-
-		sendingMessageConn = TextChatService.SendingMessage:Connect(function(textChatMessage)
-			local textSource = textChatMessage.TextSource
-			if textSource and textSource.UserId then
-				local player = Players:GetPlayerByUserId(textSource.UserId)
-				if player then
-					local character = player.Character
-					if textChatMessage.Status == Enum.TextChatMessageStatus.Sending then
-						addMessageWithId(character, textChatMessage.Text, textChatMessage.MessageId)
-					end
-				end
-			end
-		end)
-
-		messageReceivedConn = TextChatService.MessageReceived:Connect(function(textChatMessage)
-			local textSource = textChatMessage.TextSource
-			if textSource and textSource.UserId then
-				local player = Players:GetPlayerByUserId(textSource.UserId)
-				if player then
-					local character = player.Character
-					if character and character.PrimaryPart then
-						if textChatMessage.Status == Enum.TextChatMessageStatus.Success then
-							local id = "chatted_" .. textChatMessage.MessageId
-							if chatStore:getState().messages[id] then
-								chatStore:dispatch(SetMessageText(id, textChatMessage.Text))
-							else
-								addMessageWithId(character, textChatMessage.Text, textChatMessage.MessageId)
-							end
-						end
-					end
-				end
-			end
-		end)
-	end
 end
 
 local function destroyBubbleChat()
@@ -425,7 +366,7 @@ local function initVoiceChat()
 			if not participantState.subscriptionCompleted then
 				voiceState = Constants.VOICE_STATE.CONNECTING
 			elseif participantState.isMutedLocally then
-				voiceState = GetFFlagEnableVoiceChatLocalMuteUI() and Constants.VOICE_STATE.LOCAL_MUTED or Constants.VOICE_STATE.MUTED
+				voiceState = Constants.VOICE_STATE.LOCAL_MUTED
 			elseif participantState.isMuted then
 				voiceState = Constants.VOICE_STATE.MUTED
 			elseif participantState.isSignalActive then

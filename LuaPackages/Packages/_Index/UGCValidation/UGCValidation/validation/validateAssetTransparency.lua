@@ -1,6 +1,5 @@
---!nocheck
+--!strict
 --[[
-	using nocheck for now, will change later. That's because the binary used to lint doesn't have the cpp functions
 
 	validateTransparency.lua checks the transparency of each part on a UGC bundle. On Studio, this utilizes taking a screen capture of the viewport, while in RCC servers it utilizes the thumbnail generator.
 ]]
@@ -14,51 +13,72 @@ local getFFlagUGCValidationValidateTransparencyServer =
 	require(root.flags.getFFlagUGCValidationValidateTransparencyServer)
 local getEngineFeatureViewportFrameSnapshotEngineFeature =
 	require(root.flags.getEngineFeatureViewportFrameSnapshotEngineFeature)
+local getFFlagUseThumbnailerUtil = require(root.flags.getFFlagUseThumbnailerUtil)
+
+local FIntUGCValidationHeadThreshold = game:DefineFastInt("UGCValidationHeadThreshold", 30)
+local FIntUGCValidationTorsoThresholdFront = game:DefineFastInt("UGCValidationTorsoThresholdFront", 50)
+local FIntUGCValidationTorsoThresholdBack = game:DefineFastInt("UGCValidationTorsoThresholdBack", 48)
+local FIntUGCValidationTorsoThresholdSide = game:DefineFastInt("UGCValidationTorsoThresholdSide", 46)
+local FIntUGCValidationLeftArmThresholdFront = game:DefineFastInt("UGCValidationLeftArmThresholdFront", 35)
+local FIntUGCValidationLeftArmThresholdBack = game:DefineFastInt("UGCValidationLeftArmThresholdBack", 33)
+local FIntUGCValidationLeftArmThresholdSide = game:DefineFastInt("UGCValidationLeftArmThresholdSide", 50)
+local FIntUGCValidationRightArmThresholdFront = game:DefineFastInt("UGCValidationRightArmThresholdFront", 35)
+local FIntUGCValidationRightArmThresholdBack = game:DefineFastInt("UGCValidationRightArmThresholdBack", 33)
+local FIntUGCValidationRightArmThresholdSide = game:DefineFastInt("UGCValidationRightArmThresholdSide", 50)
+local FIntUGCValidationLeftLegThresholdFront = game:DefineFastInt("UGCValidationLeftLegThresholdFront", 50)
+local FIntUGCValidationLeftLegThresholdBack = game:DefineFastInt("UGCValidationLeftLegThresholdBack", 50)
+local FIntUGCValidationLeftLegThresholdSide = game:DefineFastInt("UGCValidationLeftLegThresholdSide", 46)
+local FIntUGCValidationRightLegThresholdFront = game:DefineFastInt("UGCValidationRightLegThresholdFront", 50)
+local FIntUGCValidationRightLegThresholdBack = game:DefineFastInt("UGCValidationRightLegThresholdBack", 50)
+local FIntUGCValidationRightLegThresholdSide = game:DefineFastInt("UGCValidationRightLegThresholdSide", 48)
 
 local UGCValidationService = game:GetService("UGCValidationService")
-local Types = require(root.util.Types)
-local AssetTraversalUtils = require(root.util.AssetTraversalUtils)
-local ConstantsInterface = require(root.ConstantsInterface)
+local Types = require(root.util.Types) -- remove with FFlagUseThumbnailerUtil
+local AssetTraversalUtils = require(root.util.AssetTraversalUtils) -- remove with FFlagUseThumbnailerUtil
+local ConstantsInterface = require(root.ConstantsInterface) -- remove with FFlagUseThumbnailerUtil
+local Thumbnailer = require(root.util.Thumbnailer)
+local setupTransparentPartSize = require(root.util.setupTransparentPartSize)
 
 local CAMERA_FOV: number = 70
 local IMAGE_SIZE: number = 100
 local CAMERA_POSITIONS: { Vector3 } = { Vector3.new(0, 0, -1), Vector3.new(0, 0, 1), Vector3.new(1, 0, 0) }
-local DEFAULT_BG_COLOR_1: Color3 = Color3.fromRGB(0, 0, 0)
+local DEFAULT_BG_COLOR_1: Color3 = Color3.fromRGB(0, 0, 0) -- remove with FFlagUseThumbnailerUtil
 local TRANSPARENT_PART_COLOR: Color3 = Color3.fromRGB(7, 32, 91) --magic number, doesn't really matter
 
 local assetTypeEnumToPartsToValidIDs = {
 	[Enum.AssetType.DynamicHead] = {
-		[CAMERA_POSITIONS[1]] = 0.32,
-		[CAMERA_POSITIONS[2]] = 0.32,
-		[CAMERA_POSITIONS[3]] = 0.32,
+		[CAMERA_POSITIONS[1]] = FIntUGCValidationHeadThreshold / 100,
+		[CAMERA_POSITIONS[2]] = FIntUGCValidationHeadThreshold / 100,
+		[CAMERA_POSITIONS[3]] = FIntUGCValidationHeadThreshold / 100,
 	},
 	[Enum.AssetType.Torso] = {
-		[CAMERA_POSITIONS[1]] = 0.50,
-		[CAMERA_POSITIONS[2]] = 0.48,
-		[CAMERA_POSITIONS[3]] = 0.46,
+		[CAMERA_POSITIONS[1]] = FIntUGCValidationTorsoThresholdFront / 100,
+		[CAMERA_POSITIONS[2]] = FIntUGCValidationTorsoThresholdBack / 100,
+		[CAMERA_POSITIONS[3]] = FIntUGCValidationTorsoThresholdSide / 100,
 	},
 	[Enum.AssetType.LeftArm] = {
-		[CAMERA_POSITIONS[1]] = 0.35,
-		[CAMERA_POSITIONS[2]] = 0.33,
-		[CAMERA_POSITIONS[3]] = 0.50,
+		[CAMERA_POSITIONS[1]] = FIntUGCValidationLeftArmThresholdFront / 100,
+		[CAMERA_POSITIONS[2]] = FIntUGCValidationLeftArmThresholdBack / 100,
+		[CAMERA_POSITIONS[3]] = FIntUGCValidationLeftArmThresholdSide / 100,
 	},
 	[Enum.AssetType.RightArm] = {
-		[CAMERA_POSITIONS[1]] = 0.35,
-		[CAMERA_POSITIONS[2]] = 0.33,
-		[CAMERA_POSITIONS[3]] = 0.50,
+		[CAMERA_POSITIONS[1]] = FIntUGCValidationRightArmThresholdFront / 100,
+		[CAMERA_POSITIONS[2]] = FIntUGCValidationRightArmThresholdBack / 100,
+		[CAMERA_POSITIONS[3]] = FIntUGCValidationRightArmThresholdSide / 100,
 	},
 	[Enum.AssetType.LeftLeg] = {
-		[CAMERA_POSITIONS[1]] = 0.50,
-		[CAMERA_POSITIONS[2]] = 0.50,
-		[CAMERA_POSITIONS[3]] = 0.46,
+		[CAMERA_POSITIONS[1]] = FIntUGCValidationLeftLegThresholdFront / 100,
+		[CAMERA_POSITIONS[2]] = FIntUGCValidationLeftLegThresholdBack / 100,
+		[CAMERA_POSITIONS[3]] = FIntUGCValidationLeftLegThresholdSide / 100,
 	},
 	[Enum.AssetType.RightLeg] = {
-		[CAMERA_POSITIONS[1]] = 0.50,
-		[CAMERA_POSITIONS[2]] = 0.50,
-		[CAMERA_POSITIONS[3]] = 0.48,
+		[CAMERA_POSITIONS[1]] = FIntUGCValidationRightLegThresholdFront / 100,
+		[CAMERA_POSITIONS[2]] = FIntUGCValidationRightLegThresholdBack / 100,
+		[CAMERA_POSITIONS[3]] = FIntUGCValidationRightLegThresholdSide / 100,
 	},
 }
 
+-- remove with FFlagUseThumbnailerUtil
 local function setupViewportFrame()
 	local screenGui: ScreenGui = Instance.new("ScreenGui", game:GetService("CoreGui"))
 	local vpf: ViewportFrame = Instance.new("ViewportFrame", screenGui)
@@ -71,6 +91,7 @@ local function setupViewportFrame()
 	return screenGui, worldModel, vpf
 end
 
+-- remove with FFlagUseThumbnailerUtil
 local function setupCamera(part: MeshPart, direction: Vector3): Camera?
 	local partPos: Vector3, partSize: Vector3
 	partPos = part.CFrame.Position
@@ -98,6 +119,7 @@ local CAPTURE_ERROR_STRING = "Unable to capture snapshot of %s"
 local READ_FAILED_ERROR_STRING = "Failed to read data from snapshot of (%s)"
 local VALIDATION_FAILED_ERROR_STRING = "%s is too transparent. Please fill in more of the mesh."
 
+-- remove with FFlagUseThumbnailerUtil
 local function validateOnServer(assetTypeEnum: Enum.AssetType, dir: Vector3): (boolean, { string }?)
 	-- selene: allow(incorrect_standard_library_use)
 	local ThumbnailGenerator = game:GetService("ThumbnailGenerator" :: any) :: any
@@ -124,13 +146,13 @@ local function validateOnServer(assetTypeEnum: Enum.AssetType, dir: Vector3): (b
 
 	if not passesValidation then
 		local errorMsg = string.format(VALIDATION_FAILED_ERROR_STRING, assetTypeEnum.Name)
-		error(errorMsg)
 		return false, { errorMsg }
 	end
 
 	return true
 end
 
+-- remove with FFlagUseThumbnailerUtil
 local function validateOnClient(assetTypeEnum: Enum.AssetType, dir: Vector3, vpf): (boolean, { string }?)
 	local captureSuccess, rbxTempId = pcall(function()
 		task.wait(1)
@@ -159,7 +181,8 @@ local function validateOnClient(assetTypeEnum: Enum.AssetType, dir: Vector3, vpf
 	return true
 end
 
-return function(
+-- remove with FFlagUseThumbnailerUtil
+local function validate_DEPRECATED(
 	inst: Instance?,
 	assetTypeEnumNullable: Enum.AssetType?,
 	isServerNullable: boolean?
@@ -239,7 +262,6 @@ return function(
 				end
 			end
 		end
-		instClone = inst :: Folder
 		instClone.Parent = if isServer then workspace else worldModel
 		moveParts(instClone :: Folder, nil, CFrame.new(), hierarchy.root, hierarchy)
 		local maxSize: Vector3 = Vector3.new()
@@ -298,5 +320,111 @@ return function(
 	end
 	instClone:Destroy()
 	transparentPart:Destroy()
+	return true
+end
+
+local FILL = 0.95
+return function(inst: Instance?, assetTypeEnum: Enum.AssetType, isServerNullable: boolean?): (boolean, { string }?)
+	if not getFFlagUseThumbnailerUtil() then
+		return validate_DEPRECATED(inst, assetTypeEnum, isServerNullable)
+	end
+	if not inst then
+		return true
+	end
+
+	if not getEngineFeatureEngineUGCValidateTransparency() then
+		return true
+	end
+
+	local isServer: boolean = if isServerNullable then true else false
+
+	if isServer and not getFFlagUGCValidationValidateTransparencyServer() then
+		return true
+	end
+
+	if
+		not isServer
+		and (
+			not getFFlagUGCValidationValidateTransparencyClient()
+			or not getEngineFeatureViewportFrameSnapshotEngineFeature()
+		)
+	then
+		return true
+	end
+
+	local instClone: Instance = (inst :: Instance):Clone()
+	local transparentPart: MeshPart = Instance.new("MeshPart") :: MeshPart
+
+	transparentPart.CanCollide = false
+	transparentPart.Transparency = 0.5
+	transparentPart.Color = TRANSPARENT_PART_COLOR
+
+	local transparentPartSucc: boolean = setupTransparentPartSize(transparentPart, instClone, assetTypeEnum)
+	if not transparentPartSucc then
+		return false, { "Error getting part sizes " }
+	end
+
+	local target = Instance.new("Folder")
+	transparentPart.Parent = target
+	instClone.Parent = target
+
+	local thumbnailer = Thumbnailer.new(isServer, CAMERA_FOV, Vector2.new(IMAGE_SIZE, IMAGE_SIZE))
+	thumbnailer:init(transparentPart)
+
+	for _, dir in CAMERA_POSITIONS do
+		local plane: Vector3 = Vector3.new(1, 1, 1) - Vector3.new(math.abs(dir.X), math.abs(dir.Y), math.abs(dir.Z))
+
+		local maskedSize: Vector3 = transparentPart.Size * plane
+		local maxDim: number = math.max(maskedSize.X, maskedSize.Y, maskedSize.Z)
+
+		thumbnailer:setCamera(FILL, maxDim, dir)
+
+		local captureSuccess, img = thumbnailer:takeSnapshot()
+
+		if not captureSuccess then
+			thumbnailer:cleanup()
+			local errorMsg = string.format(CAPTURE_ERROR_STRING, assetTypeEnum.Name)
+			if isServer then
+				error(errorMsg)
+			else
+				return false, { errorMsg }
+			end
+		end
+
+		local success, passesValidation
+		if isServer then
+			success, passesValidation = pcall(function()
+				return UGCValidationService:ValidateImageTransparencyThresholdByteString(
+					img :: string,
+					assetTypeEnumToPartsToValidIDs[assetTypeEnum][dir]
+				)
+			end)
+		else
+			success, passesValidation = pcall(function()
+				return UGCValidationService:ValidateImageTransparencyThresholdTextureID(
+					img :: string,
+					assetTypeEnumToPartsToValidIDs[assetTypeEnum][dir]
+				)
+			end)
+		end
+
+		if not success then
+			thumbnailer:cleanup()
+			local errorMsg = string.format(READ_FAILED_ERROR_STRING, assetTypeEnum.Name)
+			if isServer then
+				error(errorMsg)
+			else
+				return false, { errorMsg }
+			end
+		end
+
+		if not passesValidation then
+			thumbnailer:cleanup()
+			return false, { string.format(VALIDATION_FAILED_ERROR_STRING, assetTypeEnum.Name) }
+		end
+	end
+
+	thumbnailer:cleanup()
+
 	return true
 end

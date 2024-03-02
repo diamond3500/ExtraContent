@@ -8,6 +8,9 @@ return function()
 	local Promise = require(CorePackages.Promise)
 	local Cryo = require(CorePackages.Cryo)
 
+	local VoiceChat = require(CorePackages.Workspace.Packages.VoiceChat)
+	local Constants = VoiceChat.Constants
+
 	local CoreGui = game:GetService("CoreGui")
 	local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 	local HttpService = game:GetService("HttpService")
@@ -22,6 +25,9 @@ return function()
 	local waitForEvents = require(CorePackages.Workspace.Packages.TestUtils).DeferredLuaHelpers.waitForEvents
 
 	local GetFFlagAlwaysMountVoicePrompt = require(RobloxGui.Modules.Flags.GetFFlagAlwaysMountVoicePrompt)
+	local GetFFlagVoiceBanShowToastOnSubsequentJoins = require(RobloxGui.Modules.Flags.GetFFlagVoiceBanShowToastOnSubsequentJoins)
+	local GetFFlagJoinWithoutMicPermissions = require(RobloxGui.Modules.Flags.GetFFlagJoinWithoutMicPermissions)
+	local GetFFlagUpdateNudgeV3VoiceBanUI = require(RobloxGui.Modules.Flags.GetFFlagUpdateNudgeV3VoiceBanUI)
 
 	local noop = function() end
 	local stub = function(val)
@@ -76,8 +82,10 @@ return function()
 	local VoiceChatServiceManager
 
 	local TableUtilities = require(game:GetService("CorePackages").AppTempCommon.LuaApp.TableUtilities)
+	local tutils = require(CorePackages.tutils)
+	local GetFFlagLuaAppReplaceTableUtilities = TableUtilities.GetFFlagLuaAppReplaceTableUtilities
 
-	local deepEqual = TableUtilities.DeepEqual
+	local deepEqual = if GetFFlagLuaAppReplaceTableUtilities() then tutils.deepEqual else TableUtilities.DeepEqual
 
 	local HTTPServiceStub = {
 		GetAsyncFullUrlCB = noop,
@@ -242,15 +250,21 @@ return function()
 		end)
 	end)
 
-	describe("Voice Chat Service Manager", function()
+	describe("Voice Chat Service Manager", function(context)
 		beforeAll(function(context)
 			context.fflagVoiceChatServiceManagerUseAvatarChat =
 				game:SetFastFlagForTesting("VoiceChatServiceManagerUseAvatarChat", false)
+			context.DebugSkipVoicePermissionCheck =
+				game:SetFastFlagForTesting("DebugSkipVoicePermissionCheck", false)
 		end)
 		afterAll(function(context)
 			game:SetFastFlagForTesting(
 				"VoiceChatServiceManagerUseAvatarChat",
 				context.fflagVoiceChatServiceManagerUseAvatarChat
+			)
+			game:SetFastFlagForTesting(
+				"DebugSkipVoicePermissionCheck",
+				context.DebugSkipVoicePermissionCheck
 			)
 		end)
 
@@ -291,55 +305,101 @@ return function()
 			expect(deepEqual(VoiceChatServiceManager.participants, {})).toBe(true)
 		end)
 
-		it("requestMicPermission throws when a malformed response is given", function()
-			VoiceChatServiceManager = VoiceChatServiceManagerKlass.new(
-				VoiceChatServiceStub,
-				HTTPServiceStub,
-				PermissionServiceStub,
-				nil,
-				nil,
-				nil,
-				getPermissionsFunction()
-			)
-			expectToReject(VoiceChatServiceManager:requestMicPermission())
-		end)
+		if GetFFlagJoinWithoutMicPermissions() then
+			it("requestMicPermission still resolves when a malformed response is given", function()
+				PermissionServiceStub.hasPermissionsCB = stubPromise({ status = PermissionsProtocol.Status.DENIED }, Promise.reject)
+				VoiceChatServiceManager = VoiceChatServiceManagerKlass.new(
+					VoiceChatServiceStub,
+					HTTPServiceStub,
+					PermissionServiceStub,
+					nil,
+					nil,
+					nil,
+					getPermissionsFunction()
+				)
+				expectToResolve(VoiceChatServiceManager:requestMicPermission())
+			end)
 
-		it("requestMicPermission rejects when permissions protocol response is denied", function()
-			VoiceChatServiceManager = VoiceChatServiceManagerKlass.new(
-				VoiceChatServiceStub,
-				HTTPServiceStub,
-				PermissionServiceStub,
-				nil,
-				nil,
-				nil,
-				getPermissionsFunction(PermissionsProtocol.Status.DENIED)
-			)
-			PermissionServiceStub.requestPermissionsCB = stubPromise({ status = PermissionsProtocol.Status.DENIED })
-			expectToReject(VoiceChatServiceManager:requestMicPermission())
-		end)
+			it("requestMicPermission rejects when permissions protocol response is denied", function()
+				PermissionServiceStub.hasPermissionsCB = stubPromise({ status = PermissionsProtocol.Status.DENIED })
+				PermissionServiceStub.requestPermissionsCB = stubPromise({ status = PermissionsProtocol.Status.DENIED })
+				VoiceChatServiceManager = VoiceChatServiceManagerKlass.new(
+					VoiceChatServiceStub,
+					HTTPServiceStub,
+					PermissionServiceStub,
+					nil,
+					nil,
+					nil,
+					getPermissionsFunction(PermissionsProtocol.Status.DENIED)
+				)
+				expectToResolve(VoiceChatServiceManager:requestMicPermission())
+			end)
+		else
+			it("requestMicPermission throws when a malformed response is given", function()
+				VoiceChatServiceManager = VoiceChatServiceManagerKlass.new(
+					VoiceChatServiceStub,
+					HTTPServiceStub,
+					PermissionServiceStub,
+					nil,
+					nil,
+					nil,
+					getPermissionsFunction()
+				)
+				expectToReject(VoiceChatServiceManager:requestMicPermission())
+			end)
 
-		it("requestMicPermission resolves when permissions protocol response is approved", function()
-			VoiceChatServiceManager = VoiceChatServiceManagerKlass.new(
-				VoiceChatServiceStub,
-				HTTPServiceStub,
-				PermissionServiceStub,
-				nil,
-				nil,
-				nil,
-				getPermissionsFunction(PermissionsProtocol.Status.AUTHORIZED)
-			)
-			PermissionServiceStub.requestPermissionsCB = stubPromise({ status = PermissionsProtocol.Status.AUTHORIZED })
-			expectToResolve(VoiceChatServiceManager:requestMicPermission())
-		end)
+			it("requestMicPermission rejects when permissions protocol response is denied", function()
+				VoiceChatServiceManager = VoiceChatServiceManagerKlass.new(
+					VoiceChatServiceStub,
+					HTTPServiceStub,
+					PermissionServiceStub,
+					nil,
+					nil,
+					nil,
+					getPermissionsFunction(PermissionsProtocol.Status.DENIED)
+				)
+				PermissionServiceStub.requestPermissionsCB = stubPromise({ status = PermissionsProtocol.Status.DENIED })
+				expectToReject(VoiceChatServiceManager:requestMicPermission())
+			end)
+		end
+
+		if GetFFlagJoinWithoutMicPermissions() then
+			it("requestMicPermission resolves when permissions protocol response is approved for join without voice permission", function()
+				PermissionServiceStub.hasPermissionsCB = stubPromise({ status = PermissionsProtocol.Status.AUTHORIZED })
+				VoiceChatServiceManager = VoiceChatServiceManagerKlass.new(
+					VoiceChatServiceStub,
+					HTTPServiceStub,
+					PermissionServiceStub,
+					nil,
+					nil,
+					nil,
+					getPermissionsFunction(PermissionsProtocol.Status.AUTHORIZED)
+				)
+				expectToResolve(VoiceChatServiceManager:requestMicPermission())
+				expect(VoiceChatServiceManager.permissionState).toBe(Constants.PERMISSION_STATE.LISTEN_AND_TALK)
+			end)
+		else
+			it("requestMicPermission resolves when permissions protocol response is approved", function()
+				VoiceChatServiceManager = VoiceChatServiceManagerKlass.new(
+					VoiceChatServiceStub,
+					HTTPServiceStub,
+					PermissionServiceStub,
+					nil,
+					nil,
+					nil,
+					getPermissionsFunction(PermissionsProtocol.Status.AUTHORIZED)
+				)
+				PermissionServiceStub.requestPermissionsCB = stubPromise({ status = PermissionsProtocol.Status.AUTHORIZED })
+				expectToResolve(VoiceChatServiceManager:requestMicPermission())
+			end)
+		end
 
 		describe("permission prompt", function()
-			local errorToasts, newContent
+			local newContent
 			beforeEach(function()
-				errorToasts = game:SetFastFlagForTesting("VoiceChatStudioErrorToasts2", true)
 				newContent = game:SetFastFlagForTesting("UseVoiceExitBetaLanguageV2", true)
 			end)
 			afterEach(function()
-				game:SetFastFlagForTesting("VoiceChatStudioErrorToasts2", errorToasts)
 				game:SetFastFlagForTesting("UseVoiceExitBetaLanguageV2", newContent)
 			end)
 
@@ -390,7 +450,6 @@ return function()
 			end
 
 			it("Doesn't show place prompt if universe is not enabled for voice", function()
-				local earlyOutFlag = game:SetFastFlagForTesting("VCPromptEarlyOut", true)
 				VoiceChatServiceManager = VoiceChatServiceManagerKlass.new(VoiceChatServiceStub, HTTPServiceStub)
 				HTTPServiceStub.GetAsyncFullUrlCB = createVoiceOptionsJSONStub({
 					universePlaceVoiceEnabledSettings = {
@@ -409,7 +468,6 @@ return function()
 				expect(VoiceChatServiceManager:userAndPlaceCanUseVoice("12345")).toBe(false)
 				waitForEvents.act()
 				expect(mock).never.toHaveBeenCalled()
-				game:SetFastFlagForTesting("VCPromptEarlyOut", earlyOutFlag)
 			end)
 		end)
 
@@ -423,35 +481,208 @@ return function()
 				game:SetFastFlagForTesting("EnableUniveralVoiceToasts", oldToasts)
 				game:SetFastFlagForTesting("EnableVoiceMicPromptToastFix", oldToastsFix)
 			end)
+			if not GetFFlagJoinWithoutMicPermissions() then
+				it("shows correct prompt when user does not give voice permission", function()
+					VoiceChatServiceManager = VoiceChatServiceManagerKlass.new(
+						VoiceChatServiceStub,
+						HTTPServiceStub,
+						PermissionServiceStub,
+						nil,
+						nil,
+						nil,
+						getPermissionsFunction(PermissionsProtocol.Status.DENIED)
+					)
+					VoiceChatServiceManager.policyMapper = mockPolicyMapper
+					VoiceChatServiceManager.userEligible = true
+					PermissionServiceStub.hasPermissionsCB = stubPromise({ status = PermissionsProtocol.Status.DENIED })
+					act(function()
+						VoiceChatServiceManager:CheckAndShowPermissionPrompt()
+					end)
+					waitForEvents.act()
+					expect(CoreGui.RobloxVoiceChatPromptGui).never.toBeNil()
 
-			it("shows correct prompt when user does not give voice permission", function()
-				VoiceChatServiceManager = VoiceChatServiceManagerKlass.new(
-					VoiceChatServiceStub,
-					HTTPServiceStub,
-					PermissionServiceStub,
-					nil,
-					nil,
-					nil,
-					getPermissionsFunction(PermissionsProtocol.Status.DENIED)
-				)
+					local ToastContainer = CoreGui:FindFirstChild("ToastContainer", true)
+					local expectedToastText = "Unable to access Microphone"
+
+					expect(ToastContainer.Toast.ToastFrame.ToastMessageFrame.ToastTextFrame.ToastTitle.Text).toBe(
+						expectedToastText
+					)
+				end)
+			end
+
+			it("shows or does not show toast when user is voice banned and has acknowledged ban", function()
+				VoiceChatServiceManager = VoiceChatServiceManagerKlass.new(VoiceChatServiceStub, HTTPServiceStub)
 				VoiceChatServiceManager.policyMapper = mockPolicyMapper
-				VoiceChatServiceManager.userEligible = true
-				PermissionServiceStub.hasPermissionsCB = stubPromise({ status = PermissionsProtocol.Status.DENIED })
+				VoiceChatServiceManager.runService = runServiceStub
+				HTTPServiceStub.GetAsyncFullUrlCB = createVoiceOptionsJSONStub({
+					universePlaceVoiceEnabledSettings = {
+						isUniverseEnabledForVoice = true,
+						isPlaceEnabledForVoice = false,
+					},
+					voiceSettings = {
+						isVoiceEnabled = false,
+						isBanned = true,
+						bannedUntil = { Seconds = 1 }
+					},
+					isBanned = true,
+					bannedUntil = { Seconds = 1 },
+					informedOfBan = true
+				})
+
+				local mock, mockFn = jest.fn()
+
 				act(function()
-					VoiceChatServiceManager:CheckAndShowPermissionPrompt()
+					VoiceChatServiceManager:userAndPlaceCanUseVoice()
+					VoiceChatServiceManager:createPromptInstance(noop)
+					VoiceChatServiceManager.promptSignal.Event:Connect(mockFn)
 				end)
 				waitForEvents.act()
-				expect(CoreGui.RobloxVoiceChatPromptGui).never.toBeNil()
 
-				local ToastContainer = CoreGui:FindFirstChild("ToastContainer", true)
-				local FFlagVoiceChatPromptFrameNewCopyEnabled2 = game:GetFastFlag("VoiceChatPromptFrameNewCopyEnabled2")
-				local expectedToastText = if FFlagVoiceChatPromptFrameNewCopyEnabled2
-					then "Unable to access Microphone"
-					else "Voice Chat Unavailable"
+				if GetFFlagVoiceBanShowToastOnSubsequentJoins() then
+					expect(mock).toHaveBeenCalledWith(VoiceChatPromptType.VoiceChatSuspendedTemporaryToast)
+				else
+					expect(mock).never.toHaveBeenCalled()
+				end
+			end)
 
-				expect(ToastContainer.Toast.ToastFrame.ToastMessageFrame.ToastTextFrame.ToastTitle.Text).toBe(
-					expectedToastText
-				)
+			it("shows correct ban modal for ban reason 7 when calling userAndPlaceCanUseVoice", function()
+				VoiceChatServiceManager = VoiceChatServiceManagerKlass.new(VoiceChatServiceStub, HTTPServiceStub)
+				VoiceChatServiceManager.policyMapper = mockPolicyMapper
+				VoiceChatServiceManager.runService = runServiceStub
+				HTTPServiceStub.GetAsyncFullUrlCB = createVoiceOptionsJSONStub({
+					universePlaceVoiceEnabledSettings = {
+						isUniverseEnabledForVoice = true,
+						isPlaceEnabledForVoice = false,
+					},
+					voiceSettings = {
+						isVoiceEnabled = false,
+						isBanned = true,
+						bannedUntil = { Seconds = 1 },
+						banReason = 7,
+					},
+					isBanned = true,
+					bannedUntil = { Seconds = 1 },
+					banReason = 7,
+					informedOfBan = false,
+				})
+
+				local mock, mockFn = jest.fn()
+
+				act(function()
+					VoiceChatServiceManager:userAndPlaceCanUseVoice()
+					VoiceChatServiceManager:createPromptInstance(noop)
+					VoiceChatServiceManager.promptSignal.Event:Connect(mockFn)
+				end)
+				waitForEvents.act()
+
+				if GetFFlagUpdateNudgeV3VoiceBanUI() then
+					expect(mock).toHaveBeenCalledWith(VoiceChatPromptType.VoiceChatSuspendedTemporaryB)
+				else
+					expect(mock).toHaveBeenCalledWith(VoiceChatPromptType.VoiceChatSuspendedTemporary)
+				end
+			end)
+
+			it("shows correct ban modal for ban reason 7 when calling ShowPlayerModeratedMessage", function()
+				VoiceChatServiceManager = VoiceChatServiceManagerKlass.new(VoiceChatServiceStub, HTTPServiceStub)
+				VoiceChatServiceManager.policyMapper = mockPolicyMapper
+				VoiceChatServiceManager.runService = runServiceStub
+				HTTPServiceStub.GetAsyncFullUrlCB = createVoiceOptionsJSONStub({
+					universePlaceVoiceEnabledSettings = {
+						isUniverseEnabledForVoice = true,
+						isPlaceEnabledForVoice = false,
+					},
+					voiceSettings = {
+						isVoiceEnabled = false,
+						isBanned = true,
+						bannedUntil = { Seconds = 1 },
+						banReason = 7,
+					},
+					isBanned = true,
+					bannedUntil = { Seconds = 1 },
+					banReason = 7,
+					informedOfBan = false,
+				})
+
+				local mock, mockFn = jest.fn()
+
+				act(function()
+					VoiceChatServiceManager:ShowPlayerModeratedMessage()
+					VoiceChatServiceManager:createPromptInstance(noop)
+					VoiceChatServiceManager.promptSignal.Event:Connect(mockFn)
+				end)
+				waitForEvents.act()
+
+				if GetFFlagUpdateNudgeV3VoiceBanUI() then
+					expect(mock).toHaveBeenCalledWith(VoiceChatPromptType.VoiceChatSuspendedTemporaryB)
+				else
+					expect(mock).toHaveBeenCalledWith(VoiceChatPromptType.VoiceChatSuspendedTemporary)
+				end
+			end)
+
+			it("shows correct ban modal for ban reason not equal to 7 when calling ShowPlayerModeratedMessage", function()
+				VoiceChatServiceManager = VoiceChatServiceManagerKlass.new(VoiceChatServiceStub, HTTPServiceStub)
+				VoiceChatServiceManager.policyMapper = mockPolicyMapper
+				VoiceChatServiceManager.runService = runServiceStub
+				HTTPServiceStub.GetAsyncFullUrlCB = createVoiceOptionsJSONStub({
+					universePlaceVoiceEnabledSettings = {
+						isUniverseEnabledForVoice = true,
+						isPlaceEnabledForVoice = false,
+					},
+					voiceSettings = {
+						isVoiceEnabled = false,
+						isBanned = true,
+						bannedUntil = { Seconds = 1 },
+						banReason = 6,
+					},
+					isBanned = true,
+					bannedUntil = { Seconds = 1 },
+					banReason = 6,
+					informedOfBan = false,
+				})
+
+				local mock, mockFn = jest.fn()
+
+				act(function()
+					VoiceChatServiceManager:ShowPlayerModeratedMessage()
+					VoiceChatServiceManager:createPromptInstance(noop)
+					VoiceChatServiceManager.promptSignal.Event:Connect(mockFn)
+				end)
+				waitForEvents.act()
+
+				expect(mock).toHaveBeenCalledWith(VoiceChatPromptType.VoiceChatSuspendedTemporary)
+			end)
+
+			it("shows correct ban modal for ban reason not equal to 7 when calling userAndPlaceCanUseVoice", function()
+				VoiceChatServiceManager = VoiceChatServiceManagerKlass.new(VoiceChatServiceStub, HTTPServiceStub)
+				VoiceChatServiceManager.policyMapper = mockPolicyMapper
+				VoiceChatServiceManager.runService = runServiceStub
+				HTTPServiceStub.GetAsyncFullUrlCB = createVoiceOptionsJSONStub({
+					universePlaceVoiceEnabledSettings = {
+						isUniverseEnabledForVoice = true,
+						isPlaceEnabledForVoice = false,
+					},
+					voiceSettings = {
+						isVoiceEnabled = false,
+						isBanned = true,
+						bannedUntil = { Seconds = 1 },
+						banReason = 6,
+					},
+					isBanned = true,
+					bannedUntil = { Seconds = 1 },
+					banReason = 6,
+					informedOfBan = false,
+				})
+
+				local mock, mockFn = jest.fn()
+
+				act(function()
+					VoiceChatServiceManager:ShowPlayerModeratedMessage()
+					VoiceChatServiceManager:createPromptInstance(noop)
+					VoiceChatServiceManager.promptSignal.Event:Connect(mockFn)
+				end)
+				waitForEvents.act()
+
+				expect(mock).toHaveBeenCalledWith(VoiceChatPromptType.VoiceChatSuspendedTemporary)
 			end)
 		end)
 
@@ -472,16 +703,6 @@ return function()
 		end)
 
 		describe("BlockingUtils", function()
-			local sessionFlag, rejoinFlag
-			beforeEach(function()
-				sessionFlag = game:SetFastFlagForTesting("EnableSessionCancelationOnBlock", true)
-				rejoinFlag = game:SetFastFlagForTesting("EnableVoiceChatRejoinOnBlock", true)
-			end)
-			afterEach(function()
-				game:SetFastFlagForTesting("EnableSessionCancelationOnBlock", sessionFlag)
-				game:SetFastFlagForTesting("EnableVoiceChatRejoinOnBlock", rejoinFlag)
-			end)
-
 			it("we call subscribe block when a user is blocked", function()
 				local BlockMock = Instance.new("BindableEvent")
 				VoiceChatServiceManager = VoiceChatServiceManagerKlass.new(
@@ -605,73 +826,13 @@ return function()
 	end)
 
 	describe("VoiceChatServiceManager SignalR watcher", function()
-		describe("checkAndUpdateSequence VoiceChatReportOutOfOrderSequence off", function()
-			beforeAll(function(c)
-				c.reportFlag = game:SetFastFlagForTesting("VoiceChatReportOutOfOrderSequence2", false)
-				c.fflagVoiceChatServiceManagerUseAvatarChat =
-					game:SetFastFlagForTesting("VoiceChatServiceManagerUseAvatarChat", false)
-			end)
-			afterAll(function(c)
-				game:SetFastFlagForTesting("VoiceChatReportOutOfOrderSequence2", c.reportFlag)
-				game:SetFastFlagForTesting(
-					"VoiceChatServiceManagerUseAvatarChat",
-					c.fflagVoiceChatServiceManagerUseAvatarChat
-				)
-			end)
-
-			it("should return true if a sequence increments normally", function()
-				expect(VoiceChatServiceManager:checkAndUpdateSequence("test", 101)).toBe(true)
-				expect(VoiceChatServiceManager:checkAndUpdateSequence("test", 102)).toBe(true)
-				expect(VoiceChatServiceManager:checkAndUpdateSequence("test", 103)).toBe(true)
-				expect(VoiceChatServiceManager:checkAndUpdateSequence("test", 104)).toBe(true)
-			end)
-
-			it("should return true if a sequence number repeats", function()
-				expect(VoiceChatServiceManager:checkAndUpdateSequence("test", 101)).toBe(true)
-				expect(VoiceChatServiceManager:checkAndUpdateSequence("test", 102)).toBe(true)
-				expect(VoiceChatServiceManager:checkAndUpdateSequence("test", 102)).toBe(true)
-				expect(VoiceChatServiceManager:checkAndUpdateSequence("test", 101)).toBe(true)
-			end)
-
-			it("should return false if it skips a number", function()
-				expect(VoiceChatServiceManager:checkAndUpdateSequence("test", 101)).toBe(true)
-				expect(VoiceChatServiceManager:checkAndUpdateSequence("test", 103)).toBe(false)
-			end)
-
-			it("should return true if two sequences increment on their own", function()
-				expect(VoiceChatServiceManager:checkAndUpdateSequence("test1", 101)).toBe(true)
-				expect(VoiceChatServiceManager:checkAndUpdateSequence("test2", 201)).toBe(true)
-				expect(VoiceChatServiceManager:checkAndUpdateSequence("test2", 202)).toBe(true)
-				expect(VoiceChatServiceManager:checkAndUpdateSequence("test1", 102)).toBe(true)
-				expect(VoiceChatServiceManager:checkAndUpdateSequence("test1", 103)).toBe(true)
-				expect(VoiceChatServiceManager:checkAndUpdateSequence("test2", 203)).toBe(true)
-			end)
-
-			it("should return false if either sequence skips", function()
-				expect(VoiceChatServiceManager:checkAndUpdateSequence("test1", 101)).toBe(true)
-				expect(VoiceChatServiceManager:checkAndUpdateSequence("test2", 201)).toBe(true)
-				expect(VoiceChatServiceManager:checkAndUpdateSequence("test1", 103)).toBe(false)
-				expect(VoiceChatServiceManager:checkAndUpdateSequence("test2", 202)).toBe(true)
-				expect(VoiceChatServiceManager:checkAndUpdateSequence("test1", 104)).toBe(true)
-				expect(VoiceChatServiceManager:checkAndUpdateSequence("test2", 204)).toBe(false)
-			end)
-
-			it("should ignore nil values", function()
-				expect(VoiceChatServiceManager:checkAndUpdateSequence("test", 101)).toBe(true)
-				expect(VoiceChatServiceManager:checkAndUpdateSequence("test", nil)).toBe(true)
-				expect(VoiceChatServiceManager:checkAndUpdateSequence("test", 102)).toBe(true)
-			end)
-		end)
-
 		describe("checkAndUpdateSequence VoiceChatReportOutOfOrderSequence on", function()
 			beforeAll(function(c)
-				c.reportFlag = game:SetFastFlagForTesting("VoiceChatReportOutOfOrderSequence2", true)
 				c.fflagVoiceChatServiceManagerUseAvatarChat =
 					game:SetFastFlagForTesting("VoiceChatServiceManagerUseAvatarChat", false)
 			end)
 
 			afterAll(function(c)
-				game:SetFastFlagForTesting("VoiceChatReportOutOfOrderSequence2", c.reportFlag)
 				game:SetFastFlagForTesting(
 					"VoiceChatServiceManagerUseAvatarChat",
 					c.fflagVoiceChatServiceManagerUseAvatarChat
@@ -782,7 +943,6 @@ return function()
 			end)
 
 			it("should not call join on first connect", function(context)
-				local flag = game:SetFastFlagForTesting("VoiceChatWatchForMissedSignalROnConnectionChanged", true)
 				-- Note that join is called on first connect, but that's handled elsewhere
 				VoiceChatServiceManager:watchSignalR()
 
@@ -795,11 +955,9 @@ return function()
 				waitForEvents()
 
 				expect(VoiceChatServiceStub.joinCalled).toBe(false)
-				game:SetFastFlagForTesting("VoiceChatWatchForMissedSignalROnConnectionChanged", flag)
 			end)
 
 			it("should not call join if no sequence numbers were missed", function(context)
-				local conFlag = game:SetFastFlagForTesting("VoiceChatWatchForMissedSignalROnConnectionChanged", true)
 				local evtFlag = game:SetFastFlagForTesting("VoiceChatWatchForMissedSignalROnEventReceived", true)
 				VoiceChatServiceManager:watchSignalR()
 
@@ -814,12 +972,10 @@ return function()
 				waitForEvents()
 
 				expect(VoiceChatServiceStub.joinCalled).toBe(false)
-				game:SetFastFlagForTesting("VoiceChatWatchForMissedSignalROnConnectionChanged", conFlag)
 				game:SetFastFlagForTesting("VoiceChatWatchForMissedSignalROnEventReceived", evtFlag)
 			end)
 
 			it("should call join if a sequence number was missed on reconnect", function(context)
-				local conFlag = game:SetFastFlagForTesting("VoiceChatWatchForMissedSignalROnConnectionChanged", true)
 				local evtFlag = game:SetFastFlagForTesting("VoiceChatWatchForMissedSignalROnEventReceived", true)
 				VoiceChatServiceManager:watchSignalR()
 
@@ -834,12 +990,10 @@ return function()
 				waitForEvents()
 
 				expect(VoiceChatServiceStub.joinCalled).toBe(true)
-				game:SetFastFlagForTesting("VoiceChatWatchForMissedSignalROnConnectionChanged", conFlag)
 				game:SetFastFlagForTesting("VoiceChatWatchForMissedSignalROnEventReceived", evtFlag)
 			end)
 
 			it("should ignore sequence numbers from other namespaces", function(context)
-				local conFlag = game:SetFastFlagForTesting("VoiceChatWatchForMissedSignalROnConnectionChanged", true)
 				local evtFlag = game:SetFastFlagForTesting("VoiceChatWatchForMissedSignalROnEventReceived", true)
 				VoiceChatServiceManager:watchSignalR()
 
@@ -855,12 +1009,10 @@ return function()
 				waitForEvents()
 
 				expect(VoiceChatServiceStub.joinCalled).toBe(false)
-				game:SetFastFlagForTesting("VoiceChatWatchForMissedSignalROnConnectionChanged", conFlag)
 				game:SetFastFlagForTesting("VoiceChatWatchForMissedSignalROnEventReceived", evtFlag)
 			end)
 
 			it("should ignore bad JSON responses", function(context)
-				local conFlag = game:SetFastFlagForTesting("VoiceChatWatchForMissedSignalROnConnectionChanged", true)
 				local evtFlag = game:SetFastFlagForTesting("VoiceChatWatchForMissedSignalROnEventReceived", true)
 				VoiceChatServiceManager:watchSignalR()
 
@@ -876,7 +1028,6 @@ return function()
 				waitForEvents()
 
 				expect(VoiceChatServiceStub.joinCalled).toBe(false)
-				game:SetFastFlagForTesting("VoiceChatWatchForMissedSignalROnConnectionChanged", conFlag)
 				game:SetFastFlagForTesting("VoiceChatWatchForMissedSignalROnEventReceived", evtFlag)
 			end)
 		end)

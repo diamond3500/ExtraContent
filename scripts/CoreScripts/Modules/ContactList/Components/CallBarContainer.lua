@@ -1,6 +1,9 @@
 --!strict
 local CoreGui = game:GetService("CoreGui")
 local CorePackages = game:GetService("CorePackages")
+local Workspace = game:GetService("Workspace")
+
+local Camera = Workspace.CurrentCamera :: Camera
 
 local React = require(CorePackages.Packages.React)
 local Cryo = require(CorePackages.Packages.Cryo)
@@ -8,11 +11,17 @@ local CallProtocol = require(CorePackages.Workspace.Packages.CallProtocol)
 local Sounds = require(CorePackages.Workspace.Packages.SoundManager).Sounds
 local SoundGroups = require(CorePackages.Workspace.Packages.SoundManager).SoundGroups
 local SoundManager = require(CorePackages.Workspace.Packages.SoundManager).SoundManager
-local GetFFlagCorescriptsSoundManagerEnabled =
-	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagCorescriptsSoundManagerEnabled
-local GetFFlagSoundManagerRefactor = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagSoundManagerRefactor
+local ReactOtter = require(CorePackages.Packages.ReactOtter)
 
 local RobloxGui = CoreGui:WaitForChild("RobloxGui")
+
+local Chrome = RobloxGui.Modules.Chrome
+local ChromeEnabled = require(RobloxGui.Modules.Chrome.Enabled)
+local ChromeService = require(Chrome.Service)
+local ChromeConstants = require(Chrome.Unibar.Constants)
+
+local TopBar = RobloxGui.Modules.TopBar
+local TopBarConstants = require(TopBar.Constants)
 
 local ContactList = RobloxGui.Modules.ContactList
 local dependencies = require(ContactList.dependencies)
@@ -25,6 +34,9 @@ local Components = script.Parent
 local CallBar = require(Components.CallBar)
 
 local CALL_BAR_SIZE = Vector2.new(200, 44)
+local CALL_BAR_TOP_PADDING = 4
+local CALL_BAR_MARGIN = 12
+local CALL_BAR_UNIBAR_VERTICAL_PADDING = 10
 
 export type Props = {
 	callProtocol: CallProtocol.CallProtocolModule | nil,
@@ -34,18 +46,78 @@ local defaultProps = {
 	callProtocol = CallProtocol.CallProtocol.default,
 }
 
+local ScreenPosition = {
+	On = "On" :: "On",
+	Off = "Off" :: "Off",
+}
+
+export type ScreenPosition = "On" | "Off"
+
 local function CallBarContainer(passedProps: Props)
 	local props = Cryo.Dictionary.join(defaultProps, passedProps)
 
 	local dispatch = useDispatch()
-	local callBarRef = React.useRef(nil)
-	local initCallBarCallback = React.useCallback(function(ref)
-		callBarRef.current = ref
-		pcall(function()
-			if ref then
-				ref:TweenPosition(UDim2.new(0.5, 0, 0, 0), Enum.EasingDirection.Out, Enum.EasingStyle.Quad, 0.3, true)
+
+	local isCallBarEnabled, setIsCallBarEnabled = React.useState(false)
+	local callBarPosition, setCallBarPosition
+
+	callBarPosition, setCallBarPosition = ReactOtter.useAnimatedBinding({
+		X = (Camera.ViewportSize.X / 2) - (CALL_BAR_SIZE.X / 2),
+		Y = -CALL_BAR_SIZE.Y,
+	}, function(callBarPos)
+		if callBarPos.Y == -CALL_BAR_SIZE.Y and isCallBarEnabled then
+			-- If we're hiding the CallBar then also disable it once the motor is complete
+			setIsCallBarEnabled(false)
+		end
+	end)
+
+	--[[
+		Updates the screenPosition for the call bar given the current state of the unibar. If the
+		call bar collides with the unibar then move call bar towards the right. If the
+		call bar won't fit in the viewport then adjust the call bar downwards.
+		If unibar is not enabled, we just align it with the tilt icon.
+
+		@param screenPosition | The screen position we'd like to update to (On / Off)
+	--]]
+	local updateCallBarPosition = React.useCallback(function(screenPosition: ScreenPosition)
+		-- By default we set the call bar to be center aligned with the screen
+		local screenPositionXOffset = (Camera.ViewportSize.X / 2) - (CALL_BAR_SIZE.X / 2)
+
+		local screenPositionYOffset
+		if screenPosition == ScreenPosition.On then
+			if ChromeEnabled() then
+				screenPositionYOffset = TopBarConstants.TopBarTopMargin + TopBarConstants.TopBarButtonPadding
+			else
+				screenPositionYOffset = CALL_BAR_TOP_PADDING
 			end
-		end)
+		else
+			screenPositionYOffset = -CALL_BAR_SIZE.Y
+		end
+
+		if ChromeEnabled() then
+			-- It is possible unibar has not been initialized here.
+
+			local unibarStatus = ChromeService:status():get()
+			local unibarDimensions = ChromeService:layout():get()
+			local unibarMax = unibarDimensions[unibarStatus].Max
+
+			if unibarMax.X + CALL_BAR_MARGIN > (Camera.ViewportSize.X / 2) - (CALL_BAR_SIZE.X / 2) then
+				-- If CallBar default position (middle of screen) doesn't fit nicely with unibar
+				if unibarMax.X + (CALL_BAR_MARGIN * 2) + CALL_BAR_SIZE.X > Camera.ViewportSize.X then
+					-- If CallBar has been pushed down because CallBar overflows Viewport
+					if screenPosition == ScreenPosition.On then
+						screenPositionYOffset = TopBarConstants.TopBarHeight + CALL_BAR_UNIBAR_VERTICAL_PADDING
+					end
+				else
+					screenPositionXOffset = unibarMax.X + CALL_BAR_MARGIN
+				end
+			end
+		end
+
+		setCallBarPosition({
+			X = ReactOtter.spring(screenPositionXOffset, ChromeConstants.MENU_ANIMATION_SPRING),
+			Y = ReactOtter.spring(screenPositionYOffset, ChromeConstants.MENU_ANIMATION_SPRING),
+		})
 	end, {})
 
 	local selectCurrentCallStatus = React.useCallback(function(state: any)
@@ -54,7 +126,11 @@ local function CallBarContainer(passedProps: Props)
 	local currentCallStatus = useSelector(selectCurrentCallStatus)
 
 	local selectActiveUtc = React.useCallback(function(state: any)
-		return if state.Call.currentCall ~= nil then state.Call.currentCall.activeUtc else 0
+		local currentActiveUtc = 0
+		if state.Call.currentCall and state.Call.currentCall.activeUtc then
+			currentActiveUtc = state.Call.currentCall.activeUtc
+		end
+		return currentActiveUtc
 	end)
 	local activeUtc = useSelector(selectActiveUtc)
 
@@ -63,91 +139,31 @@ local function CallBarContainer(passedProps: Props)
 	end)
 	local instanceId = useSelector(selectInstanceId)
 
-	local maybeHideCallBarAndEndCall = React.useCallback(function()
-		pcall(function()
-			if game.JobId ~= instanceId and callBarRef and callBarRef.current then
-				callBarRef.current:TweenPosition(
-					UDim2.new(0.5, 0, 0, -CALL_BAR_SIZE.Y),
-					Enum.EasingDirection.In,
-					Enum.EasingStyle.Quad,
-					0.3,
-					true,
-					function()
-						dispatch(RoduxCall.Actions.EndCall())
-					end
-				)
-			end
-		end)
-	end, { instanceId })
-
 	React.useEffect(function()
 		-- We just listen for the transitions we care about here. However, it is
 		-- worth noting that GetCallState could return us a call in another state.
 		local connectingCallConn = props.callProtocol:listenToHandleConnectingCall(function(params)
-			if GetFFlagCorescriptsSoundManagerEnabled() then
-				if GetFFlagSoundManagerRefactor() then
-					SoundManager:PlaySound(Sounds.Ringtone.Name, { Volume = 0.5, Looped = true }, SoundGroups.Iris)
-				else
-					SoundManager:PlaySound_old(
-						Sounds.Ringtone.Name,
-						{ Volume = 0.5, Looped = true, SoundGroup = SoundGroups.Iris }
-					)
-				end
-			end
-			dispatch(RoduxCall.Actions.ConnectingCall(params))
+			SoundManager:PlaySound(Sounds.Ringtone.Name, { Volume = 0.5, Looped = true }, SoundGroups.Iris)
+
+			dispatch(RoduxCall.Actions.UpdateCall(params))
 		end)
 
 		local teleportingCallConn = props.callProtocol:listenToHandleTeleportingCall(function(params)
-			if GetFFlagCorescriptsSoundManagerEnabled() then
-				SoundManager:StopSound(Sounds.Ringtone.Name)
-				if GetFFlagSoundManagerRefactor() then
-					SoundManager:PlaySound(Sounds.CallAccept.Name, { Volume = 0.5 }, SoundGroups.Iris)
-				else
-					SoundManager:PlaySound_old(Sounds.CallAccept.Name, { Volume = 0.5, SoundGroup = SoundGroups.Iris })
-				end
-			end
+			SoundManager:StopSound(Sounds.Ringtone.Name)
+			SoundManager:PlaySound(Sounds.CallAccept.Name, { Volume = 0.5 }, SoundGroups.Iris)
 			dispatch(RoduxCall.Actions.UpdateCall(params))
 		end)
 
 		local activeCallConn = props.callProtocol:listenToHandleActiveCall(function(params)
-			dispatch(RoduxCall.Actions.StartCall(params))
+			dispatch(RoduxCall.Actions.UpdateCall(params))
 		end)
 
-		local endCallConn = props.callProtocol:listenToHandleEndCall(function(params)
-			if params.callAction == CallAction.Cancel.rawValue() then
-				if GetFFlagCorescriptsSoundManagerEnabled() then
-					SoundManager:StopSound(Sounds.Ringtone.Name)
-					if GetFFlagSoundManagerRefactor() then
-						SoundManager:PlaySound(Sounds.HangUp.Name, { Volume = 0.5 }, SoundGroups.Iris)
-					else
-						SoundManager:PlaySound_old(Sounds.HangUp.Name, { Volume = 0.5, SoundGroup = SoundGroups.Iris })
-					end
-				end
-				dispatch(RoduxCall.Actions.FailedCall(params.lastCall))
-			elseif params.callAction == CallAction.Decline.rawValue() then
-				if GetFFlagCorescriptsSoundManagerEnabled() then
-					SoundManager:StopSound(Sounds.Ringtone.Name)
-					if GetFFlagSoundManagerRefactor() then
-						SoundManager:PlaySound(Sounds.CallDecline.Name, { Volume = 0.5 }, SoundGroups.Iris)
-					else
-						SoundManager:PlaySound_old(
-							Sounds.CallDecline.Name,
-							{ Volume = 0.5, SoundGroup = SoundGroups.Iris }
-						)
-					end
-				end
-				dispatch(RoduxCall.Actions.FailedCall(params.lastCall))
-			else
-				if params.callAction == CallAction.Finish.rawValue() and GetFFlagCorescriptsSoundManagerEnabled() then
-					if GetFFlagSoundManagerRefactor() then
-						SoundManager:PlaySound(Sounds.HangUp.Name, { Volume = 0.5 }, SoundGroups.Iris)
-					else
-						SoundManager:PlaySound_old(Sounds.HangUp.Name, { Volume = 0.5, SoundGroup = SoundGroups.Iris })
-					end
-				end
+		local transferCallTeleportJoinConn = props.callProtocol:listenToHandleTransferCallTeleportJoin(function()
+			-- Fetch call state since the instance id will be updated and this
+			-- can happen after the call bar is fetched.
+			props.callProtocol:getCallState():andThen(function(params)
 				dispatch(RoduxCall.Actions.UpdateCall(params))
-			end
-			maybeHideCallBarAndEndCall()
+			end)
 		end)
 
 		props.callProtocol:getCallState():andThen(function(params)
@@ -158,17 +174,76 @@ local function CallBarContainer(passedProps: Props)
 			connectingCallConn:Disconnect()
 			teleportingCallConn:Disconnect()
 			activeCallConn:Disconnect()
+			transferCallTeleportJoinConn:Disconnect()
+		end
+	end, { props.callProtocol })
+
+	local unibarMounted, setUnibarMounted = React.useState(false)
+	if ChromeEnabled() then
+		React.useEffect(function()
+			-- Listen for when Unibar has finished mounting
+			local unibarLayoutConnection = ChromeService:layout():connect(function()
+				setUnibarMounted(true)
+			end)
+
+			return function()
+				unibarLayoutConnection.disconnect()
+			end
+		end, {})
+	end
+
+	React.useEffect(function()
+		local isVisible = currentCallStatus == RoduxCall.Enums.Status.Connecting
+			or currentCallStatus == RoduxCall.Enums.Status.Teleporting
+			or currentCallStatus == RoduxCall.Enums.Status.Active
+			or (currentCallStatus == RoduxCall.Enums.Status.Idle and game.JobId == instanceId)
+
+		if isVisible then
+			setIsCallBarEnabled(true)
+		end
+
+		updateCallBarPosition(if isVisible then ScreenPosition.On else ScreenPosition.Off)
+
+		local unibarStatusConnection
+		if ChromeEnabled() then
+			unibarStatusConnection = ChromeService:status():connect(function()
+				updateCallBarPosition(if isVisible then ScreenPosition.On else ScreenPosition.Off)
+			end)
+		end
+
+		-- Listen for screen size changes
+		local viewportSizeConnection = Camera:GetPropertyChangedSignal("ViewportSize"):Connect(function()
+			updateCallBarPosition(if isVisible then ScreenPosition.On else ScreenPosition.Off)
+		end)
+
+		return function()
+			if ChromeEnabled() then
+				unibarStatusConnection:disconnect()
+			end
+
+			viewportSizeConnection:Disconnect()
+		end
+	end, { currentCallStatus, instanceId, unibarMounted })
+
+	React.useEffect(function()
+		local endCallConn = props.callProtocol:listenToHandleEndCall(function(params)
+			if params.callAction == CallAction.Cancel then
+				SoundManager:StopSound(Sounds.Ringtone.Name)
+				SoundManager:PlaySound(Sounds.HangUp.Name, { Volume = 0.5 }, SoundGroups.Iris)
+			elseif params.callAction == CallAction.Decline then
+				SoundManager:StopSound(Sounds.Ringtone.Name)
+				SoundManager:PlaySound(Sounds.CallDecline.Name, { Volume = 0.5 }, SoundGroups.Iris)
+			elseif params.callAction == CallAction.Finish then
+				SoundManager:PlaySound(Sounds.HangUp.Name, { Volume = 0.5 }, SoundGroups.Iris)
+			end
+
+			dispatch(RoduxCall.Actions.UpdateCall(params))
+		end)
+
+		return function()
 			endCallConn:Disconnect()
 		end
-	end, { props.callProtocol, maybeHideCallBarAndEndCall })
-
-	local isCallBarEnabled = React.useMemo(function()
-		return currentCallStatus == RoduxCall.Enums.Status.Connecting.rawValue()
-			or currentCallStatus == RoduxCall.Enums.Status.Teleporting.rawValue()
-			or currentCallStatus == RoduxCall.Enums.Status.Active.rawValue()
-			or currentCallStatus == RoduxCall.Enums.Status.Failed.rawValue()
-			or (currentCallStatus == RoduxCall.Enums.Status.Idle.rawValue() and game.JobId == instanceId)
-	end, { currentCallStatus })
+	end, { props.callProtocol })
 
 	return if isCallBarEnabled
 		then React.createElement("Frame", {
@@ -176,13 +251,12 @@ local function CallBarContainer(passedProps: Props)
 			BackgroundTransparency = 1,
 			BorderSizePixel = 0,
 		}, {
-			UIPadding = React.createElement("UIPadding", {
-				PaddingTop = UDim.new(0, 4),
-			}),
 			CallBar = React.createElement(CallBar, {
 				size = CALL_BAR_SIZE,
-				callBarRef = initCallBarCallback,
 				activeUtc = activeUtc,
+				position = callBarPosition:map(function(val)
+					return UDim2.fromOffset(math.round(val.X), math.round(val.Y))
+				end),
 			}),
 		})
 		else nil

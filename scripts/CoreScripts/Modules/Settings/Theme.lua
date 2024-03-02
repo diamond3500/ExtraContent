@@ -4,8 +4,8 @@ local CoreGui = game:GetService('CoreGui')
 local GuiService = game:GetService("GuiService")
 local RobloxGui = CoreGui:WaitForChild('RobloxGui')
 
+local AppFonts = require(CorePackages.Workspace.Packages.Style).AppFonts
 local DarkTheme = require(CorePackages.Workspace.Packages.Style).Themes.DarkTheme
-local AppFont = require(CorePackages.Workspace.Packages.Style).Fonts.Gotham
 local UIBlox = require(CorePackages.UIBlox)
 local UIBloxImages = UIBlox.App.ImageSet.Images
 local getIconSize = UIBlox.App.ImageSet.getIconSize
@@ -18,7 +18,7 @@ local EnableInGameMenuModernizationStickyBar = require(RobloxGui.Modules.Flags.G
 local ExperienceMenuABTestManager = require(RobloxGui.Modules.ExperienceMenuABTestManager)
 local ChromeEnabled = require(script.Parent.Parent.Chrome.Enabled)
 
-local AppFontBaseSize = AppFont.BaseSize
+local AppFontBaseSize = 16 * 1.2
 
 local ThemeEnabled = EnableInGameMenuControls() or EnableInGameMenuModernization() or ChromeEnabled()
 
@@ -40,7 +40,7 @@ local fontSizeMap = {
 }
 
 local nullColor = Color3.fromRGB(0, 0, 0);
-local nullFont: any? = Enum.Font.Gotham
+local nullFont: any? = AppFonts.default:getDefault()
 local nullFontSize: any? = fontSizeMap[Enum.FontSize.Size24]
 local nullTextSize: any? = 20
 
@@ -77,17 +77,22 @@ local AppTheme = {
 		Color = Color3.fromRGB(217, 217, 217),
 		Transparency = 0.0,
 	},
+	-- TODO temporary focus state color, awaiting design feedback
+	Player_RowSelection = {
+		Color = Color3.new(.396, 0.4, 0.408),
+		Transparency = 0.9,
+	}
 }
 
 local AppFont = {
 	-- TODO Gotham is a temporary font, should be switched to new one when available
 	Confirmation_Font = {
-		Font = Enum.Font.GothamBold,
+		Font = AppFonts.default:getBold(),
 		RelativeSize = fontSizeMap[Enum.FontSize.Size36],
 		TextSize = 36 * nominalSizeFactor,
 	},
 	Button_Font = {
-		Font = Enum.Font.GothamMedium,
+		Font = AppFonts.default:getMedium(),
 		RelativeSize = fontSizeMap[Enum.FontSize.Size24],
 		TextSize = 18,
 	},
@@ -96,60 +101,60 @@ local AppFont = {
 	},
 	DisplayName = {
 		RelativeSize = Enum.FontSize.Size18,
-		Font = Enum.Font.GothamMedium,
+		Font = AppFonts.default:getMedium(),
 	},
 	Settings_Font = {
-		Font = Enum.Font.Gotham,
+		Font = AppFonts.default:getDefault(),
 	},
 	Help_Title_Font = {
-		Font = Enum.Font.GothamMedium,
+		Font = AppFonts.default:getMedium(),
 		RelativeSize = fontSizeMap[Enum.FontSize.Size18],
 	},
 	Help_Text_Font = {
-		Font = Enum.Font.Gotham,
+		Font = AppFonts.default:getDefault(),
 		RelativeSize = fontSizeMap[Enum.FontSize.Size18],
 		TextSize = 18 * nominalSizeFactor,
 	},
 	Help_Gamepad_Font = {
-		Font = Enum.Font.GothamMedium,
+		Font = AppFonts.default:getMedium(),
 	},
 	Help_Touch_Font = {
-		Font = Enum.Font.GothamBold,
+		Font = AppFonts.default:getBold(),
 		RelativeSize = fontSizeMap[Enum.FontSize.Size14],
 	},
 	Game_Settings_Font = {
-		Font = Enum.Font.Gotham,
+		Font = AppFonts.default:getDefault(),
 		RelativeSize = fontSizeMap[Enum.FontSize.Size24],
 	},
 	Conversation_Details_Font = {
-		Font = Enum.Font.Gotham,
+		Font = AppFonts.default:getDefault(),
 		TextSize = 16 * nominalSizeFactor,
 	},
 	Utility_Text_Font = {
-		Font = Enum.Font.Gotham,
+		Font = AppFonts.default:getDefault(),
 		TextSize = 18,
 	},
 	Utility_Text_Small_Font = {
-		Font = Enum.Font.Gotham,
+		Font = AppFonts.default:getDefault(),
 		TextSize = 16 * nominalSizeFactor,
 	},
 	Utility_Row_Small_Font = {
-		Font = Enum.Font.Gotham,
+		Font = AppFonts.default:getDefault(),
 		TextSize = 16 * nominalSizeFactor,
 	},
 	Utility_Row_Font = {
-		Font = Enum.Font.GothamMedium,
+		Font = AppFonts.default:getMedium(),
 		TextSize = 16 * nominalSizeFactor,
 	},
 	Back_Button_Font = {
-		Font = Enum.Font.GothamSemibold,
+		Font = AppFonts.default:getSemibold(),
 		TextSize = 24 * nominalSizeFactor,
 	},
 	Semibold_Font = {
-		Font = Enum.Font.GothamSemibold,
+		Font = AppFonts.default:getSemibold(),
 	},
 	Bold_Font = {
-		Font = Enum.Font.GothamMedium,
+		Font = AppFonts.default:getMedium(),
 	}
 }
 
@@ -178,6 +183,7 @@ local ComponentThemeKeys = {
 	DarkenBackground = "Overlay",
 
 	PlayerRowFrame = "BackgroundDefault",
+	PlayerRowSelection = "Player_RowSelection",
 	TabSelection = "IGM_TabSelection",
 
 	DefaultButton = "IGM_Button",

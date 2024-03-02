@@ -26,14 +26,20 @@
 	}
 ]]
 local CoreGui = game:GetService("CoreGui")
+local InspectAndBuyFolder = script.Parent.Parent
 
-local MockId = require(script.Parent.Parent.MockId)
-local Constants = require(script.Parent.Parent.Constants)
+local MockId = require(InspectAndBuyFolder.MockId)
+local Constants = require(InspectAndBuyFolder.Constants)
 
-local FFlagEnableRestrictedAssetSaleLocationInspectAndBuy
-	= require(CoreGui.RobloxGui.Modules.Flags.FFlagEnableRestrictedAssetSaleLocationInspectAndBuy)
+local FFlagEnableRestrictedAssetSaleLocationInspectAndBuy =
+	require(CoreGui.RobloxGui.Modules.Flags.FFlagEnableRestrictedAssetSaleLocationInspectAndBuy)
 
-local GetCollectibleItemInInspectAndBuyEnabled = require(script.Parent.Parent.Flags.GetCollectibleItemInInspectAndBuyEnabled)
+local GetCollectibleItemInInspectAndBuyEnabled =
+	require(InspectAndBuyFolder.Flags.GetCollectibleItemInInspectAndBuyEnabled)
+local GetFFlagIBGateUGC4ACollectibleAssetsBundles =
+	require(InspectAndBuyFolder.Flags.GetFFlagIBGateUGC4ACollectibleAssetsBundles)
+local GetFFlagIBEnableCollectiblesSystemSupport =
+	require(InspectAndBuyFolder.Flags.GetFFlagIBEnableCollectiblesSystemSupport)
 
 local AssetInfo = {}
 
@@ -58,6 +64,8 @@ function AssetInfo.mock()
 	self.price = ""
 	self.productId = ""
 	self.isLimited = false
+	self.isLimitedUnique = if GetFFlagIBEnableCollectiblesSystemSupport() then false else nil
+	self.collectibleIsLimited = if GetFFlagIBEnableCollectiblesSystemSupport() then false else nil
 	self.bundlesAssetIsIn = {}
 	self.numFavorites = 0
 	self.minimumMembershipLevel = 0
@@ -87,16 +95,25 @@ function AssetInfo.fromGetProductInfo(assetInfo)
 	newAsset.assetTypeId = tostring(assetInfo.AssetTypeId)
 	newAsset.productId = tostring(assetInfo.ProductId)
 	if GetCollectibleItemInInspectAndBuyEnabled() and newAsset.productType == Constants.ProductType.CollectibleItem then
-		newAsset.isForSale = assetInfo.IsForSale and assetInfo.Remaining > 0 and assetInfo.CanBeSoldInThisGame
+		newAsset.isForSale = assetInfo.IsForSale
+			and assetInfo.Remaining > 0
+			and assetInfo.CanBeSoldInThisGame
 			and assetInfo.SaleLocation.SaleLocationType ~= Constants.SaleLocationType.ExperiencesDevApiOnly
 		newAsset.collectibleItemId = assetInfo.CollectibleItemId or ""
 		newAsset.collectibleProductId = assetInfo.CollectibleProductId or ""
 		newAsset.remaining = assetInfo.Remaining or 0
 		if assetInfo.CollectiblesItemDetails then
 			newAsset.collectibleLowestResalePrice = assetInfo.CollectiblesItemDetails.CollectibleLowestResalePrice or 0
-			newAsset.collectibleLowestAvailableResaleProductId = assetInfo.CollectiblesItemDetails.CollectibleLowestAvailableResaleProductId or ""
-			newAsset.collectibleLowestAvailableResaleItemInstanceId = assetInfo.CollectiblesItemDetails.CollectibleLowestAvailableResaleItemInstanceId or ""
-			newAsset.collectibleQuantityLimitPerUser = assetInfo.CollectiblesItemDetails.CollectibleQuantityLimitPerUser or 0
+			newAsset.collectibleLowestAvailableResaleProductId = assetInfo.CollectiblesItemDetails.CollectibleLowestAvailableResaleProductId
+				or ""
+			newAsset.collectibleLowestAvailableResaleItemInstanceId = assetInfo.CollectiblesItemDetails.CollectibleLowestAvailableResaleItemInstanceId
+				or ""
+			newAsset.collectibleQuantityLimitPerUser = assetInfo.CollectiblesItemDetails.CollectibleQuantityLimitPerUser
+				or 0
+			newAsset.collectibleIsLimited = if GetFFlagIBGateUGC4ACollectibleAssetsBundles()
+					or GetFFlagIBEnableCollectiblesSystemSupport()
+				then assetInfo.CollectiblesItemDetails.IsLimited
+				else nil
 		end
 	elseif FFlagEnableRestrictedAssetSaleLocationInspectAndBuy then
 		newAsset.isForSale = assetInfo.IsForSale and assetInfo.CanBeSoldInThisGame
@@ -104,15 +121,21 @@ function AssetInfo.fromGetProductInfo(assetInfo)
 		newAsset.isForSale = assetInfo.IsForSale
 	end
 	newAsset.creatorHasVerifiedBadge = assetInfo.Creator.HasVerifiedBadge
-	newAsset.isLimited = assetInfo.IsLimited or assetInfo.IsLimitedUnique
+	if GetFFlagIBEnableCollectiblesSystemSupport() then
+		-- Differentiate between L1.0 limited and limited unique items
+		newAsset.isLimited = assetInfo.IsLimited
+		newAsset.isLimitedUnique = assetInfo.IsLimitedUnique
+	else
+		newAsset.isLimited = assetInfo.IsLimited or assetInfo.IsLimitedUnique
+	end
 
 	return newAsset
 end
 
-function AssetInfo.fromHumanoidDescription(id)
+function AssetInfo.fromHumanoidDescription(assetId)
 	local newAsset = AssetInfo.new()
 
-	newAsset.assetId = tostring(id)
+	newAsset.assetId = tostring(assetId)
 
 	return newAsset
 end
@@ -155,9 +178,10 @@ function AssetInfo.fromPurchaseSuccess(assetId)
 end
 
 --[[
-	TODO AVBURST-12905:
-		Remove and use item details endpoint for getting attribution data
-		instead of using the asset-versions endpoint.
+	FIXME(dbanks)
+	2023/12/07
+	See https://roblox.atlassian.net/browse/AVBURST-12905
+	This will be removed once backend sends "creating universe" with asset details.
 --]]
 function AssetInfo.fromGetVersionInfo(assetId, latestVersionData)
 	local newAsset = AssetInfo.new()

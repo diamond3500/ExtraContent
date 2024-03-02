@@ -5,10 +5,14 @@ local Players = game:GetService("Players")
 local Roact = require(CorePackages.Roact)
 local RoactRodux = require(CorePackages.RoactRodux)
 local Otter = require(CorePackages.Otter)
+local AppFonts = require(CorePackages.Workspace.Packages.Style).AppFonts
 
 local CoreGui = game:GetService("CoreGui")
 local RobloxGui = CoreGui:WaitForChild("RobloxGui")
+local Modules = CoreGui.RobloxGui.Modules
 local RobloxTranslator = require(RobloxGui:WaitForChild("Modules"):WaitForChild("RobloxTranslator"))
+local TopBarConstants = require(Modules.TopBar.Constants)
+local ChromeEnabled = require(Modules.Chrome.Enabled)()
 
 local Presentation = script.Parent
 local PlayerList = Presentation.Parent.Parent
@@ -28,7 +32,7 @@ local WithLayoutValues = LayoutValues.WithLayoutValues
 
 local FFlagPlayerListFixMobileScrolling = require(PlayerList.Flags.FFlagPlayerListFixMobileScrolling)
 local FFlagPlayerListFixBackgroundFlicker = require(PlayerList.Flags.FFlagPlayerListFixBackgroundFlicker)
-local GetFFlagEnableAccessibilitySettingsEffectsInCoreScripts = require(RobloxGui.Modules.Flags.GetFFlagEnableAccessibilitySettingsEffectsInCoreScripts)
+local GetFFlagPlayerListChromePushdown = require(PlayerList.Flags.GetFFlagPlayerListChromePushdown)
 
 local MOTOR_OPTIONS = {
 	dampingRatio = 1,
@@ -41,6 +45,7 @@ local OLD_PLAYERLIST_TEAM_ENTRY_SIZE = 20
 local MIN_PLAYERS_HEIGHT_ADJUST = 6
 local MAX_PLAYERS_HEIGHT_ADJUST = 12
 local HEADER_SIZE_Y = 44
+local BORDER_SIZE = 24
 
 local function map(x, inMin, inMax, outMin, outMax)
 	return (x - inMin) * (outMax - outMin) / (inMax - inMin) + outMin
@@ -64,12 +69,17 @@ local function playerListSizeFromViewportSize(viewportSize)
 
 	-- Clamp the max size to (500, 600)
 	-- Clamp the min size to 270x434, but always keep a 12px border on the edges
-	sMin = math.clamp(sMin, math.min(270, vMin - 24), 500)
-	sMax = math.clamp(sMax, math.min(434, vMax - 24), 600)
+	sMin = math.clamp(sMin, math.min(270, vMin - BORDER_SIZE), 500)
+	sMax = math.clamp(sMax, math.min(434, vMax - BORDER_SIZE), 600)
 
 	-- Remap from min/max to x/y
 	local sX = viewportSize.x > viewportSize.y and sMax or sMin
 	local sY = viewportSize.y > viewportSize.x and sMax or sMin
+	
+	-- Increase y-axis border to avoid chrome overlap on landscape
+	if GetFFlagPlayerListChromePushdown() and ChromeEnabled and viewportSize.y < viewportSize.x then
+		sY -= (TopBarConstants.TopBarHeight - BORDER_SIZE)
+	end
 
 	return UDim2.fromOffset(sX, sY)
 end
@@ -152,7 +162,7 @@ function PlayerListApp:renderBodyChildren(previousSizeBound, childElements)
 			Size = UDim2.new(1, 0, 0, HEADER_SIZE_Y),
 			Position = UDim2.new(0, 0, 0, 0),
 			BackgroundTransparency = 1,
-			Font = Enum.Font.GothamBold,
+			Font = AppFonts.default:getBold(),
 			Visible = contentVisible and not dropDownVisible,
 			TextSize = 22,
 			TextColor3 = Color3.fromRGB(240, 240, 240),
@@ -249,7 +259,10 @@ function PlayerListApp:render()
 				contentsVisible = true,
 				selectedPlayer = self.props.dropDownPlayer,
 			}),
-
+			-- Push menu down when chrome enabled to below topbarheight
+			BodyPadding = if GetFFlagPlayerListChromePushdown() and ChromeEnabled and self.props.screenSizeY < self.props.screenSizeX then Roact.createElement("UIPadding", {
+				PaddingTop = UDim.new(0, TopBarConstants.TopBarHeight)
+			}) else nil,
 			BodyBackground = Roact.createElement("Frame", {
 				Size = playerListSizeFromViewportSize(Vector2.new(self.props.screenSizeX, self.props.screenSizeY)),
 				AnchorPoint = Vector2.new(0.5, 0.5),
@@ -313,7 +326,7 @@ local function mapStateToProps(state)
 		screenSizeX = state.screenSize.X,
 		screenSizeY = state.screenSize.Y,
 
-		preferredTransparency = if GetFFlagEnableAccessibilitySettingsEffectsInCoreScripts() then state.settings.preferredTransparency else 1,
+		preferredTransparency = state.settings.preferredTransparency,
 
 		displayOptions = state.displayOptions,
 		players = state.players,

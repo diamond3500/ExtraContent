@@ -27,6 +27,7 @@ local RobloxTranslator = require(RobloxGui.Modules.RobloxTranslator)
 local Images = UIBlox.App.ImageSet.Images
 
 local isNewInGameMenuEnabled = require(RobloxGui.Modules.isNewInGameMenuEnabled)
+local isRoactAbuseReportMenuEnabled = require(RobloxGui.Modules.TrustAndSafety.isRoactAbuseReportMenuEnabled)
 
 local PlayerList = Components.Parent
 
@@ -36,8 +37,6 @@ local SetPlayerListVisibility = require(PlayerList.Actions.SetPlayerListVisibili
 local BlockPlayer = require(PlayerList.Thunks.BlockPlayer)
 local UnblockPlayer = require(PlayerList.Thunks.UnblockPlayer)
 local RequestFriendship = require(PlayerList.Thunks.RequestFriendship)
-
-local GetFFlagEnableAccessibilitySettingsEffectsInCoreScripts = require(RobloxGui.Modules.Flags.GetFFlagEnableAccessibilitySettingsEffectsInCoreScripts)
 
 local PlayerDropDown = Roact.PureComponent:extend("PlayerDropDown")
 
@@ -160,10 +159,15 @@ function PlayerDropDown:createReportButton()
 				local InGameMenu = require(RobloxGui.Modules.InGameMenuInit)
 				InGameMenu.openReportDialog(selectedPlayer, self.__componentName)
 			else
-				-- This module has to be required here or it yields on initalization which breaks the unit tests.
-				-- TODO: Revist this with new in game menu.
-				local ReportAbuseMenu = require(RobloxGui.Modules.Settings.Pages.ReportAbuseMenu)
-				ReportAbuseMenu:ReportPlayer(selectedPlayer, self.__componentName)
+				if isRoactAbuseReportMenuEnabled() then
+					local ReportAbuseMenu = require(RobloxGui.Modules.Settings.Pages.ReportAbuseMenuNewContainerPage)
+					ReportAbuseMenu:ReportPlayer(selectedPlayer, self.__componentName)
+				else
+					-- This module has to be required here or it yields on initalization which breaks the unit tests.
+					-- TODO: Revist this with new in game menu.
+					local ReportAbuseMenu = require(RobloxGui.Modules.Settings.Pages.ReportAbuseMenu)
+					ReportAbuseMenu:ReportPlayer(selectedPlayer, self.__componentName)
+				end
 				self.props.closeDropDown()
 			end
 		end,
@@ -316,7 +320,7 @@ local function mapStateToProps(state)
 		inspectMenuEnabled = state.displayOptions.inspectMenuEnabled,
 		isTenFootInterface = state.displayOptions.isTenFootInterface,
 		subjectToChinaPolicies = state.displayOptions.subjectToChinaPolicies,
-		preferredTransparency = if GetFFlagEnableAccessibilitySettingsEffectsInCoreScripts() then state.settings.preferredTransparency else 1,
+		preferredTransparency = state.settings.preferredTransparency,
 	}
 end
 

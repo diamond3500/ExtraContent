@@ -49,7 +49,6 @@ local IsExperienceMenuABTestEnabled = require(CoreGuiModules.IsExperienceMenuABT
 local ExperienceMenuABTestManager = require(CoreGuiModules.ExperienceMenuABTestManager)
 local GetFFlagEnableNewInviteMenuIXP = require(CoreGuiModules.Flags.GetFFlagEnableNewInviteMenuIXP)
 local NewInviteMenuExperimentManager = require(CoreGuiModules.Settings.Pages.ShareGame.NewInviteMenuExperimentManager)
-local GetFFlagEnableSoundTelemetry = require(CoreGuiModules.Flags.GetFFlagEnableSoundTelemetry)
 local GetFFlagEnableSoundSessionTelemetry = require(CoreGuiModules.Flags.GetFFlagEnableSoundSessionTelemetry)
 local GetFFlagReportAnythingAnnotationIXP = require(CoreGuiModules.Settings.Flags.GetFFlagReportAnythingAnnotationIXP)
 local TrustAndSafetyIXPManager = require(RobloxGui.Modules.TrustAndSafety.TrustAndSafetyIXPManager)
@@ -57,14 +56,11 @@ local TrustAndSafetyIXPManager = require(RobloxGui.Modules.TrustAndSafety.TrustA
 local GetCoreScriptsLayers = require(CoreGuiModules.Experiment.GetCoreScriptsLayers)
 
 local GetFFlagRtMessaging = require(RobloxGui.Modules.Flags.GetFFlagRtMessaging)
-local GetFFlagContactListEnabled = require(RobloxGui.Modules.Common.Flags.GetFFlagContactListEnabled)
+local GetFFlagContactListClientEnabled = require(RobloxGui.Modules.Common.Flags.GetFFlagContactListClientEnabled)
 local FFlagAddPublishAssetPrompt = game:DefineFastFlag("AddPublishAssetPrompt6", false)
-local getFFlagEnableApolloClientInExperience = require(CorePackages.Workspace.Packages.SharedFlags).getFFlagEnableApolloClientInExperience
 local isCharacterNameHandlerEnabled = require(CorePackages.Workspace.Packages.SharedFlags).isCharacterNameHandlerEnabled
-local GetFFlagCorescriptsSoundManagerEnabled = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagCorescriptsSoundManagerEnabled
 local GetFFlagIrisAlwaysOnTopEnabled = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagIrisAlwaysOnTopEnabled
 local GetFFlagEnableSocialContextToast = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagEnableSocialContextToast
-local GetFFlagTenFootUiAchievements = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagTenFootUiAchievements
 
 local FFlagLuaAppEnableToastNotificationsCoreScripts = game:DefineFastFlag("LuaAppEnableToastNotificationsCoreScripts4", false)
 local FFlagCoreScriptsGlobalEffects = require(CorePackages.Workspace.Packages.SharedFlags).FFlagCoreScriptsGlobalEffects
@@ -72,8 +68,10 @@ local FFlagAdPortalTeleportPromptLua = game:DefineFastFlag("AdPortalTeleportProm
 
 local GetFFlagVoiceUserAgency3 = require(RobloxGui.Modules.Flags.GetFFlagVoiceUserAgency3)
 local GetFFlagLuaInExperienceCoreScriptsGameInviteUnification = require(RobloxGui.Modules.Flags.GetFFlagLuaInExperienceCoreScriptsGameInviteUnification)
+local getFFlagMicrophoneDevicePermissionsPromptLogging = require(RobloxGui.Modules.Flags.getFFlagMicrophoneDevicePermissionsPromptLogging)
 
 game:DefineFastFlag("MoodsEmoteFix3", false)
+local FFlagEnableSendCameraAccessAnalytics = game:DefineFastFlag("EnableSendCameraAccessAnalytics", false)
 
 local UIBlox = require(CorePackages.UIBlox)
 local uiBloxConfig = require(CoreGuiModules.UIBloxInGameConfig)
@@ -102,9 +100,31 @@ if getFFlagDoNotPromptCameraPermissionsOnMount() then
 	ExperienceChat.GlobalFlags.DoNotPromptCameraPermissionsOnMount = true
 end
 
-local Screenshots = require(CorePackages.Workspace.Packages.Screenshots)
-local FFlagScreenshotsFeaturesEnabledForAll = Screenshots.Flags.FFlagScreenshotsFeaturesEnabledForAll
-local FFlagScreenshotSharingEnableExperiment = Screenshots.Flags.FFlagScreenshotSharingEnableExperiment
+local GetFFlagJoinWithoutMicPermissions = require(RobloxGui.Modules.Flags.GetFFlagJoinWithoutMicPermissions)
+if GetFFlagJoinWithoutMicPermissions() then
+	local ExperienceChat = require(CorePackages.ExperienceChat)
+	ExperienceChat.GlobalFlags.JoinWithoutMicPermissions = true
+end
+
+local getFFlagEnableAlwaysAvailableCamera = require(RobloxGui.Modules.Flags.getFFlagEnableAlwaysAvailableCamera)
+if getFFlagEnableAlwaysAvailableCamera() then
+	local ExperienceChat = require(CorePackages.ExperienceChat)
+	ExperienceChat.GlobalFlags.EnableAlwaysAvailableCamera = true
+end
+
+local GetFFlagConsolidateBubbleChat = require(RobloxGui.Modules.Flags.GetFFlagConsolidateBubbleChat)
+if GetFFlagConsolidateBubbleChat() then
+	local ExperienceChat = require(CorePackages.ExperienceChat)
+	local GlobalFlags = (ExperienceChat.GlobalFlags :: any)
+	GlobalFlags.ConsolidateBubbleChat = true
+end
+
+local getFFlagRenderVoiceBubbleAfterAsyncInit = require(RobloxGui.Modules.Flags.getFFlagRenderVoiceBubbleAfterAsyncInit)
+if getFFlagRenderVoiceBubbleAfterAsyncInit() then
+	local ExperienceChat = require(CorePackages.ExperienceChat)
+	local GlobalFlags = (ExperienceChat.GlobalFlags :: any)
+	GlobalFlags.RenderVoiceBubbleAfterAsyncInit = true
+end
 
 -- Since prop validation can be expensive in certain scenarios, you can enable
 -- this flag locally to validate props to Roact components.
@@ -242,9 +262,7 @@ coroutine.wrap(safeRequire)(RobloxGui.Modules.KeyboardUINavigation)
 coroutine.wrap(safeRequire)(RobloxGui.Modules.EmotesMenu.EmotesMenuMaster)
 
 -- Screenshots
-if FFlagScreenshotsFeaturesEnabledForAll or FFlagScreenshotSharingEnableExperiment then
-	coroutine.wrap(safeRequire)(RobloxGui.Modules.Screenshots.ScreenshotsApp)
-end
+coroutine.wrap(safeRequire)(RobloxGui.Modules.Screenshots.ScreenshotsApp)
 
 initify(CoreGuiModules.AvatarEditorPrompts)
 coroutine.wrap(safeRequire)(CoreGuiModules.AvatarEditorPrompts)
@@ -281,6 +299,10 @@ if GetFFlagScreenshotHudApi() and not PolicyService:IsSubjectToChinaPolicies() t
 	ScriptContext:AddCoreScriptLocal("CoreScripts/ScreenshotHud", RobloxGui)
 end
 
+if getFFlagMicrophoneDevicePermissionsPromptLogging() then
+	ScriptContext:AddCoreScriptLocal("CoreScripts/MicrophoneDevicePermissionsLoggingInitializer", RobloxGui)
+end
+
 if game:GetEngineFeature("VoiceChatSupported") and GetFFlagEnableVoiceDefaultChannel() then
 	ScriptContext:AddCoreScriptLocal("CoreScripts/VoiceDefaultChannel", RobloxGui)
 end
@@ -311,10 +333,6 @@ ScriptContext:AddCoreScriptLocal("CoreScripts/ChatEmoteUsage", script.Parent)
 
 if FFlagLuaAppEnableToastNotificationsCoreScripts then
 	ScriptContext:AddCoreScriptLocal("CoreScripts/ToastNotificationGUI", script.Parent)
-end
-
-if GetFFlagLuaInExperienceCoreScriptsGameInviteUnification() then
-	ScriptContext:AddCoreScriptLocal("CoreScripts/GameInviteModalGUI", script.Parent)
 end
 
 if GetFFlagRtMessaging() then
@@ -349,19 +367,27 @@ if game:GetEngineFeature("PortalAdPrompt") then
 	end
 end
 
+if game:GetEngineFeature("EnableAdsEudsaStaticDisclosure") then
+	coroutine.wrap(function()
+		local AdsEudsaInit = safeRequire(CorePackages.Workspace.Packages.AdsEudsa)
+
+		if AdsEudsaInit and AdsEudsaInit.starterScript then
+			AdsEudsaInit.starterScript()
+		end
+	end)()
+end
+
 if game:GetEngineFeature("EnableVoiceAttention") then
 	ScriptContext:AddCoreScriptLocal("CoreScripts/VoiceAttention", script.Parent)
 end
 
-if GetFFlagEnableSoundTelemetry() or GetFFlagEnableSoundSessionTelemetry() then
+if GetFFlagEnableSoundSessionTelemetry() then
 	ScriptContext:AddCoreScriptLocal("CoreScripts/SoundTelemetry", script.Parent)
 end
 
-if getFFlagEnableApolloClientInExperience() then
-	coroutine.wrap(safeRequire)(CoreGuiModules.ApolloClient)
-end
+coroutine.wrap(safeRequire)(CoreGuiModules.ApolloClient)
 
-if GetFFlagContactListEnabled() then
+if GetFFlagContactListClientEnabled() then
 	initify(CoreGuiModules.ContactList)
 	coroutine.wrap(safeRequire)(CoreGuiModules.ContactList)
 end
@@ -377,22 +403,29 @@ end
 if FFlagCoreScriptsGlobalEffects then
 	-- Mounts a react root that persists while the user is in-experience.
 	-- This allows us to use react-based listeners that trigger effects
-	if not _G.IsLegacyAppShell then
-		ScriptContext:AddCoreScriptLocal("CoreScripts/CoreScriptsGlobalEffects", script.Parent)
-	end
+	ScriptContext:AddCoreScriptLocal("CoreScripts/CoreScriptsGlobalEffects", script.Parent)
 end
 
-if GetFFlagCorescriptsSoundManagerEnabled() then
-	local SoundManager = require(CorePackages.Workspace.Packages.SoundManager).SoundManager
-	SoundManager.init()
-end
+local SoundManager = require(CorePackages.Workspace.Packages.SoundManager).SoundManager
+SoundManager.init()
 
 if GetFFlagEnableSocialContextToast() then
 	ScriptContext:AddCoreScriptLocal("CoreScripts/SocialContextToast", RobloxGui)
 end
 
-if GetFFlagTenFootUiAchievements() then
-	local InExpAchievementManager = require(CorePackages.Workspace.Packages.Achievements).InExpAchievementManager
-	local achievementManager = InExpAchievementManager.new()
-	achievementManager:startUp()
+if GetFFlagLuaInExperienceCoreScriptsGameInviteUnification() then
+	ScriptContext:AddCoreScriptLocal("CoreScripts/GameInviteModalGUI", script.Parent)
+end
+
+local InExpAchievementManager = require(CorePackages.Workspace.Packages.Achievements).InExpAchievementManager
+local achievementManager = InExpAchievementManager.new()
+achievementManager:startUp()
+
+local GetFFlagPlayerViewRemoteEnabled = require(RobloxGui.Modules.Common.Flags.GetFFlagPlayerViewRemoteEnabled)
+if GetFFlagPlayerViewRemoteEnabled() then
+	ScriptContext:AddCoreScriptLocal("CoreScripts/PlayerView", RobloxGui)
+end
+
+if FFlagEnableSendCameraAccessAnalytics then
+	ScriptContext:AddCoreScriptLocal("CoreScripts/SendCameraAccessAnalytics", RobloxGui)
 end

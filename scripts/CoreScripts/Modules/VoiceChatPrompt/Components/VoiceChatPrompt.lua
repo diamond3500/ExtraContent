@@ -15,8 +15,11 @@ VoiceChatPrompt.validateProps = t.strictInterface({
 	errorText = t.optional(t.string),
 	bannedUntil = t.optional(t.string),
 	onContinueFunc = t.optional(t.callback),
+	onPrimaryActivated = t.optional(t.callback),
+	onSecondaryActivated = t.optional(t.callback),
 	onReadyForSignal = t.optional(t.callback),
 	Analytics = t.optional(t.table),
+	VoiceChatServiceManager = t.optional(t.table),
 	policyMapper = t.optional(t.callback),
 })
 

@@ -7,6 +7,7 @@ local getDurations = ProfilerUtil.getDurations
 local getSourceName = ProfilerUtil.getSourceName
 local getLine = ProfilerUtil.getLine
 local getNativeFlag = ProfilerUtil.getNativeFlag
+local getPluginFlag = ProfilerUtil.getPluginFlag
 local standardizeChildren = ProfilerUtil.standardizeChildren
 
 local Components = script.Parent.Parent.Parent.Components
@@ -33,7 +34,9 @@ local ANON_LABEL = "<anonymous>"
 
 local ProfilerFunctionViewEntry = Roact.PureComponent:extend("ProfilerFunctionViewEntry")
 
+local FFlagScriptProfilerPluginAnnotation = game:DefineFastFlag("ScriptProfilerPluginAnnotation", false)
 local FFlagScriptProfilerNativeFrames = game:DefineFastFlag("ScriptProfilerNativeFrames", false)
+local FFlagScriptProfilerHideGCOverhead = game:DefineFastFlag("ScriptProfilerHideGCOverhead", false)
 
 type BorderedCellLabelProps = {
     text: string,
@@ -125,9 +128,14 @@ function ProfilerFunctionViewEntry:render()
     local functionId = props.functionId
     local func = data.Functions[functionId]
 
-    local totalDuration = func.TotalDuration
+    local totalDuration = func.TotalDuration / self.props.average
 
-    local isNative = getNativeFlag(data, func, true)
+    if FFlagScriptProfilerHideGCOverhead then
+        totalDuration -= self.props.gcOffset
+    end
+
+    local isNative = getNativeFlag(data, func)
+    local isPlugin = getPluginFlag(data, func)
 
     local totalDurationText
     if percentageRatio then
@@ -147,15 +155,19 @@ function ProfilerFunctionViewEntry:render()
     local name = props.nodeName
     name = if not name or #name == 0 then defaultName else name
 
+    if FFlagScriptProfilerPluginAnnotation and isPlugin then
+        name = name .. " <plugin>"
+    end
+
     if FFlagScriptProfilerNativeFrames and isNative then
         name = name .. " <native>"
     end
 
-    local sourceName = getSourceName(data, func, true)
+    local sourceName = getSourceName(data, func)
     sourceName = if not sourceName or #sourceName == 0 then name else sourceName
 
     local hoverText = sourceName :: string
-    local lineNumber = getLine(data, func, true)
+    local lineNumber = getLine(data, func)
     if lineNumber and lineNumber >= 1 then
         hoverText = string.format(TOOLTIP_FORMAT, sourceName, tostring(lineNumber))
     end

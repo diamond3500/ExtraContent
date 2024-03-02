@@ -72,7 +72,7 @@ Cell.validateProps = t.strictInterface({
 	leftPaddingOffset = t.optional(t.number),
 	layoutOrder = t.integer,
 	setButtonRef = t.optional(t.union(t.callback, t.table)),
-	cursorKind = t.optional(CursorKind.isEnumValue),
+	cursorKind = if UIBloxConfig.migrateToNewSelectionCursor then nil else t.optional(CursorKind.isEnumValue),
 	-- If the background asset behind the element is visible or not
 	isElementBackgroundVisible = t.optional(t.boolean),
 	-- Add offset to the left of the divider separating cells
@@ -104,12 +104,16 @@ Cell.validateProps = t.strictInterface({
 	borderCornerRadius = t.optional(t.integer),
 	-- Background of the cell. Defaults to `BackgroundUIDefault`.
 	background = t.optional(validateColorInfo),
+
+	selectionOrder = t.optional(t.number),
+	-- Optional selection cursor
+	selectionCursor = if UIBloxConfig.migrateToNewSelectionCursor then t.optional(t.any) else nil,
 })
 
 Cell.defaultProps = {
 	selected = false,
 	disabled = false,
-	rightSideGadgetSize = Vector2.new(0, 0),
+	rightSideGadgetSize = nil,
 	leftPaddingOffset = 0,
 	isElementBackgroundVisible = true,
 	dividerOffset = 0,
@@ -227,7 +231,7 @@ function Cell:renderWithSelectionCursor(getSelectionCursor)
 		local textLengthOffset = 0
 		local textOnly = true
 
-		if UIBloxConfig.enableRightSideGadgetView and self.props.rightSideGadgetSize ~= nil then
+		if self.props.rightSideGadgetSize ~= nil then
 			textLengthOffset = self.props.rightSideGadgetSize.X
 				+ self.props.iconPaddingLeft
 				+ self.props.iconSize
@@ -302,7 +306,10 @@ function Cell:renderWithSelectionCursor(getSelectionCursor)
 					BorderSizePixel = 0,
 					[Roact.Ref] = self.props.setButtonRef,
 					[Roact.Event.Activated] = self.props.onActivated,
-					SelectionImageObject = getSelectionCursor(self.props.cursorKind),
+					SelectionImageObject = if UIBloxConfig.migrateToNewSelectionCursor
+						then self.props.selectionCursor
+						else getSelectionCursor(self.props.cursorKind),
+					SelectionOrder = self.props.selectionOrder,
 				},
 				children = {
 
@@ -396,17 +403,15 @@ function Cell:renderWithSelectionCursor(getSelectionCursor)
 							PaddingRight = UDim.new(0, rightPadding),
 						}),
 
-						RightSideContent = UIBloxConfig.enableRightSideGadgetView
-								and self.props.renderRightSideGadget
+						RightSideContent = self.props.renderRightSideGadget
+								and self.props.rightSideGadgetSize
 								and Roact.createElement("Frame", {
 									BackgroundTransparency = 1,
 									BorderSizePixel = 0,
 									LayoutOrder = 3,
-									Size = UDim2.new(
-										0,
-										self.props.rightSideGadgetSize.X or 0,
-										0,
-										self.props.rightSideGadgetSize.Y or 0
+									Size = UDim2.fromOffset(
+										self.props.rightSideGadgetSize.X,
+										self.props.rightSideGadgetSize.Y
 									),
 								}, self.props.renderRightSideGadget())
 							or Roact.createFragment({

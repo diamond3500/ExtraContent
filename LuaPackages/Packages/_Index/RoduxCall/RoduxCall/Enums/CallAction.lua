@@ -1,18 +1,17 @@
-local Packages = script.Parent.Parent.Parent
-local enumerate = require(Packages.enumerate) :: any
-
-return enumerate(script.Name, {
-	Accept = "Accept",
-	AcceptSuccess = "AcceptSucces",
-	Cancel = "Cancel",
-	ConnectionConfirm = "ConnectionConfirm",
-	Decline = "Decline",
-	Fail = "Fail",
-	Finish = "Finish",
-	Init = "Init",
-	InitSucess = "InitSuccess",
-	Miss = "Miss",
-	Receive = "Receive",
-	Reject = "Reject",
-	Suppress = "Suppress",
-})
+return {
+	Accept = "Accept" :: "Accept",
+	AcceptSuccess = "AcceptSuccess" :: "AcceptSuccess",
+	Cancel = "Cancel" :: "Cancel",
+	ConnectionConfirm = "ConnectionConfirm" :: "ConnectionConfirm",
+	Decline = "Decline" :: "Decline",
+	Duplicate = "Duplicate" :: "Duplicate",
+	Fail = "Fail" :: "Fail",
+	Finish = "Finish" :: "Finish",
+	Init = "Init" :: "Init",
+	InitSucess = "InitSuccess" :: "InitSuccess",
+	Miss = "Miss" :: "Miss",
+	Receive = "Receive" :: "Receive",
+	Reject = "Reject" :: "Reject",
+	Suppress = "Suppress" :: "Suppress",
+	TeleportSuccess = "TeleportSuccess" :: "TeleportSuccess",
+}

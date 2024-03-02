@@ -4,7 +4,6 @@ local UIBlox = App.Parent
 local Core = UIBlox.Core
 local Packages = UIBlox.Parent
 
-local UIBloxConfig = require(Packages.UIBlox.UIBloxConfig)
 local Cryo = require(Packages.Cryo)
 local t = require(Packages.t)
 local Roact = require(Packages.Roact)
@@ -17,6 +16,9 @@ local CursorKind = require(App.SelectionImage.CursorKind)
 local Interactable = require(Core.Control.Interactable)
 local ControlState = require(Core.Control.Enum.ControlState)
 local enumerateValidator = require(UIBlox.Utility.enumerateValidator)
+local useCursorByType = require(App.SelectionCursor.useCursorByType)
+local CursorType = require(App.SelectionCursor.CursorType)
+local UIBloxConfig = require(UIBlox.UIBloxConfig)
 
 local DISABLED_TRANSPARENCY = 0.5
 
@@ -63,6 +65,8 @@ Cell.validateProps = t.strictInterface({
 	[Roact.Change.AbsolutePosition] = t.optional(t.callback),
 	[Roact.Ref] = t.optional(t.union(t.callback, t.table)),
 	forwardRef = t.optional(t.union(t.callback, t.table)),
+	-- Selection cursor
+	selectionCursor = if UIBloxConfig.migrateToNewSelectionCursor then t.optional(t.any) else nil,
 })
 
 Cell.defaultProps = {
@@ -109,15 +113,10 @@ function Cell:init()
 end
 
 function Cell:render()
-	if UIBloxConfig.enableSelectionCursorProviderOnTableCell then
-		return withStyle(function(style)
-			return withSelectionCursorProvider(function(getSelectionCursor)
-				return self:renderWithProviders(style, getSelectionCursor)
-			end)
-		end)
-	end
 	return withStyle(function(style)
-		return self:renderWithProviders(style)
+		return withSelectionCursorProvider(function(getSelectionCursor)
+			return self:renderWithProviders(style, getSelectionCursor)
+		end)
 	end)
 end
 
@@ -150,7 +149,9 @@ function Cell:renderWithProviders(style, getSelectionCursor)
 		Size = size,
 		BackgroundTransparency = 1,
 		AutoButtonColor = false,
-		SelectionImageObject = getSelectionCursor and getSelectionCursor(CursorKind.RoundedRectNoInset),
+		SelectionImageObject = if UIBloxConfig.migrateToNewSelectionCursor
+			then self.props.selectionCursor
+			else (getSelectionCursor and getSelectionCursor(CursorKind.RoundedRectNoInset)),
 
 		isDisabled = isDisabled,
 		onStateChanged = self.onStateChanged,
@@ -161,28 +162,18 @@ function Cell:renderWithProviders(style, getSelectionCursor)
 		[Roact.Change.AbsolutePosition] = self.props[Roact.Change.AbsolutePosition],
 		[Roact.Ref] = self.props.forwardRef,
 	}, {
-		CellBackground = if UIBloxConfig.enableTableCellFullBackgroundOverride
-			then Roact.createElement("Frame", {
-				Size = UDim2.fromScale(1, 1),
-				BackgroundTransparency = 1,
-				ZIndex = -1,
-			}, {
-				Background = background or Roact.createElement("Frame", {
-					Size = UDim2.fromScale(1, 1),
-					BackgroundColor3 = backgroundStyle.Color,
-					BackgroundTransparency = backgroundStyle.Transparency,
-					BorderSizePixel = 0,
-				}),
-			})
-			else Roact.createElement("Frame", {
+		CellBackground = Roact.createElement("Frame", {
+			Size = UDim2.fromScale(1, 1),
+			BackgroundTransparency = 1,
+			ZIndex = -1,
+		}, {
+			Background = background or Roact.createElement("Frame", {
 				Size = UDim2.fromScale(1, 1),
 				BackgroundColor3 = backgroundStyle.Color,
 				BackgroundTransparency = backgroundStyle.Transparency,
 				BorderSizePixel = 0,
-				ZIndex = -1,
-			}, {
-				Background = background,
 			}),
+		}),
 		CellContent = Roact.createElement("Frame", {
 			Size = UDim2.fromScale(1, 1),
 			BackgroundTransparency = 1,
@@ -222,6 +213,12 @@ function Cell:renderWithProviders(style, getSelectionCursor)
 end
 
 return Roact.forwardRef(function(props, ref)
+	local selectionCursor = useCursorByType(CursorType.RoundedRectNoInset)
+	if UIBloxConfig.migrateToNewSelectionCursor then
+		props = Cryo.Dictionary.join({
+			selectionCursor = selectionCursor,
+		}, props)
+	end
 	return Roact.createElement(
 		Cell,
 		Cryo.Dictionary.join(props, {

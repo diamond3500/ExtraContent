@@ -5,8 +5,10 @@ local PackageIndex = script.Parent.Parent.Parent._Workspace
 
 local Package = require(PackageIndex["SocialCommon"]["SocialCommon"])
 
+export type ChatEntryPointName = Package.ChatEntryPointName
 export type ContextualInfoTypes = Package.ContextualInfoTypes
 export type RecommendationSourceEnum = Package.RecommendationSourceEnum
+export type Buttons = Package.Buttons
 
 
 return Package

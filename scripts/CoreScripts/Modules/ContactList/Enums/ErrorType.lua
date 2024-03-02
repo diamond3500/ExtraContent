@@ -1,12 +1,11 @@
-local CoreGui = game:GetService("CoreGui")
+local ErrorType = {
+	CallerIsInAnotherCall = "CallerIsInAnotherCall" :: "CallerIsInAnotherCall",
+	CalleeIsInAnotherCall = "CalleeIsInAnotherCall" :: "CalleeIsInAnotherCall",
+	PlaceIsNotVoiceEnabled = "PlaceIsNotVoiceEnabled" :: "PlaceIsNotVoiceEnabled",
+	UniverseIsNotVoiceEnabled = "UniverseIsNotVoiceEnabled" :: "UniverseIsNotVoiceEnabled",
+	CallerIsNotVoiceEnabled = "CallerIsNotVoiceEnabled" :: "CallerIsNotVoiceEnabled",
+	UniverseAgeIsNotValid = "UniverseAgeIsNotValid" :: "UniverseAgeIsNotValid",
+	ReservedServerAccessCodeIsNotProvided = "ReservedServerAccessCodeIsNotProvided" :: "ReservedServerAccessCodeIsNotProvided",
+}
 
-local RobloxGui = CoreGui:WaitForChild("RobloxGui")
-
-local ContactList = RobloxGui.Modules.ContactList
-local dependencies = require(ContactList.dependencies)
-local enumerate = dependencies.enumerate
-
-return enumerate(script.Name, {
-	CallerIsInAnotherCall = "CallerIsInAnotherCall",
-	CalleeIsInAnotherCall = "CalleeIsInAnotherCall",
-})
+return ErrorType

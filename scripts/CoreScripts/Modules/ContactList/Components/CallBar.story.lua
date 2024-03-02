@@ -10,8 +10,8 @@ local ContactList = RobloxGui.Modules.ContactList
 local dependencies = require(ContactList.dependencies)
 local RoduxCall = dependencies.RoduxCall
 
-local activeUtc = os.time()
-local createdUtc = os.time()
+local activeUtc = os.time() * 1000
+local createdUtc = os.time() * 1000
 
 local UserProfiles = require(CorePackages.Workspace.Packages.UserProfiles)
 
@@ -50,6 +50,7 @@ return {
 				React.createElement(CallBar, {
 					size = Vector2.new(200, 44),
 					activeUtc = activeUtc,
+					position = UDim2.new(0.5, 0, 0, 0),
 				}),
 			})
 		end,
@@ -58,13 +59,13 @@ return {
 	state = {
 		Call = {
 			currentCall = {
-				status = RoduxCall.Enums.Status.Active.rawValue(),
+				status = RoduxCall.Enums.Status.Active,
 				callerId = 11111111,
 				calleeId = 12345678,
 				placeId = 789,
 				callId = "123456",
-				callerDisplayName = "Display Name 1",
-				calleeDisplayName = "Display Name 2",
+				callerCombinedName = "Display Name 1",
+				calleeCombinedName = "Display Name 2",
 				gameInstanceId = "gameId",
 				createdUtc = createdUtc,
 				activeUtc = activeUtc,

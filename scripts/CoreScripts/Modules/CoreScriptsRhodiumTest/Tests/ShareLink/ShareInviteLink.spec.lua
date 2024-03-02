@@ -18,9 +18,6 @@ return function()
 	local ReactRoblox = require(CorePackages.Packages.ReactRoblox)
 	local act = ReactRoblox.act
 
-	local GetFFlagLuaAppNewShareSheet =
-		require(CorePackages.Workspace.Packages.ExternalContentSharingProtocol).Flags.GetFFlagLuaAppNewShareSheet
-
 	local NetworkingShareLinks = dependencies.NetworkingShareLinks
 
 
@@ -28,12 +25,9 @@ return function()
 	local STORE_URL = "www.bbc.co.uk"
 	local NETWORK_URL = "www.bbc.com"
 
-	local originalGameInviteShortUrlEnabled, originalGameInviteShortUrlRollout
 	local generateLink, mockAnalytics, externalContentSharingProtocol, makeTestElement
 
 	beforeEach(function()
-		originalGameInviteShortUrlEnabled = game:SetFastFlagForTesting("GameInviteShortUrlEnabled", true)
-		originalGameInviteShortUrlRollout = game:SetFastIntForTesting("GameInviteShortUrlRollout", 100)
 		NetworkingShareLinks.GenerateLink.Mock.clear()
 
 		generateLink = jest.fn()
@@ -83,8 +77,6 @@ return function()
 
 	afterEach(function()
 		NetworkingShareLinks.GenerateLink.Mock.clear()
-		game:SetFastFlagForTesting("GameInviteShortUrlEnabled", originalGameInviteShortUrlEnabled)
-		game:SetFastIntForTesting("GameInviteShortUrlRollout", originalGameInviteShortUrlRollout)
 	end)
 
 	it("should call fetchShareInviteLink on mount if there is no value in the store", function()
@@ -139,18 +131,10 @@ return function()
 		expect(generateLink).never.toHaveBeenCalled()
 		expect(mockAnalytics.onShareButtonClick).toHaveBeenCalledTimes(1)
 
-		if GetFFlagLuaAppNewShareSheet() then
-			expect(externalContentSharingProtocol.shareUrl).toHaveBeenCalledTimes(1)
-			expect(externalContentSharingProtocol.shareUrl).toHaveBeenCalledWith(externalContentSharingProtocol, {
-				url = STORE_URL,
-				context = "V1Menu",
-			})
-		else
-			expect(externalContentSharingProtocol.shareText).toHaveBeenCalledTimes(1)
-			expect(externalContentSharingProtocol.shareText).toHaveBeenCalledWith(externalContentSharingProtocol, {
-				text = STORE_URL,
-				context = "V1Menu",
-			})
-		end
+		expect(externalContentSharingProtocol.shareUrl).toHaveBeenCalledTimes(1)
+		expect(externalContentSharingProtocol.shareUrl).toHaveBeenCalledWith(externalContentSharingProtocol, {
+			url = STORE_URL,
+			context = "V1Menu",
+		})
 	end)
 end

@@ -6,7 +6,12 @@ local HttpRbxApiService = game:GetService("HttpRbxApiService")
 local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 
 local Promise = require(CorePackages.Promise)
-local httpRequest = require(CorePackages.AppTempCommon.Temp.httpRequest)
+
+local GetFFlagRemoveAppTempCommonTemp =
+	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagRemoveAppTempCommonTemp
+local httpRequest = if GetFFlagRemoveAppTempCommonTemp()
+	then require(RobloxGui.Modules.Common.httpRequest)
+	else require(CorePackages.AppTempCommon.Temp.httpRequest)
 
 local httpImpl = httpRequest(HttpRbxApiService)
 
@@ -14,7 +19,7 @@ local Thunks = script.Parent
 local TopBar = Thunks.Parent
 local SetGameName = require(TopBar.Actions.SetGameName)
 
-local GetGameNameAndDescription = require(CorePackages.Workspace.Packages.GameDetailRodux).Requests.GetGameNameAndDescription
+local GetGameNameAndDescription = require(CorePackages.Workspace.Packages.GameDetailRodux).GetGameNameAndDescription
 
 return function(store)
 	if game.GameId == 0 then

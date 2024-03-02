@@ -19,6 +19,7 @@ local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 local GuiService = game:GetService("GuiService")
 local RunService = game:GetService("RunService")
 local AnalyticsService = game:GetService("RbxAnalyticsService")
+local Players = game:GetService("Players")
 
 ----------- UTILITIES --------------
 local PerfUtils = require(RobloxGui.Modules.Common.PerfUtils)
@@ -31,12 +32,14 @@ RobloxGui:WaitForChild("Modules"):WaitForChild("TenFootInterface")
 local isTenFootInterface = require(RobloxGui.Modules.TenFootInterface):IsEnabled()
 
 local GetFFlagEnableInGameMenuDurationLogger = require(RobloxGui.Modules.Common.Flags.GetFFlagEnableInGameMenuDurationLogger)
+local GetFFlagChromeSurveySupport = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagChromeSurveySupport
 
 local GetDefaultQualityLevel = require(RobloxGui.Modules.Common.GetDefaultQualityLevel)
 
 local Constants = require(RobloxGui.Modules:WaitForChild("InGameMenu"):WaitForChild("Resources"):WaitForChild("Constants"))
 
 local Theme = require(RobloxGui.Modules.Settings.Theme)
+local LocalStore = require(RobloxGui.Modules.Chrome.Service.LocalStore)
 
 ----------- CLASS DECLARATION --------------
 
@@ -61,7 +64,14 @@ local function Initialize()
 			}
 		)
 
-		MessageBus.publish(Constants.OnSurveyEventDescriptor, {eventType = Constants.SurveyEventType})
+		local customProps = nil
+		if GetFFlagChromeSurveySupport() then
+			local chromeSeenCount = tostring(LocalStore.getChromeSeenCount())
+			customProps = { chromeSeenCount = chromeSeenCount }
+		end
+
+		local localUserId = tostring(Players.LocalPlayer.UserId)
+		MessageBus.publish(Constants.OnSurveyEventDescriptor, {eventType = Constants.SurveyEventType, userId = localUserId, customProps = customProps})
 
 		-- need to wait for render frames so on slower devices the leave button highlight will update
 		-- otherwise, since on slow devices it takes so long to leave you are left wondering if you pressed the button

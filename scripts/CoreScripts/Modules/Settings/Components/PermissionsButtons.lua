@@ -36,21 +36,24 @@ local VoiceConstants = require(Modules.VoiceChat.Constants)
 local log = require(RobloxGui.Modules.Logger):new(script.Name)
 
 local GetFFlagInvertMuteAllPermissionButton = require(RobloxGui.Modules.Flags.GetFFlagInvertMuteAllPermissionButton)
-local GetFFlagMuteAllEvent = require(RobloxGui.Modules.Flags.GetFFlagMuteAllEvent)
 local FFlagAvatarChatCoreScriptSupport = require(RobloxGui.Modules.Flags.FFlagAvatarChatCoreScriptSupport)
 local GetFFlagUpdateSelfieViewOnBan = require(RobloxGui.Modules.Flags.GetFFlagUpdateSelfieViewOnBan)
 local GetFFlagShowMicConnectingIconAndToast = require(RobloxGui.Modules.Flags.GetFFlagShowMicConnectingIconAndToast)
-local FFlagACPermissionButtonFix = game:DefineFastFlag("ACPermissionButtonFix", false)
 local FFlagMuteNonFriendsEvent = require(RobloxGui.Modules.Flags.FFlagMuteNonFriendsEvent)
 local getFFlagDoNotPromptCameraPermissionsOnMount = require(RobloxGui.Modules.Flags.getFFlagDoNotPromptCameraPermissionsOnMount)
+local GetFFlagRemoveInGameChatBubbleChatReferences = require(RobloxGui.Modules.Flags.GetFFlagRemoveInGameChatBubbleChatReferences)
+local GetFFlagJoinWithoutMicPermissions = require(RobloxGui.Modules.Flags.GetFFlagJoinWithoutMicPermissions)
 
-local GetFFlagVoiceTextOverflowFix = require(RobloxGui.Modules.Flags.GetFFlagVoiceTextOverflowFix)
+if GetFFlagRemoveInGameChatBubbleChatReferences() then
+	displayCameraDeniedToast = require(RobloxGui.Modules.VoiceChat.Helpers.displayCameraDeniedToast)
+end
+
 local Analytics = require(RobloxGui.Modules.SelfView.Analytics).new()
 
 local PermissionsButtons = Roact.PureComponent:extend("PermissionsButtons")
 
 local PADDING_SIZE = 24
-local SMALL_PADDING_SIZE = if GetFFlagVoiceTextOverflowFix() then 10 else 16
+local SMALL_PADDING_SIZE = 10
 local DIVIDER_HEIGHT = 24
 local Y_HEIGHT = 38
 
@@ -136,11 +139,9 @@ function PermissionsButtons:init()
 	-- Mute all players in the lobby
 	self.toggleMuteAll = function()
 		-- Ensure VCS is initialized.
-		if FFlagACPermissionButtonFix then
-			local voiceService = VoiceChatServiceManager:getService()
-			if not voiceService then
-				return
-			end
+		local voiceService = VoiceChatServiceManager:getService()
+		if not voiceService then
+			return
 		end
 
 		local newAllPlayersMuted = not self.state.allPlayersMuted
@@ -165,14 +166,12 @@ function PermissionsButtons:init()
 			return
 		end
 		-- Ensure VCS is initialized.
-		if FFlagACPermissionButtonFix then
-			local voiceService = VoiceChatServiceManager:getService()
-			if not voiceService then
-				return
-			end
+		local voiceService = VoiceChatServiceManager:getService()
+		if not voiceService then
+			return
 		end
 
-		VoiceChatServiceManager:ToggleMic()
+		VoiceChatServiceManager:ToggleMic("InGameMenuPermissionsBar")
 
 		Analytics:setLastCtx("inExperienceEscapeMenu")
 
@@ -282,7 +281,7 @@ function PermissionsButtons:getPermissions()
 			hasMicPermissions = response.hasMicPermissions,
 		})
 	end
-	getCamMicPermissions(callback)
+	getCamMicPermissions(callback, nil, nil, "PermissionsButtons.getPermissions")
 end
 
 --[[
@@ -294,7 +293,7 @@ function PermissionsButtons:getMicPermission()
 			hasMicPermissions = response.hasMicPermissions,
 		})
 	end
-	getCamMicPermissions(callback, { PermissionsProtocol.Permissions.MICROPHONE_ACCESS :: string })
+	getCamMicPermissions(callback, { PermissionsProtocol.Permissions.MICROPHONE_ACCESS :: string }, nil, "PermissionsButtons.getMicPermission")
 end
 
 --[[
@@ -348,6 +347,9 @@ function PermissionsButtons:render()
 	local shouldShowMicButtons = self.state.hasMicPermissions
 	if GetFFlagUpdateSelfieViewOnBan() then
 		shouldShowMicButtons = self.state.hasMicPermissions and not VoiceChatServiceManager:VoiceChatEnded()
+	end
+	if GetFFlagJoinWithoutMicPermissions() then
+		shouldShowMicButtons = self.state.voiceServiceInitialized and not VoiceChatServiceManager:VoiceChatEnded()
 	end
 	local shouldShowCameraButtons = self.state.hasCameraPermissions
 	if getFFlagDoNotPromptCameraPermissionsOnMount() then
@@ -453,12 +455,10 @@ function PermissionsButtons:render()
 			event = StarterGui.CoreGuiChangedSignal,
 			callback = self.onCoreGuiChanged,
 		}),
-		MuteAllChangedEvent = if GetFFlagMuteAllEvent() then
-			Roact.createElement(ExternalEventConnection, {
-				event = VoiceChatServiceManager.muteAllChanged.Event,
-				callback = self.toggleMuteAllIcon,
-			})
-		else nil,
+		MuteAllChangedEvent = Roact.createElement(ExternalEventConnection, {
+			event = VoiceChatServiceManager.muteAllChanged.Event,
+			callback = self.toggleMuteAllIcon,
+		}),
 		VideoCaptureEnabledEvent = Roact.createElement(ExternalEventConnection, {
 			event = FaceAnimatorService:GetPropertyChangedSignal("VideoAnimationEnabled"),
 			callback = self.updateVideoCaptureEnabled,

@@ -50,8 +50,6 @@ local function initializeLibrary(configs)
 		}),
 
 		ImageSet = strict({
-			Button = require(script.Core.ImageSet.ImageSetComponent).Button,
-			Label = require(script.Core.ImageSet.ImageSetComponent).Label,
 			ImageSetButton = require(script.Core.ImageSet.ImageSetComponent).Button,
 			ImageSetLabel = require(script.Core.ImageSet.ImageSetComponent).Label,
 			Validator = strict({
@@ -65,6 +63,10 @@ local function initializeLibrary(configs)
 				SelectionMode = require(script.Core.Control.Enum.SelectionMode),
 			}),
 			Interactable = require(script.Core.Control.Interactable),
+		}),
+
+		Spatial = strict({
+			SurfaceGuiWithAdornee = require(script.Core.Spatial.SurfaceGuiWithAdornee),
 		}),
 
 		Style = strict({
@@ -90,10 +92,16 @@ local function initializeLibrary(configs)
 		Hooks = strict({
 			useExternalEvent = require(script.Utility.useExternalEvent),
 			useIsGamepad = require(script.Utility.useIsGamepad),
+			useInputType = require(script.Utility.useInputType),
 			useLazyRef = require(script.Utility.useLazyRef),
 			useInitializedValue = require(script.Utility.useInitializedValue),
 			useForwardRef = require(script.Utility.useForwardRef),
 			useProperties = require(script.Utility.useProperties),
+			usePropertiesDeferred = require(script.Utility.usePropertiesDeferred),
+		}),
+
+		Enums = strict({
+			InputType = require(script.Enums.InputType),
 		}),
 	})
 
@@ -129,10 +137,7 @@ local function initializeLibrary(configs)
 				ButtonType = require(script.App.Button.Enum.ButtonType),
 				StandardButtonSize = require(script.Core.Button.Enum.StandardButtonSize),
 			}),
-			PrimaryContextualButton = require(script.App.Button.PrimaryContextualButton),
-			PrimarySystemButton = require(script.App.Button.PrimarySystemButton),
-			SecondaryButton = require(script.App.Button.SecondaryButton),
-			AlertButton = require(script.App.Button.AlertButton),
+			Button = require(script.App.Button.Button),
 			ButtonStack = require(script.App.Button.ButtonStack),
 			TextButton = require(script.App.Button.TextButton),
 			LinkButton = require(script.App.Button.LinkButton),
@@ -218,11 +223,6 @@ local function initializeLibrary(configs)
 			GridView = require(script.App.Grid.GridView),
 			GridMetrics = require(script.App.Grid.GridMetrics),
 			DefaultMetricsGridView = require(script.App.Grid.DefaultMetricsGridView),
-		}),
-
-		Pill = strict({
-			SmallPill = require(script.App.Pill.SmallPill),
-			LargePill = require(script.App.Pill.LargePill),
 		}),
 
 		Tile = strict({
@@ -355,6 +355,8 @@ local function initializeLibrary(configs)
 			CursorProvider = require(script.App.SelectionCursor.CursorProvider),
 			useCursor = require(script.App.SelectionCursor.useCursor),
 			withCursor = require(script.App.SelectionCursor.withCursor),
+			useCursorByType = require(script.App.SelectionCursor.useCursorByType),
+			CursorType = require(script.App.SelectionCursor.CursorType),
 		}),
 
 		Template = strict({
@@ -374,6 +376,10 @@ local function initializeLibrary(configs)
 			CellHeadDetail = require(script.App.Table.CellHeadDetail),
 			CellTailDescription = require(script.App.Table.CellTailDescription),
 		}),
+
+		Input = strict({
+			TextField = require(script.App.Input.TextField),
+		}),
 	})
 
 	UIBlox.UnitTestHelpers = {
@@ -392,6 +398,7 @@ local function initializeLibrary(configs)
 				then require(script.App.Style.Validator.validateThemeNew)
 				else require(script.App.Style.Validator.validateTheme),
 			validateColorInfo = require(script.Core.Style.Validator.validateColorInfo),
+			validateColorToken = require(script.Core.Style.Validator.validateColorToken),
 		},
 		-- Used for updating the style in consumer who would have previously
 		-- used `_context` to access the style object
@@ -427,7 +434,7 @@ local function initializeLibrary(configs)
 		UIBlox = UsageTracker.trackMemberAccess("UIBlox", UIBlox, UsageTracker.isReactComponent)
 	end
 
-	if configs.enableLogger and configs.enableTraceLevelLog then
+	if configs.enableTraceLevelLog then
 		local Logger = require(script.Logger)
 		Logger:enableTraceLog()
 	end

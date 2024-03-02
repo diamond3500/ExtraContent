@@ -44,6 +44,7 @@ local MINIMUM_MIDDLE_SIZE_PIXELS = 200
 local LABEL_HEIGHT = 15
 local LABEL_TEXT_SIZE = 12
 local DISCLAIMER_TEXT_SIZE = 12
+local DELAYED_INPUT_ANIM_SEC = 3
 
 local NAME_TEXT = "name"
 local DESCRIPTION_TEXT = "description"
@@ -73,6 +74,7 @@ local LayeredAssetTypes = {
 local PublishAssetPrompt = script.Parent.Parent
 local GetFFlagValidateDescription = require(PublishAssetPrompt.GetFFlagValidateDescription)
 local FFlagSendConsentDeniedOnCancel = game:DefineFastFlag("SendConsentDeniedOnCancel", false)
+local FFlagDelayAssetCreatePrompt = game:DefineFastFlag("DelayAssetCreatePrompt", false)
 local EngineFeatureEnableEmotePublish = game:GetEngineFeature("EnableEmotePublish")
 
 local PublishAssetPromptSingleStep = Roact.PureComponent:extend("PublishAssetPromptSingleStep")
@@ -147,15 +149,12 @@ function PublishAssetPromptSingleStep:init()
 	end
 
 	self.denyAndClose = function()
-		-- We should never get to this point if this engine feature is off (see ConnectAssetServiceEvents.lua), but just in case:
-		if game:GetEngineFeature("ExperienceAuthReflectionFixes") then
-			ExperienceAuthService:ScopeCheckUIComplete(
-				self.props.guid,
-				self.props.scopes,
-				Enum.ScopeCheckResult.ConsentDenied,
-				{} -- empty metadata
-			)
-		end
+		ExperienceAuthService:ScopeCheckUIComplete(
+			self.props.guid,
+			self.props.scopes,
+			Enum.ScopeCheckResult.ConsentDenied,
+			{} -- empty metadata
+		)
 		self.closePrompt()
 	end
 
@@ -180,16 +179,13 @@ function PublishAssetPromptSingleStep:init()
 			metadata["emoteThumbnailParameters"] = emoteThumbnailParametersTable
 		end
 
-		-- We should never get to this point if this engine feature is off (see ConnectAssetServiceEvents.lua), but just in case:
-		if game:GetEngineFeature("ExperienceAuthReflectionFixes") then
-			ExperienceAuthService:ScopeCheckUIComplete(
-				self.props.guid,
-				self.props.scopes,
-				Enum.ScopeCheckResult.ConsentAccepted,
-				metadata
-			)
-			self.closePrompt()
-		end
+		ExperienceAuthService:ScopeCheckUIComplete(
+			self.props.guid,
+			self.props.scopes,
+			Enum.ScopeCheckResult.ConsentAccepted,
+			metadata
+		)
+		self.closePrompt()
 	end
 
 	self.onAssetNameUpdated = function(newName, isNameValid)
@@ -350,10 +346,18 @@ function PublishAssetPromptSingleStep:renderAlertLocalized(localized)
 				},
 				{
 					buttonType = ButtonType.PrimarySystem,
-					props = {
-						onActivated = self.confirmAndUpload,
-						text = localized[SUBMIT_TEXT],
-					},
+					props = if FFlagDelayAssetCreatePrompt
+						then {
+							onActivated = self.confirmAndUpload,
+							text = localized[SUBMIT_TEXT],
+							isDelayedInput = true,
+							enableInputDelayed = true,
+							delayInputSeconds = DELAYED_INPUT_ANIM_SEC,
+						}
+						else {
+							onActivated = self.confirmAndUpload,
+							text = localized[SUBMIT_TEXT],
+						},
 					isDefaultChild = false,
 				},
 			},

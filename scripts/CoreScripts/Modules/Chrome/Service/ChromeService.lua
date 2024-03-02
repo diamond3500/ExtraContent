@@ -1,6 +1,8 @@
 local CorePackages = game:GetService("CorePackages")
 local LocalizationService = game:GetService("LocalizationService")
 local UserInputService = game:GetService("UserInputService")
+local LuauPolyfill = require(CorePackages.Packages.LuauPolyfill)
+local reverse = LuauPolyfill.Array.reverse
 
 local SignalLib = require(CorePackages.Workspace.Packages.AppCommonLib)
 local Localization = require(CorePackages.Workspace.Packages.InExperienceLocales).Localization
@@ -16,14 +18,18 @@ local AvailabilitySignal = utils.AvailabilitySignal
 local Types = require(script.Parent.Types)
 
 local GetFFlagEnableUnibarSneakPeak = require(script.Parent.Parent.Flags.GetFFlagEnableUnibarSneakPeak)
+local GetFFlagEnableChromeFTUX = require(script.Parent.Parent.Flags.GetFFlagEnableChromeFTUX)
 local GetFFlagEnableUnibarMaxDefaultOpen = require(script.Parent.Parent.Flags.GetFFlagEnableUnibarMaxDefaultOpen)
-local EnableInGameMenuChromeWithoutSeenClose =
-	require(script.Parent.Parent.Flags.GetFFlagEnableInGameMenuChromeWithoutSeenClose)
-local GetFFlagSelfViewMultiTouchFix = require(script.Parent.Parent.Flags.GetFFlagSelfViewMultiTouchFix)
+local GetFFlagEnableChromeEscapeFix = require(script.Parent.Parent.Flags.GetFFlagEnableChromeEscapeFix)
+local GetFFlagEnableChromeDefaultOpen = require(script.Parent.Parent.Flags.GetFFlagEnableChromeDefaultOpen)
+local GetFFlagNewUnibarIA = require(script.Parent.Parent.Flags.GetFFlagNewUnibarIA)
+local GetFFlagEnableChromePinIntegrations = require(script.Parent.Parent.Flags.GetFFlagEnableChromePinIntegrations)
+local EnabledPinnedChat = require(script.Parent.Parent.Flags.GetFFlagEnableChromePinnedChat)()
+local GetFFlagChromeSurveySupport = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagChromeSurveySupport
 
-local NOTIFICATION_INDICATOR_DISPLAY_TIME_SEC = 1.5
+local NOTIFICATION_INDICATOR_DISPLAY_TIME_SEC = 2.5
 local NOTIFICATION_INDICATOR_IDLE_COOLDOWN_TIME_SEC = 10
-local CHROME_INTERACTED_KEY = "ChromeInteracted"
+local CHROME_INTERACTED_KEY = "ChromeInteracted2"
 local CHROME_SEEN_COUNT_KEY = "ChromeSeenCount"
 local MAX_CHROME_SEEN_COUNT = 3
 
@@ -38,6 +44,11 @@ ChromeService.MenuStatus = { Closed = 0, Open = 1 }
 ChromeService.IntegrationStatus = { None = 0, Icon = 1, Window = 2 }
 ChromeService.Key = {
 	MostRecentlyUsed = "MRU",
+	UserPinned = if GetFFlagEnableChromePinIntegrations then "UP" else nil,
+}
+
+export type UnibarLayoutInfo = {
+	[number]: Rect,
 }
 
 export type ObservableMenuStatus = utils.ObservableValue<number>
@@ -46,11 +57,13 @@ export type ObservableMenuList = utils.ObservableValue<Types.MenuList>
 export type ObservableIntegration = utils.ObservableValue<Types.IntegrationComponentProps | nil>
 export type ObservableIntegrationList = utils.ObservableValue<Types.IntegrationList>
 export type ObservableIntegrationId = utils.ObservableValue<string?>
+export type ObservableMenuLayout = utils.ObservableValue<UnibarLayoutInfo>
 
 export type ObservableWindowList = utils.ObservableValue<Types.WindowList>
 
 export type ObservableDragConnection = utils.ObservableValue<{ current: RBXScriptConnection? }?>
 type DragConnectionObjectType = any
+export type ObservableAlignment = utils.ObservableValue<Enum.HorizontalAlignment>
 
 function noop() end
 
@@ -66,10 +79,13 @@ export type ChromeService = {
 	toggleSubMenu: (ChromeService, subMenuId: Types.IntegrationId) -> (),
 	currentSubMenu: (ChromeService) -> ObservableSubMenu,
 	toggleOpen: (ChromeService) -> (),
-	open: (ChromeService) -> (),
+	open: (ChromeService, preventFocusCapture: boolean?) -> (),
 	close: (ChromeService) -> (),
 	getLastInputToOpenMenu: (ChromeService) -> Enum.UserInputType,
 	status: (ChromeService) -> ObservableMenuStatus,
+	layout: (ChromeService) -> ObservableMenuLayout,
+	setMenuAbsolutePosition: (ChromeService, position: Vector2) -> (),
+	setMenuAbsoluteSize: (ChromeService, closed: Vector2, open: Vector2) -> (),
 	menuList: (ChromeService) -> ObservableMenuList,
 	windowList: (ChromeService) -> ObservableWindowList,
 	updateLocalization: (ChromeService, component: Types.IntegrationRegisterProps) -> Types.IntegrationRegisterProps,
@@ -98,6 +114,13 @@ export type ChromeService = {
 	withinCurrentSubmenu: (ChromeService, componentId: Types.IntegrationId) -> boolean,
 	isMostRecentlyUsed: (ChromeService, componentId: Types.IntegrationId) -> boolean,
 	setRecentlyUsed: (ChromeService, componentId: Types.IntegrationId, force: boolean?) -> (),
+	removeRecentlyUsed: (ChromeService, componentId: Types.IntegrationId, force: boolean?) -> (),
+	rebuildMostRecentlyUsed: (ChromeService) -> (),
+	isUserPinned: (ChromeService, componentId: Types.IntegrationId) -> boolean,
+	setUserPin: (ChromeService, componentId: Types.IntegrationId, force: boolean?) -> (),
+	removeUserPin: (ChromeService, componentId: Types.IntegrationId, force: boolean?) -> (),
+	rebuildUserPins: (ChromeService) -> (),
+	areUserPinsFull: (ChromeService) -> boolean,
 	storeChromeInteracted: (ChromeService) -> (),
 	storeChromeSeen: (ChromeService) -> (),
 	activate: (ChromeService, componentId: Types.IntegrationId) -> (),
@@ -105,9 +128,17 @@ export type ChromeService = {
 	isWindowOpen: (ChromeService, componentId: Types.IntegrationId) -> boolean,
 	updateWindowSizeSignals: (ChromeService) -> (),
 	windowPosition: (ChromeService, componentId: Types.IntegrationId) -> UDim2?,
-	updateScreenSize: (ChromeService, screenSize: Vector2, isMobileDevice: boolean) -> (),
+	updateScreenSize: (
+		ChromeService,
+		screenSize: Vector2,
+		isMobileDevice: boolean,
+		isPortrait: boolean,
+		isTinyPortrait: boolean
+	) -> (),
 	updateWindowPosition: (ChromeService, componentId: Types.IntegrationId, position: UDim2) -> (),
 	createIconProps: (ChromeService, Types.IntegrationId, number?, boolean?) -> Types.IntegrationComponentProps,
+	orderAlignment: (ChromeService) -> ObservableAlignment,
+	configureOrderAlignment: (ChromeService, alignment: Enum.HorizontalAlignment) -> (),
 
 	onIntegrationRegistered: (ChromeService) -> SignalLib.Signal,
 	onIntegrationActivated: (ChromeService) -> SignalLib.Signal,
@@ -121,6 +152,10 @@ export type ChromeService = {
 	setSelectedByOffset: (ChromeService, number) -> (),
 
 	_status: ObservableMenuStatus,
+	_layout: ObservableMenuLayout,
+	_menuAbsolutePosition: Vector2,
+	_menuAbsoluteSizeOpen: Vector2,
+	_menuAbsoluteSizeClosed: Vector2,
 	_currentSubMenu: ObservableSubMenu,
 
 	_integrations: Types.IntegrationList,
@@ -136,7 +171,8 @@ export type ChromeService = {
 	_totalNotifications: utils.NotifySignal,
 	_mostRecentlyUsedFullRecord: { Types.IntegrationId },
 	_mostRecentlyUsed: Types.IntegrationIdList,
-	_mostRecentlyUsedLimit: number,
+	_userPins: Types.IntegrationIdList,
+	_mostRecentlyUsedAndPinnedLimit: number,
 	_notificationIndicator: ObservableIntegration,
 	_lastDisplayedNotificationTick: number,
 	_lastDisplayedNotificationId: Types.IntegrationId,
@@ -154,6 +190,7 @@ export type ChromeService = {
 	},
 	_selectedItem: ObservableIntegrationId,
 	_selectedItemIdx: number,
+	_orderAlignment: ObservableAlignment,
 }
 
 local DummyIntegration = {
@@ -166,13 +203,27 @@ local DummyIntegration = {
 	hideNotificationCountWhileOpen = false,
 }
 
+function createUnibarLayoutInfo(position: Vector2, closedSize: Vector2, openSize: Vector2): UnibarLayoutInfo
+	return {
+		[ChromeService.MenuStatus.Open] = Rect.new(position, (position + openSize)),
+		[ChromeService.MenuStatus.Closed] = Rect.new(position, (position + closedSize)),
+	}
+end
+
 function ChromeService.new(): ChromeService
 	local localeId = LocalizationService.RobloxLocaleId
 	local self = {}
 	self._chromeSeenCount = if GetFFlagEnableUnibarMaxDefaultOpen() then getChromeSeenCount() else 0
-	self._status = if GetFFlagEnableUnibarSneakPeak() or GetFFlagEnableUnibarMaxDefaultOpen()
+
+	local status: ObservableMenuStatus = if GetFFlagEnableChromeDefaultOpen()
+			and (GetFFlagEnableUnibarSneakPeak() or GetFFlagEnableUnibarMaxDefaultOpen())
 		then getInitialStatus(self._chromeSeenCount)
 		else utils.ObservableValue.new(ChromeService.MenuStatus.Closed)
+	self._status = status
+	self._layout = utils.ObservableValue.new(createUnibarLayoutInfo(Vector2.zero, Vector2.zero, Vector2.zero))
+	self._menuAbsolutePosition = Vector2.zero
+	self._menuAbsoluteSizeOpen = Vector2.zero
+	self._menuAbsoluteSizeClosed = Vector2.zero
 	self._currentSubMenu = utils.ObservableValue.new(nil)
 	self._selectedItem = utils.ObservableValue.new(nil)
 	self._selectedItemIdx = 0
@@ -189,28 +240,40 @@ function ChromeService.new(): ChromeService
 	self._totalNotifications = NotifySignal.new(true)
 	self._mostRecentlyUsedFullRecord = {}
 	self._mostRecentlyUsed = {}
-	self._mostRecentlyUsedLimit = 1
+	self._userPins = {}
+	self._mostRecentlyUsedAndPinnedLimit = 1
 	self._localization = Localization.new(localeId)
 	self._localizedLabelKeys = {}
 
 	self._notificationIndicator = ObservableValue.new(nil)
 	self._lastDisplayedNotificationTick = 0
 	self._lastDisplayedNotificationId = ""
+	self._orderAlignment = ObservableValue.new(Enum.HorizontalAlignment.Left)
 
 	self._onIntegrationRegistered = Signal.new()
 	self._onIntegrationActivated = Signal.new()
 	self._onIntegrationStatusChanged = Signal.new()
 
-	self._lastInputToOpenMenu = Enum.UserInputType.None
+	-- If unibar is default opened, init as MouseButton1 to prevent focus navigation at startup
+	self._lastInputToOpenMenu = if GetFFlagEnableChromeEscapeFix()
+			and GetFFlagEnableChromeDefaultOpen()
+			and status:get() == ChromeService.MenuStatus.Open
+		then Enum.UserInputType.MouseButton1
+		else Enum.UserInputType.None
 
 	local service = (setmetatable(self, ChromeService) :: any) :: ChromeService
 
 	-- todo: Consider moving this outside of ChromeService to reduce dependency on Roblox instances
-	ViewportUtil.screenSize:connect(function(screenSize)
-		service:updateScreenSize(screenSize, ViewportUtil.mobileDevice:get())
+	ViewportUtil.viewport:connect(function(viewportInfo: ViewportUtil.ViewportInfo)
+		service:updateScreenSize(
+			viewportInfo.size,
+			viewportInfo.isMobileDevice,
+			viewportInfo.portraitOrientation,
+			viewportInfo.tinyPortrait
+		)
 	end, true)
 
-	if GetFFlagEnableUnibarMaxDefaultOpen() and not EnableInGameMenuChromeWithoutSeenClose() then
+	if GetFFlagEnableUnibarMaxDefaultOpen() then
 		service:storeChromeSeen()
 	end
 
@@ -219,14 +282,18 @@ end
 
 -- Get how many times user has seen chrome from local storage
 function getChromeSeenCount(): number
-	if GetFFlagEnableUnibarMaxDefaultOpen() and LocalStore.isEnabled() then
-		local chromeSeenCount = LocalStore.loadForLocalPlayer(CHROME_SEEN_COUNT_KEY)
-		if chromeSeenCount and tonumber(chromeSeenCount) then
-			return chromeSeenCount
+	if GetFFlagChromeSurveySupport() then
+		return LocalStore.getChromeSeenCount()
+	else
+		if GetFFlagEnableUnibarMaxDefaultOpen() and LocalStore.isEnabled() then
+			local chromeSeenCount = LocalStore.loadForLocalPlayer(CHROME_SEEN_COUNT_KEY)
+			if chromeSeenCount and tonumber(chromeSeenCount) then
+				return chromeSeenCount
+			end
 		end
-	end
 
-	return 0
+		return 0
+	end
 end
 
 -- Get initial status of menu: closed if interacted with before or seen enough times, open otherwise
@@ -239,11 +306,7 @@ function getInitialStatus(chromeSeenCount: number): ObservableMenuStatus
 			end
 		end
 
-		if
-			GetFFlagEnableUnibarMaxDefaultOpen()
-			and chromeSeenCount >= MAX_CHROME_SEEN_COUNT
-			and not EnableInGameMenuChromeWithoutSeenClose()
-		then
+		if GetFFlagEnableUnibarMaxDefaultOpen() and chromeSeenCount >= MAX_CHROME_SEEN_COUNT then
 			return utils.ObservableValue.new(ChromeService.MenuStatus.Closed)
 		end
 	end
@@ -265,55 +328,89 @@ function ChromeService:storeChromeSeen()
 	end
 end
 
-function ChromeService:updateScreenSize(screenSize: Vector2, isMobileDevice: boolean)
+function ChromeService:updateScreenSize(
+	screenSize: Vector2,
+	isMobileDevice: boolean,
+	isPortrait: boolean,
+	isTinyPortrait: boolean
+)
 	-- Upon screen viewport resize:
 
 	-- 1) Configured the number of most recently used slots
-
-	local isPortrait = screenSize.Y > screenSize.X
-	local smallPortraitLimitPx = 375
-	local isTinyPortrait = isPortrait and screenSize.X < smallPortraitLimitPx
-
-	local mostRecentlyUsedSlots = 0
+	local mostRecentlyUsedAndPinnedSlots = 0
 
 	if isMobileDevice then
 		if isTinyPortrait then
-			mostRecentlyUsedSlots = 0
+			mostRecentlyUsedAndPinnedSlots = 0
 		elseif isPortrait then
-			mostRecentlyUsedSlots = 1
+			mostRecentlyUsedAndPinnedSlots = 1
 		else
-			mostRecentlyUsedSlots = 2
+			mostRecentlyUsedAndPinnedSlots = 2
+		end
+
+		if EnabledPinnedChat and not GetFFlagNewUnibarIA() then
+			mostRecentlyUsedAndPinnedSlots = math.max(0, mostRecentlyUsedAndPinnedSlots - 1)
 		end
 	else
-		mostRecentlyUsedSlots = 4
+		mostRecentlyUsedAndPinnedSlots = 4
 	end
 
-	-- 2) Repopulate most recently list if the slot count changes
-
-	if mostRecentlyUsedSlots ~= self._mostRecentlyUsedLimit then
+	-- 2) Repopulate most recently and user pin lists if the slot count changes
+	if mostRecentlyUsedAndPinnedSlots ~= self._mostRecentlyUsedAndPinnedLimit then
 		-- only run if slot count changes; limit updates
+		self._mostRecentlyUsedAndPinnedLimit = mostRecentlyUsedAndPinnedSlots
 
-		self._mostRecentlyUsedLimit = mostRecentlyUsedSlots
-		table.clear(self._mostRecentlyUsed)
-
-		local i = #self._mostRecentlyUsedFullRecord
-		if i > 0 then
-			-- slice a subset of the full record to repopulate slots
-			table.move(
-				self._mostRecentlyUsedFullRecord, -- src
-				math.max(1, i - mostRecentlyUsedSlots + 1), -- src start index
-				i, -- src end index
-				1, -- dst insert index
-				self._mostRecentlyUsed -- dst
-			)
+		if GetFFlagEnableChromePinIntegrations() then
+			self:rebuildUserPins()
 		end
-
-		self:updateMenuList()
-		self:updateNotificationTotals()
+		self:rebuildMostRecentlyUsed()
 	end
 
 	-- 3) Update window size signals
 	self:updateWindowSizeSignals()
+end
+
+function ChromeService:rebuildMostRecentlyUsed()
+	table.clear(self._mostRecentlyUsed)
+
+	local i = #self._mostRecentlyUsedFullRecord
+	if i > 0 then
+		local srcStartIndex = i - self._mostRecentlyUsedAndPinnedLimit + 1
+		if GetFFlagEnableChromePinIntegrations() then
+			srcStartIndex = i - self._mostRecentlyUsedAndPinnedLimit + #self._userPins + 1
+		end
+
+		-- slice a subset of the full record to repopulate slots
+		table.move(
+			self._mostRecentlyUsedFullRecord, -- src
+			math.max(1, srcStartIndex), -- src start index
+			i, -- src end index
+			1, -- dst insert index
+			self._mostRecentlyUsed -- dst
+		)
+	end
+
+	self:updateMenuList()
+	self:updateNotificationTotals()
+end
+
+function ChromeService:rebuildUserPins()
+	if GetFFlagEnableChromePinIntegrations() and self._mostRecentlyUsedAndPinnedLimit < #self._userPins then
+		local newUserPins = {}
+		local i = #self._userPins
+		table.move(
+			self._userPins, -- src
+			math.max(1, i - self._mostRecentlyUsedAndPinnedLimit + 1), -- src start index
+			i, -- src end index
+			1, -- dst insert index
+			newUserPins -- dst
+		)
+
+		self._userPins = newUserPins
+
+		self:updateMenuList()
+		self:updateNotificationTotals()
+	end
 end
 
 function ChromeService:updateWindowSizeSignals()
@@ -326,12 +423,23 @@ end
 
 function ChromeService:triggerNotificationIndicator(id: Types.IntegrationId)
 	local menuStatus: ObservableMenuStatus = self._status
+	local integration = self._integrations[id]
+	local integrationAvailability = integration.availability:get()
+
+	if
+		integrationAvailability == ChromeService.AvailabilitySignal.Unavailable
+		or integrationAvailability == ChromeService.AvailabilitySignal.Pinned
+	then
+		-- Early exit for pinned and hidden items
+		return
+	end
+
 	if menuStatus:get() ~= ChromeService.MenuStatus.Closed then
 		-- Early out if the menu isn't closed.  We only need to show this in the closed state.
 		return
 	end
 
-	local notification = self._integrations[id].notification:get()
+	local notification = integration.notification:get()
 	if notification.type == "count" then
 		local count: number = notification.value :: any
 		-- Only run if the count is non zero.
@@ -413,14 +521,21 @@ function ChromeService:toggleOpen()
 	end
 end
 
-function ChromeService:open()
+function ChromeService:open(preventFocusCapture: boolean?)
 	local menuStatus: ObservableMenuStatus = self._status
 
 	if menuStatus:get() == ChromeService.MenuStatus.Closed then
 		menuStatus:set(ChromeService.MenuStatus.Open)
 		self._lastDisplayedNotificationId = ""
 		self._notificationIndicator:set(nil)
-		self._lastInputToOpenMenu = UserInputService:GetLastInputType()
+
+		if GetFFlagEnableChromeFTUX() then
+			self._lastInputToOpenMenu = if preventFocusCapture
+				then Enum.UserInputType.Touch
+				else UserInputService:GetLastInputType()
+		else
+			self._lastInputToOpenMenu = UserInputService:GetLastInputType()
+		end
 	end
 end
 
@@ -608,6 +723,17 @@ function ChromeService:createIconProps(
 	end
 end
 
+function reverseOrder(t)
+	local n = #t
+	local revOrder = {}
+	for i = 1, n do
+		revOrder[i] = t[i].order
+	end
+	for i = 1, n do
+		t[i].order = revOrder[n - i + 1]
+	end
+end
+
 -- Convert the menuConfig into view-model data for the unibar
 -- This incluses adding dividers between groups and child submenus
 function ChromeService:updateMenuList()
@@ -676,6 +802,9 @@ function ChromeService:updateMenuList()
 			if v == ChromeService.Key.MostRecentlyUsed then
 				-- If MostRecentlyUsed special key, substitute for the MostRecentlyUsed array
 				collectMenu(self._mostRecentlyUsed, parent, windowList)
+			elseif GetFFlagEnableChromePinIntegrations() and v == ChromeService.Key.UserPinned then
+				-- If UserPinned special key, substitute for the UserPinned array
+				collectMenu(self._userPins, parent, windowList)
 			elseif type(v) == "table" then
 				-- A list (non-string item) is a group of items that require visual dividers to bookend
 				if not #parent.children then
@@ -724,6 +853,11 @@ function ChromeService:updateMenuList()
 	-- Remove dangling dividers
 	if #root.children and root.children[#root.children] and root.children[#root.children].isDivider then
 		table.remove(root.children, #root.children)
+	end
+
+	if self._orderAlignment:get() == Enum.HorizontalAlignment.Left then
+		root.children = reverse(root.children)
+		reverseOrder(root.children)
 	end
 
 	-- todo: nice to have optimization, only update if we fail an equality check
@@ -839,17 +973,11 @@ function ChromeService:gesture(
 	connection: { current: RBXScriptConnection? }?,
 	inputObject: InputObject?
 )
-	if GetFFlagSelfViewMultiTouchFix() then
-		if self._integrations[componentId] then
-			self._dragConnection[componentId] = {
-				connection = connection,
-				inputObject = inputObject,
-			}
-		end
-	else
-		if self._integrations[componentId] then
-			self._dragConnection[componentId] = connection
-		end
+	if self._integrations[componentId] then
+		self._dragConnection[componentId] = {
+			connection = connection,
+			inputObject = inputObject,
+		}
 	end
 end
 
@@ -896,10 +1024,28 @@ function ChromeService:isMostRecentlyUsed(componentId: Types.IntegrationId)
 	return table.find(self._mostRecentlyUsed, componentId) ~= nil
 end
 
+function ChromeService:removeRecentlyUsed(componentId: Types.IntegrationId)
+	local idx = table.find(self._mostRecentlyUsedFullRecord, componentId)
+	if idx then
+		table.remove(self._mostRecentlyUsedFullRecord, idx)
+	end
+
+	self:rebuildMostRecentlyUsed()
+end
 function ChromeService:setRecentlyUsed(componentId: Types.IntegrationId, force: boolean?)
 	if force or (self:withinCurrentSubmenu(componentId) and not self:isMostRecentlyUsed(componentId)) then
+		-- if integration is pinned by user, do not set it to an MRU slot
+		if GetFFlagEnableChromePinIntegrations() and self:isUserPinned(componentId) then
+			return
+		end
+
 		table.insert(self._mostRecentlyUsed, componentId)
-		while self._mostRecentlyUsedLimit >= 0 and #self._mostRecentlyUsed > self._mostRecentlyUsedLimit do
+		local maxMostRecentlyUsedSlots = self._mostRecentlyUsedAndPinnedLimit
+		if GetFFlagEnableChromePinIntegrations() then
+			maxMostRecentlyUsedSlots = self._mostRecentlyUsedAndPinnedLimit - #self._userPins
+		end
+
+		while self._mostRecentlyUsedAndPinnedLimit >= 0 and #self._mostRecentlyUsed > maxMostRecentlyUsedSlots do
 			table.remove(self._mostRecentlyUsed, 1)
 		end
 		self:updateMenuList()
@@ -913,6 +1059,40 @@ function ChromeService:setRecentlyUsed(componentId: Types.IntegrationId, force: 
 		end
 		table.insert(self._mostRecentlyUsedFullRecord, componentId)
 	end
+end
+
+function ChromeService:isUserPinned(componentId: Types.IntegrationId)
+	return GetFFlagEnableChromePinIntegrations() and table.find(self._userPins, componentId) ~= nil
+end
+
+function ChromeService:removeUserPin(componentId: Types.IntegrationId)
+	if not GetFFlagEnableChromePinIntegrations() then
+		return
+	end
+
+	local idx = table.find(self._userPins, componentId)
+	if idx then
+		table.remove(self._userPins, idx)
+	end
+
+	self:updateMenuList()
+	self:updateNotificationTotals()
+end
+
+function ChromeService:setUserPin(componentId: Types.IntegrationId, force: boolean?)
+	if
+		(force or (self:withinCurrentSubmenu(componentId) and not self:isUserPinned(componentId)))
+		and #self._userPins < self._mostRecentlyUsedAndPinnedLimit
+		and GetFFlagEnableChromePinIntegrations()
+	then
+		table.insert(self._userPins, componentId)
+
+		self:removeRecentlyUsed(componentId)
+	end
+end
+
+function ChromeService:areUserPinsFull()
+	return GetFFlagEnableChromePinIntegrations() and self._mostRecentlyUsedAndPinnedLimit <= #self._userPins
 end
 
 function ChromeService:windowPosition(componentId: Types.IntegrationId)
@@ -940,6 +1120,10 @@ function ChromeService:activate(componentId: Types.IntegrationId)
 
 		if GetFFlagEnableUnibarSneakPeak() then
 			self:storeChromeInteracted()
+		end
+
+		if GetFFlagEnableChromeFTUX() then
+			LocalStore.storeForLocalPlayer(componentId, true)
 		end
 
 		if integrationActivated then
@@ -1027,6 +1211,35 @@ function ChromeService:repairSelected()
 		idx = math.clamp(idx, 1, #menuItems)
 		self:setSelected(menuItems[idx].id)
 	end
+end
+function ChromeService:configureOrderAlignment(alignment: Enum.HorizontalAlignment)
+	if self._orderAlignment:get() ~= alignment then
+		self._orderAlignment:set(alignment)
+		self:updateMenuList()
+	end
+end
+
+function ChromeService:orderAlignment()
+	return self._orderAlignment
+end
+
+function ChromeService:setMenuAbsolutePosition(position: Vector2)
+	if position ~= self._menuAbsolutePosition then
+		self._menuAbsolutePosition = position
+		self._layout:set(createUnibarLayoutInfo(position, self._menuAbsoluteSizeClosed, self._menuAbsoluteSizeOpen))
+	end
+end
+
+function ChromeService:setMenuAbsoluteSize(closed: Vector2, open: Vector2)
+	if closed ~= self._menuAbsoluteSizeClosed or open ~= self._menuAbsoluteSizeOpen then
+		self._menuAbsoluteSizeClosed = closed
+		self._menuAbsoluteSizeOpen = open
+		self._layout:set(createUnibarLayoutInfo(self._menuAbsolutePosition, closed, open))
+	end
+end
+
+function ChromeService:layout()
+	return self._layout
 end
 
 return ChromeService

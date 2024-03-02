@@ -7,8 +7,6 @@
 
 	Pills can be used directly or via a PillGroup.
 ]]
-local TextService = game:GetService("TextService")
-
 local Control = script.Parent.Parent
 local App = Control.Parent
 local UIBlox = App.Parent
@@ -32,6 +30,10 @@ local getContentStyle = require(Core.Button.getContentStyle)
 local GenericTextLabel = require(Core.Text.GenericTextLabel.GenericTextLabel)
 local ImageSetComponent = require(UIBlox.Core.ImageSet.ImageSetComponent)
 local ShimmerPanel = require(UIBlox.App.Loading.ShimmerPanel)
+local useCursorByType = require(App.SelectionCursor.useCursorByType)
+local CursorType = require(App.SelectionCursor.CursorType)
+local UIBloxConfig = require(UIBlox.UIBloxConfig)
+local GetTextSize = require(UIBlox.Core.Text.GetTextSize)
 
 local INNER_PADDING = 12
 local LIST_PADDING = 4
@@ -44,6 +46,8 @@ export type Props = {
 	layoutOrder: number?,
 	-- Text of the `Pill` button
 	text: string?,
+	-- Enables a thin border stroke around the `Pill`
+	hasBorder: boolean?,
 	-- Highlights the `Pill`, becomes selected with a close icon
 	isSelected: boolean?,
 	-- Sets the `Pill` to a loading shimmer
@@ -52,6 +56,8 @@ export type Props = {
 	isDisabled: boolean?,
 	-- Callback function invoked when the `Pill` is clicked
 	onActivated: (() -> ())?,
+	-- Callback invoked when `Pill` control state changes. When possible, `onActivated` should be used instead.
+	onStateChanged: ((oldState: EnumItem, newState: EnumItem) -> ())?,
 
 	-- Navigation parameter for RoactGamepad support
 	NextSelectionLeft: any,
@@ -62,6 +68,15 @@ export type Props = {
 	-- Navigation parameter for RoactGamepad support
 	NextSelectionDown: any,
 	controlRef: any,
+}
+
+local defaultProps = {
+	hasBorder = false,
+	isDisabled = false,
+	isLoading = false,
+	isSelected = false,
+	layoutOrder = 1,
+	text = "",
 }
 
 local CLOSE_ICON = "icons/navigation/close_small"
@@ -96,22 +111,27 @@ local BUTTON_STATE_COLOR_LAYER2 = {
 	[ControlState.Hover] = "BackgroundOnHover",
 }
 
-local function Pillv2(props: Props)
-	local controlState, onStateChanged = useControlState()
+local function Pillv2(providedProps: Props)
+	local props: Props = Cryo.Dictionary.join(defaultProps, providedProps)
+	local text = props.text :: string
+
+	local controlState, internalOnStateChanged = useControlState()
+	local onStateChanged = React.useCallback(function(oldState, newState)
+		if props.onStateChanged then
+			props.onStateChanged(oldState, newState)
+		end
+		internalOnStateChanged(oldState, newState)
+	end, { props.onStateChanged })
+
 	local style = useStyle()
 	local font = style.Font
 
-	local layoutOrder = props.layoutOrder or 1
-	local isSelected = props.isSelected or false
-	local isDisabled = props.isDisabled or false
-	local isLoading = props.isLoading or false
-	local text = props.text or ""
-	local onActivated = props.onActivated
+	local selectionCursor = if UIBloxConfig.migrateToNewSelectionCursor
+		then useCursorByType(CursorType.SmallPill)
+		else useSelectionCursor(CursorKind.SmallPill)
 
-	local selectionCursor = useSelectionCursor(CursorKind.SmallPill)
-
-	local textStateColorMap = if isSelected then SELECTED_TEXT_STATE_COLOR else TEXT_STATE_COLOR
-	local buttonStateColorMap = if isSelected then SELECTED_BUTTON_STATE_COLOR else BUTTON_STATE_COLOR
+	local textStateColorMap = if props.isSelected then SELECTED_TEXT_STATE_COLOR else TEXT_STATE_COLOR
+	local buttonStateColorMap = if props.isSelected then SELECTED_BUTTON_STATE_COLOR else BUTTON_STATE_COLOR
 
 	local iconStyle = getContentStyle(SELECTED_ICON_STATE_COLOR, controlState, style)
 	local textStyle = getContentStyle(textStateColorMap, controlState, style)
@@ -121,25 +141,25 @@ local function Pillv2(props: Props)
 	local iconSize = getIconSize(IconSize.Small)
 	local baseSize = font.BaseSize
 	local fontSize = font.CaptionHeader.RelativeSize * baseSize
-	local textBounds = TextService:GetTextSize(text, fontSize, font.CaptionHeader.Font, Vector2.new(10000, 10000)).X
+	local textBounds = GetTextSize(text, fontSize, font.CaptionHeader.Font, Vector2.new(10000, 10000)).X
 
 	local pillWidth = textBounds + (INNER_PADDING * 2)
 	local textAreaSize = MAX_BUTTON_WIDTH - (INNER_PADDING * 2)
-	if isSelected then
+	if props.isSelected then
 		local closeIconSpace = LIST_PADDING + iconSize
 		pillWidth += closeIconSpace
 		textAreaSize -= closeIconSpace
 	end
 
-	if isLoading then
+	if props.isLoading then
 		return React.createElement(ShimmerPanel, {
-			LayoutOrder = layoutOrder,
+			LayoutOrder = props.layoutOrder,
 			Size = UDim2.new(0, pillWidth, 0, BUTTON_HEIGHT),
 			cornerRadius = UDim.new(1, 0),
 		})
 	end
 
-	local showSecondLayerBackgrounod = not isSelected and controlState == ControlState.Hover
+	local showSecondLayerBackgrounod = not props.isSelected and controlState == ControlState.Hover
 
 	return React.createElement(Interactable, {
 		Size = UDim2.new(0, pillWidth, 0, BUTTON_HEIGHT),
@@ -149,12 +169,12 @@ local function Pillv2(props: Props)
 		ImageTransparency = buttonStyle.Transparency,
 		AutoButtonColor = false,
 		BorderSizePixel = 0,
-		LayoutOrder = layoutOrder,
+		LayoutOrder = props.layoutOrder,
 		ScaleType = Enum.ScaleType.Slice,
-		isDisabled = isDisabled,
+		isDisabled = props.isDisabled,
 
 		SelectionImageObject = selectionCursor,
-		[React.Event.Activated] = if not isLoading then onActivated else nil,
+		[React.Event.Activated] = if not props.isLoading then props.onActivated else nil,
 		onStateChanged = onStateChanged,
 
 		ref = props.controlRef,
@@ -179,6 +199,13 @@ local function Pillv2(props: Props)
 			UICorner = React.createElement("UICorner", {
 				CornerRadius = UDim.new(1, 0),
 			}),
+			UIStroke = if props.hasBorder
+				then React.createElement("UIStroke", {
+					Color = style.Theme.Divider.Color,
+					Transparency = style.Theme.Divider.Transparency,
+					Thickness = 1,
+				})
+				else nil,
 			Content = React.createElement("Frame", {
 				AnchorPoint = Vector2.new(0.5, 0.5),
 				Position = UDim2.fromScale(0.5, 0.5),
@@ -212,7 +239,7 @@ local function Pillv2(props: Props)
 						MaxSize = Vector2.new(textAreaSize, BUTTON_HEIGHT),
 					}),
 				}),
-				CloseIcon = isSelected and React.createElement(ImageSetComponent.Label, {
+				CloseIcon = props.isSelected and React.createElement(ImageSetComponent.Label, {
 					LayoutOrder = 2,
 					AnchorPoint = Vector2.new(0.5, 0.5),
 					Size = UDim2.fromOffset(iconSize, iconSize),

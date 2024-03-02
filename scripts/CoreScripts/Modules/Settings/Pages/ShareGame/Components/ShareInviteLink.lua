@@ -6,9 +6,6 @@ local UserInputService = game:GetService("UserInputService")
 local ExternalContentSharingProtocol
 	= require(CorePackages.Workspace.Packages.ExternalContentSharingProtocol).ExternalContentSharingProtocol.default
 
-local UrlBuilderPackage = require(CorePackages.Packages.UrlBuilder)
-local UrlBuilder = UrlBuilderPackage.UrlBuilder
-
 local Roact = require(CorePackages.Roact)
 local RoactRodux = require(CorePackages.RoactRodux)
 
@@ -25,9 +22,6 @@ local RoduxNetworking = dependencies.RoduxNetworking
 local NetworkStatus = RoduxNetworking.Enum.NetworkStatus
 local Theme = require(RobloxGui.Modules.Settings.Theme)
 
-local GetFFlagLuaAppNewShareSheet =
-	require(CorePackages.Workspace.Packages.ExternalContentSharingProtocol).Flags.GetFFlagLuaAppNewShareSheet
-local getFFlagGameInviteShortUrlEnabled = require(CorePackages.Workspace.Packages.SharedFlags).getFFlagGameInviteShortUrlEnabled
 local ShareInviteLink = Roact.PureComponent:extend("ShareInviteLink")
 
 local CONTENTS_LEFT_RIGHT_PADDING = 12
@@ -38,15 +32,10 @@ local SHARE_INVITE_LINK_TEXT = RobloxTranslator:FormatByKey("Feature.SocialShare
 local COPIED_INVITE_LINK_TEXT = RobloxTranslator:FormatByKey("Feature.SocialShare.Label.Copied")
 local MENU_VERSION_CONST = "V1Menu"
 local platform = UserInputService:GetPlatform()
-local isDesktopClient = (platform == Enum.Platform.Windows) or (platform == Enum.Platform.OSX) or (platform == Enum.Platform.UWP)
 
 export type Props = {
 	isDesktopClient: boolean,
 	externalContentSharingProtocol: {
-		shareText: (any, {
-			text: string,
-			context:string,
-		}) -> (),
 		shareUrl: (any, {
 			url: string,
 			context:string,
@@ -69,45 +58,13 @@ function ShareInviteLink:init()
 		show_copied_text = false,
 	}
 
-	self.showSharesheet = if not getFFlagGameInviteShortUrlEnabled() then function(linkId, linkType)
-		local url = UrlBuilder.sharelinks.appsflyer(linkId, linkType)
-		if ExternalContentSharingProtocol then
-			if GetFFlagLuaAppNewShareSheet() then
-				ExternalContentSharingProtocol:shareUrl({
-					url = url,
-					context = "V1Menu"
-				})
-			else
-				ExternalContentSharingProtocol:shareText({
-					text = url,
-					context = "V1Menu"
-				})
-			end
-
-			if isDesktopClient then
-				self:setState({ show_copied_text = true })
-
-				delay(1, function ()
-					self:setState({ show_copied_text = false })
-				end)
-			end
-		end
-	end else nil
-
 	self.displayShareSheet = function(config: { shortUrl: string })
 		local props: InternalProps = self.props
 		if props.externalContentSharingProtocol then
-			if GetFFlagLuaAppNewShareSheet() then
-				props.externalContentSharingProtocol:shareUrl({
-					url = config.shortUrl,
-					context = MENU_VERSION_CONST
-				})
-			else
-				props.externalContentSharingProtocol:shareText({
-					text = config.shortUrl,
-					context = MENU_VERSION_CONST
-				})
-			end
+			props.externalContentSharingProtocol:shareUrl({
+				url = config.shortUrl,
+				context = MENU_VERSION_CONST
+			})
 
 			if props.isDesktopClient then
 				self:setState({ show_copied_text = true })
@@ -129,11 +86,7 @@ function ShareInviteLink:didUpdate(oldProps: InternalProps)
 		
 		self.props.analytics:linkGenerated({ linkType = linkType, linkId = linkId })
 
-		if getFFlagGameInviteShortUrlEnabled() then
-			self.displayShareSheet(props.shareInviteLink)
-		else
-			self.showSharesheet(linkId, linkType)
-		end
+		self.displayShareSheet(props.shareInviteLink)
 	end
 end
 
@@ -151,13 +104,7 @@ function ShareInviteLink:render()
 		if self.props.shareInviteLink == nil then
 			self.props.fetchShareInviteLink()
 		else
-			local linkType = RoduxShareLinks.Enums.LinkType.ExperienceInvite.rawValue()
-			local linkId = self.props.shareInviteLink.linkId
-			if getFFlagGameInviteShortUrlEnabled() then
-				self.displayShareSheet(props.shareInviteLink)
-			else
-				self.showSharesheet(linkId, linkType)
-			end
+			self.displayShareSheet(props.shareInviteLink)
 		end
 	end
 

@@ -3,9 +3,16 @@ local HttpRbxApiService = game:GetService("HttpRbxApiService")
 local TeleportService = game:GetService("TeleportService")
 
 local GamesMultigetPlaceDetails =
-	require(CorePackages.Workspace.Packages.GameDetailRodux).Requests.GamesMultigetPlaceDetails
+	require(CorePackages.Workspace.Packages.GameDetailRodux).GamesByPlaceId.GamesMultigetPlaceDetails
 
-local httpRequest = require(CorePackages.AppTempCommon.Temp.httpRequest)
+local CoreGui = game:GetService("CoreGui")
+local RobloxGui = CoreGui:WaitForChild("RobloxGui")
+local GetFFlagRemoveAppTempCommonTemp =
+	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagRemoveAppTempCommonTemp
+local httpRequest: any = if GetFFlagRemoveAppTempCommonTemp()
+	then require(RobloxGui.Modules.Common.httpRequest)
+	else require(CorePackages.AppTempCommon.Temp.httpRequest)
+
 local httpImpl = httpRequest(HttpRbxApiService :: any)
 
 return function()

@@ -30,11 +30,13 @@ local VRHub = require(RobloxGui.Modules.VR.VRHub)
 local PolicyService = require(RobloxGui.Modules.Common.PolicyService)
 local PerfUtils = require(RobloxGui.Modules.Common.PerfUtils)
 local MouseIconOverrideService = require(CorePackages.InGameServices.MouseIconOverrideService)
-local isSubjectToDesktopPolicies = require(RobloxGui.Modules.InGameMenu.isSubjectToDesktopPolicies)
+local isSubjectToDesktopPolicies = require(CorePackages.Workspace.Packages.SharedFlags).isSubjectToDesktopPolicies
 local MenuBackButton = require(RobloxGui.Modules.Settings.Components.MenuBackButton)
 local RoactAppExperiment = require(CorePackages.Packages.RoactAppExperiment)
 local IXPServiceWrapper = require(RobloxGui.Modules.Common.IXPServiceWrapper)
-
+local AppFonts = require(CorePackages.Workspace.Packages.Style).AppFonts
+local ScreenshotsPolicy  = require(CorePackages.Workspace.Packages.Screenshots).ScreenshotsPolicy
+local InExperienceCapabilities = require(RobloxGui.Modules.Common.InExperienceCapabilities)
 
 local Theme = require(script.Parent.Theme)
 
@@ -54,6 +56,7 @@ local SETTINGS_HUB_MOUSE_OVERRIDE_KEY = Symbol.named("SettingsHubCursorOverride"
 local VERSION_BAR_HEIGHT = isTenFootInterface and 32 or (utility:IsSmallTouchScreen() and 24 or 26)
 
 local BOTTOM_BUTTON_BAR_HEIGHT = 80
+local BOTTOM_BUTTON_10FT_SIZE = 72
 
 -- [[ FAST FLAGS ]]
 local FFlagUseNotificationsLocalization = settings():GetFFlag('UseNotificationsLocalization')
@@ -62,32 +65,32 @@ local FFlagLocalizeVersionLabels = settings():GetFFlag("LocalizeVersionLabels")
 local FFlagEnableInGameMenuDurationLogger = require(RobloxGui.Modules.Common.Flags.GetFFlagEnableInGameMenuDurationLogger)()
 
 local isNewInGameMenuEnabled = require(RobloxGui.Modules.isNewInGameMenuEnabled)
+local isRoactAbuseReportMenuEnabled = require(RobloxGui.Modules.TrustAndSafety.isRoactAbuseReportMenuEnabled)
 
 local GetFFlagAbuseReportEnableReportSentPage = require(RobloxGui.Modules.Flags.GetFFlagAbuseReportEnableReportSentPage)
 local GetFFlagVoiceChatUILogging = require(RobloxGui.Modules.Flags.GetFFlagVoiceChatUILogging)
 local GetFFlagOldMenuUseSpeakerIcons = require(RobloxGui.Modules.Flags.GetFFlagOldMenuUseSpeakerIcons)
 local GetFFlagMuteButtonRaceConditionFix = require(RobloxGui.Modules.Flags.GetFFlagMuteButtonRaceConditionFix)
-local GetFFlagAbuseReportMenuMigration = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagAbuseReportMenuMigration
 
 local GetFFlagRemoveAssetVersionEndpoint = require(RobloxGui.Modules.Flags.GetFFlagRemoveAssetVersionEndpoint)
 local GetFFlagNewEventIngestPlayerScriptsDimensions = require(RobloxGui.Modules.Flags.GetFFlagNewEventIngestPlayerScriptsDimensions)
-local GetFFlagInGameMenuV1LeaveToHome = require(RobloxGui.Modules.Flags.GetFFlagInGameMenuV1LeaveToHome)
-local FFlagInGameMenuV1FullScreenTitleBar = game:DefineFastFlag("InGameMenuV1FullScreenTitleBar", false)
-local FFlagInGameMenuHomeButton = game:DefineFastFlag("InGameMenuHomeButton", false)
-local FFlagInGameMenuV1ExitModal = game:DefineFastFlag("InGameMenuV1ExitModal", false)
 local FFlagFixMouseIconSettingsMenuWithDeferredEvents = game:DefineFastFlag("FixMouseIconSettingsMenuWithDeferredEvents", false)
 local GetFFlagShareInviteLinkContextMenuV1Enabled = require(RobloxGui.Modules.Settings.Flags.GetFFlagShareInviteLinkContextMenuV1Enabled)
 local GetFFlagReportAbuseMenuEntrypointAnalytics = require(RobloxGui.Modules.Settings.Flags.GetFFlagReportAbuseMenuEntrypointAnalytics)
-local GetFFlagShareGamePageNullCheckEnabled = require(RobloxGui.Modules.Settings.Flags.GetFFlagShareGamePageNullCheckEnabled)
 local FFlagAvatarChatCoreScriptSupport = require(RobloxGui.Modules.Flags.FFlagAvatarChatCoreScriptSupport)
 local GetFFlagVoiceRecordingIndicatorsEnabled = require(RobloxGui.Modules.Flags.GetFFlagVoiceRecordingIndicatorsEnabled)
 local GetFFlagEnableTeleportBackButton = require(RobloxGui.Modules.Flags.GetFFlagEnableTeleportBackButton)
-local GetFFlagEnableAccessibilitySettingsEffectsInCoreScripts = require(RobloxGui.Modules.Flags.GetFFlagEnableAccessibilitySettingsEffectsInCoreScripts)
 local ChromeEnabled = require(RobloxGui.Modules.Chrome.Enabled)()
 local FFlagLuaEnableGameInviteModalSettingsHub = game:DefineFastFlag("LuaEnableGameInviteModalSettingsHub", false)
+local GetFFlagFix10ftBottomButtons = require(RobloxGui.Modules.Settings.Flags.GetFFlagFix10ftBottomButtons)
 local GetFFlagLuaInExperienceCoreScriptsGameInviteUnification = require(RobloxGui.Modules.Flags.GetFFlagLuaInExperienceCoreScriptsGameInviteUnification)
 local GetFStringGameInviteMenuLayer = require(CorePackages.Workspace.Packages.SharedFlags).GetFStringGameInviteMenuLayer
+local GetFFlagFix10ftMenuGap = require(RobloxGui.Modules.Settings.Flags.GetFFlagFix10ftMenuGap)
 local GetFFlagFixSettingsHubVRBackgroundError =  require(RobloxGui.Modules.Settings.Flags.GetFFlagFixSettingsHubVRBackgroundError)
+local GetFFlagRightAlignMicText =  require(RobloxGui.Modules.Settings.Flags.GetFFlagRightAlignMicText)
+local GetFFlagFixResumeSourceAnalytics =  require(RobloxGui.Modules.Settings.Flags.GetFFlagFixResumeSourceAnalytics)
+local GetFFlagShouldInitWithFirstPageWithTabHeader =  require(RobloxGui.Modules.Settings.Flags.GetFFlagShouldInitWithFirstPageWithTabHeader)
+local FFlagPreventHiddenSwitchPage = game:DefineFastFlag("PreventHiddenSwitchPage", false)
 
 --[[ SERVICES ]]
 local RobloxReplicatedStorage = game:GetService("RobloxReplicatedStorage")
@@ -148,7 +151,6 @@ if GetFFlagLuaInExperienceCoreScriptsGameInviteUnification() then
 	GameInviteConstants = GameInvitePackage.GameInviteConstants
 end
 
-local Screenshots = require(CorePackages.Workspace.Packages.Screenshots)
 local ScreenshotsApp = require(RobloxGui.Modules.Screenshots.ScreenshotsApp)
 
 local Constants = require(RobloxGui.Modules:WaitForChild("InGameMenu"):WaitForChild("Resources"):WaitForChild("Constants"))
@@ -156,12 +158,11 @@ local Constants = require(RobloxGui.Modules:WaitForChild("InGameMenu"):WaitForCh
 local shouldLocalize = PolicyService:IsSubjectToChinaPolicies()
 
 local VoiceChatServiceManager = require(RobloxGui.Modules.VoiceChat.VoiceChatServiceManager).default
-local GetFFlagEnableVoiceChatPlayersList = require(RobloxGui.Modules.Flags.GetFFlagEnableVoiceChatPlayersList)
+local FFlagAddCapturesGuacPolicy = require(CorePackages.Workspace.Packages.Screenshots).Flags.FFlagAddCapturesGuacPolicy
 local GetFFlagOldMenuNewIcons = require(RobloxGui.Modules.Flags.GetFFlagOldMenuNewIcons)
 local GetFFlagPlayerListAnimateMic = require(RobloxGui.Modules.Flags.GetFFlagPlayerListAnimateMic)
 local NotchSupportExperiment = require(RobloxGui.Modules.Settings.Experiments.NotchSupportExperiment)
 local GetFFlagInGameMenuV1FadeBackgroundAnimation = require(RobloxGui.Modules.Settings.Flags.GetFFlagInGameMenuV1FadeBackgroundAnimation)
-local GetFFlagUseDesignSystemGamepadIcons = require(RobloxGui.Modules.Flags.GetFFlagUseDesignSystemGamepadIcons)
 local GetShowCapturesTab = require(RobloxGui.Modules.Settings.Experiments.GetShowCapturesTab)
 local GetFFlagSwitchInExpTranslationsPackage = require(RobloxGui.Modules.Flags.GetFFlagSwitchInExpTranslationsPackage)
 local FFlagSettingsHubRaceConditionFix = game:DefineFastFlag("SettingsHubRaceConditionFix", false)
@@ -209,7 +210,7 @@ local chat = require(RobloxGui.Modules.ChatSelector)
 
 local SETTINGS_SHIELD_ACTIVE_POSITION
 local SETTINGS_SHIELD_SIZE
-if isTenFootInterface then
+if not (GetFFlagFix10ftMenuGap() and Theme.UIBloxThemeEnabled) and isTenFootInterface then
 	SETTINGS_SHIELD_ACTIVE_POSITION = UDim2.new(0,0,0,0)
 	SETTINGS_SHIELD_SIZE = UDim2.new(1,0,1,0)
 else
@@ -272,9 +273,7 @@ local function CreateSettingsHub()
 	if GetFFlagEnableTeleportBackButton() then
 		this.BackBarVisibleConnection = nil
 	end
-	if GetFFlagEnableAccessibilitySettingsEffectsInCoreScripts() then
-		this.PreferredTransparencyChangedConnection = nil
-	end
+	this.PreferredTransparencyChangedConnection = nil
 	this.TabConnection = nil
 	this.LeaveGamePage = require(RobloxGui.Modules.Settings.Pages.LeaveGame)
 	this.ResetCharacterPage = require(RobloxGui.Modules.Settings.Pages.ResetCharacter)
@@ -473,7 +472,9 @@ local function CreateSettingsHub()
 			wholeButton.Visible = false
 			wholeButton:Destroy()
 		end
-		local buttonSize = if isTenFootInterface then UDim2.new(0, 320, 0, 120) else UDim2.new(0, 260, 0, Theme.LargeButtonHeight)
+		local tenFootButtonHeight = if GetFFlagFix10ftBottomButtons() and Theme.UIBloxThemeEnabled then BOTTOM_BUTTON_10FT_SIZE else 120
+		local buttonSize = if isTenFootInterface then UDim2.new(0, 320, 0, tenFootButtonHeight) else UDim2.new(0, 260, 0, Theme.LargeButtonHeight)
+
 		updateButtonPosition("LeaveGame", UDim2.new(0.5, if isTenFootInterface then -160 else -130, 0.5, -25), buttonSize)
 		updateButtonPosition("ResetCharacter", UDim2.new(0.5, if isTenFootInterface then -550 else -400, 0.5, -25), buttonSize)
 		updateButtonPosition("Resume", UDim2.new(0.5, if isTenFootInterface then 200 else 140, 0.5, -25), buttonSize)
@@ -500,7 +501,7 @@ local function CreateSettingsHub()
 		this.BottomBarButtonsComponents[#this.BottomBarButtonsComponents + 1] = iconBtn;
 	end
 
-	local function addBottomBarButtonOld(name, text, gamepadImage, keyboardImage, position, clickFunc, hotkeys)
+	local function addBottomBarButtonOld(name, text, gamepadImage, keyboardImage, position, clickFunc, hotkeys, hotFunc)
 
 
 		local buttonName = name .. "Button"
@@ -508,7 +509,7 @@ local function CreateSettingsHub()
 
 		local size = UDim2.new(0,260,0,Theme.LargeButtonHeight)
 		if isTenFootInterface then
-			size = UDim2.new(0,320,0,120)
+			size = if Theme.UIBloxThemeEnabled and GetFFlagFix10ftBottomButtons() then UDim2.new(0,320,0,BOTTOM_BUTTON_10FT_SIZE) else UDim2.new(0,320,0,120)
 		end
 
 		this[buttonName], this[textName] = utility:MakeStyledButton(name .. "Button", text, size, clickFunc, nil, this)
@@ -599,7 +600,11 @@ local function CreateSettingsHub()
 
 		local hotKeyFunc = function(contextName, inputState, inputObject)
 			if inputState == Enum.UserInputState.Begin then
-				clickFunc()
+				if GetFFlagFixResumeSourceAnalytics() then
+					hotFunc()
+				else
+					clickFunc()
+				end
 			end
 		end
 
@@ -613,7 +618,7 @@ local function CreateSettingsHub()
 
 		local size = sizeOverride or UDim2.new(0,260,0,70)
 		if isTenFootInterface then
-			size = UDim2.new(0,320,0,120)
+			size = if Theme.UIBloxThemeEnabled and GetFFlagFix10ftBottomButtons() then UDim2.new(0,320,0,BOTTOM_BUTTON_10FT_SIZE) else UDim2.new(0,320,0,120)
 		end
 
 		this[buttonName], this[textName] = utility:MakeStyledButton(name .. "Button", text, size, clickFunc, nil, this)
@@ -696,19 +701,9 @@ local function CreateSettingsHub()
 		buttonImageAppend = "@2x"
 	end
 
-	local buttonB
-	local buttonX
-	local buttonY
-
-	if GetFFlagUseDesignSystemGamepadIcons() then
-		buttonB = "rbxasset://textures/ui/Controls/DesignSystem/ButtonB" .. buttonImageAppend .. ".png"
-		buttonX = "rbxasset://textures/ui/Controls/DesignSystem/ButtonX" .. buttonImageAppend .. ".png"
-		buttonY = "rbxasset://textures/ui/Controls/DesignSystem/ButtonY" .. buttonImageAppend .. ".png"
-	else
-		buttonB = "rbxasset://textures/ui/Settings/Help/BButtonLight" .. buttonImageAppend .. ".png"
-		buttonX = "rbxasset://textures/ui/Settings/Help/XButtonLight" .. buttonImageAppend .. ".png"
-		buttonY = "rbxasset://textures/ui/Settings/Help/YButtonLight" .. buttonImageAppend .. ".png"
-	end
+	local buttonB = "rbxasset://textures/ui/Controls/DesignSystem/ButtonB" .. buttonImageAppend .. ".png"
+	local buttonX = "rbxasset://textures/ui/Controls/DesignSystem/ButtonX" .. buttonImageAppend .. ".png"
+	local buttonY = "rbxasset://textures/ui/Controls/DesignSystem/ButtonY" .. buttonImageAppend .. ".png"
 
 	local function appendMicButton()
 
@@ -725,7 +720,7 @@ local function CreateSettingsHub()
 		if Theme.UseIconButtons then
 			addBottomBarIconButton("MuteButton", nil, "", buttonB, pollImage, UDim2.new(0.5, isTenFootInterface and 300 or 330, 0.5,-25),
 				function ()
-					VoiceChatServiceManager:ToggleMic()
+					VoiceChatServiceManager:ToggleMic("InGameMenu")
 					if voiceAnalytics then
 						voiceAnalytics:onToggleMuteSelf(this.isMuted)
 					end
@@ -734,7 +729,7 @@ local function CreateSettingsHub()
 		else
 			addBottomBarButton("MuteButton", "", buttonB, pollImage, UDim2.new(0.5, isTenFootInterface and 300 or 330, 0.5,-25),
 				function ()
-					VoiceChatServiceManager:ToggleMic()
+					VoiceChatServiceManager:ToggleMic("InGameMenu")
 				end, {}, UDim2.new(0,Theme.LargeButtonHeight,0,Theme.LargeButtonHeight),
 				--[[forceHintButton = ]] true
 			)
@@ -790,8 +785,7 @@ local function CreateSettingsHub()
 	local voiceChatServiceConnected = false
 	local voiceEnabled = false
 	local function setupVoiceListeners()
-		if GetFFlagEnableVoiceChatPlayersList()
-			and game:GetEngineFeature("VoiceChatSupported")
+		if game:GetEngineFeature("VoiceChatSupported")
 			and not voiceChatServiceConnected
 		then
 			voiceChatServiceConnected = true
@@ -982,16 +976,14 @@ local function CreateSettingsHub()
 			ShieldInstanceType = "ImageButton"
 		end
 
-		if GetFFlagEnableAccessibilitySettingsEffectsInCoreScripts() then
-			this.CanvasGroup = utility:Create("CanvasGroup")
-			{
-				Name = "CanvasGroup",
-				Size = UDim2.fromScale(1, 1),
-				BackgroundTransparency = 1,
-				GroupTransparency = 0,
-				Parent = this.ClippingShield
-			}
-		end
+		this.CanvasGroup = utility:Create("CanvasGroup")
+		{
+			Name = "CanvasGroup",
+			Size = UDim2.fromScale(1, 1),
+			BackgroundTransparency = 1,
+			GroupTransparency = 0,
+			Parent = this.ClippingShield
+		}
 
 		this.Shield = utility:Create(ShieldInstanceType)
 		{
@@ -1532,7 +1524,7 @@ local function CreateSettingsHub()
 
 		this.VoiceRecordingIndicatorFrame = if GetFFlagVoiceRecordingIndicatorsEnabled() and not FFlagAvatarChatCoreScriptSupport then utility:Create'Frame'
 			{
-				Size = UDim2.fromOffset(0, 100),
+				Size = if GetFFlagRightAlignMicText() and ChromeEnabled then UDim2.new(1, 0, 0, 100) else UDim2.fromOffset(0, 100),
 				Position = UDim2.new(0,0,0,0),
 				Parent = this.HubBar,
 				BackgroundTransparency = 1,
@@ -1545,7 +1537,7 @@ local function CreateSettingsHub()
 				Visible = false,
 				Position = UDim2.new(0,60,0,0),
 				TextSize = 12,
-				Font = Enum.Font.GothamMedium,
+				Font = AppFonts.default:getMedium(),
 				Size = UDim2.fromScale(1, 1),
 				TextXAlignment = Enum.TextXAlignment.Left,
 				TextYAlignment = Enum.TextYAlignment.Center,
@@ -1556,16 +1548,33 @@ local function CreateSettingsHub()
 		if GetFFlagVoiceRecordingIndicatorsEnabled() then
 			if utility:IsSmallTouchScreen() then
 				this.VoiceRecordingText.Size = UDim2.fromScale(1, 1)
-				this.VoiceRecordingText.Position = UDim2.new(0,60,0,-60)
 				this.VoiceRecordingText.AnchorPoint = Vector2.new(0,0)
+				if GetFFlagRightAlignMicText() and ChromeEnabled then
+					this.VoiceRecordingText.TextXAlignment = Enum.TextXAlignment.Right
+					this.VoiceRecordingText.Position = UDim2.new(0,0,0,-60)
+				else
+					this.VoiceRecordingText.Position = UDim2.new(0,60,0,-60)
+				end
 			elseif isTenFootInterface then
 				this.VoiceRecordingText.AnchorPoint = Vector2.new(0, 1)
-				this.VoiceRecordingText.Size = UDim2.new(0,1200,0,100)
-				this.VoiceRecordingText.Position = UDim2.new(0.5,0,0.1,0)
+				if GetFFlagRightAlignMicText() and ChromeEnabled then
+					this.VoiceRecordingText.TextXAlignment = Enum.TextXAlignment.Right
+					this.VoiceRecordingText.Size = UDim2.new(1,0,0,100)
+					this.VoiceRecordingText.Position = UDim2.new(0,0,0.1,0)
+				else
+					this.VoiceRecordingText.Size = UDim2.new(0,1200,0,100)
+					this.VoiceRecordingText.Position = UDim2.new(0.5,0,0.1,0)
+				end
 			else
 				this.VoiceRecordingText.AnchorPoint = Vector2.new(0, 1)
-				this.VoiceRecordingText.Size = UDim2.new(0, 800, 0, 60)
-				this.VoiceRecordingText.Position = UDim2.new(0.5,0,0.1,0)
+				if GetFFlagRightAlignMicText() and ChromeEnabled then
+					this.VoiceRecordingText.TextXAlignment = Enum.TextXAlignment.Right
+					this.VoiceRecordingText.Size = UDim2.new(1, 0, 0, 60)
+					this.VoiceRecordingText.Position = UDim2.new(0,0,0.1,0)
+				else
+					this.VoiceRecordingText.Size = UDim2.new(0, 800, 0, 60)
+					this.VoiceRecordingText.Position = UDim2.new(0.5,0,0.1,0)
+				end
 			end
 
 			this.voiceRecordingIndicatorTextMotor = Otter.createSingleMotor(0)
@@ -1670,25 +1679,24 @@ local function CreateSettingsHub()
 				Parent = this.PageViewInnerFrame,
 			}
 		end
-		if GetFFlagEnableAccessibilitySettingsEffectsInCoreScripts() then
-			this.InnerCanvasGroupShow = utility:Create("CanvasGroup")
-			{
-				Name = "InnerCanvasGroupShow",
-				Size = UDim2.fromScale(1, 1),
-				BackgroundTransparency = 1,
-				GroupTransparency = 0,
-				Parent = this.PageViewInnerFrame
-			}
 
-			this.InnerCanvasGroupHide = utility:Create("CanvasGroup")
-			{
-				Name = "InnerCanvasGroupHide",
-				Size = UDim2.fromScale(1, 1),
-				BackgroundTransparency = 1,
-				GroupTransparency = 0,
-				Parent = this.PageViewInnerFrame
-			}
-		end
+		this.InnerCanvasGroupShow = utility:Create("CanvasGroup")
+		{
+			Name = "InnerCanvasGroupShow",
+			Size = UDim2.fromScale(1, 1),
+			BackgroundTransparency = 1,
+			GroupTransparency = 0,
+			Parent = this.PageViewInnerFrame
+		}
+
+		this.InnerCanvasGroupHide = utility:Create("CanvasGroup")
+		{
+			Name = "InnerCanvasGroupHide",
+			Size = UDim2.fromScale(1, 1),
+			BackgroundTransparency = 1,
+			GroupTransparency = 0,
+			Parent = this.PageViewInnerFrame
+		}
 
 		if Theme.UseStickyBar() then
 			this.PageView.AutomaticCanvasSize = Enum.AutomaticSize.Y
@@ -1735,38 +1743,49 @@ local function CreateSettingsHub()
 		end
 
 		local leaveGameFunc = function()
+			if FFlagPreventHiddenSwitchPage and this:GetVisibility() == false then
+				return
+			end
+
 			this:AddToMenuStack(this.Pages.CurrentPage)
 			this.HubBar.Visible = false
 			removeBottomBarBindings()
 			this:SwitchToPage(this.LeaveGamePage, nil, 1, true)
 		end
 
-		local resumeFunc = function()
+		local resumeFunc = function(source)
 			setVisibilityInternal(false)
 			AnalyticsService:SetRBXEventStream(
 				Constants.AnalyticsTargetName,
 				Constants.AnalyticsResumeGameName,
 				Constants.AnalyticsMenuActionName,
-				{ source = if Theme.UIBloxThemeEnabled then Constants.AnalyticsResumeShieldSource else Constants.AnalyticsResumeButtonSource }
+				{ source = if Theme.UIBloxThemeEnabled then
+					if GetFFlagFixResumeSourceAnalytics() then source else Constants.AnalyticsResumeShieldSource
+				else Constants.AnalyticsResumeButtonSource }
 			)
 		end
 
 		if Theme.UIBloxThemeEnabled then
-			this.Shield.Activated:Connect(resumeFunc)
+			this.Shield.Activated:Connect(if GetFFlagFixResumeSourceAnalytics() then
+				function() resumeFunc(Constants.AnalyticsResumeShieldSource) end
+				else resumeFunc
+			)
 		end
 
 		local leaveGameText = "Leave"
 
-		if Theme.UseIconButtons then
-			addBottomBarIconButton("LeaveGame", "icons/actions/leave", leaveGameText, buttonX,
-				"rbxasset://textures/ui/Settings/Help/LeaveIcon.png", UDim2.new(0.5,isTenFootInterface and -160 or -130,0.5,-25),
-				leaveGameFunc, {Enum.KeyCode.L, Enum.KeyCode.ButtonX}
-			)
-		else
-			addBottomBarButtonOld("LeaveGame", leaveGameText, buttonX,
-				"rbxasset://textures/ui/Settings/Help/LeaveIcon.png", UDim2.new(0.5,isTenFootInterface and -160 or -130,0.5,-25),
-				leaveGameFunc, {Enum.KeyCode.L, Enum.KeyCode.ButtonX}
-			)
+		if InExperienceCapabilities.canNavigateHome then
+			if Theme.UseIconButtons then
+				addBottomBarIconButton("LeaveGame", "icons/actions/leave", leaveGameText, buttonX,
+					"rbxasset://textures/ui/Settings/Help/LeaveIcon.png", UDim2.new(0.5,isTenFootInterface and -160 or -130,0.5,-25),
+					leaveGameFunc, {Enum.KeyCode.L, Enum.KeyCode.ButtonX}
+				)
+			else
+				addBottomBarButtonOld("LeaveGame", leaveGameText, buttonX,
+					"rbxasset://textures/ui/Settings/Help/LeaveIcon.png", UDim2.new(0.5,isTenFootInterface and -160 or -130,0.5,-25),
+					leaveGameFunc, {Enum.KeyCode.L, Enum.KeyCode.ButtonX}, leaveGameFunc
+				)
+			end
 		end
 
 
@@ -1787,17 +1806,23 @@ local function CreateSettingsHub()
 		else
 			addBottomBarButtonOld("ResetCharacter", "Reset Character", buttonY,
 				"rbxasset://textures/ui/Settings/Help/ResetIcon.png", UDim2.new(0.5,isTenFootInterface and -550 or -400,0.5,-25),
-				resetCharFunc, {Enum.KeyCode.R, Enum.KeyCode.ButtonY}
+				resetCharFunc, {Enum.KeyCode.R, Enum.KeyCode.ButtonY}, resetCharFunc
 			)
 		end
 
 		local resumeGameText = "Resume"
+		local resumeButtonFunc = if GetFFlagFixResumeSourceAnalytics() then
+			function() resumeFunc(Constants.AnalyticsResumeButtonSource) end
+			else resumeFunc
+		local resumeHotkeyFunc = if GetFFlagFixResumeSourceAnalytics() then
+			function() resumeFunc(Constants.AnalyticsResumeGamepadSource) end
+			else nil
 		addBottomBarButtonOld("Resume", resumeGameText, buttonB,
 			"rbxasset://textures/ui/Settings/Help/EscapeIcon.png", UDim2.new(0.5,isTenFootInterface and 200 or 140,0.5,-25),
-			resumeFunc, {Enum.KeyCode.ButtonB, Enum.KeyCode.ButtonStart}
+			resumeButtonFunc, {Enum.KeyCode.ButtonB, Enum.KeyCode.ButtonStart}, resumeHotkeyFunc
 		)
 
-		if Theme.UIBloxThemeEnabled or (FFlagInGameMenuHomeButton and isSubjectToDesktopPolicies()) then
+		if Theme.UIBloxThemeEnabled or isSubjectToDesktopPolicies() then
 			if Theme.UIBloxThemeEnabled then
 				this.HubBarContainer = utility:Create'ImageLabel'
 				{
@@ -1902,23 +1927,19 @@ local function CreateSettingsHub()
 					end
 				end)
 
-				if GetFFlagInGameMenuV1LeaveToHome() then
-					local leaveToHomeFunc = function()
-						this:AddToMenuStack(this.Pages.CurrentPage)
-						this.HubBar.Visible = false
-						removeBottomBarBindings()
-						this:SwitchToPage(this.LeaveGameToHomePage, nil, 1, true)
-					end
-
-					this.HubBarHomeButton.Activated:Connect(leaveToHomeFunc)
-				else
-					this.HubBarHomeButton.Activated:Connect(leaveGameFunc)
+				local leaveToHomeFunc = function()
+					this:AddToMenuStack(this.Pages.CurrentPage)
+					this.HubBar.Visible = false
+					removeBottomBarBindings()
+					this:SwitchToPage(this.LeaveGameToHomePage, nil, 1, true)
 				end
+
+				this.HubBarHomeButton.Activated:Connect(leaveToHomeFunc)
 			end
 
 		end
 
-		if FFlagInGameMenuV1FullScreenTitleBar and isSubjectToDesktopPolicies() then
+		if isSubjectToDesktopPolicies() then
 			this.FullScreenTitleBar = SettingsFullScreenTitleBar.mount({}, this.Shield, "FullScreenTitleBar")
 		end
 
@@ -2200,9 +2221,7 @@ local function CreateSettingsHub()
 	end
 
 	local function onPreferredTransparencyChanged()
-		if GetFFlagEnableAccessibilitySettingsEffectsInCoreScripts() then
-			this.MenuContainer.BackgroundTransparency = Theme.transparency("MenuContainer", 1) * GuiService.PreferredTransparency
-		end
+		this.MenuContainer.BackgroundTransparency = Theme.transparency("MenuContainer", 1) * GuiService.PreferredTransparency
 	end
 
 	local function toggleQuickProfilerFromHotkey(actionName, inputState, inputObject)
@@ -2373,7 +2392,7 @@ local function CreateSettingsHub()
 		end
 
 		setZIndex(SETTINGS_BASE_ZINDEX + 1, newHeader)
-		if Theme.UIBloxThemeEnabled or (FFlagInGameMenuHomeButton and isSubjectToDesktopPolicies()) then
+		if Theme.UIBloxThemeEnabled or isSubjectToDesktopPolicies() then
 			newHeader.Parent = this.HubBarContainer
 		else
 			newHeader.Parent = this.HubBar
@@ -2521,6 +2540,25 @@ local function CreateSettingsHub()
 		end
 	end
 
+	function this:GetFirstPageWithTabHeader()
+		-- find page with tab position one.
+		local firstPageWithTabHeader = nil
+		for page, _ in pairs(this.Pages.PageTable) do
+			local header = page:GetTabHeader()
+			if header ~= nil and page.TabPosition == 1 then
+				firstPageWithTabHeader = page
+				break
+			end
+		end
+
+		if firstPageWithTabHeader == nil then
+			error("No page with tab header found")
+			return nil
+		end
+
+		return firstPageWithTabHeader
+	end
+
 	function this:InitInPage(pageToSwitchTo)
 		-- make sure all pages are in right position
 		local newPagePos = pageToSwitchTo.TabPosition
@@ -2572,6 +2610,10 @@ local function CreateSettingsHub()
 
 	function this:SwitchToPage(pageToSwitchTo, ignoreStack, direction, skipAnimation, invisibly, eventData)
 		if this.Pages.PageTable[pageToSwitchTo] == nil then return end
+
+		if FFlagPreventHiddenSwitchPage and this:GetVisibility() == false then
+			return
+		end
 
 		if Theme.UIBloxThemeEnabled then
 			local topExtra = UDim.new(0, 0)
@@ -2741,7 +2783,7 @@ local function CreateSettingsHub()
 			this.BackBarVisibleConnection = nil
 		end
 
-		if GetFFlagEnableAccessibilitySettingsEffectsInCoreScripts() and this.PreferredTransparencyChangedConnection then
+		if this.PreferredTransparencyChangedConnection then
 			this.PreferredTransparencyChangedConnection:disconnect()
 			this.PreferredTransparencyChangedConnection = nil
 		end
@@ -2773,11 +2815,9 @@ local function CreateSettingsHub()
 			end
 			onScreenSizeChanged()
 
-			if GetFFlagEnableAccessibilitySettingsEffectsInCoreScripts() then
-				this.PreferredTransparencyChangedConnection = GuiService:GetPropertyChangedSignal("PreferredTransparency"):connect(function()
-					onPreferredTransparencyChanged()
-				end)
-			end
+			this.PreferredTransparencyChangedConnection = GuiService:GetPropertyChangedSignal("PreferredTransparency"):connect(function()
+				onPreferredTransparencyChanged()
+			end)
 			onPreferredTransparencyChanged()
 
 			this.SettingsShowSignal:fire(this.Visible)
@@ -2812,7 +2852,7 @@ local function CreateSettingsHub()
 					movementTime = if Constants then Constants.ShieldOpenAnimationTweenTime else 0.5
 				end
 
-				if GetFFlagEnableAccessibilitySettingsEffectsInCoreScripts() and GameSettings.ReducedMotion then
+				if GameSettings.ReducedMotion then
 					this.Shield.Parent = this.CanvasGroup
 					this.CanvasGroup.GroupTransparency = 1
 					this.Shield.Position = UDim2.new(0, 0, 0, 0)
@@ -2901,7 +2941,11 @@ local function CreateSettingsHub()
 				removeBottomBarBindings()
 				this:SwitchToPage(customStartPage, nil, 1, true)
 			else
-				this:SwitchToPage(this.PlayersPage, nil, 1, true)
+				if GetFFlagShouldInitWithFirstPageWithTabHeader() then
+					this:SwitchToPage(this:GetFirstPageWithTabHeader(), nil, 1, true)
+				else
+					this:SwitchToPage(this.PlayersPage, nil, 1, true)
+				end
 			end
 
 			playerList:HideTemp('SettingsMenu', true)
@@ -2967,7 +3011,7 @@ local function CreateSettingsHub()
 					end
 				end
 
-				if GetFFlagEnableAccessibilitySettingsEffectsInCoreScripts() and GameSettings.ReducedMotion then
+				if GameSettings.ReducedMotion then
 					this.Shield.Parent = this.CanvasGroup
 
 					local tweenInfo = TweenInfo.new(0.25)
@@ -3064,11 +3108,7 @@ local function CreateSettingsHub()
 			end
 
 			if GetFFlagShareInviteLinkContextMenuV1Enabled() then
-				if GetFFlagShareGamePageNullCheckEnabled() then
-					if this.ShareGamePage then
-						this.ShareGamePage:ClearShareInviteLink(this.ShareGameApp)
-					end
-				else
+				if this.ShareGamePage then
 					this.ShareGamePage:ClearShareInviteLink(this.ShareGameApp)
 				end
 			end
@@ -3257,13 +3297,16 @@ local function CreateSettingsHub()
 	end
 
 	this.ResetCharacterPage:SetHub(this)
-	this.LeaveGamePage:SetHub(this)
+
+	if InExperienceCapabilities.canNavigateHome then
+		this.LeaveGamePage:SetHub(this)
+	end
 
 	-- full page initialization
 	this.GameSettingsPage = require(RobloxGui.Modules.Settings.Pages.GameSettings)
 	this.GameSettingsPage:SetHub(this)
 
-	if GetFFlagAbuseReportMenuMigration() then
+	if isRoactAbuseReportMenuEnabled() then
 		this.ReportAbusePage = require(RobloxGui.Modules.Settings.Pages.ReportAbuseMenuNewContainerPage)
 	else
 		this.ReportAbusePage = require(RobloxGui.Modules.Settings.Pages.ReportAbuseMenu)
@@ -3288,15 +3331,17 @@ local function CreateSettingsHub()
 		this.RecordPage:SetHub(this)
 	end
 
-	this.PlayersPage = require(RobloxGui.Modules.Settings.Pages.Players)
-	this.PlayersPage:SetHub(this)
+	if InExperienceCapabilities.canListPeopleInSameServer then
+		this.PlayersPage = require(RobloxGui.Modules.Settings.Pages.Players)
+		this.PlayersPage:SetHub(this)
+	end
 
-	if FFlagInGameMenuV1ExitModal and isSubjectToDesktopPolicies() then
+	if isSubjectToDesktopPolicies() then
 		this.ExitModalPage = require(RobloxGui.Modules.Settings.Pages.ExitModal)
 		this.ExitModalPage:SetHub(this)
 	end
 
-	if GetFFlagInGameMenuV1LeaveToHome() and isSubjectToDesktopPolicies() then
+	if isSubjectToDesktopPolicies() and InExperienceCapabilities.canNavigateHome then
 		this.LeaveGameToHomePage = require(RobloxGui.Modules.Settings.Pages.LeaveGameToHome)
 		this.LeaveGameToHomePage:SetHub(this)
 	end
@@ -3311,10 +3356,14 @@ local function CreateSettingsHub()
 			-- Create the embedded Roact app for the ShareGame page
 			-- This is accomplished via a Roact Portal into the ShareGame page frame
 			local CorePackages = game:GetService("CorePackages")
-			local EventStream = require(CorePackages.AppTempCommon.Temp.EventStream)
+			local GetFFlagRemoveAppTempCommonTemp = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagRemoveAppTempCommonTemp
+			local DEPRECATED_EventStream = require(CorePackages.AppTempCommon.Temp.EventStream)
+			local EventStream = require(CorePackages.Workspace.Packages.Analytics).AnalyticsReporters.EventStream
 			local Diag = require(CorePackages.Workspace.Packages.Analytics).AnalyticsReporters.Diag
 
-			local eventStream = EventStream.new()
+			local eventStream = if GetFFlagRemoveAppTempCommonTemp()
+				then EventStream.new(AnalyticsService)
+				else DEPRECATED_EventStream.new()
 			local inviteToGameAnalytics = InviteToGameAnalytics.new()
 				:withEventStream(eventStream)
 				:withDiag(Diag.new(AnalyticsService))
@@ -3331,7 +3380,13 @@ local function CreateSettingsHub()
 		end
 	end
 
-	if Screenshots.Flags.FFlagScreenshotsFeaturesEnabledForAll or GetShowCapturesTab() then
+	local eligibleForCapturesFeature = false
+	if FFlagAddCapturesGuacPolicy then
+		local policy = ScreenshotsPolicy.PolicyImplementation.read()
+		eligibleForCapturesFeature  = if policy then ScreenshotsPolicy.Mapper(policy).eligibleForCapturesFeature() else false
+	end
+
+	if eligibleForCapturesFeature or GetShowCapturesTab() then
 		local ShotsPageWrapper = require(RobloxGui.Modules.Settings.Pages.ShotsPageWrapper)
 
 		this.ScreenshotsApp = ScreenshotsApp
@@ -3342,9 +3397,16 @@ local function CreateSettingsHub()
 	end
 
 	-- page registration
-	this:AddPage(this.PlayersPage)
+	if this.PlayersPage then
+		this:AddPage(this.PlayersPage)
+	end
+
 	this:AddPage(this.ResetCharacterPage)
-	this:AddPage(this.LeaveGamePage)
+
+	if this.LeaveGamePage then
+		this:AddPage(this.LeaveGamePage)
+	end
+
 	this:AddPage(this.GameSettingsPage)
 
 	if this.ShotsPage then
@@ -3368,13 +3430,16 @@ local function CreateSettingsHub()
 	if this.ExitModalPage then
 		this:AddPage(this.ExitModalPage)
 	end
-	if GetFFlagInGameMenuV1LeaveToHome() then
-		if this.LeaveGameToHomePage then
-			this:AddPage(this.LeaveGameToHomePage)
-		end
+
+	if this.LeaveGameToHomePage then
+		this:AddPage(this.LeaveGameToHomePage)
 	end
 
-	this:InitInPage(this.PlayersPage)
+	if GetFFlagShouldInitWithFirstPageWithTabHeader() then
+		this:InitInPage(this:GetFirstPageWithTabHeader())
+	else
+		this:InitInPage(this.PlayersPage)
+	end
 
 	-- hook up to necessary signals
 
@@ -3382,7 +3447,11 @@ local function CreateSettingsHub()
 	GuiService.ShowLeaveConfirmation:connect(function()
 		if #this.MenuStack == 0 then
 			this:SetVisibility(true, nil, nil, nil, Constants.AnalyticsMenuOpenTypes.GamepadLeaveGame)
-			this:SwitchToPage(this.PlayerPage, nil, 1)
+			if GetFFlagShouldInitWithFirstPageWithTabHeader() then
+				this:SwitchToPage(this:GetFirstPageWithTabHeader(), nil, 1)
+			else
+				this:SwitchToPage(this.PlayersPage, nil, 1)
+			end
 		else
 			this:PopMenu(false, true)
 		end

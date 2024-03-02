@@ -6,14 +6,13 @@ local RunService = game:GetService("RunService")
 local Roact = require(CorePackages.Roact)
 local Otter = require(CorePackages.Otter)
 local t = require(CorePackages.Packages.t)
+local AppFonts = require(CorePackages.Workspace.Packages.Style).AppFonts
 local RobloxTranslator = require(RobloxGui.Modules.RobloxTranslator)
 
 local SPRING_PARAMS = {
 	frequency = 4,
 	dampingRatio = 1,
 }
-
-local GetFFlagVoiceTextOverflowFix = require(RobloxGui.Modules.Flags.GetFFlagVoiceTextOverflowFix)
 
 local MicOn = RobloxTranslator:FormatByKey("InGame.CommonUI.Label.MicOnRecording")
 local MicOff = RobloxTranslator:FormatByKey("InGame.CommonUI.Label.MicOff")
@@ -80,14 +79,14 @@ function RecordingIndicator:render()
 		AutomaticSize = Enum.AutomaticSize.XY,
 		Visible = self.props.hasMicPermissions,
 		TextSize = if self.props.isSmallTouchScreen then 10 else 12,
-		Font = Enum.Font.GothamMedium,
+		Font = AppFonts.default:getMedium(),
 		TextXAlignment = Enum.TextXAlignment.Left,
 		TextYAlignment = Enum.TextYAlignment.Center,
 		TextColor3 = Color3.fromRGB(255, 255, 255),
 		TextTransparency = 1 - self.state.textOpacity,
 		BackgroundTransparency = 1,
 		LayoutOrder = 6,
-		TextWrapped = GetFFlagVoiceTextOverflowFix(),
+		TextWrapped = true,
 	})
 end
 

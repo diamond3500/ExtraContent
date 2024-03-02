@@ -8,6 +8,7 @@ local CorePackages = game:GetService("CorePackages")
 local CoreGui = game:GetService("CoreGui")
 local ExperienceAuthService = game:GetService("ExperienceAuthService")
 local Players = game:GetService("Players")
+local HttpRbxApiService = game:GetService("HttpRbxApiService")
 
 local Roact = require(CorePackages.Roact)
 local RoactRodux = require(CorePackages.RoactRodux)
@@ -22,6 +23,15 @@ local Overlay = UIBlox.App.Dialog.Overlay
 local ButtonType = UIBlox.App.Button.Enum.ButtonType
 local RoactGamepad = require(CorePackages.Packages.RoactGamepad)
 
+local GetFFlagRemoveAppTempCommonTemp =
+	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagRemoveAppTempCommonTemp
+local httpRequest: any = if GetFFlagRemoveAppTempCommonTemp()
+	then require(RobloxGui.Modules.Common.httpRequest)
+	else require(CorePackages.AppTempCommon.Temp.httpRequest)
+
+local httpImpl = httpRequest(HttpRbxApiService :: any)
+local GetGameNameAndDescription = require(CorePackages.Workspace.Packages.GameDetailRodux).GetGameNameAndDescription
+
 local LocalPlayer = Players.LocalPlayer
 
 local Components = script.Parent
@@ -31,6 +41,7 @@ local ItemInfoList = require(CorePackages.Workspace.Packages.ItemDetails).ItemIn
 local LeaveCreationAlert = require(script.Parent.LeaveCreationAlert)
 local Constants = require(script.Parent.Parent.Constants)
 local PreviewViewport = require(Components.Common.PreviewViewport)
+local ValidationErrorModal = require(Components.ValidationErrorModal)
 
 local NAME_HEIGHT_PIXELS = 30
 local DISCLAIMER_HEIGHT_PIXELS = 50
@@ -58,17 +69,23 @@ BasePublishPrompt.validateProps = t.strictInterface({
 	closePreviewView = t.callback,
 	asset = t.union(t.instanceOf("Model"), t.instanceIsA("AnimationClip")),
 	onNameUpdated = t.callback,
-	confirmUploadReady = t.callback,
+	canSubmit = t.callback,
+	onSubmit = t.callback,
+	enableInputDelayed = t.optional(t.boolean),
+	isDelayedInput = t.optional(t.boolean),
+	delayInputSeconds = t.optional(t.number),
 
 	-- Mapped state
 	guid = t.any,
 	scopes = t.any,
+	errorMessage = t.optional(t.string),
 
 	-- Mapped dispatch functions
 	closePrompt = t.callback,
 })
 
 function BasePublishPrompt:init()
+	self.isMounted = false
 	self:setState({
 		-- if showUnsavedDataWarning is false, show the prompt
 		-- if true, we are showing a warning that says data is lost when prompt is closed
@@ -92,25 +109,33 @@ function BasePublishPrompt:init()
 	end
 
 	self.denyAndClose = function()
-		-- We should never get to this point if this engine feature is off, but just in case:
-		if game:GetEngineFeature("ExperienceAuthReflectionFixes") then
-			ExperienceAuthService:ScopeCheckUIComplete(
-				self.props.guid,
-				self.props.scopes,
-				Enum.ScopeCheckResult.ConsentDenied,
-				{} -- empty metadata
-			)
-		end
+		ExperienceAuthService:ScopeCheckUIComplete(
+			self.props.guid,
+			self.props.scopes,
+			Enum.ScopeCheckResult.ConsentDenied,
+			{} -- empty metadata
+		)
 		self.closePrompt()
 	end
 
 	-- Intended to do what the Parent wants on submission before closing the prompt
-	-- AVBURST-13553 Currently no visual indicator that Submit should be disabled if not ready
 	self.confirmAndUpload = function()
-		if self.props.confirmUploadReady() then
+		if self.props.canSubmit() then
+			self.props.onSubmit()
 			self.closePrompt()
 		end
 	end
+end
+
+function BasePublishPrompt:didMount()
+	self.isMounted = true
+	GetGameNameAndDescription(httpImpl :: any, game.GameId):andThen(function(result)
+		if self.isMounted and result.Name then
+			self:setState({
+				gameName = result.Name,
+			})
+		end
+	end)
 end
 
 function BasePublishPrompt:renderMiddle(localized)
@@ -120,7 +145,12 @@ function BasePublishPrompt:renderMiddle(localized)
 		local relativeSize: number = font.CaptionHeader.RelativeSize
 		local textSize: number = baseSize * relativeSize
 		local theme = style.Theme
+
 		assert(LocalPlayer, "Assert LocalPlayer not nil to silence type checker")
+		local localPlayerName = LocalPlayer.Name
+		local gameName = self.state.gameName
+		local typeData = self.props.typeData
+
 		return Roact.createFragment({
 			ScrollingFrame = Roact.createElement(RoactGamepad.Focusable.ScrollingFrame, {
 				BackgroundTransparency = 1,
@@ -174,16 +204,19 @@ function BasePublishPrompt:renderMiddle(localized)
 					rowData = {
 						{
 							infoName = localized[CREATOR_TEXT],
-							infoData = LocalPlayer.Name,
+							infoData = localPlayerName,
 							hasVerifiedBadge = LocalPlayer.HasVerifiedBadge,
+							isLoading = localPlayerName == nil,
 						},
 						{
 							infoName = localized[ATTRIBUTION_TEXT],
-							infoData = game.Name,
+							infoData = gameName,
+							isLoading = gameName == nil,
 						},
 						{
 							infoName = localized[TYPE_TEXT],
-							infoData = self.props.typeData,
+							infoData = typeData,
+							isLoading = typeData == nil,
 						},
 					},
 					LayoutOrder = 4,
@@ -261,6 +294,10 @@ function BasePublishPrompt:renderAlertLocalized(localized)
 							{
 								buttonType = ButtonType.PrimarySystem,
 								props = {
+									isDisabled = not self.props.canSubmit(),
+									isDelayedInput = self.props.isDelayedInput,
+									enableInputDelayed = self.props.enableInputDelayed,
+									delayInputSeconds = self.props.delayInputSeconds,
 									onActivated = self.confirmAndUpload,
 									text = localized[SUBMIT_TEXT],
 								},
@@ -276,6 +313,12 @@ function BasePublishPrompt:renderAlertLocalized(localized)
 					screenSize = self.props.screenSize,
 					closePrompt = self.denyAndClose,
 					cancelClosePrompt = self.cancelClosePrompt,
+				})
+				else nil,
+			ValidationErrorAlert = if self.props.errorMessage
+				then Roact.createElement(ValidationErrorModal, {
+					screenSize = self.props.screenSize,
+					closePrompt = self.closePrompt,
 				})
 				else nil,
 			PreviewFrame = self.props.showingPreviewView and Roact.createElement("Frame", {
@@ -312,10 +355,15 @@ function BasePublishPrompt:render()
 	return self:renderAlertLocalized(localized)
 end
 
+function BasePublishPrompt:willUnmount()
+	self.isMounted = false
+end
+
 local function mapStateToProps(state)
 	return {
 		guid = state.promptRequest.promptInfo.guid,
 		scopes = state.promptRequest.promptInfo.scopes,
+		errorMessage = state.promptRequest.promptInfo.errorMessage,
 	}
 end
 

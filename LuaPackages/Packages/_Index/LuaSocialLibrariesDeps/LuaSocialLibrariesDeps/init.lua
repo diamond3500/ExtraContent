@@ -1,5 +1,7 @@
 local LuaSocialLibrariesDeps = script.Parent
 
+local FFlagUseSocialLibraries310 = game:DefineFastFlag("UseSocialLibraries310", false)
+
 return {
 	GenericPagination = require(LuaSocialLibrariesDeps.GenericPagination),
 	RoactFitComponents = require(LuaSocialLibrariesDeps.RoactFitComponents),
@@ -8,7 +10,6 @@ return {
 	llama = require(LuaSocialLibrariesDeps.llama),
 	RoduxAliases = require(LuaSocialLibrariesDeps.RoduxAliases),
 	RoduxUsers = require(LuaSocialLibrariesDeps.RoduxUsers),
-	RoduxUsers_v13 = require(LuaSocialLibrariesDeps.RoduxUsers_v13),
 	RoduxFriends = require(LuaSocialLibrariesDeps.RoduxFriends),
 	RoduxPresence = require(LuaSocialLibrariesDeps.RoduxPresence),
 	RoduxGames = require(LuaSocialLibrariesDeps.RoduxGames),
@@ -29,11 +30,13 @@ return {
 	NetworkingPremiumFeatures = require(LuaSocialLibrariesDeps.NetworkingPremiumFeatures),
 	NetworkingCurrentlyWearing = require(LuaSocialLibrariesDeps.NetworkingCurrentlyWearing),
 	CollisionMatchers = require(LuaSocialLibrariesDeps.CollisionMatchers),
-	SocialLibraries = require(LuaSocialLibrariesDeps.SocialLibraries),
+	SocialLibraries = if FFlagUseSocialLibraries310
+		then require(LuaSocialLibrariesDeps.SocialLibraries_v310)
+		else require(LuaSocialLibrariesDeps.SocialLibraries_v258),
 	NetworkingUsers = require(LuaSocialLibrariesDeps.NetworkingUsers),
 	NetworkingBlocking = require(LuaSocialLibrariesDeps.NetworkingBlocking),
 	NetworkingSquads = require(LuaSocialLibrariesDeps.NetworkingSquads),
 	RoduxSquads = require(LuaSocialLibrariesDeps.RoduxSquads),
 	NetworkingCall = require(LuaSocialLibrariesDeps.NetworkingCall),
-	RoduxCall = require(LuaSocialLibrariesDeps.RoduxCall),
+	RoduxCall = require(LuaSocialLibrariesDeps.RoduxCall_v18),
 }

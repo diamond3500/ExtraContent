@@ -9,7 +9,8 @@ local VoiceChatServiceManager = require(RobloxGui.Modules.VoiceChat.VoiceChatSer
 local VoiceIndicator = require(RobloxGui.Modules.VoiceChat.Components.VoiceIndicatorFunc)
 local VoiceAnalytics = require(RobloxGui.Modules.Settings.Analytics.VoiceAnalytics)
 local GetFFlagEnableVoiceMuteAnalytics = require(RobloxGui.Modules.Flags.GetFFlagEnableVoiceMuteAnalytics)
-local GetFFlagEnableChromeMicShimmer = require(RobloxGui.Modules.Chrome.Flags.GetFFlagEnableChromeMicShimmer)
+
+local GetFFlagEnableChromeFTUX = require(script.Parent.Parent.Flags.GetFFlagEnableChromeFTUX)
 
 local ChromeService = require(script.Parent.Parent.Service)
 local RedVoiceDot = require(script.Parent.RedVoiceDot)
@@ -25,7 +26,7 @@ if GetFFlagEnableVoiceMuteAnalytics() then
 end
 
 local toggleMic = function(self)
-	VoiceChatServiceManager:ToggleMic()
+	VoiceChatServiceManager:ToggleMic("ChromeIntegrationsToggleMic")
 	Analytics:setLastCtx("SelfView")
 	if voiceAnalytics then
 		voiceAnalytics:onToggleMuteSelf(not VoiceChatServiceManager.localMuted)
@@ -55,8 +56,9 @@ local muteSelf = ChromeService:register({
 					userId = tostring((Players.LocalPlayer :: Player).UserId),
 					hideOnError = false,
 					iconStyle = "MicLight",
+					selectable = if GetFFlagEnableChromeFTUX() then false else nil,
 					size = ICON_SIZE,
-					showConnectingShimmer = if GetFFlagEnableChromeMicShimmer() then true else nil,
+					showConnectingShimmer = true,
 				}) :: any,
 				React.createElement(RedVoiceDot, {
 					position = UDim2.new(1, -7, 1, -7),

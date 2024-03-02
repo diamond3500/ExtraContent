@@ -1,9 +1,12 @@
 --!strict
 local root = script.Parent.Parent
 
+local getFFlagUseUGCValidationContext = require(root.flags.getFFlagUseUGCValidationContext)
 local getFFlagUGCValidateFullBody = require(root.flags.getFFlagUGCValidateFullBody)
 local getFFlagUGCValidateFixAccessories = require(root.flags.getFFlagUGCValidateFixAccessories)
 local getFFlagUGCValidateHandleRestrictedUserIds = require(root.flags.getFFlagUGCValidateHandleRestrictedUserIds)
+local getEngineFeatureUGCValidateEditableMeshAndImage =
+	require(root.flags.getEngineFeatureUGCValidateEditableMeshAndImage)
 
 local Promise = require(root.Parent.Promise)
 
@@ -12,6 +15,8 @@ local ConstantsInterface = require(root.ConstantsInterface)
 local BundlesMetadata = require(root.util.BundlesMetadata)
 local Types = require(root.util.Types)
 local getRestrictedUserTable = require(root.util.getRestrictedUserTable)
+local createEditableInstancesForContext = require(root.util.createEditableInstancesForContext)
+local destroyEditableInstances = require(root.util.destroyEditableInstances)
 local createUGCBodyPartFolders = require(root.util.createUGCBodyPartFolders)
 local fixUpPreValidation = require(root.util.fixUpPreValidation)
 local validateInternal = require(root.validation.validateInternal)
@@ -88,7 +93,8 @@ local function validateBundleReadyForUpload(
 	avatar: Instance,
 	allowedBundleTypeSettings: BundlesMetadata.AllowedBundleTypeSettings,
 	bundleType: createUGCBodyPartFolders.BundleType,
-	progressCallback: ((AvatarValidationResponse) -> ())?
+	progressCallback: ((AvatarValidationResponse) -> ())?,
+	allowEditableInstances: boolean?
 )
 	progressCallback = progressCallback or function() end
 	assert(progressCallback ~= nil, "Luau")
@@ -190,15 +196,52 @@ local function validateBundleReadyForUpload(
 
 		assert(piece.instance ~= nil, "Unfinished piece doesn't have an instnace")
 
-		local success, problems = validateInternal(
-			false, -- isAsync
-			{ piece.instance },
-			piece.assetType,
-			false, -- isServer
-			false, -- allowUnreviewedAssets
-			if getFFlagUGCValidateHandleRestrictedUserIds() then getRestrictedUserTable() else {},
-			nil -- token
-		)
+		local success, problems
+		if getFFlagUseUGCValidationContext() then
+			local instances = { piece.instance }
+			local validationContext = {
+				instances = instances :: { Instance },
+				assetTypeEnum = piece.assetType :: Enum.AssetType,
+				allowUnreviewedAssets = false,
+				restrictedUserIds = if getFFlagUGCValidateHandleRestrictedUserIds()
+					then getRestrictedUserTable()
+					else {},
+				isServer = false,
+				isAsync = false,
+				allowEditableInstances = allowEditableInstances,
+			} :: Types.ValidationContext
+
+			if getEngineFeatureUGCValidateEditableMeshAndImage() then
+				local createSuccess, result = createEditableInstancesForContext(instances, allowEditableInstances)
+				-- assuming isServer is false
+				if not createSuccess then
+					problems = result
+					success = false
+				else
+					validationContext.editableMeshes = result.editableMeshes :: Types.EditableMeshes
+					validationContext.editableImages = result.editableImages :: Types.EditableImages
+
+					success, problems = validateInternal(validationContext)
+
+					destroyEditableInstances(
+						validationContext.editableMeshes :: Types.EditableMeshes,
+						validationContext.editableImages :: Types.EditableImages
+					)
+				end
+			else
+				success, problems = validateInternal(validationContext)
+			end
+		else
+			success, problems = (validateInternal :: any)(
+				false, -- isAsync
+				{ piece.instance },
+				piece.assetType,
+				false, -- isServer
+				false, -- allowUnreviewedAssets
+				if getFFlagUGCValidateHandleRestrictedUserIds() then getRestrictedUserTable() else {},
+				nil -- token
+			)
+		end
 
 		response = table.clone(response)
 		response.errors = table.clone(response.errors)
@@ -222,7 +265,7 @@ local function validateBundleReadyForUpload(
 		progressCallback(response)
 	end)
 		:andThen(function()
-			if getFFlagUGCValidateFullBody() then
+			if getFFlagUGCValidateFullBody() and bundleType == "Body" then
 				local function createFullBodyData(inputPieces: { AvatarValidationPiece }): Types.FullBodyData
 					local results: Types.FullBodyData = {}
 					for _, individualPiece in inputPieces do
@@ -240,8 +283,47 @@ local function validateBundleReadyForUpload(
 					return results
 				end
 
+				local success, failures
 				local fullBodyData = createFullBodyData(response.pieces)
-				local success, failures = validateFullBody(fullBodyData, false)
+
+				if getFFlagUseUGCValidationContext() then
+					local validationContext = {
+						fullBodyData = fullBodyData :: Types.FullBodyData,
+						isServer = false,
+						allowEditableInstances,
+					} :: Types.ValidationContext
+
+					if getEngineFeatureUGCValidateEditableMeshAndImage() then
+						local instances = {}
+						for _, instancesAndType in fullBodyData do
+							for _, instance in instancesAndType.allSelectedInstances do
+								table.insert(instances, instance)
+							end
+						end
+
+						local createSuccess, result =
+							createEditableInstancesForContext(instances, allowEditableInstances)
+						if not createSuccess then
+							failures = result
+							success = false
+						else
+							validationContext.editableMeshes = result.editableMeshes :: Types.EditableMeshes
+							validationContext.editableImages = result.editableImages :: Types.EditableImages
+
+							success, failures = validateFullBody(validationContext)
+
+							destroyEditableInstances(
+								validationContext.editableMeshes :: Types.EditableMeshes,
+								validationContext.editableImages :: Types.EditableImages
+							)
+						end
+					else
+						success, failures = validateFullBody(validationContext)
+					end
+				else
+					success, failures = (validateFullBody :: any)(fullBodyData, false)
+				end
+
 				if not success then
 					response = table.clone(response)
 					response.errors = table.clone(response.errors)

@@ -32,14 +32,14 @@ end
 
 function SuggestedCalleeModel.format(suggestedCalleeModel)
 	return Cryo.Dictionary.join(suggestedCalleeModel, {
-		userPresenceType = Enums.PresenceType.fromRawValue(suggestedCalleeModel.userPresenceType),
+		userPresenceType = Enums.PresenceType[suggestedCalleeModel.userPresenceType],
 	})
 end
 
 SuggestedCalleeModel.isValid = t.strictInterface({
 	userId = t.number,
 	userPresenceType = function(value)
-		return Enums.PresenceType.fromRawValue(value) ~= nil
+		return Enums.PresenceType[value] ~= nil
 	end,
 	lastLocation = t.string,
 })

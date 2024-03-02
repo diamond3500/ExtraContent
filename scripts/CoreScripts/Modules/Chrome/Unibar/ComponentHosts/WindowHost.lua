@@ -17,8 +17,11 @@ local Constants = require(Chrome.Unibar.Constants)
 local ChromeTypes = require(Chrome.Service.Types)
 local ChromeAnalytics = require(Chrome.Analytics.ChromeAnalytics)
 local FFlagEnableChromeAnalytics = require(Chrome.Flags.GetFFlagEnableChromeAnalytics)()
-local GetFFlagSelfViewMultiTouchFix = require(Chrome.Flags.GetFFlagSelfViewMultiTouchFix)
+local FFlagSelfViewFixes = require(Chrome.Flags.GetFFlagSelfViewFixes)()
 local shouldRejectMultiTouch = require(Chrome.Utility.shouldRejectMultiTouch)
+
+local useSelector = require(CorePackages.Workspace.Packages.RoactUtils).Hooks.RoactRodux.useSelector
+local GetFFlagSelfViewAssertFix = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagSelfViewAssertFix
 
 local useWindowSize = require(script.Parent.Parent.Parent.Hooks.useWindowSize)
 
@@ -49,6 +52,12 @@ local WindowHost = function(props: WindowHostProps)
 		return nil
 	end, {})
 
+	local isMenuOpen = if FFlagSelfViewFixes
+		then useSelector(function(state)
+			return state.displayOptions.menuOpen or state.displayOptions.inspectMenuOpen
+		end)
+		else nil
+
 	-- When a reposition tween is playing, momentarily disallow dragging the window
 	local isRepositioning, updateIsRepositioning = React.useBinding(false)
 
@@ -70,13 +79,9 @@ local WindowHost = function(props: WindowHostProps)
 	React.useEffect(function()
 		local storedConnection: { current: RBXScriptConnection? }? = nil
 		local originalInputObj: InputObject? = nil
-		if GetFFlagSelfViewMultiTouchFix() then
-			local dragConnection: any = ChromeService:dragConnection(props.integration.id)
-			storedConnection = dragConnection.connection
-			originalInputObj = dragConnection.inputObject
-		else
-			storedConnection = ChromeService:dragConnection(props.integration.id)
-		end
+		local dragConnection: any = ChromeService:dragConnection(props.integration.id)
+		storedConnection = dragConnection.connection
+		originalInputObj = dragConnection.inputObject
 		assert(windowRef.current ~= nil)
 		assert(windowRef.current.Parent ~= nil)
 
@@ -109,10 +114,8 @@ local WindowHost = function(props: WindowHostProps)
 				connection.current = UserInputService.InputChanged:Connect(function(inputChangedObj: InputObject, _)
 					local inputPosition = inputChangedObj.Position
 
-					if GetFFlagSelfViewMultiTouchFix() then
-						if shouldRejectMultiTouch(originalInputObj, inputChangedObj) then
-							return
-						end
+					if shouldRejectMultiTouch(originalInputObj, inputChangedObj) then
+						return
 					end
 
 					local delta = inputPosition - dragStartPosition
@@ -187,10 +190,8 @@ local WindowHost = function(props: WindowHostProps)
 				}
 				frame.Position = UDim2.fromOffset(newPosition.X, newPosition.Y)
 				connection.current = UserInputService.InputChanged:Connect(function(inputChangedObj: InputObject, _)
-					if GetFFlagSelfViewMultiTouchFix() then
-						if shouldRejectMultiTouch(inputObj, inputChangedObj) then
-							return
-						end
+					if shouldRejectMultiTouch(inputObj, inputChangedObj) then
+						return
 					end
 
 					setDragging(true)
@@ -237,6 +238,12 @@ local WindowHost = function(props: WindowHostProps)
 
 	-- When the drag ends and the window frame is clipped, reposition it within the screen bounds
 	local repositionWindowWithinScreenBounds = React.useCallback(function()
+		if GetFFlagSelfViewAssertFix() then
+			-- Don't reposition if the window was closed within the debounce or umount
+			if windowRef == nil or windowRef.current == nil then
+				return
+			end
+		end
 		assert(windowRef.current ~= nil)
 		assert(windowRef.current.Parent ~= nil)
 
@@ -315,7 +322,7 @@ local WindowHost = function(props: WindowHostProps)
 			[React.Change.AbsoluteSize] = debounce(function()
 				repositionWindowWithinScreenBounds()
 			end, RESIZE_DEBOUNCE_TIME),
-			DisplayOrder = 100,
+			DisplayOrder = if not FFlagSelfViewFixes then 100 elseif isMenuOpen then -1 else 100,
 			ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
 		}, {
 			WindowFrame = React.createElement("Frame", {

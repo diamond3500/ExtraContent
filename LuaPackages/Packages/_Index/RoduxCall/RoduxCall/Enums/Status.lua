@@ -1,14 +1,9 @@
-local Packages = script.Parent.Parent.Parent
-local enumerate = require(Packages.enumerate) :: any
-
-return enumerate(script.Name, {
-	Idle = "Idle",
-	Ringing = "Ringing",
-	Accepting = "Accepting",
-	Initializing = "Initializing",
-	Connecting = "Connecting",
-	Teleporting = "Teleporting",
-	Joining = "Joining",
-	Active = "Active",
-	Failed = "Failed",
-})
+return {
+	Idle = "Idle" :: "Idle",
+	Ringing = "Ringing" :: "Ringing",
+	Accepting = "Accepting" :: "Accepting",
+	Initializing = "Initializing" :: "Initializing",
+	Connecting = "Connecting" :: "Connecting",
+	Teleporting = "Teleporting" :: "Teleporting",
+	Active = "Active" :: "Active",
+}

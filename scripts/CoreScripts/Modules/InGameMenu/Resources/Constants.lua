@@ -61,6 +61,7 @@ local Constants = {
 	AnalyticsResumeGameName = "resume",
 	AnalyticsResumeShieldSource = "shield",
 	AnalyticsResumeButtonSource = "button",
+	AnalyticsResumeGamepadSource = "gamepad",
 	AnalyticsConfirmedName = "confirmed",
 	AnalyticsCancelledName = "cancelled",
 	AnalyticsReportLeft = "ingame_menu_report_left",
@@ -120,13 +121,23 @@ local Constants = {
 		[Enum.UserInputType.Touch] = InputTypes.Touch,
 	},
 
+	FramerateCaps = {
+		30,
+		60,
+		144,
+		240, -- Anything higher than this will cause weird issues with physics events, as the physics engine runs at 240Hz (CREATORBUG-5874)
+	},
+
 	OnSurveyEventDescriptor = {
 		mid = MessageBus.getMessageId("Game", "openSurvey"),
 		validateParams = t.strictInterface({
 			eventType = t.string,
+			userId = t.optional(t.string),
+			customProps = t.optional(t.table),
 		}),
 	},
-	SurveyEventType =  "leaveButtonClick"
+	SurveyEventType =  "leaveButtonClick",
+	ChromeSeenCountKey = "ChromeSeenCount"
 }
 
 return Constants

@@ -1,12 +1,12 @@
 local VRRoot = script.Parent
 local CoreRoot = VRRoot.Parent
 local UIBlox = CoreRoot.Parent
-local UIBloxConfig = require(UIBlox.UIBloxConfig)
 
 local Packages = UIBlox.Parent
 local React = require(Packages.React)
 
 local Constants = require(VRRoot.Constants)
+local UIBloxConfig = require(UIBlox.UIBloxConfig)
 
 local LERP_SPEED = 7.2
 
@@ -23,6 +23,13 @@ local function GetUserCFrameWorldSpace(userCFrameType, VRService)
 end
 
 local function usePanel3DRenderStep(props: Constants.Panel3DProps, basePart: Constants.Ref<Part | nil>)
+	local adorneeSize, setAdorneeSize
+	local adorneeCFrame, setAdorneeCFrame
+	if UIBloxConfig.refactorPanel3D then
+		adorneeSize, setAdorneeSize = React.useBinding(Vector3.new(props.partSize.X, props.partSize.Y, 0.05))
+		adorneeCFrame, setAdorneeCFrame = React.useBinding(props.offset * CFrame.Angles(math.rad(props.tilt), 0, 0))
+	end
+
 	local lastOffset: Constants.Ref<CFrame?> = React.useRef(props.offset)
 	local lastLookCFrame: Constants.Ref<CFrame?> = React.useRef(nil)
 	local followView: Constants.Ref<boolean?> = React.useRef(false)
@@ -136,13 +143,21 @@ local function usePanel3DRenderStep(props: Constants.Panel3DProps, basePart: Con
 			})
 		end
 
-		if basePart.current ~= nil then
-			basePart.current.CFrame = panelCFrame
+		if UIBloxConfig.refactorPanel3D then
+			setAdorneeCFrame(panelCFrame)
 			-- The smallest part size is 0.05
 			-- Don't go smaller than this otherwise there will be a discrepancy between
 			-- the physical and visual positions, and the laser pointer cursor will look off
-			basePart.current.Size =
-				Vector3.new(props.partSize.X * cameraHeadScale, props.partSize.Y * cameraHeadScale, 0.05)
+			setAdorneeSize(Vector3.new(props.partSize.X * cameraHeadScale, props.partSize.Y * cameraHeadScale, 0.05))
+		else
+			if basePart.current ~= nil then
+				basePart.current.CFrame = panelCFrame
+				-- The smallest part size is 0.05
+				-- Don't go smaller than this otherwise there will be a discrepancy between
+				-- the physical and visual positions, and the laser pointer cursor will look off
+				basePart.current.Size =
+					Vector3.new(props.partSize.X * cameraHeadScale, props.partSize.Y * cameraHeadScale, 0.05)
+			end
 		end
 	end, {
 		props.anchoring,
@@ -172,18 +187,17 @@ local function usePanel3DRenderStep(props: Constants.Panel3DProps, basePart: Con
 						end)
 				end
 			end
-			if UIBloxConfig.vrFixUIJitter then
-				currentCameraChangedConn =
-					workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(onCurrentCameraChanged)
-				onCurrentCameraChanged()
 
-				if props.alignedPanel then
-					local panelPart = props.alignedPanel:GetPart()
-					if panelPart then
-						alignedPartCFrameChangedConn = panelPart:GetPropertyChangedSignal("CFrame"):Connect(function()
-							renderSteppedCallback(0)
-						end)
-					end
+			currentCameraChangedConn =
+				workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(onCurrentCameraChanged)
+			onCurrentCameraChanged()
+
+			if props.alignedPanel then
+				local panelPart = props.alignedPanel:GetPart()
+				if panelPart then
+					alignedPartCFrameChangedConn = panelPart:GetPropertyChangedSignal("CFrame"):Connect(function()
+						renderSteppedCallback(0)
+					end)
 				end
 			end
 
@@ -191,19 +205,19 @@ local function usePanel3DRenderStep(props: Constants.Panel3DProps, basePart: Con
 
 			return function()
 				connection:Disconnect()
-				if UIBloxConfig.vrFixUIJitter then
-					currentCameraChangedConn:Disconnect()
-					if cameraCFrameChangedConn then
-						cameraCFrameChangedConn:Disconnect()
-					end
-					if alignedPartCFrameChangedConn then
-						alignedPartCFrameChangedConn:Disconnect()
-					end
+				currentCameraChangedConn:Disconnect()
+				if cameraCFrameChangedConn then
+					cameraCFrameChangedConn:Disconnect()
+				end
+				if alignedPartCFrameChangedConn then
+					alignedPartCFrameChangedConn:Disconnect()
 				end
 			end
 		end
 		return function() end -- FIXME Luau: ERROR: Not all codepaths in this function return '() -> ()'
 	end, { props.anchoring, renderSteppedCallback } :: { any })
+
+	return adorneeSize, adorneeCFrame
 end
 
 return usePanel3DRenderStep

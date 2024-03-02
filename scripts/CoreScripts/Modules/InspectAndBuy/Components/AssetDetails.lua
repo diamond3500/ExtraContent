@@ -5,6 +5,7 @@ local Players = game:GetService("Players")
 local InspectAndBuyFolder = script.Parent.Parent
 local Roact = require(CorePackages.Roact)
 local RoactRodux = require(CorePackages.RoactRodux)
+local AppFonts = require(CorePackages.Workspace.Packages.Style).AppFonts
 local DetailsText = require(InspectAndBuyFolder.Components.DetailsText)
 local DetailsThumbnail = require(InspectAndBuyFolder.Components.DetailsThumbnail)
 local DetailsDescription = require(InspectAndBuyFolder.Components.DetailsDescription)
@@ -21,7 +22,7 @@ local tutils = require(CorePackages.tutils)
 local RobloxTranslator = require(CoreGui.RobloxGui.Modules.RobloxTranslator)
 local UIBlox = require(CorePackages.UIBlox)
 local Images = UIBlox.App.ImageSet.Images
-local UIBloxImageSetLabel = UIBlox.Core.ImageSet.Label
+local UIBloxImageSetLabel = UIBlox.Core.ImageSet.ImageSetLabel
 local ItemInfoList = require(CorePackages.Workspace.Packages.ItemDetails).ItemInfoList
 local AttributionConstants = require(InspectAndBuyFolder.AttributionConstants)
 
@@ -293,7 +294,7 @@ function AssetDetails:render()
 								locale,
 								{ QUANTITY = tostring(ownedInstances) }
 							),
-							Font = Enum.Font.Gotham,
+							Font = AppFonts.default:getDefault(),
 							TextSize = 12,
 							TextColor3 = Color3.new(1, 1, 1),
 							BackgroundTransparency = 1,

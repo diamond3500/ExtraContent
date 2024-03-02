@@ -9,11 +9,9 @@ local Sounds = require(CorePackages.Workspace.Packages.SoundManager).Sounds
 local SoundGroups = require(CorePackages.Workspace.Packages.SoundManager).SoundGroups
 local SoundManager = require(CorePackages.Workspace.Packages.SoundManager).SoundManager
 local UserProfiles = require(CorePackages.Workspace.Packages.UserProfiles)
-local GetFFlagCorescriptsSoundManagerEnabled =
-	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagCorescriptsSoundManagerEnabled
-local GetFFlagSoundManagerRefactor = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagSoundManagerRefactor
+local GetFFlagIrisUseLocalizationProvider =
+	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagIrisUseLocalizationProvider
 local ContactList = RobloxGui.Modules.ContactList
-local RobloxTranslator = require(RobloxGui.Modules.RobloxTranslator)
 local dependencies = require(ContactList.dependencies)
 local dependencyArray = dependencies.Hooks.dependencyArray
 local useDispatch = dependencies.Hooks.useDispatch
@@ -21,6 +19,14 @@ local useSelector = dependencies.Hooks.useSelector
 local getStandardSizeAvatarHeadShotRbxthumb = dependencies.getStandardSizeAvatarHeadShotRbxthumb
 
 local GetPresencesFromUserIds = dependencies.NetworkingPresence.GetPresencesFromUserIds
+
+local useLocalization
+local RobloxTranslator
+if GetFFlagIrisUseLocalizationProvider() then
+	useLocalization = dependencies.Hooks.useLocalization
+else
+	RobloxTranslator = require(RobloxGui.Modules.RobloxTranslator)
+end
 
 local EnumPresenceType = dependencies.RoduxPresence.Enums.PresenceType
 local UIBlox = dependencies.UIBlox
@@ -30,12 +36,14 @@ local PlayerContext = UIBlox.App.Indicator.PlayerContext
 local Images = UIBlox.App.ImageSet.Images
 local Interactable = UIBlox.Core.Control.Interactable
 
-local ImageSetLabel = UIBlox.Core.ImageSet.Label
+local ImageSetLabel = UIBlox.Core.ImageSet.ImageSetLabel
 local useStyle = UIBlox.Core.Style.useStyle
 
 local OpenOrUpdateCFM = require(ContactList.Actions.OpenOrUpdateCFM)
-
+local useAnalytics = require(ContactList.Analytics.useAnalytics)
+local EventNamesEnum = require(ContactList.Analytics.EventNamesEnum)
 local useStartCallCallback = require(ContactList.Hooks.useStartCallCallback)
+local Pages = require(ContactList.Enums.Pages)
 
 local rng = Random.new()
 
@@ -48,15 +56,19 @@ export type Props = {
 	dismissCallback: () -> (),
 	layoutOrder: number?,
 	showDivider: boolean,
+	searchQueryString: string?,
+	itemListIndex: number,
+	isSuggestedUser: boolean,
 }
 
-local CALL_IMAGE_SIZE = 28
+local CALL_IMAGE_SIZE = 24
 local PADDING_IN_BETWEEN = 12
 local PROFILE_SIZE = 68
 local PLAYER_CONTEXT_HEIGHT = 24
 local PADDING = Vector2.new(24, 12)
 
 local function FriendListItem(props: Props)
+	local analytics = useAnalytics()
 	local style = useStyle()
 	local theme = style.Theme
 	local font = style.Font
@@ -68,6 +80,15 @@ local function FriendListItem(props: Props)
 		userName = props.userName,
 		combinedName = props.combinedName,
 	}
+
+	local localized
+	if GetFFlagIrisUseLocalizationProvider() then
+		localized = useLocalization({
+			offlineStatusLabel = "InGame.Presence.Label.Offline",
+			onlineStatusLabel = "InGame.Presence.Label.Online",
+			studioStatusLabel = "InGame.Presence.Label.RobloxStudio",
+		})
+	end
 
 	React.useEffect(function()
 		if props.userPresenceType == nil then
@@ -85,6 +106,11 @@ local function FriendListItem(props: Props)
 	end, {})
 	local tag = useSelector(selectTag)
 
+	local selectCurrentPage = React.useCallback(function(state: any)
+		return state.Navigation.currentPage
+	end, {})
+	local currentPage = useSelector(selectCurrentPage)
+
 	local itemBackgroundTheme, setItemBackgroundTheme = React.useState("BackgroundDefault")
 	local onItemStateChanged = React.useCallback(function(oldState, newState)
 		if newState == ControlState.Pressed then
@@ -98,14 +124,22 @@ local function FriendListItem(props: Props)
 
 	local image = getStandardSizeAvatarHeadShotRbxthumb(tostring(props.userId))
 
-	local startCall = useStartCallCallback(tag, props.userId, props.combinedName, props.dismissCallback)
+	local analyticsInfo = {
+		searchQueryString = props.searchQueryString,
+		itemListIndex = props.itemListIndex,
+		isSuggestedUser = props.isSuggestedUser,
+		page = currentPage,
+	}
+	local startCall = useStartCallCallback(tag, props.userId, props.combinedName, props.dismissCallback, analyticsInfo)
 
 	local playerContext = React.useMemo(function()
 		local icon = Images["component_assets/circle_26_stroke_3"]
 		local iconColor = style.Theme.OfflineStatus.Color
 		local iconTransparency = style.Theme.OfflineStatus.Transparency
 		local iconSize = 12
-		local text = RobloxTranslator:FormatByKey("InGame.Presence.Label.Offline")
+		local text = if GetFFlagIrisUseLocalizationProvider()
+			then localized.offlineStatusLabel
+			else RobloxTranslator:FormatByKey("InGame.Presence.Label.Offline")
 		local textColorStyle = style.Theme.TextMuted
 
 		local userPresenceType
@@ -115,7 +149,7 @@ local function FriendListItem(props: Props)
 			lastLocation = presence.lastLocation
 		else
 			userPresenceType = if props.userPresenceType
-				then EnumPresenceType.fromRawValue(props.userPresenceType)
+				then EnumPresenceType[props.userPresenceType]
 				else EnumPresenceType.Offline
 			lastLocation = props.lastLocation or ""
 		end
@@ -124,7 +158,9 @@ local function FriendListItem(props: Props)
 			icon = Images["component_assets/circle_16"]
 			iconColor = style.Theme.OnlineStatus.Color
 			iconTransparency = style.Theme.OnlineStatus.Transparency
-			text = RobloxTranslator:FormatByKey("InGame.Presence.Label.Online")
+			text = if GetFFlagIrisUseLocalizationProvider()
+				then localized.onlineStatusLabel
+				else RobloxTranslator:FormatByKey("InGame.Presence.Label.Online")
 			textColorStyle = style.Theme.TextMuted
 			iconSize = 12
 		elseif userPresenceType == EnumPresenceType.InGame then
@@ -138,7 +174,9 @@ local function FriendListItem(props: Props)
 			icon = Images["icons/logo/studiologo_small"]
 			iconColor = style.Theme.TextDefault.Color
 			iconTransparency = style.Theme.TextDefault.Transparency
-			text = RobloxTranslator:FormatByKey("InGame.Presence.Label.RobloxStudio")
+			text = if GetFFlagIrisUseLocalizationProvider()
+				then localized.studioStatusLabel
+				else RobloxTranslator:FormatByKey("InGame.Presence.Label.RobloxStudio")
 			textColorStyle = style.Theme.TextMuted
 			iconSize = 16
 		end
@@ -158,25 +196,26 @@ local function FriendListItem(props: Props)
 	end, { presence, style })
 
 	local onHovered = React.useCallback(function(_: any, inputObject: InputObject?)
-		if
-			inputObject
-			and inputObject.UserInputType == Enum.UserInputType.MouseMovement
-			and GetFFlagCorescriptsSoundManagerEnabled()
-		then
-			if GetFFlagSoundManagerRefactor() then
-				SoundManager:PlaySound(Sounds.Hover.Name, {
-					Volume = 0.5 + rng:NextNumber(-0.25, 0.25),
-					PlaybackSpeed = 1 + rng:NextNumber(-0.5, 0.5),
-				}, SoundGroups.Iris)
-			else
-				SoundManager:PlaySound_old(Sounds.Hover.Name, {
-					Volume = 0.5 + rng:NextNumber(-0.25, 0.25),
-					PlaybackSpeed = 1 + rng:NextNumber(-0.5, 0.5),
-					SoundGroup = SoundGroups.Iris,
-				})
-			end
+		if inputObject and inputObject.UserInputType == Enum.UserInputType.MouseMovement then
+			SoundManager:PlaySound(Sounds.Hover.Name, {
+				Volume = 0.5 + rng:NextNumber(-0.25, 0.25),
+				PlaybackSpeed = 1 + rng:NextNumber(-0.5, 0.5),
+			}, SoundGroups.Iris)
 		end
 	end, {})
+
+	local openOrUpdateCFM = React.useCallback(function()
+		analytics.fireEvent(EventNamesEnum.PhoneBookPlayerMenuOpened, {
+			eventTimestampMs = os.time() * 1000,
+			friendUserId = friend.userId,
+			searchQueryString = props.searchQueryString,
+			itemListIndex = props.itemListIndex,
+			isSuggestedUser = props.isSuggestedUser,
+			page = Pages.FriendList,
+		})
+
+		dispatch(OpenOrUpdateCFM(friend))
+	end, dependencyArray(friend.userId, props.searchQueryString, props.itemListIndex, props.isSuggestedUser))
 
 	return React.createElement(Interactable, {
 		Position = UDim2.fromOffset(0, 0),
@@ -198,12 +237,8 @@ local function FriendListItem(props: Props)
 		ProfileImage = React.createElement("ImageButton", {
 			Size = UDim2.fromOffset(PROFILE_SIZE, PROFILE_SIZE),
 			Image = image,
-			[React.Event.MouseButton2Up] = function()
-				dispatch(OpenOrUpdateCFM(friend))
-			end,
-			[React.Event.TouchTap] = function()
-				dispatch(OpenOrUpdateCFM(friend))
-			end,
+			[React.Event.MouseButton2Up] = openOrUpdateCFM,
+			[React.Event.TouchTap] = openOrUpdateCFM,
 			AutoButtonColor = false,
 		}, {
 			UICorner = React.createElement("UICorner", {
@@ -277,7 +312,7 @@ local function FriendListItem(props: Props)
 				Size = UDim2.fromOffset(CALL_IMAGE_SIZE, CALL_IMAGE_SIZE),
 				AnchorPoint = Vector2.new(1, 0.5),
 				BackgroundTransparency = 1,
-				Image = "rbxassetid://14532752184", -- TODO(IRIS-659): Replace with UIBLOX icon
+				Image = "rbxassetid://15239343417", -- TODO(IRIS-659): Replace with UIBLOX icon
 				ImageColor3 = theme.ContextualPrimaryDefault.Color,
 				ImageTransparency = theme.ContextualPrimaryDefault.Transparency,
 			})

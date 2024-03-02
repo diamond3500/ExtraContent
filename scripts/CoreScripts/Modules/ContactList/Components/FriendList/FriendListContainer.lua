@@ -14,6 +14,8 @@ local Promise = require(CorePackages.AppTempCommon.LuaApp.Promise)
 local ExternalEventConnection = require(CorePackages.Workspace.Packages.RoactUtils).ExternalEventConnection
 local RetrievalStatus = require(CorePackages.Workspace.Packages.Http).Enum.RetrievalStatus
 local UserProfiles = require(CorePackages.Workspace.Packages.UserProfiles)
+local GetFFlagSuggestedCalleeBugFixEnabled =
+	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagSuggestedCalleeBugFixEnabled
 
 local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 
@@ -34,6 +36,8 @@ local GetSuggestedCallees = dependencies.NetworkingCall.GetSuggestedCallees
 local useStyle = UIBlox.Core.Style.useStyle
 local LoadingSpinner = UIBlox.App.Loading.LoadingSpinner
 
+local useAnalytics = require(ContactList.Analytics.useAnalytics)
+local EventNamesEnum = require(ContactList.Analytics.EventNamesEnum)
 local FriendListItem = require(ContactList.Components.FriendList.FriendListItem)
 local SectionHeader = require(ContactList.Components.FriendList.SectionHeader)
 local NoItemView = require(ContactList.Components.common.NoItemView)
@@ -54,6 +58,7 @@ export type Props = {
 
 local function FriendListContainer(props: Props)
 	local apolloClient = useApolloClient()
+	local analytics = useAnalytics()
 	local dispatch = useDispatch()
 	local style = useStyle()
 	local theme = style.Theme
@@ -70,7 +75,14 @@ local function FriendListContainer(props: Props)
 	local currentGuid = React.useRef("")
 	-- Cache this because we just fetch once. Given the catch, this promise will
 	-- succeed. We can inspect the result to see if it is a true success.
-	local requestSuggestedCallees = React.useRef(dispatch(GetSuggestedCallees.API()):catch(function() end))
+	local requestSuggestedCallees
+	if GetFFlagSuggestedCalleeBugFixEnabled() then
+		requestSuggestedCallees = React.useMemo(function()
+			return dispatch(GetSuggestedCallees.API()):catch(function() end)
+		end, {})
+	else
+		requestSuggestedCallees = React.useRef(dispatch(GetSuggestedCallees.API()):catch(function() end))
+	end
 
 	local trimmedSearchText = React.useMemo(function()
 		return string.gsub(props.searchText, "%s+", "")
@@ -82,98 +94,121 @@ local function FriendListContainer(props: Props)
 
 	-- Note: Careful about dependencies to this function or else we might have
 	-- an infinite render.
-	local getFriends = React.useCallback(function(currentFriends, cursor)
-		if localUserId then
-			isLoading.current = true
-			setStatus(RetrievalStatus.Fetching)
+	local getFriends = React.useCallback(
+		function(currentFriends, cursor)
+			if localUserId then
+				isLoading.current = true
+				setStatus(RetrievalStatus.Fetching)
 
-			local secondTimeout = if currentGuid.current == "" then 0 else 0.5
-			local guid = HttpService:GenerateGUID(false)
-			currentGuid.current = guid
+				local secondTimeout = if currentGuid.current == "" then 0 else 0.5
+				local guid = HttpService:GenerateGUID(false)
+				currentGuid.current = guid
 
-			local request = function()
-				-- Used to debounce the requests so that we don't overload the server.
-				if currentGuid.current ~= guid then
-					return
+				local request = function()
+					-- Used to debounce the requests so that we don't overload the server.
+					if currentGuid.current ~= guid then
+						return
+					end
+
+					analytics.fireEvent(EventNamesEnum.PhoneBookSearchAttempted, {
+						eventTimestampMs = os.time() * 1000,
+						searchQueryString = trimmedSearchText,
+					})
+
+					local requestFriends = dispatch(
+						if trimmedSearchText == ""
+							then FindFriendsFromUserId.API(
+								localUserId,
+								{ userSort = "CombinedName", cursor = cursor, limit = 20 }
+							)
+							else SearchFriendsByQuery.API(
+								localUserId,
+								{ userSort = "CombinedName", cursor = cursor, limit = 20, query = trimmedSearchText }
+							)
+					)
+
+					Promise.all({
+						requestFriends,
+						if GetFFlagSuggestedCalleeBugFixEnabled()
+							then requestSuggestedCallees
+							else requestSuggestedCallees.current,
+					}):andThen(function(result)
+						if currentGuid.current ~= guid then
+							return
+						end
+
+						local responseFriends = result[1]
+						local responseSuggestedCallees = result[2]
+
+						analytics.fireEvent(EventNamesEnum.PhoneBookSearchFinished, {
+							eventTimestampMs = os.time() * 1000,
+							searchQueryString = trimmedSearchText,
+							searchResultCount = #responseFriends.responseBody.PageItems,
+						})
+
+						local updatedFriends = {}
+						for _, friend in ipairs(currentFriends) do
+							table.insert(updatedFriends, friend)
+						end
+						for _, friend in ipairs(responseFriends.responseBody.PageItems) do
+							table.insert(updatedFriends, friend)
+						end
+
+						local userIds = Cryo.List.map(updatedFriends, function(friend)
+							return tostring(friend.id)
+						end)
+
+						if trimmedSearchText == "" and responseSuggestedCallees ~= nil then
+							-- We catch this error. So we just know if it
+							-- succeeds based on whether the response exists.
+							for _, suggestedCallee in ipairs(responseSuggestedCallees.responseBody.suggestedCallees) do
+								table.insert(userIds, tostring(suggestedCallee.userId))
+							end
+						end
+
+						apolloClient
+							:query({
+								query = UserProfiles.Queries.userProfilesCombinedNameAndUsernameByUserIds,
+								variables = {
+									userIds = userIds,
+								},
+							})
+							:andThen(function()
+								if currentGuid.current ~= guid then
+									return
+								end
+								-- Friend names fetched, update the list with this page.
+								setFriends(updatedFriends)
+								setNextPageCursor(responseFriends.responseBody.NextCursor)
+								setStatus(RetrievalStatus.Done)
+							end)
+							:catch(function(error)
+								if currentGuid.current ~= guid then
+									return
+								end
+								setStatus(RetrievalStatus.Failed)
+							end)
+					end, function()
+						if currentGuid.current ~= guid then
+							return
+						end
+						setStatus(RetrievalStatus.Failed)
+					end)
 				end
 
-				local requestFriends = dispatch(
-					if trimmedSearchText == ""
-						then FindFriendsFromUserId.API(
-							localUserId,
-							{ userSort = "CombinedName", cursor = cursor, limit = 20 }
-						)
-						else SearchFriendsByQuery.API(
-							localUserId,
-							{ userSort = "CombinedName", cursor = cursor, limit = 20, query = trimmedSearchText }
-						)
-				)
-
-				Promise.all({ requestFriends, requestSuggestedCallees.current }):andThen(function(result)
-					if currentGuid.current ~= guid then
-						return
-					end
-
-					local responseFriends = result[1]
-					local responseSuggestedCallees = result[2]
-
-					local updatedFriends = {}
-					for _, friend in ipairs(currentFriends) do
-						table.insert(updatedFriends, friend)
-					end
-					for _, friend in ipairs(responseFriends.responseBody.PageItems) do
-						table.insert(updatedFriends, friend)
-					end
-
-					local userIds = Cryo.List.map(updatedFriends, function(friend)
-						return tostring(friend.id)
-					end)
-
-					if trimmedSearchText == "" and responseSuggestedCallees ~= nil then
-						-- We catch this error. So we just know if it
-						-- succeeds based on whether the response exists.
-						for _, suggestedCallee in ipairs(responseSuggestedCallees.responseBody.suggestedCallees) do
-							table.insert(userIds, tostring(suggestedCallee.userId))
-						end
-					end
-
-					apolloClient
-						:query({
-							query = UserProfiles.Queries.userProfilesCombinedNameAndUsernameByUserIds,
-							variables = {
-								userIds = userIds,
-							},
-						})
-						:andThen(function()
-							if currentGuid.current ~= guid then
-								return
-							end
-							-- Friend names fetched, update the list with this page.
-							setFriends(updatedFriends)
-							setNextPageCursor(responseFriends.responseBody.NextCursor)
-							setStatus(RetrievalStatus.Done)
-						end)
-						:catch(function(error)
-							if currentGuid.current ~= guid then
-								return
-							end
-							setStatus(RetrievalStatus.Failed)
-						end)
-				end, function()
-					if currentGuid.current ~= guid then
-						return
-					end
-					setStatus(RetrievalStatus.Failed)
-				end)
+				if secondTimeout == 0 then
+					request()
+				else
+					delay(secondTimeout, request)
+				end
 			end
-
-			if secondTimeout == 0 then
-				request()
-			else
-				delay(secondTimeout, request)
-			end
-		end
-	end, dependencyArray(trimmedSearchText, lastRemovedFriend))
+		end,
+		dependencyArray(
+			trimmedSearchText,
+			lastRemovedFriend,
+			if GetFFlagSuggestedCalleeBugFixEnabled() then requestSuggestedCallees else nil
+		)
+	)
 
 	React.useEffect(function()
 		getFriends({}, "")
@@ -216,7 +251,7 @@ local function FriendListContainer(props: Props)
 	local noFriendsText = React.useMemo(function()
 		local message
 		if status == RetrievalStatus.Failed then
-			message = RobloxTranslator:FormatByKey("Feature.Call.Error.Title.GenericLong")
+			message = RobloxTranslator:FormatByKey("Feature.Call.Error.Description.Generic")
 		elseif props.searchText ~= "" then
 			message = RobloxTranslator:FormatByKey("Feature.Call.Description.NoFriendsFound")
 		else
@@ -285,7 +320,6 @@ local function FriendListContainer(props: Props)
 					Only incrementing numbers are counted when measuring the size of the entries table with #entries.
 					String keys like "suggestedHeader" do not contribute to the #entries count.
 				]]
-				--
 				entries[#entries + 1] = React.createElement(SectionHeader, {
 					name = RobloxTranslator:FormatByKey("Feature.Call.Label.Suggested"),
 					description = RobloxTranslator:FormatByKey("Feature.Call.Description.SuggestedFriends"),
@@ -317,8 +351,9 @@ local function FriendListContainer(props: Props)
 						dismissCallback = props.dismissCallback,
 						layoutOrder = #entries + 1,
 						showDivider = i ~= #filteredSuggestedCallees,
+						itemListIndex = i,
+						isSuggestedUser = true,
 					})
-					-- end
 				end
 			end
 
@@ -352,8 +387,10 @@ local function FriendListContainer(props: Props)
 					dismissCallback = props.dismissCallback,
 					layoutOrder = #entries + 1,
 					showDivider = i ~= #filteredFriends,
+					searchQueryString = trimmedSearchText,
+					itemListIndex = i,
+					isSuggestedUser = false,
 				})
-				-- end
 			end
 
 			if nextPageCursor ~= nil then

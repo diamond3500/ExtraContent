@@ -4,10 +4,10 @@ local CoreGui = game:GetService("CoreGui")
 local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 local Players = game:GetService("Players")
 
-local GetFFlagEnableVoiceChatLocalMuteUI = require(RobloxGui.Modules.Flags.GetFFlagEnableVoiceChatLocalMuteUI)
 local FFlagEnableVoiceChatStorybookFix = require(RobloxGui.Modules.Flags.FFlagEnableVoiceChatStorybookFix)
 local GetFFlagSubscriptionFailureUX = require(RobloxGui.Modules.Flags.GetFFlagSubscriptionFailureUX)
 local GetFFlagLocalMutedNilFix = require(RobloxGui.Modules.Flags.GetFFlagLocalMutedNilFix)
+local GetFFlagRemoveInGameChatBubbleChatReferences = require(RobloxGui.Modules.Flags.GetFFlagRemoveInGameChatBubbleChatReferences)
 
 local VoiceEnabledChanged = require(script.Parent.Actions.VoiceEnabledChanged)
 local VoiceStateChanged = require(script.Parent.Actions.VoiceStateChanged)
@@ -16,9 +16,12 @@ local ParticipantRemoved = require(script.Parent.Actions.ParticipantRemoved)
 local PlayerRemoved = require(script.Parent.Actions.PlayerRemoved)
 
 local VoiceChatServiceManager = require(script.Parent.VoiceChatServiceManager).default
-local VoiceConstants = require(CorePackages.AppTempCommon.VoiceChat.Constants)
+local VoiceConstants = require(CorePackages.Workspace.Packages.VoiceChat).Constants
 local BlockingUtility = require(RobloxGui.Modules.BlockingUtility)
 local log = require(RobloxGui.Modules.InGameChat.BubbleChat.Logger)(script.Name)
+if GetFFlagRemoveInGameChatBubbleChatReferences() then
+	log = require(RobloxGui.Modules.VoiceChat.Logger)(script.Name)
+end
 
 local VOICE_STATE
 if FFlagEnableVoiceChatStorybookFix() then
@@ -114,7 +117,7 @@ local initVoice = function(chatStore)
 			elseif not participantState.subscriptionCompleted then
 				voiceState = VOICE_STATE.CONNECTING
 			elseif participantState.isMutedLocally then
-				voiceState = GetFFlagEnableVoiceChatLocalMuteUI() and VOICE_STATE.LOCAL_MUTED or VOICE_STATE.MUTED
+				voiceState = VOICE_STATE.LOCAL_MUTED
 			elseif participantState.isMuted then
 				voiceState = VOICE_STATE.MUTED
 			elseif participantState.isSignalActive then

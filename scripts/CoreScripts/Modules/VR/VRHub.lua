@@ -19,12 +19,12 @@ local LaserPointer = require(RobloxGui.Modules.VR.LaserPointer)
 
 local VRControllerModel = require(RobloxGui.Modules.VR.VRControllerModel)
 
+local SplashScreenManager = require(CorePackages.Workspace.Packages.SplashScreenManager).SplashScreenManager
+
 local SafetyBubble = require(script.Parent.SafetyBubble)
-local SafetyBubbleEnabled = require(RobloxGui.Modules.Flags.FFlagSafetyBubbleEnabled)
-	or game:GetEngineFeature("EnableMaquettesSupport")
-local GetFFlagUIBloxVRFixUIJitter =
-	require(CorePackages.Workspace.Packages.SharedFlags).UIBlox.GetFFlagUIBloxVRFixUIJitter
-local FFlagVRControllerModelsSetByDevFix = game:DefineFastFlag("VRControllerModelsSetByDevFix", false)
+local GetFFlagHideExperienceLoadingJudder =
+	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagHideExperienceLoadingJudder
+
 
 local VRHub = {}
 local RegisteredModules = {}
@@ -38,10 +38,11 @@ VRHub.LaserPointer = nil
 VRHub.ControllerModelsEnabled = false
 VRHub.LeftControllerModel = nil
 VRHub.RightControllerModel = nil
-if FFlagVRControllerModelsSetByDevFix then
-	VRHub.ControllerModelsEnabledSetByDeveloper = true
-end
+VRHub.ControllerModelsEnabledSetByDeveloper = true
 
+if GetFFlagHideExperienceLoadingJudder() then
+	VRHub.isFPSAtTarget = SplashScreenManager.isFPSAtTarget()
+end
 VRHub.SafetyBubble = nil
 -- TODO: AvatarGestures cannot be turned on until this is implemented
 VRHub.IsFirstPerson = false
@@ -80,14 +81,10 @@ local function enableControllerModels(enabled)
 		end
 	end
 end
-local enableControllerModelsSetByDeveloper = false -- Cleanup when we remove FFlagVRControllerModelsSetByDevFix
+
 StarterGui:RegisterSetCore("VREnableControllerModels", function(enabled)
-	if FFlagVRControllerModelsSetByDevFix then
-		enabled = if enabled then true else false
-		VRHub.ControllerModelsEnabledSetByDeveloper = enabled
-	else
-		enableControllerModelsSetByDeveloper = true
-	end
+	enabled = if enabled then true else false
+	VRHub.ControllerModelsEnabledSetByDeveloper = enabled
 	enableControllerModels(enabled)
 end)
 
@@ -113,39 +110,35 @@ local function onRenderSteppedLast()
 	end
 end
 
-if GetFFlagUIBloxVRFixUIJitter() then
+local function onCameraCFrameChanged()
+	-- We normally update the position of the controllers and laser pointer in RenderStepped.
+	-- If a developer moves the camera after that, for example using TweenService, the controllers and pointer
+	-- will always be a frame behind and the user will notice a severe jitter.  This can be fixed by
+	-- calling the update functions again after the camera moves, passing in a deltaTime of zero.
 
-	local function onCameraCFrameChanged()
-		-- We normally update the position of the controllers and laser pointer in RenderStepped.
-		-- If a developer moves the camera after that, for example using TweenService, the controllers and pointer
-		-- will always be a frame behind and the user will notice a severe jitter.  This can be fixed by
-		-- calling the update functions again after the camera moves, passing in a deltaTime of zero.
-
-		if VRHub.LaserPointer then
-			VRHub.LaserPointer:update(0)
-		end
-		if VRHub.LeftControllerModel then
-			VRHub.LeftControllerModel:update(0)
-		end
-		if VRHub.RightControllerModel then
-			VRHub.RightControllerModel:update(0)
-		end
+	if VRHub.LaserPointer then
+		VRHub.LaserPointer:update(0)
 	end
-
-	local cameraCFrameChangedConn = nil
-	local function onCurrentCameraChanged()
-		if cameraCFrameChangedConn then
-			cameraCFrameChangedConn:disconnect()
-		end
-		if workspace.CurrentCamera then
-			cameraCFrameChangedConn = (workspace.CurrentCamera :: Camera):GetPropertyChangedSignal("CFrame"):Connect(onCameraCFrameChanged)
-		end
+	if VRHub.LeftControllerModel then
+		VRHub.LeftControllerModel:update(0)
 	end
-
-	workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(onCurrentCameraChanged)
-	onCurrentCameraChanged()
-
+	if VRHub.RightControllerModel then
+		VRHub.RightControllerModel:update(0)
+	end
 end
+
+local cameraCFrameChangedConn = nil
+local function onCurrentCameraChanged()
+	if cameraCFrameChangedConn then
+		cameraCFrameChangedConn:disconnect()
+	end
+	if workspace.CurrentCamera then
+		cameraCFrameChangedConn = (workspace.CurrentCamera :: Camera):GetPropertyChangedSignal("CFrame"):Connect(onCameraCFrameChanged)
+	end
+end
+
+workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(onCurrentCameraChanged)
+onCurrentCameraChanged()
 
 local function onVREnabledChanged()
 	if VRService.VREnabled then
@@ -158,15 +151,13 @@ local function onVREnabledChanged()
 
 		--Check again in case creating the laser pointer gracefully failed
 		if VRHub.LaserPointer then
-			VRHub.LaserPointer:setMode(LaserPointer.Mode.Navigation)
-		end
-		if FFlagVRControllerModelsSetByDevFix then
-			enableControllerModels(VRHub.ControllerModelsEnabledSetByDeveloper)
-		else
-			if not enableControllerModelsSetByDeveloper then
-				enableControllerModels(true)
+			if VRHub.isFPSAtTarget or not GetFFlagHideExperienceLoadingJudder() then
+				VRHub.LaserPointer:setMode(LaserPointer.Mode.Navigation)
+			elseif GetFFlagHideExperienceLoadingJudder() then
+				VRHub.LaserPointer:setMode(LaserPointer.Mode.Disabled)
 			end
 		end
+		enableControllerModels(VRHub.ControllerModelsEnabledSetByDeveloper)
 		RunService:BindToRenderStep(vrUpdateRenderstepName, Enum.RenderPriority.Last.Value, onRenderSteppedLast)
 
 		if VRHub.LaserPointer then
@@ -174,7 +165,7 @@ local function onVREnabledChanged()
 		end
 		UserInputService.OverrideMouseIconBehavior = Enum.OverrideMouseIconBehavior.ForceHide
 
-		VRHub.SafetyBubble = SafetyBubbleEnabled and SafetyBubble.new() or nil
+		VRHub.SafetyBubble = SafetyBubble.new()
 
 		-- this is the equivalent of MouseButton1 in VR
 		ContextActionService:BindCoreActivate(Enum.UserInputType.Gamepad1, Enum.KeyCode.ButtonR2)
@@ -197,18 +188,10 @@ local function onVRSessionStateChanged()
 	if VRService.VRSessionState == Enum.VRSessionState.Focused then
 		if VRHub.LaserPointer and VRHub.LaserPointer.Mode.Disabled then
 			VRHub.LaserPointer:setMode(LaserPointer.Mode.Navigation)
-			if FFlagVRControllerModelsSetByDevFix then
-				enableControllerModels(VRHub.ControllerModelsEnabledSetByDeveloper)
-			else
-				enableControllerModels(true)
-			end
+			enableControllerModels(VRHub.ControllerModelsEnabledSetByDeveloper)
 		end
 		if not VRHub.ControllerModelsEnabled then
-			if FFlagVRControllerModelsSetByDevFix then
-				enableControllerModels(VRHub.ControllerModelsEnabledSetByDeveloper)
-			else
-				enableControllerModels(true)
-			end
+			enableControllerModels(VRHub.ControllerModelsEnabledSetByDeveloper)
 		end
 	else
 		if VRHub.LaserPointer and VRHub.LaserPointer.Mode.Navigation then
@@ -301,7 +284,7 @@ VRHub.ShowHighlightedLeaveGameIconToggled = Util:Create("BindableEvent")({
 
 function VRHub:SetShowHighlightedLeaveGameIconToggled(showHighlightedLeaveGameIcon)
 	if VRHub.ShowHighlightedLeaveGameIcon ~= showHighlightedLeaveGameIcon then
-		VRHub.ShowHighlightedLeaveGameIcon = showHighlightedLeaveGameIcon	
+		VRHub.ShowHighlightedLeaveGameIcon = showHighlightedLeaveGameIcon
 		VRHub.ShowHighlightedLeaveGameIconToggled:Fire()
 	end
 end
@@ -351,6 +334,13 @@ function VRHub:GetControllerButtonPosition(keyCode)
 	local leftControllerButtonPos = VRHub.LeftControllerModel and VRHub.LeftControllerModel:getButtonPosition(keyCode)
 	local rightControllerButtonPos = VRHub.RightControllerModel and VRHub.RightControllerModel:getButtonPosition(keyCode)
 	return leftControllerButtonPos, rightControllerButtonPos
+end
+
+if GetFFlagHideExperienceLoadingJudder() then
+	SplashScreenManager.addStatusChangeListener(function(isFPSAtTarget)
+		VRHub.isFPSAtTarget = isFPSAtTarget
+		onVREnabledChanged()
+	end)
 end
 
 return VRHub

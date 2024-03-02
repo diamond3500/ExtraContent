@@ -1,7 +1,6 @@
 --!strict
 local CoreGui = game:GetService("CoreGui")
 local CorePackages = game:GetService("CorePackages")
-local GuiService = game:GetService("GuiService")
 
 local React = require(CorePackages.Packages.React)
 local Cryo = require(CorePackages.Packages.Cryo)
@@ -10,10 +9,11 @@ local Sounds = require(CorePackages.Workspace.Packages.SoundManager).Sounds
 local SoundGroups = require(CorePackages.Workspace.Packages.SoundManager).SoundGroups
 local SoundManager = require(CorePackages.Workspace.Packages.SoundManager).SoundManager
 local UserProfiles = require(CorePackages.Workspace.Packages.UserProfiles)
-local GetFFlagSoundManagerRefactor = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagSoundManagerRefactor
+local GetFFlagCallBarNameFallback = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagCallBarNameFallback
+local GetFFlagIrisUseLocalizationProvider =
+	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagIrisUseLocalizationProvider
 
 local RobloxGui = CoreGui:WaitForChild("RobloxGui")
-local RobloxTranslator = require(RobloxGui.Modules.RobloxTranslator)
 
 local ContactList = RobloxGui.Modules.ContactList
 
@@ -27,10 +27,18 @@ local getStandardSizeAvatarHeadShotRbxthumb = dependencies.getStandardSizeAvatar
 local teleportToRootPlace = dependencies.teleportToRootPlace
 
 local Colors = UIBlox.App.Style.Colors
-local ImageSetLabel = UIBlox.Core.ImageSet.Label
+local ImageSetLabel = UIBlox.Core.ImageSet.ImageSetLabel
 local useStyle = UIBlox.Core.Style.useStyle
 
 local useSelector = dependencies.Hooks.useSelector
+
+local useLocalization
+local RobloxTranslator
+if GetFFlagIrisUseLocalizationProvider() then
+	useLocalization = dependencies.Hooks.useLocalization
+else
+	RobloxTranslator = require(RobloxGui.Modules.RobloxTranslator)
+end
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -41,8 +49,8 @@ local localUserId: number = localPlayer and localPlayer.UserId or 0
 export type Props = {
 	callProtocol: CallProtocol.CallProtocolModule | nil,
 	size: Vector2,
-	callBarRef: (any) -> () | nil,
 	activeUtc: number,
+	position: React.Binding<UDim2> | UDim2,
 }
 
 local PROFILE_SIZE = 36
@@ -56,27 +64,33 @@ local defaultProps = {
 }
 
 local function formatDuration(duration: number): string
-	local minutes = math.floor(duration / 60)
+	local hours = math.floor(duration / 3600)
+	local minutes = math.floor((duration % 3600) / 60)
 	local seconds = duration % 60
+
+	local hoursStr = string.format("%02d", hours)
 	local minutesStr = string.format("%02d", minutes)
 	local secondsStr = string.format("%02d", seconds)
-	local formattedTime = minutesStr .. ":" .. secondsStr
+
+	local formattedTime = ""
+	if hours > 0 then
+		formattedTime = hoursStr .. ":" .. minutesStr .. ":" .. secondsStr
+	else
+		formattedTime = minutesStr .. ":" .. secondsStr
+	end
 
 	return formattedTime
 end
 
 local function getTextFromCallStatus(status: string, instanceId: string)
-	if status == RoduxCall.Enums.Status.Connecting.rawValue() then
-		return RobloxTranslator:FormatByKey("Feature.Call.Label.Calling")
-	elseif status == RoduxCall.Enums.Status.Teleporting.rawValue() then
-		return RobloxTranslator:FormatByKey("Feature.Call.Label.Teleporting")
-	elseif status == RoduxCall.Enums.Status.Active.rawValue() then
-		return RobloxTranslator:FormatByKey("Feature.Call.Label.RobloxCall")
-	elseif
-		status == RoduxCall.Enums.Status.Failed.rawValue()
-		or (status == RoduxCall.Enums.Status.Idle.rawValue() and game.JobId == instanceId)
-	then
-		return RobloxTranslator:FormatByKey("Feature.Call.Label.CallEnded")
+	if status == RoduxCall.Enums.Status.Connecting then
+		return "Feature.Call.Label.Calling"
+	elseif status == RoduxCall.Enums.Status.Teleporting then
+		return "Feature.Call.Label.Teleporting"
+	elseif status == RoduxCall.Enums.Status.Active then
+		return "Feature.Call.Label.RobloxCall"
+	elseif status == RoduxCall.Enums.Status.Idle then
+		return "Feature.Call.Label.CallEnded"
 	else
 		error("Invalid status for call bar: " .. status .. ".")
 	end
@@ -135,47 +149,57 @@ local function CallBar(passedProps: Props)
 		image = getStandardSizeAvatarHeadShotRbxthumb(otherParticipantId)
 	end
 
-	local callStatusText = getTextFromCallStatus(callStatus, instanceId)
+	local callStatusText
+	if GetFFlagIrisUseLocalizationProvider() then
+		local localized = useLocalization({
+			callStatusLabel = getTextFromCallStatus(callStatus, instanceId),
+		})
+		callStatusText = localized.callStatusLabel
+	else
+		callStatusText = RobloxTranslator:FormatByKey(getTextFromCallStatus(callStatus, instanceId))
+	end
 
-	local isCallEndedInInstance = callStatus == RoduxCall.Enums.Status.Idle.rawValue() and game.JobId == instanceId
+	local isCallEndedInInstance = callStatus == RoduxCall.Enums.Status.Idle and game.JobId == instanceId
 
-	local isActionButtonEnabled = callStatus == RoduxCall.Enums.Status.Active.rawValue()
-		or callStatus == RoduxCall.Enums.Status.Connecting.rawValue()
+	local isActionButtonEnabled = callStatus == RoduxCall.Enums.Status.Active
+		or callStatus == RoduxCall.Enums.Status.Connecting
 		or isCallEndedInInstance
 
 	local actionButtonCallback = React.useCallback(function()
+		local isRetry = false
+		if isCallEndedInInstance then
+			teleportToRootPlace()
+			isRetry = true
+		elseif callStatus == RoduxCall.Enums.Status.Active then
+			SoundManager:PlaySound(Sounds.HangUp.Name, { Volume = 0.5 }, SoundGroups.Iris)
+			props.callProtocol:finishCall(callId)
+		elseif callStatus == RoduxCall.Enums.Status.Connecting then
+			props.callProtocol:cancelCall(callId)
+		end
+
 		analytics.fireEvent(EventNamesEnum.CallBarHangUpClicked, {
+			eventTimestampMs = os.time() * 1000,
 			callerUserId = callerId,
 			calleeUserId = calleeId,
 			callId = callId,
 			callStatus = callStatus,
+			isRetry = isRetry,
 		})
-
-		if isCallEndedInInstance then
-			teleportToRootPlace()
-		elseif callStatus == RoduxCall.Enums.Status.Active.rawValue() then
-			if GetFFlagSoundManagerRefactor() then
-				SoundManager:PlaySound(Sounds.HangUp.Name, { Volume = 0.5 }, SoundGroups.Iris)
-			else
-				SoundManager:PlaySound_old(Sounds.HangUp.Name, { Volume = 0.5, SoundGroup = SoundGroups.Iris })
-			end
-			props.callProtocol:finishCall(callId)
-		elseif callStatus == RoduxCall.Enums.Status.Connecting.rawValue() then
-			props.callProtocol:cancelCall(callId)
-		end
 	end, { callStatus, props.callProtocol, isCallEndedInInstance })
 
 	local actionButtonBackground = if isCallEndedInInstance then style.Theme.SystemPrimaryDefault else style.Theme.Alert
-	local actionButtonImage = if isCallEndedInInstance then "rbxassetid://15123605982" else "rbxassetid://14535614005"
+	local actionButtonImage = if isCallEndedInInstance then "rbxassetid://15123605982" else "rbxassetid://15239778319"
 	local actionButtonImageColor = if isCallEndedInInstance then Colors.Slate else Colors.White
 
 	React.useEffect(function()
 		local callDurationTimerConnection = RunService.Heartbeat:Connect(function()
-			if not props.activeUtc then
+			if props.activeUtc == 0 then
 				return
 			end
 
-			local duration = os.time() - (props.activeUtc / 1000)
+			-- Prevent duration from going negative since activeUtc is in
+			-- milliseconds.
+			local duration = math.max(0, os.time() - (props.activeUtc / 1000))
 			local durationString = formatDuration(duration)
 
 			setCurrentCallDuration(durationString)
@@ -192,18 +216,41 @@ local function CallBar(passedProps: Props)
 	})
 
 	local combinedName = ""
-	if namesFetch.data then
-		combinedName = UserProfiles.Selectors.getCombinedNameFromId(namesFetch.data, otherParticipantId)
+	if GetFFlagCallBarNameFallback() then
+		local selectOtherParticipantName = React.useCallback(function(state: any)
+			local currentCall = state.Call.currentCall
+			if currentCall then
+				if localUserId == currentCall.callerId then
+					return currentCall.calleeCombinedName or ""
+				else
+					return currentCall.callerCombinedName or ""
+				end
+			end
+
+			return ""
+		end)
+		local otherParticipantName = useSelector(selectOtherParticipantName)
+
+		if namesFetch.data then
+			combinedName = UserProfiles.Selectors.getCombinedNameFromId(namesFetch.data, otherParticipantId)
+		elseif namesFetch.error then
+			combinedName = otherParticipantName
+		end
+	else
+		if namesFetch.data then
+			combinedName = UserProfiles.Selectors.getCombinedNameFromId(namesFetch.data, otherParticipantId)
+		elseif namesFetch.error then
+			combinedName = "Name Error"
+		end
 	end
 
 	return React.createElement("Frame", {
 		Size = UDim2.fromOffset(props.size.X, props.size.Y),
-		Position = UDim2.new(0.5, 0, 0, -(props.size.Y + GuiService:GetGuiInset().Y)),
-		AnchorPoint = Vector2.new(0.5, 0),
+		Position = props.position,
+		AnchorPoint = Vector2.new(0, 0),
 		BackgroundColor3 = theme.BackgroundMuted.Color,
 		BackgroundTransparency = theme.BackgroundMuted.Transparency,
 		BorderSizePixel = 0,
-		ref = props.callBarRef,
 	}, {
 		UICorner = React.createElement("UICorner", {
 			CornerRadius = UDim.new(0.5, 0),
@@ -266,9 +313,7 @@ local function CallBar(passedProps: Props)
 				BorderSizePixel = 0,
 				Font = font.Footer.Font,
 				LayoutOrder = 2,
-				Text = if callStatus == RoduxCall.Enums.Status.Active.rawValue()
-					then currentCallDuration
-					else callStatusText,
+				Text = if callStatus == RoduxCall.Enums.Status.Active then currentCallDuration else callStatusText,
 				TextColor3 = Colors.White,
 				TextSize = font.BaseSize * font.Footer.RelativeSize,
 				TextTransparency = 0.4,
@@ -277,7 +322,7 @@ local function CallBar(passedProps: Props)
 			}),
 		}),
 
-		ActionButton = if callStatus ~= RoduxCall.Enums.Status.Failed.rawValue()
+		ActionButton = if callStatus ~= RoduxCall.Enums.Status.Failed
 			then React.createElement("ImageButton", {
 				Position = UDim2.fromOffset(0, 0),
 				Active = isActionButtonEnabled,

@@ -8,13 +8,11 @@ local CFrameUtility = require(CorePackages.Thumbnailing).CFrameUtility
 local newTrackerStreamAnimation: TrackerStreamAnimation? = nil
 local cloneStreamTrack: AnimationStreamTrack? = nil
 
-local EngineFeatureHasFeatureLoadStreamAnimationForSelfieViewApiEnabled =
-	game:GetEngineFeature("LoadStreamAnimationForSelfieViewApiEnabled")
-
-local FFlagSelfViewImprovedUpdateCloneTriggering = game:DefineFastFlag("SelfViewImprovedUpdateCloneTriggering", false)
+local FFlagSelfViewLookUpHumanoidByType = game:DefineFastFlag("SelfViewLookUpHumanoidByType", false)
 
 local SelfieViewModule = script.Parent.Parent.Parent.SelfieView
 local GetFFlagSelfieViewDontWaitForCharacter = require(SelfieViewModule.Flags.GetFFlagSelfieViewDontWaitForCharacter)
+local GetFFlagSelfViewAssertFix = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagSelfViewAssertFix
 
 local RunService = game:GetService("RunService")
 
@@ -153,15 +151,10 @@ local function syncTrack(animator: Animator, track: AnimationTrack)
 	if track.Animation and track.Animation:IsA("Animation") then
 		--regular animation sync handled further below
 	elseif track.Animation and track.Animation:IsA("TrackerStreamAnimation") then
-		if EngineFeatureHasFeatureLoadStreamAnimationForSelfieViewApiEnabled then
-			newTrackerStreamAnimation = Instance.new("TrackerStreamAnimation")
-			assert(newTrackerStreamAnimation ~= nil)
-			cloneStreamTrack =
-				animator:LoadStreamAnimationForSelfieView_deprecated(newTrackerStreamAnimation, LocalPlayer)
-			cloneTrack = cloneStreamTrack
-		else
-			cloneTrack = animator:LoadStreamAnimation(track.Animation)
-		end
+		newTrackerStreamAnimation = Instance.new("TrackerStreamAnimation")
+		assert(newTrackerStreamAnimation ~= nil)
+		cloneStreamTrack = animator:LoadStreamAnimationForSelfieView_deprecated(newTrackerStreamAnimation, LocalPlayer)
+		cloneTrack = cloneStreamTrack
 	else
 		warn("No animation to clone in SelfView")
 	end
@@ -231,6 +224,11 @@ local function updateClone(player: Player?)
 	end
 
 	clone = character:Clone()
+	if GetFFlagSelfViewAssertFix() then
+		if clone == nil then
+			return
+		end
+	end
 	assert(clone ~= nil)
 
 	--remove tags in Self View clone of avatar as it may otherwise cause gameplay issues
@@ -327,7 +325,12 @@ local function updateClone(player: Player?)
 		return
 	end
 
-	local cloneHumanoid: Humanoid = clone:FindFirstChild("Humanoid") :: Humanoid
+	local cloneHumanoid = nil
+	if FFlagSelfViewLookUpHumanoidByType then
+		cloneHumanoid = clone:FindFirstChildWhichIsA("Humanoid")
+	else
+		cloneHumanoid = clone:FindFirstChild("Humanoid") :: Humanoid
+	end
 	if cloneHumanoid then
 		cloneHumanoid.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
 	end
@@ -444,11 +447,15 @@ local function characterAdded(character)
 	clearObserver(Observer.HeadSize)
 	clearObserver(Observer.Color)
 
-	if FFlagSelfViewImprovedUpdateCloneTriggering then
-		local humanoid = character:FindFirstChild("Humanoid")
-		if humanoid then
-			addHumanoidStateChangedObserver(humanoid)
-		end
+	local humanoid = nil
+	if FFlagSelfViewLookUpHumanoidByType then
+		humanoid = character:FindFirstChildWhichIsA("Humanoid")
+	else
+		humanoid = character:FindFirstChild("Humanoid") :: Humanoid
+	end
+
+	if humanoid then
+		addHumanoidStateChangedObserver(humanoid)
 	end
 
 	-- listen for updates on the original character's structure
@@ -459,16 +466,19 @@ local function characterAdded(character)
 			updateCachedHeadColor(headRef)
 		end
 
-		if FFlagSelfViewImprovedUpdateCloneTriggering then
+		if FFlagSelfViewLookUpHumanoidByType then
+			if descendant:IsA("Humanoid") then
+				local humanoid = descendant
+				addHumanoidStateChangedObserver(humanoid)
+			end
+		else
 			if descendant.Name == "Humanoid" or descendant:IsA("Humanoid") then
 				local humanoid = descendant
 				addHumanoidStateChangedObserver(humanoid)
 			end
+		end
 
-			if ModelUtils.shouldMarkCloneDirtyForDescendant(descendant) then
-				setCloneDirty(true)
-			end
-		else
+		if ModelUtils.shouldMarkCloneDirtyForDescendant(descendant) then
 			setCloneDirty(true)
 		end
 	end)
@@ -480,14 +490,9 @@ local function characterAdded(character)
 					return
 				end
 			end
-			if not FFlagSelfViewImprovedUpdateCloneTriggering then
-				setCloneDirty(true)
-			end
 
-			if FFlagSelfViewImprovedUpdateCloneTriggering then
-				if ModelUtils.shouldMarkCloneDirtyForDescendant(descendant) then
-					setCloneDirty(true)
-				end
+			if ModelUtils.shouldMarkCloneDirtyForDescendant(descendant) then
+				setCloneDirty(true)
 			end
 		end
 	end)
@@ -554,12 +559,15 @@ local function onCharacterAdded(character: Model)
 	else
 		ReInit(LocalPlayer)
 	end
-	if FFlagSelfViewImprovedUpdateCloneTriggering then
-		clearObserver(Observer.HumanoidStateChanged)
-		local humanoid = character:FindFirstChild("Humanoid")
-		if humanoid then
-			addHumanoidStateChangedObserver(humanoid)
-		end
+	clearObserver(Observer.HumanoidStateChanged)
+	local humanoid = nil
+	if FFlagSelfViewLookUpHumanoidByType then
+		humanoid = character:FindFirstChildWhichIsA("Humanoid")
+	else
+		humanoid = character:FindFirstChild("Humanoid") :: Humanoid
+	end
+	if humanoid then
+		addHumanoidStateChangedObserver(humanoid)
 	end
 end
 
@@ -690,16 +698,31 @@ function startRenderStepped(player: Player)
 						anim = value.Animation
 						if anim then
 							if anim:IsA("Animation") then
-								orgAnimationTracks[anim.AnimationId] = value
-								if not cloneAnimationTracks[anim.AnimationId] then
-									cloneAnimationTracks[anim.AnimationId] = cloneAnimator:LoadAnimation(anim)
-								end
-								local cloneAnimationTrack = cloneAnimationTracks[anim.AnimationId]
+								if GetFFlagSelfViewAssertFix() then
+									if anim.AnimationId ~= "" then
+										orgAnimationTracks[anim.AnimationId] = value
+										if not cloneAnimationTracks[anim.AnimationId] then
+											cloneAnimationTracks[anim.AnimationId] = cloneAnimator:LoadAnimation(anim)
+										end
+										local cloneAnimationTrack = cloneAnimationTracks[anim.AnimationId] --cloneAnimator:LoadAnimation(anim)
 
-								cloneAnimationTrack:Play()
-								cloneAnimationTrack.TimePosition = value.TimePosition
-								cloneAnimationTrack.Priority = value.Priority
-								cloneAnimationTrack:AdjustWeight(value.WeightCurrent, 0.1)
+										cloneAnimationTrack:Play()
+										cloneAnimationTrack.TimePosition = value.TimePosition
+										cloneAnimationTrack.Priority = value.Priority
+										cloneAnimationTrack:AdjustWeight(value.WeightCurrent, 0.1)
+									end
+								else
+									orgAnimationTracks[anim.AnimationId] = value
+									if not cloneAnimationTracks[anim.AnimationId] then
+										cloneAnimationTracks[anim.AnimationId] = cloneAnimator:LoadAnimation(anim)
+									end
+									local cloneAnimationTrack = cloneAnimationTracks[anim.AnimationId] --cloneAnimator:LoadAnimation(anim)
+
+									cloneAnimationTrack:Play()
+									cloneAnimationTrack.TimePosition = value.TimePosition
+									cloneAnimationTrack.Priority = value.Priority
+									cloneAnimationTrack:AdjustWeight(value.WeightCurrent, 0.1)
+								end
 							end
 						end
 					end
@@ -841,9 +864,7 @@ local function Initialize(player: Player, passedWrapperFrame: Frame?): (() -> ()
 	Players.PlayerAdded:Connect(playerAdded)
 	Players.PlayerRemoving:Connect(function(player)
 		if player == LocalPlayer then
-			if FFlagSelfViewImprovedUpdateCloneTriggering then
-				clearObserver(Observer.HumanoidStateChanged)
-			end
+			clearObserver(Observer.HumanoidStateChanged)
 			clearObserver(Observer.CharacterAdded)
 			clearObserver(Observer.CharacterRemoving)
 			clearClone()

@@ -13,4 +13,50 @@ export type BoundsData = {
 	minOverall: Vector3?,
 	maxOverall: Vector3?,
 }
+export type EditableMeshInfo = {
+	instance: EditableMesh,
+	created: boolean,
+}
+export type EditableImageInfo = {
+	instance: EditableImage,
+	created: boolean,
+}
+export type BypassFlags = {
+	skipSnapshot: boolean?,
+	skipValidateHSR: boolean?,
+}
+export type EditableMeshes = { [Instance]: { [string]: EditableMeshInfo } }
+export type EditableImages = { [Instance]: { [string]: EditableImageInfo } }
+export type ValidationContext = {
+	fullBodyData: FullBodyData?,
+	instances: { Instance }?,
+	assetTypeEnum: Enum.AssetType?,
+	allowUnreviewedAssets: boolean?,
+	restrictedUserIds: RestrictedUserIds?,
+	isServer: boolean?,
+	token: string?,
+	universeId: number?,
+	isAsync: boolean?,
+	editableMeshes: EditableMeshes?,
+	editableImages: EditableImages?,
+	allowEditableInstances: boolean?,
+	bypassFlags: BypassFlags?,
+}
+
+export type MeshInfo = {
+	editableMesh: EditableMesh?, --TODO: remove ? when removing EngineFeatureUGCValidateEditableMeshAndImage
+	contentId: string?,
+	fullName: string,
+	fieldName: string,
+	scale: Vector3?,
+	context: string?,
+}
+
+export type TextureInfo = {
+	editableImage: EditableImage?, --TODO: remove ? when removing EngineFeatureUGCValidateEditableMeshAndImage
+	contentId: string?,
+	fullName: string,
+	fieldName: string,
+}
+
 return Types

@@ -19,6 +19,7 @@ local ObjectViewport = require(Components.Common.ObjectViewport)
 
 local PADDING = UDim.new(0, 20)
 local CAMERA_FOV = 30
+local DELAYED_INPUT_ANIM_SEC = 3
 
 local NAME_METADATA_STRING = "avatarName"
 
@@ -29,7 +30,7 @@ local PublishAvatarPrompt = Roact.PureComponent:extend("PublishAvatarPrompt")
 
 PublishAvatarPrompt.validateProps = t.strictInterface({
 	screenSize = t.Vector2,
-	humanoidDescription = t.any,
+	humanoidModel = t.instanceOf("Model"),
 
 	-- Mapped state
 	guid = t.any,
@@ -56,24 +57,21 @@ function PublishAvatarPrompt:init()
 		})
 	end
 
-	self.confirmUploadReady = function(): boolean
-		if not self.state.isNameValid then
-			return false
-		end
+	-- Prompt can submit as long as name is valid
+	self.canSubmit = function(): boolean
+		return self.state.isNameValid and self.props.humanoidModel ~= nil
+	end
+
+	self.onSubmit = function()
 		local metadata = {}
 		metadata[NAME_METADATA_STRING] = self.state.name
 
-		-- We should never get to this point if this engine feature is off, but just in case:
-		if game:GetEngineFeature("ExperienceAuthReflectionFixes") then
-			ExperienceAuthService:ScopeCheckUIComplete(
-				self.props.guid,
-				self.props.scopes,
-				Enum.ScopeCheckResult.ConsentAccepted,
-				metadata
-			)
-		end
-
-		return true
+		ExperienceAuthService:ScopeCheckUIComplete(
+			self.props.guid,
+			self.props.scopes,
+			Enum.ScopeCheckResult.ConsentAccepted,
+			metadata
+		)
 	end
 
 	self.onNameUpdated = function(newName, isNameValid)
@@ -85,10 +83,7 @@ function PublishAvatarPrompt:init()
 end
 
 function PublishAvatarPrompt:renderPromptBody()
-	-- TODO: Replace placeholder HD AVBURST-13327
-	-- Note it's nice to use LocalPlayer.Character.Humanoid.HumanoidDescription for debugging
-	local model =
-		Players:CreateHumanoidModelFromDescription(Instance.new("HumanoidDescription"), Enum.HumanoidRigType.R15)
+	local isLoading = self.props.humanoidModel == nil
 	return Roact.createFragment({
 		UIListLayout = Roact.createElement("UIListLayout", {
 			Padding = PADDING,
@@ -102,21 +97,20 @@ function PublishAvatarPrompt:renderPromptBody()
 		}),
 		EmbeddedPreview = Roact.createElement(ObjectViewport, {
 			openPreviewView = self.openPreviewView,
-			model = model,
+			model = self.props.humanoidModel,
+			isLoading = isLoading,
 			useFullBodyCameraSettings = true,
 			fieldOfView = CAMERA_FOV,
 			LayoutOrder = 1,
 		}),
-		AvatarPartGrid = Roact.createElement(AvatarPartGrid, {
-			-- TODO: AVBURST-13327 Placeholder until Humanoid Model can be passed to frontend
-			humanoidModel = Players:CreateHumanoidModelFromDescription(
-				Instance.new("HumanoidDescription"),
-				Enum.HumanoidRigType.R15
-			),
-			name = self.state.name,
-			LayoutOrder = 2,
-			screenSize = self.props.screenSize,
-		}),
+		AvatarPartGrid = if not isLoading
+			then Roact.createElement(AvatarPartGrid, {
+				humanoidModel = self.props.humanoidModel,
+				name = self.state.name,
+				LayoutOrder = 2,
+				screenSize = self.props.screenSize,
+			})
+			else nil,
 	})
 end
 
@@ -138,26 +132,23 @@ function PublishAvatarPrompt:render()
 		screenSize = self.props.screenSize,
 		showingPreviewView = self.state.showingPreviewView,
 		closePreviewView = self.closePreviewView,
-		-- TODO: Replace placeholder HD AVBURST-13327
-		-- Note it's nice to use LocalPlayer.Character.Humanoid.HumanoidDescription for debugging
-		asset = Players:CreateHumanoidModelFromDescription(
-			Instance.new("HumanoidDescription"),
-			Enum.HumanoidRigType.R15
-		),
+		asset = self.props.humanoidModel,
 		nameLabel = "Body Name", -- TODO AVBURST-12954 localize
 		defaultName = self.state.name,
 		typeData = localized[BODY_TEXT],
 		titleText = localized[TITLE_TEXT],
 		onNameUpdated = self.onNameUpdated,
-		confirmUploadReady = self.confirmUploadReady,
+		canSubmit = self.canSubmit,
+		onSubmit = self.onSubmit,
+		enableInputDelayed = true,
+		isDelayedInput = true,
+		delayInputSeconds = DELAYED_INPUT_ANIM_SEC,
 	})
 end
 
 local function mapStateToProps(state)
 	return {
-		-- TODO: Replace placeholder HD AVBURST-13327
-		-- Currently humanoidDescription is just a string, so the viewport uses a placeholder
-		humanoidDescription = state.promptRequest.promptInfo.humanoidDescription,
+		humanoidModel = state.promptRequest.promptInfo.humanoidModel,
 		guid = state.promptRequest.promptInfo.guid,
 		scopes = state.promptRequest.promptInfo.scopes,
 	}

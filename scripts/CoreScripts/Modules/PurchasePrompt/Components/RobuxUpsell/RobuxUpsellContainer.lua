@@ -172,6 +172,7 @@ RobuxUpsellContainer = connectToStore(
 				return dispatch(initiatePurchasePrecheck())
 			end,
 			completeRequest = function()
+				GuiService.SelectedCoreObject = nil
 				return dispatch(completeRequest())
 			end,
 			onAnalyticEvent = function(name, data)

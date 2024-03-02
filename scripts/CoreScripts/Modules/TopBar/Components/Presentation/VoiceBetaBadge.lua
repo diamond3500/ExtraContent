@@ -19,6 +19,7 @@ local InGameMenuConstants = require(RobloxGui.Modules.InGameMenuConstants)
 local VoiceChatServiceManager = require(RobloxGui.Modules.VoiceChat.VoiceChatServiceManager).default
 local log = require(RobloxGui.Modules.Logger):new(script.Name)
 
+local AppFonts = require(CorePackages.Workspace.Packages.Style).AppFonts
 local ExternalEventConnection = require(CorePackages.Workspace.Packages.RoactUtils).ExternalEventConnection
 
 local VoiceBetaBadge = Roact.PureComponent:extend("MenuIcon")
@@ -26,12 +27,15 @@ local VoiceBetaBadge = Roact.PureComponent:extend("MenuIcon")
 local GetFStringVoiceBetaBadgeLearnMore = require(RobloxGui.Modules.Flags.GetFStringVoiceBetaBadgeLearnMore)
 local GetFFlagBetaBadgeLearnMoreLinkFormview = require(RobloxGui.Modules.Flags.GetFFlagBetaBadgeLearnMoreLinkFormview)
 
-local FFlagUpdateVoiceBetaDescription = game:DefineFastFlag("UpdateVoiceBetaDescription", false)
 local TopBar = script.Parent.Parent.Parent
 local FFlagEnableChromeBackwardsSignalAPI = require(TopBar.Flags.GetFFlagEnableChromeBackwardsSignalAPI)()
 local SetKeepOutArea = require(TopBar.Actions.SetKeepOutArea)
 local RemoveKeepOutArea = require(TopBar.Actions.RemoveKeepOutArea)
 local Constants = require(TopBar.Constants)
+
+local Chrome = TopBar.Parent.Chrome
+local ChromeEnabled = require(Chrome.Enabled)
+local ChromeService = if ChromeEnabled then require(Chrome.Service) else nil
 
 VoiceBetaBadge.validateProps = t.strictInterface({
 	layoutOrder = t.integer,
@@ -49,7 +53,7 @@ local STROKE_THICKNESS = 2
 
 local BadgeSize = UDim2.fromOffset(31, 11)
 local PopupPadding = UDim.new(0, 12)
-local PopupSize = UDim2.fromOffset(330, if FFlagUpdateVoiceBetaDescription then 185 else 165)
+local PopupSize = UDim2.fromOffset(330, 185)
 
 local RobloxTranslator = require(RobloxGui.Modules.RobloxTranslator)
 
@@ -73,7 +77,9 @@ end
 
 function VoiceBetaBadge:init()
 	self.buttonRef = Roact.createRef()
+
 	self:setState({
+		chromeMenuOpen = ChromeService and ChromeService:status():get() == ChromeService.MenuStatus.Open,
 		vrShowMenuIcon = VRService.VREnabled and GamepadService.GamepadCursorEnabled,
 		voiceChatServiceConnected = false,
 		showPopup = false,
@@ -107,9 +113,29 @@ function VoiceBetaBadge:init()
 	end
 end
 
+function VoiceBetaBadge:didMount()
+	if ChromeService then
+		self.chromeMenuStatusConn = ChromeService:status():connect(function()
+			self:setState({
+				chromeMenuOpen = ChromeService:status():get() == ChromeService.MenuStatus.Open
+			})
+		end)
+	end
+end
+
+function VoiceBetaBadge:onUnmount()
+	if self.chromeMenuStatusConn then
+		self.chromeMenuStatusConn:Disconnect()
+		self.chromeMenuStatusConn = nil
+	end
+end
+
 function VoiceBetaBadge:render()
 	local visible = (not VRService.VREnabled or self.state.vrShowMenuIcon) and self.state.voiceChatServiceConnected
 
+	if self.state.chromeMenuOpen then
+		visible = false
+	end
 	local onAreaChanged = function(rbx)
 		if visible and rbx then
 			-- Need to recalculate the position as stroke is not part of AbsolutePosition/AbsoluteSize
@@ -191,9 +217,7 @@ function VoiceBetaBadge:render()
 						}),
 					}),
 					Text = Roact.createElement("TextLabel", {
-						Text = if FFlagUpdateVoiceBetaDescription
-							then RobloxTranslator:FormatByKey("InGame.CommonUI.Badge.Popup.DisclaimerText2")
-							else RobloxTranslator:FormatByKey("InGame.CommonUI.Badge.Popup.DisclaimerText"),
+						Text = RobloxTranslator:FormatByKey("InGame.CommonUI.Badge.Popup.DisclaimerText2"),
 						TextSize = popupTextSize,
 						Font = font,
 						LayoutOrder = 0,
@@ -248,7 +272,7 @@ function VoiceBetaBadge:render()
 				}, {
 					Button = Roact.createElement("TextButton", {
 						Text = RobloxTranslator:FormatByKey("InGame.CommonUI.Badge.BadgeText"),
-						Font = Enum.Font.GothamBold,
+						Font = AppFonts.default:getBold(),
 						TextSize = 8,
 						BackgroundTransparency = 1,
 						BorderSizePixel = 0,

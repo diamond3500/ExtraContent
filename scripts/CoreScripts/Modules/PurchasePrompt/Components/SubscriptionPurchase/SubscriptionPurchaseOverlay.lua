@@ -7,9 +7,9 @@ local PurchasePromptDeps = require(CorePackages.PurchasePromptDeps)
 local Roact = PurchasePromptDeps.Roact
 
 local IAPExperience = PurchasePromptDeps.IAPExperience
-local SubscriptionPurchaseFlow =  IAPExperience.PurchaseFlow.SubscriptionPurchaseFlow
-local SubscriptionPurchaseFlowState =  IAPExperience.PurchaseFlow.SubscriptionPurchaseFlowState
-local PurchaseErrorType =  IAPExperience.PurchaseFlow.PurchaseErrorType
+local SubscriptionPurchaseFlow = IAPExperience.PurchaseFlow.SubscriptionPurchaseFlow
+local SubscriptionPurchaseFlowState = IAPExperience.PurchaseFlow.SubscriptionPurchaseFlowState
+local PurchaseErrorType = IAPExperience.PurchaseFlow.PurchaseErrorType
 
 local PromptState = require(Root.Enums.PromptState)
 local PurchaseError = require(Root.Enums.PurchaseError)
@@ -28,14 +28,16 @@ type Props = {
 	name: string,
 	subscriptionProviderId: string,
 	subscriptionProviderName: string,
+	priceTier: number,
 	displayPrice: string,
 	period: string,
 	disclaimerText: string,
 	description: string,
 	itemIcon: any,
 
+	isGamepadEnabled: boolean,
 	isTestingMode: boolean,
-	
+
 	promptSubscriptionPurchase: () -> any,
 	endPurchase: () -> any,
 
@@ -52,7 +54,7 @@ function SubscriptionPurchaseOverlay:init()
 			return
 		elseif promptState == PromptState.PurchaseComplete then
 			props.endPurchase()
-			return 
+			return
 		elseif promptState == PromptState.Error then
 			props.endPurchase()
 			return
@@ -82,15 +84,15 @@ end
 
 function SubscriptionPurchaseOverlay:getErrorType()
 	local props: Props = self.props
-	
+
 	if props.purchaseError == PurchaseError.AlreadySubscribed then
 		return PurchaseErrorType.AlreadySubscribed
 	elseif props.purchaseError == PurchaseError.SubscriptionExceededUserSpendLimit then
 		return PurchaseErrorType.SubscriptionExceededUserSpendLimit
 	elseif props.purchaseError == PurchaseError.SubscriptionUnsupportedLocale then
 		return PurchaseErrorType.SubscriptionUnsupportedLocale
-	elseif props.purchaseError == PurchaseError.RestrictedUserAge then
-		return PurchaseErrorType.RestrictedUserAge
+	elseif props.purchaseError == PurchaseError.RestrictedUser then
+		return PurchaseErrorType.RestrictedUser
 	elseif props.purchaseError == PurchaseError.SubscriptionPurchasePlatformNotSupported then
 		return PurchaseErrorType.SubscriptionPurchasePlatformNotSupported
 	elseif props.purchaseError == PurchaseError.SubscriptionInvalidSaleLocation then
@@ -107,6 +109,7 @@ end
 function SubscriptionPurchaseOverlay:render()
 	local props: Props = self.props
 
+	local BUTTON_A_ICON = "rbxasset://textures/ui/Controls/DesignSystem/ButtonA.png"
 
 	return Roact.createElement(SubscriptionPurchaseFlow, {
 		screenSize = props.screenSize,
@@ -118,11 +121,14 @@ function SubscriptionPurchaseOverlay:render()
 		name = props.name,
 		subscriptionProviderId = props.subscriptionProviderId,
 		subscriptionProviderName = props.subscriptionProviderName,
+		priceTier = props.priceTier,
 		displayPrice = props.displayPrice,
 		period = props.period,
 		disclaimerText = props.disclaimerText,
 		description = props.description,
 		itemIcon = props.itemIcon,
+
+		acceptControllerIcon = if props.isGamepadEnabled then BUTTON_A_ICON else nil,
 
 		isTestingMode = props.isTestingMode,
 

@@ -5,15 +5,11 @@ local Core = UIBlox.Core
 local Packages = UIBlox.Parent
 
 local React = require(Packages.React)
-local Cryo = require(Packages.Cryo)
 
 local Images = require(App.ImageSet.Images)
-local IconSize = require(App.ImageSet.Enum.IconSize)
-local getIconSize = require(App.ImageSet.getIconSize)
 
 local ImageSetComponent = require(Core.ImageSet.ImageSetComponent)
 local useStyle = require(Core.Style.useStyle)
-local StyleTypes = require(UIBlox.App.Style.StyleTypes)
 local Fonts = require(App.Style.Fonts)
 local UIBloxConfig = require(UIBlox.UIBloxConfig)
 local GetTextSize = require(UIBlox.Core.Text.GetTextSize)
@@ -23,38 +19,22 @@ local PLAYERS_ICON = "icons/status/games/people-playing_small"
 
 local RATING_ITEM_WIDTH = 40
 
-export type StyleProps = {
-	spacingGap: number?,
-	statSpacingGap: number?,
-	statIconSize: number?,
-	statIconContentColor: StyleTypes.ThemeItem?,
-	statLabelContentColor: StyleTypes.ThemeItem?,
-}
-
 export type Props = {
 	-- String containing game rating; should have "%" appended
 	ratingText: string,
 	-- String containing number of users playing; should be formatted using abbreviateCount().
 	-- If undefined, the playing stats will not display - only the rating will.
 	playingText: string?,
-	-- Props to style the component
-	styleProps: StyleProps?,
 }
 
-local defaultStyleProps: StyleProps = {
-	spacingGap = 12,
-	statSpacingGap = 4,
-	statIconSize = getIconSize(IconSize.Small),
-}
-
-local function renderStatItem(containerProps, icon, text, stylePalette, styleProps: StyleProps, textWidth: number?)
-	local theme = stylePalette.Theme
+local function renderStatItem(containerProps, icon, text, stylePalette, textWidth: number?)
+	local tokens = stylePalette.Tokens
 	local font: Fonts.FontPalette = stylePalette.Font
 
-	local statSpacingGap = styleProps.statSpacingGap
-	local statIconSize = styleProps.statIconSize :: number
-	local statIconContentColor = styleProps.statIconContentColor or theme.IconDefault
-	local statLabelContentColor = styleProps.statLabelContentColor or theme.TextMuted
+	local statSpacingGap = tokens.Global.Space_25
+	local statIconSize = tokens.Semantic.Icon.Size.Small
+	local statIconContentColor = tokens.Semantic.Color.Text.Muted
+	local statLabelContentColor = tokens.Semantic.Color.Text.Muted
 
 	return React.createElement("Frame", containerProps, {
 		UIListLayout = React.createElement("UIListLayout", {
@@ -68,7 +48,7 @@ local function renderStatItem(containerProps, icon, text, stylePalette, stylePro
 			Image = Images[icon],
 			BackgroundTransparency = 1,
 			ImageTransparency = statIconContentColor.Transparency,
-			ImageColor3 = statIconContentColor.Color,
+			ImageColor3 = statIconContentColor.Color3,
 			LayoutOrder = 1,
 			AnchorPoint = Vector2.new(0, 0.5),
 		}),
@@ -81,7 +61,7 @@ local function renderStatItem(containerProps, icon, text, stylePalette, stylePro
 			TextSize = font.BaseSize * font.Body.RelativeSize,
 			TextXAlignment = Enum.TextXAlignment.Left,
 			TextYAlignment = Enum.TextYAlignment.Center,
-			TextColor3 = statLabelContentColor.Color,
+			TextColor3 = statLabelContentColor.Color3,
 			TextTransparency = statLabelContentColor.Transparency,
 			LayoutOrder = 2,
 		}, {
@@ -108,8 +88,7 @@ end
 local function StatGroup(props: Props)
 	local stylePalette = useStyle()
 
-	local styleProps = Cryo.Dictionary.join(defaultStyleProps, props.styleProps or {})
-	local spacingGap = styleProps.spacingGap
+	local spacingGap = stylePalette.Tokens.Global.Space_100
 
 	local ratingTextWidth, playingTextWidth
 	if UIBloxConfig.useStatGroupManualSize then
@@ -132,7 +111,7 @@ local function StatGroup(props: Props)
 			AutomaticSize = Enum.AutomaticSize.X,
 			BackgroundTransparency = 1,
 			LayoutOrder = 1,
-		}, RATING_ICON, props.ratingText, stylePalette, styleProps, ratingTextWidth),
+		}, RATING_ICON, props.ratingText, stylePalette, ratingTextWidth),
 
 		PlayingStats = if props.playingText ~= nil
 			then renderStatItem({
@@ -140,7 +119,7 @@ local function StatGroup(props: Props)
 				AutomaticSize = Enum.AutomaticSize.X,
 				BackgroundTransparency = 1,
 				LayoutOrder = 2,
-			}, PLAYERS_ICON, props.playingText, stylePalette, styleProps, playingTextWidth)
+			}, PLAYERS_ICON, props.playingText, stylePalette, playingTextWidth)
 			else nil,
 	})
 end

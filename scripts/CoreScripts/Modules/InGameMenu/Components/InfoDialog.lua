@@ -8,6 +8,8 @@ local Roact = InGameMenuDependencies.Roact
 local UIBlox = InGameMenuDependencies.UIBlox
 local t = InGameMenuDependencies.t
 
+local Button = UIBlox.App.Button.Button
+local ButtonType = UIBlox.App.Button.Enum.ButtonType
 local withStyle = UIBlox.Core.Style.withStyle
 
 local InGameMenu = script.Parent.Parent
@@ -16,7 +18,7 @@ local Assets = require(InGameMenu.Resources.Assets)
 local ThemedTextLabel = require(script.Parent.ThemedTextLabel)
 local Divider = require(script.Parent.Divider)
 
-local ImageSetLabel = UIBlox.Core.ImageSet.Label
+local ImageSetLabel = UIBlox.Core.ImageSet.ImageSetLabel
 
 local DIALOG_WIDTH = 312
 local DIALOG_PADDING = 24
@@ -121,7 +123,8 @@ function InfoDialog:render()
 						TextWrapped = true,
 					})
 				}),
-				ConfirmButton = Roact.createElement(UIBlox.App.Button.PrimarySystemButton, {
+				ConfirmButton = Roact.createElement(Button, {
+					buttonType = ButtonType.PrimarySystem,
 					layoutOrder = 5,
 					size = UDim2.new(1, 0, 0, 36),
 					onActivated = props.onDismiss,

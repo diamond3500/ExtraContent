@@ -11,6 +11,11 @@ local t = require(CorePackages.Packages.t)
 local Otter = require(CorePackages.Otter)
 
 local withStyle = UIBlox.Style.withStyle
+local IconButton = UIBlox.App.Button.IconButton
+local IconSize = UIBlox.App.ImageSet.Enum.IconSize
+local SmallIconSize = UIBlox.App.ImageSet.getIconSize(IconSize.Small)
+
+local UIBloxImages = UIBlox.App.ImageSet.Images
 
 local Components = script.Parent.Parent
 local Connection = Components.Connection
@@ -27,8 +32,13 @@ local PlayerDropDown = require(script.Parent.PlayerDropDown)
 local TitleBar = require(script.Parent.TitleBar)
 
 local PlayerList = Components.Parent
+local SetPlayerListVisibility = require(PlayerList.Actions.SetPlayerListVisibility)
 
 local FAKE_NEUTRAL_TEAM = require(PlayerList.GetFakeNeutralTeam)
+
+local FFlagDisablePlayerListDisplayCloseBtn = game:DefineFastFlag("DisablePlayerListDisplayCloseBtn", false)
+local EnableCloseButton = ChromeEnabled() and not FFlagDisablePlayerListDisplayCloseBtn
+local TopBottomCornerRadius = 7
 
 local MOTOR_OPTIONS = {
 	dampingRatio = 1,
@@ -36,8 +46,6 @@ local MOTOR_OPTIONS = {
 }
 
 local RENDER_OUTSIDE_WINDOW_ELEMENTS = 3
-
-local GetFFlagEnableAccessibilitySettingsEffectsInCoreScripts = require(RobloxGui.Modules.Flags.GetFFlagEnableAccessibilitySettingsEffectsInCoreScripts)
 
 local PlayerListDisplay = Roact.PureComponent:extend("PlayerListDisplay")
 
@@ -84,6 +92,8 @@ PlayerListDisplay.validateProps = t.strictInterface({
 
 	dropDownPlayer = t.optional(t.instanceIsA("Player")),
 	dropDownVisible = t.boolean,
+
+	dismissPlayerList = t.callback,
 })
 
 function PlayerListDisplay:init()
@@ -307,7 +317,7 @@ function PlayerListDisplay:render()
 					else style.Theme.BackgroundContrast.Color
 
 				local transparencyBinding = self.minimizedBinding:map(function(value)
-					local defaultTransparency = if GetFFlagEnableAccessibilitySettingsEffectsInCoreScripts() then layoutValues.OverrideBackgroundTransparency * style.Settings.PreferredTransparency else layoutValues.OverrideBackgroundTransparency
+					local defaultTransparency = layoutValues.OverrideBackgroundTransparency * style.Settings.PreferredTransparency
 					local fadedTransparency = layoutValues.FadedBackgroundTransparency
 					local delta = fadedTransparency - defaultTransparency
 					return defaultTransparency + (delta * value)
@@ -341,17 +351,42 @@ function PlayerListDisplay:render()
 							HorizontalAlignment = Enum.HorizontalAlignment.Left,
 						}),
 
-						TopRoundedRect = Roact.createElement("ImageLabel", {
-							LayoutOrder = 1,
-							BackgroundTransparency = 1,
-							Image = "rbxasset://textures/ui/TopRoundedRect8px.png",
-							ImageColor3 = backgroundColor,
-							ImageTransparency = transparencyBinding,
-							ScaleType = Enum.ScaleType.Slice,
-							SliceCenter = Rect.new(8, 8, 24, 16),
-							SliceScale = 0.5,
-							Size = UDim2.new(1, 0, 0, 4),
-						}),
+						TopRoundedRect = if not EnableCloseButton
+							then Roact.createElement("ImageLabel", {
+								LayoutOrder = 1,
+								BackgroundTransparency = 1,
+								Image = "rbxasset://textures/ui/TopRoundedRect8px.png",
+								ImageColor3 = backgroundColor,
+								ImageTransparency = transparencyBinding,
+								ScaleType = Enum.ScaleType.Slice,
+								SliceCenter = Rect.new(8, 8, 24, 18),
+								SliceScale = 0.5,
+								Size = UDim2.new(1, 0, 0, 4),
+							})
+							else Roact.createElement("Frame", {
+								LayoutOrder = 1,
+								ClipsDescendants = true,
+								Size = UDim2.new(1, 0, 0, SmallIconSize+2),
+								BackgroundTransparency = 1,
+							}, {
+								Roact.createElement("Frame", {
+									Size = UDim2.new(1, 0, 0, (SmallIconSize+2)*2),
+									BackgroundColor3 = backgroundColor,
+									BackgroundTransparency = transparencyBinding,
+								}, {
+									Roact.createElement(IconButton, {
+										Name = "DismissButton",
+										position = UDim2.new(0, 1, 0, 1),
+										iconSize = IconSize.Small,
+										icon = UIBloxImages["icons/navigation/close"],
+										onActivated = self.props.dismissPlayerList,
+									}),
+									Roact.createElement("UICorner", {
+										CornerRadius = UDim.new(0, TopBottomCornerRadius),
+									}),
+								}),
+							}),
+
 
 						TitleBar = #self.props.gameStats > 0 and Roact.createElement(TitleBar, {
 							LayoutOrder = 2,
@@ -419,17 +454,37 @@ function PlayerListDisplay:render()
 							}),
 						}),
 
-						BottomRoundedRect = Roact.createElement("ImageLabel", {
-							LayoutOrder = 4,
-							BackgroundTransparency = 1,
-							Image = "rbxasset://textures/ui/BottomRoundedRect8px.png",
-							ImageColor3 = backgroundColor,
-							ImageTransparency = transparencyBinding,
-							ScaleType = Enum.ScaleType.Slice,
-							SliceCenter = Rect.new(8, 8, 24, 16),
-							SliceScale = 0.5,
-							Size = UDim2.new(1, 0, 0, 4),
-						}),
+						BottomRoundedRect = if not EnableCloseButton
+							then Roact.createElement("ImageLabel", {
+								LayoutOrder = 4,
+								BackgroundTransparency = 1,
+								Image = "rbxasset://textures/ui/BottomRoundedRect8px.png",
+								ImageColor3 = backgroundColor,
+								ImageTransparency = transparencyBinding,
+								ScaleType = Enum.ScaleType.Slice,
+								SliceCenter = Rect.new(8, 8, 24, 16),
+								SliceScale = 0.5,
+								Size = UDim2.new(1, 0, 0, 4),
+							})
+							else Roact.createElement("Frame", {
+								LayoutOrder = 4,
+								ClipsDescendants = true,
+								Size = UDim2.new(1, 0, 0, TopBottomCornerRadius),
+								BackgroundTransparency = 1,
+								BorderSizePixel = 0,
+							}, {
+								Roact.createElement("Frame", {
+									Position = UDim2.new(0, 0, 0, -TopBottomCornerRadius-1),
+									Size = UDim2.new(1, 0, 0, TopBottomCornerRadius*2),
+									BackgroundColor3 = backgroundColor,
+									BackgroundTransparency = transparencyBinding,
+									BorderSizePixel = 0,
+								}, {
+									Roact.createElement("UICorner", {
+										CornerRadius = UDim.new(0, TopBottomCornerRadius),
+									}),
+								}),
+							}),
 					}),
 				})
 			end
@@ -467,6 +522,14 @@ function PlayerListDisplay:didUpdate(prevProps)
 	end
 end
 
+local function mapDispatchToProps(dispatch)
+	return {
+		dismissPlayerList = function()
+			return dispatch(SetPlayerListVisibility(false))
+		end,
+	}
+end
+
 local function mapStateToProps(state)
 	local isMinimized = state.displayOptions.isMinimized
 
@@ -491,4 +554,4 @@ local function mapStateToProps(state)
 	}
 end
 
-return RoactRodux.UNSTABLE_connect2(mapStateToProps, nil)(PlayerListDisplay)
+return RoactRodux.UNSTABLE_connect2(mapStateToProps, mapDispatchToProps)(PlayerListDisplay)

@@ -5,7 +5,6 @@ local App = Text.Parent
 local UIBlox = App.Parent
 local Packages = UIBlox.Parent
 
-local UIBloxConfig = require(UIBlox.UIBloxConfig)
 local Roact = require(Packages.Roact)
 local Cryo = require(Packages.Cryo)
 local t = require(Packages.t)
@@ -14,9 +13,8 @@ local GetTextSize = require(UIBlox.Core.Text.GetTextSize)
 local validateFontInfo = require(UIBlox.Core.Style.Validator.validateFontInfo)
 local validateTypographyInfo = require(UIBlox.Core.Style.Validator.validateTypographyInfo)
 local validateColorInfo = require(UIBlox.Core.Style.Validator.validateColorInfo)
+local validateColorToken = require(UIBlox.Core.Style.Validator.validateColorToken)
 local withStyle = require(UIBlox.Core.Style.withStyle)
-
-local useNewGenericTextLabelProps = UIBloxConfig.useNewGenericTextLabelProps
 
 local GenericTextLabel = Roact.PureComponent:extend("GenericTextLabel")
 
@@ -30,7 +28,7 @@ GenericTextLabel.validateProps = t.interface({
 	fontStyle = t.union(validateFontInfo, validateTypographyInfo),
 
 	-- The color table from the style palette
-	colorStyle = validateColorInfo,
+	colorStyle = t.union(validateColorInfo, validateColorToken),
 
 	-- Whether the TextLabel is Fluid Sizing between the font's min and default sizes (optional)
 	fluidSizing = t.optional(t.boolean),
@@ -50,7 +48,7 @@ function GenericTextLabel:render()
 	return withStyle(function(stylePalette)
 		local font = self.props.fontStyle
 		local color = self.props.colorStyle
-		local textColor = color.Color
+		local textColor = color.Color or color.Color3
 		local textTransparency = color.Transparency
 
 		local baseSize = stylePalette.Font.BaseSize
@@ -72,21 +70,11 @@ function GenericTextLabel:render()
 			textboxSize = UDim2.new(0, textboxBounds.X, 0, textboxBounds.Y)
 		end
 
-		-- can inline once useNewGenericTextLabelProps is removed
-		local size
-		local textSize
-		local automaticSize
-
-		if useNewGenericTextLabelProps then
-			size = if self.props.AutomaticSize == nil or self.props.AutomaticSize == Enum.AutomaticSize.None
-				then textboxSize
-				else nil
-			textSize = self.props.TextSize or fontSizeMax
-			automaticSize = self.props.AutomaticSize or nil
-		else
-			size = textboxSize
-			textSize = fontSizeMax
-		end
+		local size = if self.props.AutomaticSize == nil or self.props.AutomaticSize == Enum.AutomaticSize.None
+			then textboxSize
+			else nil
+		local textSize = self.props.TextSize or fontSizeMax
+		local automaticSize = self.props.AutomaticSize or nil
 
 		local newProps = Cryo.Dictionary.join(self.props, {
 			[Roact.Children] = Cryo.None,

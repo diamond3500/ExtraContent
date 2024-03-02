@@ -5,17 +5,19 @@ local Players = game:GetService("Players")
 local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 local Modules = RobloxGui.Modules 
 
-local Screenshots = require(CorePackages.Workspace.Packages.Screenshots)
-
 local IXPServiceWrapper = require(Modules.Common.IXPServiceWrapper)
 
-local FFlagScreenshotSharingEnableExperiment = Screenshots.Flags.FFlagScreenshotSharingEnableExperiment
+local FFlagAddCapturesGuacPolicy = require(CorePackages.Workspace.Packages.Screenshots).Flags.FFlagAddCapturesGuacPolicy
+local FFlagEnableCaptures13Experiment = game:DefineFastFlag("EnableCaptures13Experiment", false)
 local FStringScreenshotSharingIXPLayer = game:DefineFastString("ScreenshotSharingIXPLayer", "Experience.Menu")
 local FStringScreenshotSharingIXPTreatmentKey = game:DefineFastString("ScreenshotSharingIXPTreatmentKey", "ScreenshotSharingEnabled")
+local FStringCapturesU13IXPTreatmentKey = game:DefineFastString("CapturesU13IXPTreatmentKey", "CapturesEnabledU13")
 
 -- TODO(SACQ-1024): Write tests for GetShowCapturesTab
 local GetShowCapturesTab = function()
-	if not FFlagScreenshotSharingEnableExperiment then
+	-- We want to shift to using a GUAC policy to determine whether to show the captures tab, which will make
+	-- this file obsolete. We can remove this entire file when we remove the FFlagAddCapturesGuacPolicy flag.
+	if FFlagAddCapturesGuacPolicy then
 		return false
 	end
 
@@ -39,7 +41,7 @@ local GetShowCapturesTab = function()
 
 	assert(layerData ~= nil, "layerData must not be nil")
 
-	return layerData[FStringScreenshotSharingIXPTreatmentKey]
+	return layerData[FStringScreenshotSharingIXPTreatmentKey] or (FFlagEnableCaptures13Experiment and layerData[FStringCapturesU13IXPTreatmentKey])
 end
 
 return GetShowCapturesTab

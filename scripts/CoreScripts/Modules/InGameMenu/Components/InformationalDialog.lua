@@ -11,6 +11,8 @@ local Roact = InGameMenuDependencies.Roact
 local UIBlox = InGameMenuDependencies.UIBlox
 local t = InGameMenuDependencies.t
 
+local Button = UIBlox.App.Button.Button
+local ButtonType = UIBlox.App.Button.Enum.ButtonType
 local withStyle = UIBlox.Core.Style.withStyle
 
 local InGameMenu = script.Parent.Parent
@@ -21,7 +23,7 @@ local Assets = require(InGameMenu.Resources.Assets)
 
 local ThemedTextLabel = require(script.Parent.ThemedTextLabel)
 
-local ImageSetLabel = UIBlox.Core.ImageSet.Label
+local ImageSetLabel = UIBlox.Core.ImageSet.ImageSetLabel
 
 local FocusHandler = require(script.Parent.Connection.FocusHandler)
 
@@ -216,7 +218,8 @@ function InformationalDialog:render()
 							SortOrder = Enum.SortOrder.LayoutOrder,
 							VerticalAlignment = Enum.VerticalAlignment.Center,
 						}),
-						ConfirmButton = Roact.createElement(UIBlox.App.Button.PrimarySystemButton, {
+						ConfirmButton = Roact.createElement(Button, {
+							buttonType = ButtonType.PrimarySystem,
 							layoutOrder = 1,
 							size = UDim2.new(1, -5, 1, 0),
 							text = props.confirmText,

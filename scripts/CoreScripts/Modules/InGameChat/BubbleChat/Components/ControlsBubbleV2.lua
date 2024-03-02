@@ -27,13 +27,15 @@ local SelfViewAPI = require(Modules.SelfView.publicApi)
 local toggleSelfViewSignal = require(Modules.SelfView.toggleSelfViewSignal)
 local Analytics = require(Modules.SelfView.Analytics).new()
 local GetFFlagLocalMutedNilFix = require(Modules.Flags.GetFFlagLocalMutedNilFix)
-local GetFFlagMicHandlingParity = require(Modules.Flags.GetFFlagMicHandlingParity)
 local VoiceConstants = require(Modules.VoiceChat.Constants)
 local getCamMicPermissions = require(RobloxGui.Modules.Settings.getCamMicPermissions)
 local isCamEnabledForUserAndPlace = require(RobloxGui.Modules.Settings.isCamEnabledForUserAndPlace)
 local displayCameraDeniedToast = require(RobloxGui.Modules.InGameChat.BubbleChat.Helpers.displayCameraDeniedToast)
+local isCameraOnlyUser = require(RobloxGui.Modules.Settings.isCameraOnlyUser)
 
 local getFFlagDoNotPromptCameraPermissionsOnMount = require(RobloxGui.Modules.Flags.getFFlagDoNotPromptCameraPermissionsOnMount)
+local getFFlagEnableAlwaysAvailableCamera = require(RobloxGui.Modules.Flags.getFFlagEnableAlwaysAvailableCamera)
+local getFFlagLegacyConnectingMicStateFix = require(RobloxGui.Modules.Flags.getFFlagLegacyConnectingMicStateFix)
 
 local AvatarChatUISettings = Constants.AVATAR_CHAT_UI_SETTINGS
 
@@ -76,22 +78,13 @@ function ControlsBubble:init()
 				return
 			end
 
-			if GetFFlagMicHandlingParity() then
-				if self.props.voiceState == Constants.VOICE_STATE.ERROR then
-					VoiceChatServiceManager:RejoinPreviousChannel()
-				elseif self.props.voiceState == Constants.VOICE_STATE.CONNECTING then
-					VoiceChatServiceManager:ShowVoiceChatLoadingMessage()
-				else
-					Analytics:setLastCtx("bubbleChatToggle")
-					VoiceChatServiceManager:ToggleMic()
-
-					self:setState({
-						microphoneEnabled = not VoiceChatServiceManager.localMuted,
-					})
-				end
+			if self.props.voiceState == Constants.VOICE_STATE.ERROR then
+				VoiceChatServiceManager:RejoinPreviousChannel()
+			elseif self.props.voiceState == Constants.VOICE_STATE.CONNECTING then
+				VoiceChatServiceManager:ShowVoiceChatLoadingMessage()
 			else
 				Analytics:setLastCtx("bubbleChatToggle")
-				VoiceChatServiceManager:ToggleMic()
+				VoiceChatServiceManager:ToggleMic("LegacyBubbleChatToggle")
 
 				self:setState({
 					microphoneEnabled = not VoiceChatServiceManager.localMuted,
@@ -169,14 +162,8 @@ end
 	Camera icon should only be shown to the local player.
 ]]
 function ControlsBubble:shouldShowCameraIndicator()
-	if getFFlagDoNotPromptCameraPermissionsOnMount() then
-		if self.props.isLocalPlayer and self:getCameraButtonVisibleAtMount() then
-			return true
-		end
-	else
-		if self.props.isLocalPlayer and self.props.hasCameraPermissions then
-			return true
-		end
+	if self.props.isLocalPlayer and self:getCameraButtonVisibleAtMount() then
+		return true
 	end
 
 	return false
@@ -185,9 +172,16 @@ end
 function ControlsBubble:shouldShowMicOffIndicator()
 	if self.props.isLocalPlayer then
 		-- If the local player has not given mic permissions to their device, we show the muted icon.
-		local noPermissions = not (self.state.microphoneEnabled and self.props.hasMicPermissions)
+		local noPermissions
+		if getFFlagLegacyConnectingMicStateFix() then
+			noPermissions = not self.props.hasMicPermissions
+		else
+			noPermissions = not (self.state.microphoneEnabled and self.props.hasMicPermissions)
+		end
+		
 		local micMuted = self.props.voiceState == Constants.VOICE_STATE.MUTED
 			or self.props.voiceState == Constants.VOICE_STATE.LOCAL_MUTED
+
 		if noPermissions or micMuted then
 			return true
 		end
@@ -197,6 +191,12 @@ function ControlsBubble:shouldShowMicOffIndicator()
 end
 
 function ControlsBubble:getCameraButtonVisibleAtMount()
+	if getFFlagEnableAlwaysAvailableCamera() then
+		if isCameraOnlyUser() then
+			-- If the user is a camera only user do not show the camera button
+			return false
+		end
+	end
 	return isCamEnabledForUserAndPlace()
 end
 

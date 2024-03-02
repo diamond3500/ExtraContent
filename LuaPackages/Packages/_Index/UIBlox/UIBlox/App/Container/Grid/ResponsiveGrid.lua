@@ -4,10 +4,14 @@ local UIBlox = App.Parent
 local Packages = UIBlox.Parent
 
 local React = require(Packages.React)
+local UIBloxConfig = require(UIBlox.UIBloxConfig)
 
 local ResponsiveRow = require(UIBlox.Core.Layout.Responsive.ResponsiveRow)
 local useResponsiveLayout = require(UIBlox.Core.Layout.Responsive.useResponsiveLayout)
 local useProperties = require(UIBlox.Utility.useProperties)
+local usePropertiesDeferred = require(UIBlox.Utility.usePropertiesDeferred)
+
+type usePropertiesHook = typeof(useProperties)
 
 export type Props = {
 	-- The type of row, determines which column count and spacing values to select from config
@@ -45,6 +49,8 @@ export type Props = {
 	absoluteWindowTop: number,
 	-- Vertical absolute height of the display window
 	absoluteWindowHeight: number,
+	-- use usePropertiesDeferred else useProperties for updateDisplayLines updates
+	enableDeferredRefPropEvents: boolean?,
 }
 
 -- vertical space taken by one cell => cell height + 1 gutter
@@ -68,9 +74,11 @@ local function useCellAbsoluteHeight(propRelativeHeight: UDim?, kind: string?)
 	end, { columns, gutter, verticalGutter, margin, relativeHeight } :: { any })
 end
 
+local EMPTY_RANGE = NumberRange.new(0, 0)
+local displayLinesDefault = if UIBloxConfig.responsiveGridDisplayLinesNonNil then EMPTY_RANGE else nil
+
 local function ResponsiveGrid(props: Props, ref: React.Ref<Frame>)
-	-- TODO actual type is `NumberRange?`
-	local displayLines, setDisplayLines = React.useState(nil :: any)
+	local displayLines: NumberRange?, setDisplayLines: (NumberRange?) -> () = React.useState(displayLinesDefault)
 	local getCellAbsoluteHeight = useCellAbsoluteHeight(props.relativeHeight, props.kind)
 
 	local updateDisplayLines = React.useCallback(function(absolutePosition, absoluteSize)
@@ -83,10 +91,13 @@ local function ResponsiveGrid(props: Props, ref: React.Ref<Frame>)
 				return setDisplayLines(NumberRange.new(firstLine, firstLine + lineCount - 1))
 			end
 		end
-		return setDisplayLines(nil)
+		return setDisplayLines(displayLinesDefault)
 	end, { getCellAbsoluteHeight, props.absoluteWindowTop, props.absoluteWindowHeight, setDisplayLines } :: { any })
 
-	local frameRef = useProperties(ref, updateDisplayLines, { "AbsolutePosition", "AbsoluteSize" })
+	local useRefProps: usePropertiesHook = if props.enableDeferredRefPropEvents
+		then usePropertiesDeferred
+		else useProperties
+	local frameRef = useRefProps(ref, updateDisplayLines, { "AbsolutePosition", "AbsoluteSize" })
 
 	return React.createElement(ResponsiveRow, {
 		kind = props.kind,

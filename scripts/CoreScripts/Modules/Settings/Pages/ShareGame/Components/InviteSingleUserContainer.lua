@@ -6,10 +6,16 @@ local HttpRbxApiService = game:GetService("HttpRbxApiService")
 local React = require(CorePackages.Packages.React)
 local RoactRodux = require(CorePackages.RoactRodux)
 
-local AppDarkTheme = require(CorePackages.Workspace.Packages.Style).Themes.DarkTheme
-local AppFont = require(CorePackages.Workspace.Packages.Style).Fonts.Gotham
-
 local Modules = CoreGui.RobloxGui.Modules
+local GetFFlagEnableStyleProviderCleanUp =
+	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagEnableStyleProviderCleanUp
+local AppDarkTheme = if GetFFlagEnableStyleProviderCleanUp()
+	then nil
+	else require(CorePackages.Workspace.Packages.Style).Themes.DarkTheme
+local AppFont = if GetFFlagEnableStyleProviderCleanUp()
+	then nil
+	else require(CorePackages.Workspace.Packages.Style).Fonts.Gotham
+local renderWithCoreScriptsStyleProvider = require(Modules.Common.renderWithCoreScriptsStyleProvider)
 local ShareGame = Modules.Settings.Pages.ShareGame
 local Colors = require(Modules.Common.Constants).COLORS
 local ShareGameConstants = require(ShareGame.Constants)
@@ -17,7 +23,12 @@ local InviteEvents = require(CorePackages.Workspace.Packages.GameInvite).GameInv
 local InviteStatus = ShareGameConstants.InviteStatus
 local RobloxTranslator = require(ShareGame.getTranslator)()
 
-local httpRequest = require(CorePackages.AppTempCommon.Temp.httpRequest)
+local GetFFlagRemoveAppTempCommonTemp =
+	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagRemoveAppTempCommonTemp
+local httpRequest: any = if GetFFlagRemoveAppTempCommonTemp()
+	then require(Modules.Common.httpRequest)
+	else require(CorePackages.AppTempCommon.Temp.httpRequest)
+
 local InviteUserIdToPlaceId = require(ShareGame.Thunks.InviteUserIdToPlaceId)
 local RetrievalStatus = require(CorePackages.Workspace.Packages.Http).Enum.RetrievalStatus
 local InviteUserIdToPlaceIdCustomized = require(ShareGame.Thunks.InviteUserIdToPlaceIdCustomized)
@@ -34,8 +45,8 @@ local GetFIntThrottleInviteSendEndpointDelay = require(Modules.Flags.GetFIntThro
 local GetFFlagSingleUserInvitePageKeybind = require(Modules.Settings.Flags.GetFFlagSingleUserInvitePageKeybind)
 
 local UIBlox = require(CorePackages.UIBlox)
-local PrimaryButton = UIBlox.App.Button.PrimarySystemButton
-local SecondaryButton = UIBlox.App.Button.SecondaryButton
+local Button = UIBlox.App.Button.Button
+local ButtonType = UIBlox.App.Button.Enum.ButtonType
 local StyledTextLabel = UIBlox.App.Text.StyledTextLabel
 
 local useStyle = UIBlox.Core.Style.useStyle
@@ -248,13 +259,15 @@ local InviteSingleUserContainer = function(props)
 				LayoutOrder = 3,
 				BackgroundTransparency = 1,
 			}, {
-				CancelButton = React.createElement(SecondaryButton, {
+				CancelButton = React.createElement(Button, {
+					buttonType = ButtonType.Secondary,
 					size = UDim2.new(0.5, -12, 1, 0),
 					text = RobloxTranslator:FormatByKey("Feature.SettingsHub.Action.Cancel"),
 					onActivated = onCloseButtonActivated,
 					isDisabled = sendingInvite,
 				}),
-				InviteButton = React.createElement(PrimaryButton, {
+				InviteButton = React.createElement(Button, {
+					buttonType = ButtonType.PrimarySystem,
 					size = UDim2.new(0.5, -12, 1, 0),
 					position = UDim2.new(0.5, 12, 0, 0),
 					text = RobloxTranslator:FormatByKey(inviteTextKey),
@@ -298,13 +311,19 @@ end, function(dispatch: (any) -> any)
 		end,
 	}
 end)(function(props)
-	-- Style Provider For UIBlox components
-	return React.createElement(UIBlox.Style.Provider, {
-		style = {
-			Theme = AppDarkTheme,
-			Font = AppFont,
-		},
-	}, {
-		SingleUserInvite = React.createElement(InviteSingleUserContainer, props),
-	})
+	if GetFFlagEnableStyleProviderCleanUp() then
+		return renderWithCoreScriptsStyleProvider({
+			SingleUserInvite = React.createElement(InviteSingleUserContainer, props),
+		})
+	else
+		-- Style Provider For UIBlox components
+		return React.createElement(UIBlox.Style.Provider, {
+			style = {
+				Theme = AppDarkTheme,
+				Font = AppFont,
+			},
+		}, {
+			SingleUserInvite = React.createElement(InviteSingleUserContainer, props),
+		})
+	end
 end)

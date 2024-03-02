@@ -10,6 +10,8 @@ local TweenService = game:GetService("TweenService")
 local CoreGuiService = game:GetService("CoreGui")
 local RobloxGui = CoreGuiService:WaitForChild("RobloxGui")
 local CoreGuiModules = RobloxGui:WaitForChild("Modules")
+local CorePackages = game:GetService("CorePackages")
+local AppFonts = require(CorePackages.Workspace.Packages.Style).AppFonts
 
 local RobloxTranslator = require(CoreGuiModules.RobloxTranslator)
 local create = require(CoreGuiModules.Common.Create)
@@ -19,9 +21,13 @@ local fadeTweenInfo = TweenInfo.new(FADE_DURATION, Enum.EasingStyle.Sine)
 local pulseTweenInfo = TweenInfo.new(PULSE_DURATION, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true)
 
 local FFlagLocalizeGameplayPaused = game:DefineFastFlag("LocalizeGameplayPaused", false)
+local FFlagNetworkPauseNotifTweenCancel = game:DefineFastFlag("NetworkPauseNotifTweenCancel", false)
+local FFlagNetworkPauseNoAnimation = game:DefineFastFlag("NetworkPauseNoAnimation", false)
 
 -- gui builder
 local function build()
+
+	local initTransparency = if FFlagNetworkPauseNoAnimation then 0 else 1
 
 	return create "ImageLabel" {
 
@@ -33,7 +39,7 @@ local function build()
 		Size = UDim2.new(1, 0, 1, 0),
 		Position = UDim2.new(0.5, 0, 0.5, 0),
 		ImageColor3 = Color3.fromRGB(122, 122, 122),
-		ImageTransparency = 1,
+		ImageTransparency = initTransparency,
 		BackgroundTransparency = 1,
 	
 		create "UISizeConstraint" {
@@ -53,7 +59,7 @@ local function build()
 			BackgroundColor3 = Color3.fromRGB(66, 66, 66),
 			Size = UDim2.new(1, 0, 0, 1),
 			Position = UDim2.new(0, 0, 0, 88),
-			BackgroundTransparency = 1
+			BackgroundTransparency = initTransparency
 		},
 	
 		create "Frame" {
@@ -77,14 +83,14 @@ local function build()
 					Size = PULSE_ORIGINAL_SIZE,
 					Position = UDim2.new(0.5, 0, 0.88, 0),
 					AnchorPoint = Vector2.new(0.5, 0.88),
-					ImageTransparency = 1
+					ImageTransparency = initTransparency
 				}
 	
 			},
 	
 			create "TextLabel" {
 				Name = "Label",
-				Font = Enum.Font.GothamBold,
+				Font = AppFonts.default:getBold(),
 				Text = FFlagLocalizeGameplayPaused and RobloxTranslator:FormatByKey("InGame.GameplayPaused.Title")
 					or "Gameplay Paused",
 				TextSize = 22,
@@ -93,14 +99,14 @@ local function build()
 				Position = UDim2.new(0, 0, 0, 54),
 				BackgroundTransparency = 1,
 				TextColor3 = Color3.fromRGB(255, 255, 255),
-				TextTransparency = 1
+				TextTransparency = initTransparency
 			}
 	
 		},
 	
 		create "TextLabel" {
 			Name = "Lower",
-			Font = Enum.Font.Gotham,
+			Font = AppFonts.default:getDefault(),
 			Text = FFlagLocalizeGameplayPaused and RobloxTranslator:FormatByKey("InGame.GameplayPaused.Body")
 				or "Gameplay has been paused: please wait while the game content loads.",
 			TextColor3 = Color3.fromRGB(190, 190, 190),
@@ -109,7 +115,7 @@ local function build()
 			Position = UDim2.new(0, 0, 0, 89),
 			Size = UDim2.new(1, 0, 1, -89),
 			BackgroundTransparency = 1,
-			TextTransparency = 1
+			TextTransparency = initTransparency
 		}
 
 	}
@@ -123,13 +129,15 @@ function Notification.new()
 	local self = setmetatable({}, Notification)
 	local gui = build()
 
-	gui:GetPropertyChangedSignal("ImageTransparency"):Connect(function ()
-		local transparency = gui.ImageTransparency
-		gui.Lower.TextTransparency = transparency
-		gui.Accent.BackgroundTransparency = transparency
-		gui.Upper.Label.TextTransparency = transparency
-		gui.Upper.IconContainer.Icon.ImageTransparency = transparency
-	end)
+	if not FFlagNetworkPauseNoAnimation then
+		gui:GetPropertyChangedSignal("ImageTransparency"):Connect(function ()
+			local transparency = gui.ImageTransparency
+			gui.Lower.TextTransparency = transparency
+			gui.Accent.BackgroundTransparency = transparency
+			gui.Upper.Label.TextTransparency = transparency
+			gui.Upper.IconContainer.Icon.ImageTransparency = transparency
+		end)
+	end
 
 	local anim_showNotification = TweenService:Create(gui, fadeTweenInfo, { ImageTransparency = 0 })
 	local anim_hideNotification = TweenService:Create(gui, fadeTweenInfo, { ImageTransparency = 1 })
@@ -139,14 +147,18 @@ function Notification.new()
 		ImageTransparency = PULSE_TRANSPARENCY
 	})
 
-	anim_showNotification.Completed:Connect(function (state)
-		if state == Enum.PlaybackState.Completed then
-			gui.Upper.IconContainer.Icon.ImageTransparency = PULSE_ORIGINAL_TRANSPARENCY
-			anim_pulse:Play()
-		end
-	end)
+	if not FFlagNetworkPauseNoAnimation then
+		anim_showNotification.Completed:Connect(function (state)
+			if state == Enum.PlaybackState.Completed then
+				gui.Upper.IconContainer.Icon.ImageTransparency = PULSE_ORIGINAL_TRANSPARENCY
+				anim_pulse:Play()
+			end
+		end)
+	end
 
 	self.__gui = gui
+	self.__guiParent = nil
+	self.__show = false
 	self.__animations = {
 		show = anim_showNotification,
 		hide = anim_hideNotification,
@@ -158,16 +170,43 @@ end
 
 function Notification:Show()
 	self.__gui.Upper.IconContainer.Icon.Size = PULSE_ORIGINAL_SIZE
-	self.__animations.show:Play()
+
+	if FFlagNetworkPauseNoAnimation then
+		self.__gui.Upper.IconContainer.Icon.ImageTransparency = PULSE_ORIGINAL_TRANSPARENCY
+		self.__show = true
+		self.__gui.Parent = self.__guiParent
+		self.__animations.pulse:Play()
+	else
+		if FFlagNetworkPauseNotifTweenCancel then
+			self.__animations.hide:Cancel()
+		end
+		self.__animations.show:Play()
+	end
 end
 
 function Notification:Hide()
-	self.__animations.pulse:Cancel()
-	self.__animations.hide:Play()
+	if FFlagNetworkPauseNoAnimation then
+		self.__show = false
+		self.__gui.Parent = nil
+		self.__animations.pulse:Cancel()
+	else
+		self.__animations.pulse:Cancel()
+		if FFlagNetworkPauseNotifTweenCancel then
+			self.__animations.show:Cancel()
+		end
+		self.__animations.hide:Play()
+	end
 end
 
 function Notification:SetParent(parent)
-	self.__gui.Parent = parent
+	if FFlagNetworkPauseNoAnimation then
+		self.__guiParent = parent
+		if self.__show then
+			self.__gui.Parent = parent
+		end
+	else
+		self.__gui.Parent = parent
+	end
 end
 
 return Notification

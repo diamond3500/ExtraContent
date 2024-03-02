@@ -1,8 +1,5 @@
-local Packages = script.Parent.Parent.Parent
-local enumerate = require(Packages.enumerate) :: any
-
-return enumerate(script.Name, {
-	Finished = "CallFinished",
-	Declined = "CallDeclined",
-	Missed = "CallMissed",
-})
+return {
+	Finished = "CallFinished" :: "CallFinished",
+	Declined = "CallDeclined" :: "CallDeclined",
+	Missed = "CallMissed" :: "CallMissed",
+}

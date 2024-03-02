@@ -7,6 +7,7 @@ local Roact = require(CorePackages.Roact)
 local utility = require(RobloxGui.Modules.Settings.Utility)
 
 local AbuseReportMenu = require(CorePackages.Workspace.Packages.AbuseReportMenu).AbuseReportMenu
+local ReportAbuseAnalytics = require(CorePackages.Workspace.Packages.AbuseReportMenu).ReportAbuseAnalytics
 
 ------------ Variables -------------------
 local PageInstance = nil
@@ -26,6 +27,8 @@ local function Initialize()
 	this._onHiddenCallback = function() end
 	this._onDisplayedCallback = function() end
 	this._onSettingsHiddenCallback = function() end
+	this._setNextPlayerToReportCallback = function() end
+	this._onMenuWidthChange = function() end
 
 	function this:SetHub(newHubRef)
 		-- Keep a reference to the hub so we can open and close the whole menu from here
@@ -33,7 +36,7 @@ local function Initialize()
 
 		this.HubRef.SettingsShowSignal:connect(function(isOpen)
 			if not isOpen then
-				this._onSettingsHiddenCallback()
+				this:onSettingsHidden()	
 			end
 		end)
 
@@ -60,8 +63,16 @@ local function Initialize()
 		this._onHiddenCallback()
 	end
 
+	function this:onSettingsHidden()
+		this._onSettingsHiddenCallback()
+	end
+
 	function this:onDisplayed()
 		this._onDisplayedCallback()
+	end
+
+	function this:setNextPlayerToReport(player)
+		this._setNextPlayerToReportCallback(player)
 	end
 
 	------ TAB CUSTOMIZATION -------
@@ -100,6 +111,12 @@ local function Initialize()
 		registerOnReportTabDisplayed = function(onDisplayedCallback)
 			this._onDisplayedCallback = onDisplayedCallback
 		end,
+		registerOnMenuWidthChange = function(callback)
+			this._onMenuWidthChange = callback
+		end,
+		registerSetNextPlayerToReport = function(setNextPlayerToReportCallback)
+			this._setNextPlayerToReportCallback = setNextPlayerToReportCallback
+		end,
 		registerOnSettingsHidden = function(onSettingsHiddenCallback)
 			this._onSettingsHiddenCallback = onSettingsHiddenCallback
 		end,
@@ -115,7 +132,16 @@ local function Initialize()
 	})
 	Roact.mount(abuseReportMenu, this.Page, "AbuseReportMenu")
 
-	this.Page.Size = UDim2.new(1, 0, 1, 0)
+	this.Page.Size = UDim2.new(1, 0, 0, 0)
+	this.Page.AutomaticSize = Enum.AutomaticSize.Y
+	-- We are using changes in AbsolutePosition here to keep track of mobile orientation change
+	-- we can also use AbsoluteSize, but since we are using AutomaticSize, the sizing
+	-- changes are triggered way too often, causing errors. AbsolutePosition also changes
+	-- on orientation change but only updated once. But it also is triggered on scrolling, but not as
+	-- much as the auto sizing changes
+	this.Page:GetPropertyChangedSignal("AbsolutePosition"):Connect(function()
+		this._onMenuWidthChange(this.Page.AbsoluteSize.X)
+	end)
 
 	return this
 end
@@ -130,5 +156,20 @@ end)
 PageInstance.Hidden.Event:connect(function()
 	PageInstance:onHidden()
 end)
+
+function PageInstance:ReportPlayer(player, entryPoint)
+	if player then
+		ReportAbuseAnalytics:startAbuseReportSession(entryPoint)
+		PageInstance:setNextPlayerToReport(player)
+
+		if not PageInstance.HubRef:GetVisibility() then
+			PageInstance.HubRef:SetVisibility(true, false, PageInstance)
+		else
+			PageInstance.HubRef:SwitchToPage(PageInstance, false, nil, nil, nil, {
+				entrypoint = ReportAbuseAnalytics:getAbuseReportSessionEntryPoint(),
+			})
+		end
+	end
+end
 
 return PageInstance

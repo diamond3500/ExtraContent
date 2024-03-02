@@ -8,6 +8,9 @@ return function()
 	local JestGlobals = require(CorePackages.JestGlobals)
 	local jestExpect = JestGlobals.expect
 
+	local LocalizationProvider = require(CorePackages.Workspace.Packages.Localization).LocalizationProvider
+	local Localization = require(CorePackages.Workspace.Packages.InExperienceLocales).Localization
+
 	local Reducer = require(script.Parent.Parent.Reducer)
 	local CallBarContainer = require(script.Parent.CallBarContainer)
 
@@ -19,13 +22,13 @@ return function()
 
 	beforeAll(function(c: any)
 		c.mockCurrentCall = {
-			status = RoduxCall.Enums.Status.Active.rawValue(),
+			status = RoduxCall.Enums.Status.Active,
 			callerId = 11111111,
 			calleeId = 12345678,
 			placeId = 789,
 			callId = "123456",
-			callerDisplayName = "Display Name 1",
-			calleeDisplayName = "Display Name 2",
+			callerCombinedName = "Display Name 1",
+			calleeCombinedName = "Display Name 2",
 			instanceId = "gameId",
 		}
 	end)
@@ -38,8 +41,12 @@ return function()
 		local element = Roact.createElement(RoactRodux.StoreProvider, {
 			store = store,
 		}, {
-			StyleProvider = Roact.createElement(UIBlox.Core.Style.Provider, {}, {
-				CallBarContainer = Roact.createElement(CallBarContainer),
+			LocalizationProvider = Roact.createElement(LocalizationProvider, {
+				localization = Localization.new("en-us"),
+			}, {
+				StyleProvider = Roact.createElement(UIBlox.Core.Style.Provider, {}, {
+					CallBarContainer = Roact.createElement(CallBarContainer),
+				}),
 			}),
 		})
 
@@ -55,13 +62,13 @@ return function()
 		local store = Rodux.Store.new(Reducer, {
 			Call = {
 				currentCall = {
-					status = RoduxCall.Enums.Status.Accepting.rawValue(),
+					status = RoduxCall.Enums.Status.Accepting,
 					callerId = 11111111,
 					calleeId = 12345678,
 					placeId = 789,
 					callId = "123456",
-					callerDisplayName = "Display Name 1",
-					calleeDisplayName = "Display Name 2",
+					callerCombinedName = "Display Name 1",
+					calleeCombinedName = "Display Name 2",
 					instanceId = "gameId",
 				},
 			},

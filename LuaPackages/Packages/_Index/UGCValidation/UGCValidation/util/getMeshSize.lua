@@ -1,14 +1,24 @@
 local UGCValidationService = game:GetService("UGCValidationService")
 
 local root = script.Parent.Parent
-local getFFlagUGCValidateBodyParts = require(root.flags.getFFlagUGCValidateBodyParts)
 
-local function getMeshSize(meshId: string)
-	local verts = UGCValidationService:GetMeshVerts(meshId)
+local Types = require(root.util.Types)
 
-	local minX, maxX = math.huge, (if getFFlagUGCValidateBodyParts() then -math.huge else 0)
-	local minY, maxY = math.huge, (if getFFlagUGCValidateBodyParts() then -math.huge else 0)
-	local minZ, maxZ = math.huge, (if getFFlagUGCValidateBodyParts() then -math.huge else 0)
+local getFFlagUseUGCValidationContext = require(root.flags.getFFlagUseUGCValidationContext)
+local getEngineFeatureUGCValidateEditableMeshAndImage =
+	require(root.flags.getEngineFeatureUGCValidateEditableMeshAndImage)
+
+local function getMeshSize(meshInfo: Types.MeshInfo)
+	local verts
+	if getEngineFeatureUGCValidateEditableMeshAndImage() then
+		verts = UGCValidationService:GetEditableMeshVerts(meshInfo.editableMesh)
+	else
+		verts = UGCValidationService:GetMeshVerts(meshInfo.contentId)
+	end
+
+	local minX, maxX = math.huge, -math.huge
+	local minY, maxY = math.huge, -math.huge
+	local minZ, maxZ = math.huge, -math.huge
 
 	for i = 1, #verts do
 		local vert = verts[i]
@@ -23,4 +33,24 @@ local function getMeshSize(meshId: string)
 	return Vector3.new(maxX - minX, maxY - minY, maxZ - minZ)
 end
 
-return getMeshSize
+local function DEPRECATED_getMeshSize(meshId: string)
+	local verts = UGCValidationService:GetMeshVerts(meshId)
+
+	local minX, maxX = math.huge, -math.huge
+	local minY, maxY = math.huge, -math.huge
+	local minZ, maxZ = math.huge, -math.huge
+
+	for i = 1, #verts do
+		local vert = verts[i]
+		minX = math.min(minX, vert.X)
+		minY = math.min(minY, vert.Y)
+		minZ = math.min(minZ, vert.Z)
+		maxX = math.max(maxX, vert.X)
+		maxY = math.max(maxY, vert.Y)
+		maxZ = math.max(maxZ, vert.Z)
+	end
+
+	return Vector3.new(maxX - minX, maxY - minY, maxZ - minZ)
+end
+
+return if getFFlagUseUGCValidationContext() then getMeshSize else DEPRECATED_getMeshSize :: never

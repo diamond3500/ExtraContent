@@ -25,6 +25,13 @@ local useStyle = UIBlox.Core.Style.useStyle
 local ErrorType = require(ContactList.Enums.ErrorType)
 
 local CloseDialog = require(ContactList.Actions.CloseDialog)
+local useAnalytics = require(ContactList.Analytics.useAnalytics)
+local EventNamesEnum = require(ContactList.Analytics.EventNamesEnum)
+
+local GetFFlagSeparateVoiceEnabledErrors =
+	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagSeparateVoiceEnabledErrors
+local GetFFlagIrisReservedServerCheckError =
+	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagIrisReservedServerCheckError
 
 local CALL_DIALOG_DISPLAY_ORDER = 8
 
@@ -43,6 +50,7 @@ local function CallDialogContainer(passedProps: Props)
 	local theme = style.Theme
 
 	local dispatch = useDispatch()
+	local analytics = useAnalytics()
 
 	local containerSize, setContainerSize = React.useState(Vector2.new(0, 0))
 
@@ -73,24 +81,59 @@ local function CallDialogContainer(passedProps: Props)
 	React.useEffect(function()
 		local callMessageConn = props.callProtocol:listenToHandleCallMessage(function(params)
 			if params.messageType == CallProtocol.Enums.MessageType.CallError.rawValue() then
-				if params.errorType == ErrorType.CallerIsInAnotherCall.rawValue() then
+				-- Show error dialog
+				if params.errorType == ErrorType.CallerIsInAnotherCall then
 					dispatch(
 						OpenOrUpdateDialog(
 							RobloxTranslator:FormatByKey("Feature.Call.Error.Title.CouldntMakeCall"),
 							RobloxTranslator:FormatByKey("Feature.Call.Error.Description.AlreadyInCall")
 						)
 					)
-				elseif params.errorType == ErrorType.CalleeIsInAnotherCall.rawValue() then
-					local calleeDisplayName = params.callInfo.calleeDisplayName
+				elseif params.errorType == ErrorType.CalleeIsInAnotherCall then
+					local calleeCombinedName = params.callInfo.calleeCombinedName
 					dispatch(
 						OpenOrUpdateDialog(
 							RobloxTranslator:FormatByKey("Feature.Call.Error.Title.FriendBusy"),
 							RobloxTranslator:FormatByKey(
 								"Feature.Call.Error.Description.FriendBusy",
-								{ calleeCombinedName = calleeDisplayName }
+								{ calleeCombinedName = calleeCombinedName }
 							)
 						)
 					)
+				elseif
+					params.errorType == ErrorType.UniverseIsNotVoiceEnabled
+					or params.errorType == ErrorType.PlaceIsNotVoiceEnabled
+				then
+					dispatch(
+						OpenOrUpdateDialog(
+							RobloxTranslator:FormatByKey("Feature.Call.Error.Title.ExperienceError"),
+							RobloxTranslator:FormatByKey("Feature.Call.Description.ExperienceError")
+						)
+					)
+
+					if GetFFlagSeparateVoiceEnabledErrors() then
+						analytics.fireEvent(EventNamesEnum.PhoneBookCallFriendFailed, {
+							eventTimestampMs = os.time() * 1000,
+							calleeUserId = params.callInfo.calleeId,
+							callerUserId = params.callInfo.callerId,
+							errorMsg = "Universe or place is not voice enabled.",
+						})
+					end
+				elseif
+					GetFFlagSeparateVoiceEnabledErrors() and params.errorType == ErrorType.CallerIsNotVoiceEnabled
+				then
+					dispatch(
+						OpenOrUpdateDialog(
+							RobloxTranslator:FormatByKey("Feature.Call.Modal.EnableChatVoiceTitle"),
+							RobloxTranslator:FormatByKey("Feature.Call.Modal.EnableChatVoiceBody")
+						)
+					)
+					analytics.fireEvent(EventNamesEnum.PhoneBookCallFriendFailed, {
+						eventTimestampMs = os.time() * 1000,
+						calleeUserId = params.callInfo.calleeId,
+						callerUserId = params.callInfo.callerId,
+						errorMsg = "User is not voice enabled.",
+					})
 				else
 					dispatch(
 						OpenOrUpdateDialog(
@@ -98,6 +141,16 @@ local function CallDialogContainer(passedProps: Props)
 							RobloxTranslator:FormatByKey("Feature.Call.Error.Description.Generic")
 						)
 					)
+				end
+
+				-- Print out error message
+				if params.errorType == ErrorType.UniverseAgeIsNotValid then
+					warn("Experience must be at least one week old to place a call")
+				elseif
+					GetFFlagIrisReservedServerCheckError()
+					and params.errorType == ErrorType.ReservedServerAccessCodeIsNotProvided
+				then
+					warn("Reserved server access code was not provided via OnCallInviteInvoked callback")
 				end
 			end
 		end)

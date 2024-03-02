@@ -30,10 +30,14 @@ local GuiService = game:GetService("GuiService")
 local RunService = game:GetService("RunService")
 local CorePackages = game:GetService("CorePackages")
 local LocalizationService = game:GetService("LocalizationService")
+local Players = game:GetService("Players")
 
 ----------- UTILITIES --------------
 
 local GetFFlagSwitchInExpTranslationsPackage = require(RobloxGui.Modules.Flags.GetFFlagSwitchInExpTranslationsPackage)
+local GetFFlagChromeSurveySupport = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagChromeSurveySupport
+local GetFFlagEnableStyleProviderCleanUp =
+	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagEnableStyleProviderCleanUp
 
 local NotificationType = GuiService:GetNotificationTypeList()
 local Roact = require(CorePackages.Roact)
@@ -48,6 +52,7 @@ local SendAnalytics = require(RobloxGui.Modules.InGameMenu.Utility.SendAnalytics
 local UserLocalStore = require(RobloxGui.Modules.InGameMenu.Utility.UserLocalStore)
 local GetDefaultQualityLevel = require(RobloxGui.Modules.Common.GetDefaultQualityLevel)
 local MessageBus = require(CorePackages.Workspace.Packages.MessageBus).MessageBus
+local LocalStore = require(RobloxGui.Modules.Chrome.Service.LocalStore)
 
 ----------- COMPONENTS --------------
 
@@ -57,8 +62,15 @@ local Images = UIBlox.App.ImageSet.Images
 local StyleProvider = UIBlox.Core.Style.Provider
 local EducationalModal = UIBlox.App.Dialog.Modal.EducationalModal
 
-local AppDarkTheme = require(CorePackages.Workspace.Packages.Style).Themes.DarkTheme
-local AppFont = require(CorePackages.Workspace.Packages.Style).Fonts.Gotham
+local renderWithCoreScriptsStyleProvider
+local AppDarkTheme
+local AppFont
+if not GetFFlagEnableStyleProviderCleanUp() then
+	AppDarkTheme = require(CorePackages.Workspace.Packages.Style).Themes.DarkTheme
+	AppFont = require(CorePackages.Workspace.Packages.Style).Fonts.Gotham
+else
+	renderWithCoreScriptsStyleProvider = require(RobloxGui.Modules.Common.renderWithCoreScriptsStyleProvider)
+end
 
 ------------ VARIABLES -------------------
 
@@ -67,9 +79,7 @@ local Constants = require(RobloxGui.Modules:WaitForChild("InGameMenu"):WaitForCh
 
 ------------ FLAGS -------------------
 
-local GetFFlagInGameMenuV1LeaveToHome = require(RobloxGui.Modules.Flags.GetFFlagInGameMenuV1LeaveToHome)
 local GetFIntEducationalPopupDisplayMaxCount = require(RobloxGui.Modules.Flags.GetFIntEducationalPopupDisplayMaxCount)
-local FFlagLuaAppExitModalDoNotShow = game:DefineFastFlag("LuaAppExitModalDoNotShow", false)
 
 ----------- CLASS DECLARATION --------------
 local function Initialize()
@@ -100,9 +110,7 @@ local function Initialize()
 			source = if isUsingGamepad then "Gamepad" else "Button",
 		})
 
-		if GetFFlagInGameMenuV1LeaveToHome() then
-			LinkingProtocol.default:detectURL("roblox://navigation/home")
-		end
+		LinkingProtocol.default:detectURL("roblox://navigation/home")
 
 		-- need to wait for render frames so on slower devices the leave button highlight will update
 		-- otherwise, since on slow devices it takes so long to leave you are left wondering if you pressed the button
@@ -183,19 +191,11 @@ local function Initialize()
 			subtitle = localization:Format("CoreScripts.InGameMenu.ExitModal.Subtitle"),
 			bodyTextOpenMenu = localization:Format("CoreScripts.InGameMenu.ExitModal.BodyTextOpenMenu"),
 			bodyTextClickHome = localization:Format("CoreScripts.InGameMenu.ExitModal.BodyTextClickHome"),
-			optionDontShow = if FFlagLuaAppExitModalDoNotShow
-				then localization:Format("CoreScripts.InGameMenu.ExitModal.OptionDontShow")
-				else nil,
+			optionDontShow = localization:Format("CoreScripts.InGameMenu.ExitModal.OptionDontShow"),
 			actionExit = localization:Format("CoreScripts.InGameMenu.ExitModal.ActionExit"),
 			actionHome = localization:Format("CoreScripts.InGameMenu.ExitModal.ActionHome"),
 		}
-
-		return Roact.createElement(StyleProvider, {
-			style = {
-				Theme = AppDarkTheme,
-				Font = AppFont,
-			},
-		}, {
+		local children = {
 			Roact.createElement(EducationalModal, {
 				bodyContents = {
 					{
@@ -207,10 +207,10 @@ local function Initialize()
 						text = localized.bodyTextClickHome,
 					},
 				},
-				hasDoNotShow = if FFlagLuaAppExitModalDoNotShow then true else nil,
+				hasDoNotShow = true,
 				cancelText = localized.actionExit,
 				confirmText = localized.actionHome,
-				doNotShowText = if FFlagLuaAppExitModalDoNotShow then localized.optionDontShow else nil,
+				doNotShowText = localized.optionDontShow,
 				titleBackgroundImageProps = {
 					image = "rbxasset://textures/ui/LuaApp/graphic/Auth/GridBackground.jpg",
 					imageHeight = 200,
@@ -224,21 +224,38 @@ local function Initialize()
 					this.DontLeaveFunc(false)
 				end,
 				onCancel = function(doNotShow)
-					if FFlagLuaAppExitModalDoNotShow and doNotShow then
+					if doNotShow then
 						this.DontShowAgain()
 					end
 					this.LeaveAppFunc(false)
 				end,
 				onConfirm = function(doNotShow)
-					if FFlagLuaAppExitModalDoNotShow and doNotShow then
+					if doNotShow then
 						this.DontShowAgain()
 					end
 					this.LeaveGameFunc(false)
 
-					MessageBus.publish(Constants.OnSurveyEventDescriptor, {eventType = Constants.SurveyEventType}) 
+					local customProps = nil
+					if GetFFlagChromeSurveySupport() then
+						local chromeSeenCount = tostring(LocalStore.getChromeSeenCount())
+						customProps = { chromeSeenCount = chromeSeenCount }
+					end
+
+					local localUserId = tostring(Players.LocalPlayer.UserId)
+					MessageBus.publish(Constants.OnSurveyEventDescriptor, {eventType = Constants.SurveyEventType, userId = localUserId, customProps = customProps})
 				end,
 			}),
-		})
+		}
+		if not GetFFlagEnableStyleProviderCleanUp() then
+			return Roact.createElement(StyleProvider, {
+				style = {
+					Theme = AppDarkTheme,
+					Font = AppFont,
+				},
+			}, children)
+		else
+			return renderWithCoreScriptsStyleProvider(children)
+		end
 	end
 
 	local exitModalTree = Roact.mount(ExitModal(), this.Page, "ExitModal")
@@ -263,7 +280,7 @@ end
 PageInstance = Initialize()
 
 PageInstance.Displayed.Event:connect(function()
-	if FFlagLuaAppExitModalDoNotShow and not PageInstance.ShouldShow() then
+	if not PageInstance.ShouldShow() then
 		PageInstance.LeaveAppFunc(true)
 	end
 

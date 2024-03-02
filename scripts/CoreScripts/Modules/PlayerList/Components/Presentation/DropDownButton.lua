@@ -17,13 +17,11 @@ local IconButton = require(Components.PresentationCommon.IconButton)
 
 local Colors = require(CorePackages.Workspace.Packages.Style).Colors
 
-local ImageSetLabel = UIBlox.Core.ImageSet.Label
+local ImageSetLabel = UIBlox.Core.ImageSet.ImageSetLabel
 local Images = UIBlox.App.ImageSet.Images
 local CoreGui = game:GetService("CoreGui")
 local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 local ChromeEnabled = require(RobloxGui.Modules.Chrome.Enabled)
-
-local GetFFlagEnableAccessibilitySettingsEffectsInCoreScripts = require(RobloxGui.Modules.Flags.GetFFlagEnableAccessibilitySettingsEffectsInCoreScripts)
 
 local DropDownButton = Roact.PureComponent:extend("DropDownButton")
 
@@ -84,9 +82,7 @@ function DropDownButton:render()
 
 			local backgroundStyle = {
 				Color = backgroundColor,
-				Transparency = if GetFFlagEnableAccessibilitySettingsEffectsInCoreScripts 
-									then layoutValues.OverrideBackgroundTransparency * style.Settings.PreferredTransparency 
-									else layoutValues.OverrideBackgroundTransparency,
+				Transparency = layoutValues.OverrideBackgroundTransparency * style.Settings.PreferredTransparency 
 			}
 			local overlayStyle = {
 				Transparency = 1,

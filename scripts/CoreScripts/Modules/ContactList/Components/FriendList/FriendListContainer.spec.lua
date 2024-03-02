@@ -10,6 +10,9 @@ return function()
 	local JestGlobals = require(CorePackages.JestGlobals)
 	local expect = JestGlobals.expect
 
+	local LocalizationProvider = require(CorePackages.Workspace.Packages.Localization).LocalizationProvider
+	local Localization = require(CorePackages.Workspace.Packages.InExperienceLocales).Localization
+
 	local ApolloClientModule = require(CorePackages.Packages.ApolloClient)
 	local ApolloProvider = ApolloClientModule.ApolloProvider
 
@@ -55,12 +58,12 @@ return function()
 				suggestedCallees = {
 					{
 						userId = 0,
-						userPresenceType = EnumPresenceType.Online.rawValue(),
+						userPresenceType = EnumPresenceType.Online,
 						lastLocation = "Roblox Connect",
 					},
 					{
 						userId = 1,
-						userPresenceType = EnumPresenceType.Offline.rawValue(),
+						userPresenceType = EnumPresenceType.Offline,
 						lastLocation = "Iris (Staging)",
 					},
 				},
@@ -116,11 +119,15 @@ return function()
 				ApolloProvider = Roact.createElement(ApolloProvider, {
 					client = c.mockApolloClient,
 				}, {
-					FriendListContainer = Roact.createElement(FriendListContainer, {
-						isSmallScreen = false,
-						dismissCallback = function() end,
-						scrollingEnabled = true,
-						searchText = "",
+					LocalizationProvider = Roact.createElement(LocalizationProvider, {
+						localization = Localization.new("en-us"),
+					}, {
+						FriendListContainer = Roact.createElement(FriendListContainer, {
+							isSmallScreen = false,
+							dismissCallback = function() end,
+							scrollingEnabled = true,
+							searchText = "",
+						}),
 					}),
 				}),
 			}),
@@ -133,15 +140,13 @@ return function()
 			root:render(element)
 		end)
 
-		if game:GetFastFlag("ApolloClientUserProfileReadPolicy") then
-			local containerElement = waitUntil(function()
-				-- Wait for the Apollo promise to complete.
-				local element = folder:FindFirstChild("FriendsScrollingFrame", true) :: ScrollingFrame
-				return element ~= nil, element
-			end, 1)
-			-- 1 UIListLayout + 1 friend section header + 2 friend items + 1 suggested callees section header + 2 suggested callees
-			expect(#containerElement:GetChildren()).toBe(7)
-		end
+		local containerElement = waitUntil(function()
+			-- Wait for the Apollo promise to complete.
+			local element = folder:FindFirstChild("FriendsScrollingFrame", true) :: ScrollingFrame
+			return element ~= nil, element
+		end, 1)
+		-- 1 UIListLayout + 1 friend section header + 2 friend items + 1 suggested callees section header + 2 suggested callees
+		expect(#containerElement:GetChildren()).toBe(7)
 
 		ReactRoblox.act(function()
 			root:unmount()
@@ -180,11 +185,15 @@ return function()
 				ApolloProvider = Roact.createElement(ApolloProvider, {
 					client = c.mockApolloClient,
 				}, {
-					FriendListContainer = Roact.createElement(FriendListContainer, {
-						isSmallScreen = false,
-						dismissCallback = function() end,
-						scrollingEnabled = true,
-						searchText = "",
+					LocalizationProvider = Roact.createElement(LocalizationProvider, {
+						localization = Localization.new("en-us"),
+					}, {
+						FriendListContainer = Roact.createElement(FriendListContainer, {
+							isSmallScreen = false,
+							dismissCallback = function() end,
+							scrollingEnabled = true,
+							searchText = "",
+						}),
 					}),
 				}),
 			}),
@@ -197,15 +206,13 @@ return function()
 			root:render(element)
 		end)
 
-		if game:GetFastFlag("ApolloClientUserProfileReadPolicy") then
-			local containerElement = waitUntil(function()
-				-- Wait for the Apollo promise to complete.
-				local element = folder:FindFirstChild("FriendsScrollingFrame", true) :: ScrollingFrame
-				return element ~= nil, element
-			end, 1)
-			-- 1 UIListLayout + 1 friend section header + 2 friend items
-			expect(#containerElement:GetChildren()).toBe(4)
-		end
+		local containerElement = waitUntil(function()
+			-- Wait for the Apollo promise to complete.
+			local element = folder:FindFirstChild("FriendsScrollingFrame", true) :: ScrollingFrame
+			return element ~= nil, element
+		end, 1)
+		-- 1 UIListLayout + 1 friend section header + 2 friend items
+		expect(#containerElement:GetChildren()).toBe(4)
 
 		ReactRoblox.act(function()
 			root:unmount()
@@ -230,11 +237,15 @@ return function()
 				ApolloProvider = Roact.createElement(ApolloProvider, {
 					client = c.mockApolloClient,
 				}, {
-					FriendListContainer = Roact.createElement(FriendListContainer, {
-						isSmallScreen = false,
-						dismissCallback = function() end,
-						scrollingEnabled = true,
-						searchText = "",
+					LocalizationProvider = Roact.createElement(LocalizationProvider, {
+						localization = Localization.new("en-us"),
+					}, {
+						FriendListContainer = Roact.createElement(FriendListContainer, {
+							isSmallScreen = false,
+							dismissCallback = function() end,
+							scrollingEnabled = true,
+							searchText = "",
+						}),
 					}),
 				}),
 			}),
@@ -280,11 +291,15 @@ return function()
 				ApolloProvider = Roact.createElement(ApolloProvider, {
 					client = c.mockApolloClient,
 				}, {
-					FriendListContainer = Roact.createElement(FriendListContainer, {
-						isSmallScreen = false,
-						dismissCallback = function() end,
-						scrollingEnabled = true,
-						searchText = "",
+					LocalizationProvider = Roact.createElement(LocalizationProvider, {
+						localization = Localization.new("en-us"),
+					}, {
+						FriendListContainer = Roact.createElement(FriendListContainer, {
+							isSmallScreen = false,
+							dismissCallback = function() end,
+							scrollingEnabled = true,
+							searchText = "",
+						}),
 					}),
 				}),
 			}),
@@ -297,16 +312,14 @@ return function()
 			root:render(element)
 		end)
 
-		if game:GetFastFlag("ApolloClientUserProfileReadPolicy") then
-			local containerElement = waitUntil(function()
-				-- Wait for the Apollo promise to complete.
-				local element = folder:FindFirstChild("FriendsScrollingFrame", true) :: ScrollingFrame
-				return element ~= nil, element
-			end, 1)
-			expect(containerElement).never.toBeNull()
-			local spinnerElement = containerElement:FindFirstChild("LoadingSpinner", true)
-			expect(spinnerElement).toBeNull()
-		end
+		local containerElement = waitUntil(function()
+			-- Wait for the Apollo promise to complete.
+			local element = folder:FindFirstChild("FriendsScrollingFrame", true) :: ScrollingFrame
+			return element ~= nil, element
+		end, 1)
+		expect(containerElement).never.toBeNull()
+		local spinnerElement = containerElement:FindFirstChild("LoadingSpinner", true)
+		expect(spinnerElement).toBeNull()
 
 		ReactRoblox.act(function()
 			root:unmount()
@@ -334,11 +347,15 @@ return function()
 				ApolloProvider = Roact.createElement(ApolloProvider, {
 					client = c.mockApolloClient,
 				}, {
-					FriendListContainer = Roact.createElement(FriendListContainer, {
-						isSmallScreen = false,
-						dismissCallback = function() end,
-						scrollingEnabled = true,
-						searchText = "",
+					LocalizationProvider = Roact.createElement(LocalizationProvider, {
+						localization = Localization.new("en-us"),
+					}, {
+						FriendListContainer = Roact.createElement(FriendListContainer, {
+							isSmallScreen = false,
+							dismissCallback = function() end,
+							scrollingEnabled = true,
+							searchText = "",
+						}),
 					}),
 				}),
 			}),

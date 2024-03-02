@@ -1,13 +1,9 @@
-local CoreGui = game:GetService("CoreGui")
+export type CallStateType = "CallFinished" | "CallDeclined" | "CallMissed"
 
-local RobloxGui = CoreGui:WaitForChild("RobloxGui")
+local CallState = {
+	Finished = "CallFinished" :: "CallFinished",
+	Declined = "CallDeclined" :: "CallDeclined",
+	Missed = "CallMissed" :: "CallMissed",
+}
 
-local ContactList = RobloxGui.Modules.ContactList
-local dependencies = require(ContactList.dependencies)
-local enumerate = dependencies.enumerate
-
-return enumerate(script.Name, {
-	Finished = "CallFinished",
-	Declined = "CallDeclined",
-	Missed = "CallMissed",
-})
+return CallState
