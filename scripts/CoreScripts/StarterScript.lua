@@ -16,13 +16,6 @@ local CoreGuiModules = RobloxGui:WaitForChild("Modules")
 
 local loadErrorHandlerFromEngine = game:GetEngineFeature("LoadErrorHandlerFromEngine")
 
-local initify = require(CorePackages.initify)
-
--- Initifying CorePackages.Packages is required for the error reporter to work.
--- We need to initify extensively to all CorePackages to accommodate the Packagification works.
-initify(CorePackages)
-initify(CoreGuiModules)
-
 -- Load the error reporter as early as possible, even before we finish requiring,
 -- so that it can report any errors that come after this point.
 ScriptContext:AddCoreScriptLocal("CoreScripts/CoreScriptErrorReporter", RobloxGui)
@@ -72,6 +65,7 @@ local getFFlagMicrophoneDevicePermissionsPromptLogging = require(RobloxGui.Modul
 
 game:DefineFastFlag("MoodsEmoteFix3", false)
 local FFlagEnableSendCameraAccessAnalytics = game:DefineFastFlag("EnableSendCameraAccessAnalytics", false)
+local FFlagEnableExperienceNotificationPrompts = game:DefineFastFlag("EnableExperienceNotificationPrompts", false)
 
 local UIBlox = require(CorePackages.UIBlox)
 local uiBloxConfig = require(CoreGuiModules.UIBloxInGameConfig)
@@ -165,19 +159,13 @@ end
 ScriptContext:AddCoreScriptLocal("CoreScripts/NotificationScript2", RobloxGui)
 
 -- SelfieView
-initify(CoreGuiModules.SelfieView)
 coroutine.wrap(safeRequire)(CoreGuiModules.SelfieView)
 
-
-initify(CoreGuiModules.Chrome)
-
 -- TopBar
-initify(CoreGuiModules.TopBar)
 coroutine.wrap(safeRequire)(CoreGuiModules.TopBar)
 
 if game:GetEngineFeature("LuobuModerationStatus") then
 	coroutine.wrap(function()
-		initify(CoreGuiModules.Watermark)
 		safeRequire(CoreGuiModules.Watermark)
 	end)()
 end
@@ -198,7 +186,6 @@ coroutine.wrap(function()
 		if not game:IsLoaded() then
 			game.Loaded:Wait()
 		end
-		initify(CoreGuiModules.LuobuWarningToast)
 		safeRequire(CoreGuiModules.LuobuWarningToast)
 	end
 end)()
@@ -232,7 +219,6 @@ end
 
 -- Purchase Prompt Script
 coroutine.wrap(function()
-	initify(CoreGuiModules.PurchasePrompt)
 	local PurchasePrompt = safeRequire(CoreGuiModules.PurchasePrompt)
 
 	if PurchasePrompt then
@@ -264,7 +250,6 @@ coroutine.wrap(safeRequire)(RobloxGui.Modules.EmotesMenu.EmotesMenuMaster)
 -- Screenshots
 coroutine.wrap(safeRequire)(RobloxGui.Modules.Screenshots.ScreenshotsApp)
 
-initify(CoreGuiModules.AvatarEditorPrompts)
 coroutine.wrap(safeRequire)(CoreGuiModules.AvatarEditorPrompts)
 
 -- GamepadVirtualCursor
@@ -292,6 +277,20 @@ coroutine.wrap(function()
 	safeRequire(RobloxGui.Modules.VR.VirtualKeyboard)
 	safeRequire(RobloxGui.Modules.VR.UserGui)
 end)()
+
+
+local FFlagUserVRAvatarGestures
+do
+	local success, result = pcall(function()
+		return UserSettings():IsUserFeatureEnabled("UserVRAvatarGestures")
+	end)
+	FFlagUserVRAvatarGestures = success and result
+end
+
+-- Allows players to animate their hands in VR
+if FFlagUserVRAvatarGestures then
+	coroutine.wrap(safeRequire)(RobloxGui.Modules.VR.VRAvatarGestures.VRAvatarGesturesClient)
+end
 
 ScriptContext:AddCoreScriptLocal("CoreScripts/NetworkPause", RobloxGui)
 
@@ -388,7 +387,6 @@ end
 coroutine.wrap(safeRequire)(CoreGuiModules.ApolloClient)
 
 if GetFFlagContactListClientEnabled() then
-	initify(CoreGuiModules.ContactList)
 	coroutine.wrap(safeRequire)(CoreGuiModules.ContactList)
 end
 
@@ -415,6 +413,10 @@ end
 
 if GetFFlagLuaInExperienceCoreScriptsGameInviteUnification() then
 	ScriptContext:AddCoreScriptLocal("CoreScripts/GameInviteModalGUI", script.Parent)
+end
+
+if FFlagEnableExperienceNotificationPrompts then
+	ScriptContext:AddCoreScriptLocal("CoreScripts/ExperienceNotifications", script.Parent)
 end
 
 local InExpAchievementManager = require(CorePackages.Workspace.Packages.Achievements).InExpAchievementManager

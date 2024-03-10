@@ -63,6 +63,7 @@ local function initializeLibrary(configs)
 				SelectionMode = require(script.Core.Control.Enum.SelectionMode),
 			}),
 			Interactable = require(script.Core.Control.Interactable),
+			InteractableList = require(script.Core.Control.InteractableList),
 		}),
 
 		Spatial = strict({
@@ -143,7 +144,6 @@ local function initializeLibrary(configs)
 			LinkButton = require(script.App.Button.LinkButton),
 			IconButton = require(script.App.Button.IconButton),
 			ActionBar = require(script.App.Button.ActionBar),
-			LogoTray = require(script.App.Button.LogoTray),
 		}),
 
 		Cell = strict({
@@ -334,7 +334,6 @@ local function initializeLibrary(configs)
 				Placement = require(script.App.Navigation.Enum.Placement),
 			}),
 			SystemBar = require(script.App.Navigation.SystemBar),
-			IABottomBar = require(script.App.Navigation.IABottomBar.IABottomBar),
 			PrimaryNavBar = strict({
 				ContextBar = require(script.App.Navigation.PrimaryNavBar.ContextBar),
 				IconTab = require(script.App.Navigation.PrimaryNavBar.IconTab),
@@ -384,6 +383,8 @@ local function initializeLibrary(configs)
 
 	UIBlox.UnitTestHelpers = {
 		MockContentProvider = require(script.UnitTestHelpers.MockContentProvider),
+		mockStyleComponent = require(script.Utility.mockStyleComponent),
+		testWithStyledComponent = require(script.UnitTestHelpers.testWithStyledComponent),
 	}
 
 	UIBlox.Style = {
