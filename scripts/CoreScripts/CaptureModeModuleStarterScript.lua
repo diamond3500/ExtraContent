@@ -1,6 +1,3 @@
--- Flags
-local FFlagFeedbackModuleEarlyFontInitialization = game:DefineFastFlag("FeedbackModuleEarlyFontInitialization", false)
-
 local CoreGui = game:GetService("CoreGui")
 local CorePackages = game:GetService("CorePackages")
 
@@ -10,6 +7,13 @@ local CoreGuiModules = RobloxGui:WaitForChild("Modules")
 local UIBlox = require(CorePackages.UIBlox)
 local uiBloxConfig = require(CoreGuiModules.UIBloxInGameConfig)
 UIBlox.init(uiBloxConfig)
+
+-- Flags
+local FFlagFeedbackModuleEarlyFontInitialization = game:DefineFastFlag("FeedbackModuleEarlyFontInitialization", false)
+local FFlagCaptureModeNativeExitSupport = game:DefineFastFlag("CaptureModeNativeExitSupport", false)
+local GetFFlagSelectInSceneReportMenu =
+	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagSelectInSceneReportMenu
+
 
 if FFlagFeedbackModuleEarlyFontInitialization then
     -- Early load font to prevent feedback module components from initially rendering with incorrect underlying text widths that cause unexpected text wrapping issues.
@@ -23,6 +27,30 @@ if FFlagFeedbackModuleEarlyFontInitialization then
     local _unused = TextService:GetTextBoundsAsync(params)
 end
 
--- Initialize and mount feedback application specifically
-local FeedbackModule = require(RobloxGui.Modules.Feedback)
-FeedbackModule.initialize()
+if FFlagCaptureModeNativeExitSupport then
+    -- TODO: Show exit modal in capture mode rather than just exiting to UGC game.
+    local function handleNativeExit()
+        game:GetService("ExperienceStateCaptureService"):ToggleCaptureMode()
+    end
+
+    game:GetService("GuiService").NativeClose:Connect(handleNativeExit)
+end
+
+if GetFFlagSelectInSceneReportMenu() then
+    game:WaitForChild("SafetyService")
+    local SafetyService = game:GetService("SafetyService")
+
+    if SafetyService.IsCaptureModeForReport then
+        -- Initialize and mount In-Game Asset Reporting application specifically
+        local InGameAssetReporting = require(CorePackages.Workspace.Packages.InGameAssetReporting)
+        InGameAssetReporting.initialize()
+    else
+        -- Initialize and mount feedback application specifically
+        local FeedbackModule = require(RobloxGui.Modules.Feedback)
+        FeedbackModule.initialize()
+    end
+else
+    -- Initialize and mount feedback application specifically
+    local FeedbackModule = require(RobloxGui.Modules.Feedback)
+    FeedbackModule.initialize()
+end

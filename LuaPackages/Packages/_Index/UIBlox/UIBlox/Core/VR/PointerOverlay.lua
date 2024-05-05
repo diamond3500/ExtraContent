@@ -5,14 +5,14 @@ local VRRoot = script.Parent
 local Packages = VRRoot.Parent.Parent.Parent
 local React = require(Packages.React)
 local Roact = require(Packages.Roact)
-local ExternalEventConnection = require(Packages.UIBlox.Utility.ExternalEventConnection)
+
+local ReactUtils = require(Packages.ReactUtils)
+local EventConnection = ReactUtils.EventConnection
+
 local LuauPolyfill = require(Packages.LuauPolyfill)
 local Object = LuauPolyfill.Object
 local Constants = require(VRRoot.Constants)
-local VR = script.Parent
-local App = VR.Parent
-local UIBlox = App.Parent
-local UIBloxConfig = require(UIBlox.UIBloxConfig)
+
 type VRControllerModel = {
 	update: () -> (),
 	setEnabled: (enabled: boolean) -> (),
@@ -88,7 +88,7 @@ local function PointerOverlay(providedProps: PointerOverlayProps)
 		if RightControllerModel.current then
 			RightControllerModel.current:setEnabled(false)
 		end
-		if LaserPointer.current and UIBloxConfig.destroyLaserPointersOnUnmount then
+		if LaserPointer.current then
 			LaserPointer.current:setMode(LaserPointer.current.Mode["Disabled"])
 		end
 		ContextActionService:UnbindActivate(Enum.UserInputType.Gamepad1, Enum.KeyCode.ButtonA)
@@ -126,7 +126,7 @@ local function PointerOverlay(providedProps: PointerOverlayProps)
 	return React.createElement(Roact.Portal, {
 		target = workspace,
 	}, {
-		UserCFrameChangedConnection = React.createElement(ExternalEventConnection, {
+		UserCFrameChangedConnection = React.createElement(EventConnection, {
 			event = props.UpdateEvent,
 			callback = function()
 				if LaserPointer.current then
@@ -140,12 +140,12 @@ local function PointerOverlay(providedProps: PointerOverlayProps)
 				end
 			end,
 		}),
-		VREnabledConnection = React.createElement(ExternalEventConnection, {
+		VREnabledConnection = React.createElement(EventConnection, {
 			event = VRService:GetPropertyChangedSignal("VREnabled"),
 			callback = VREnabledCallback,
 		}),
 		VRSessionStateConnection = if vrSessionStateAvailable
-			then React.createElement(ExternalEventConnection, {
+			then React.createElement(EventConnection, {
 				event = vrSessionStateSignal,
 				callback = VRSessionStateCallback,
 			})

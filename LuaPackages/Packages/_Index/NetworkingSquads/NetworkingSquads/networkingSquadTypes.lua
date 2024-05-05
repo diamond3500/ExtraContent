@@ -4,89 +4,62 @@ export type Config = {
 	useMockedResponse: boolean,
 }
 
-export type Member = {
-	userId: number,
-	status: string,
-}
-
-export type Squad = {
+export type CreateExperienceInviteRequest = {
 	squadId: string,
-	createdUtc: number,
-	updatedUtc: number,
-	inviteLinkToken: string,
-	members: { [number]: Member },
+	placeId: string,
+	membershipEntityId: any, -- TODO: Temp field for mocking. Remove after.
 }
 
-export type CreateSquadRequest = {
-	userIds: { [number]: number },
+export type CreateOrJoinSquadRequest = {
+	channelId: string,
 }
 
-export type CreateSquadResponse = {
-	squad: Squad,
+export type GetExperienceInviteRequest = {
+	inviteId: number,
+	mockedExperienceInvite: any, -- TODO: Temp field for mocking. Remove after.
 }
 
-export type GetSquadActiveResponse = {
-	squad: Squad,
+export type GetSquadActiveRequest = {
+	mockedSquad: any, -- TODO: Temp field for mocking. Remove after.
 }
 
 export type GetSquadFromSquadIdRequest = {
 	squadId: string,
-}
-
-export type GetSquadFromSquadIdResponse = {
-	squad: Squad,
+	mockedSquad: any, -- TODO: Temp field for mocking. Remove after.
 }
 
 export type JoinSquadRequest = {
 	squadId: string,
-}
-
-export type JoinSquadResponse = {
-	squad: Squad,
+	channelId: string, -- TODO: Temp field for mocking. Remove after.
 }
 
 export type LeaveSquadRequest = {
 	squadId: string,
 }
 
-export type SquadInviteRequest = {
-	squadId: string,
-	inviteeUserIds: { number },
-}
-
-export type SquadRemoveRequest = {
-	squadId: string,
-	userIdToRemove: number,
-}
-
-export type SquadRemoveResponse = {
-	squad: Squad,
-}
-
-export type CreateExperienceInviteRequest = {
-	squadId: string,
-	placeId: string,
-}
-
-export type GetExperienceInviteRequest = {
-	inviteId: number,
-}
-
 export type RespondExperienceInviteRequest = {
 	inviteId: number,
 	response: string,
+	userId: number, -- TODO: Temp field for mocking. Remove after.
+	mockedExperienceInvite: any, -- TODO: Temp field for mocking. Remove after.
+}
+
+export type SquadInviteRequest = {
+	squadId: string,
+	inviteeUserIds: { number },
+	channelId: string, -- TODO: Temp field for mocking. Remove after.
 }
 
 export type RequestThunks = {
-	CreateSquad: CreateSquadRequest,
+	CreateExperienceInvite: CreateExperienceInviteRequest,
+	CreateOrJoinSquad: CreateOrJoinSquadRequest,
+	GetExperienceInvite: GetExperienceInviteRequest,
+	GetSquadActive: GetSquadActiveRequest,
 	GetSquadFromSquadId: GetSquadFromSquadIdRequest,
 	JoinSquad: JoinSquadRequest,
 	LeaveSquad: LeaveSquadRequest,
-	SquadInvite: SquadInviteRequest,
-	SquadRemove: SquadRemoveRequest,
-	CreateExperienceInvite: CreateExperienceInviteRequest,
-	GetExperienceInvite: GetExperienceInviteRequest,
 	RespondExperienceInvite: RespondExperienceInviteRequest,
+	SquadInvite: SquadInviteRequest,
 }
 
 return {}

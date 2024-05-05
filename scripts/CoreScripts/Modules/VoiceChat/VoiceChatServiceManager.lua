@@ -63,9 +63,13 @@ local FFlagHideUIWhenVoiceDefaultDisabled = game:DefineFastFlag("HideUIWhenVoice
 local FFlagUseAudioInstanceAdded = game:DefineFastFlag("UseAudioInstanceAdded", false)
 	and game:GetEngineFeature("AudioInstanceAddedApiEnabled")
 local FFlagReceiveLikelySpeakingUsers = game:DefineFastFlag("DebugReceiveLikelySpeakingUsers", false)
-local getFFlagMicrophoneDevicePermissionsPromptLogging = require(RobloxGui.Modules.Flags.getFFlagMicrophoneDevicePermissionsPromptLogging)
-local GetFFlagVoiceBanShowToastOnSubsequentJoins = require(RobloxGui.Modules.Flags.GetFFlagVoiceBanShowToastOnSubsequentJoins)
+local getFFlagMicrophoneDevicePermissionsPromptLogging =
+	require(RobloxGui.Modules.Flags.getFFlagMicrophoneDevicePermissionsPromptLogging)
+local GetFFlagVoiceBanShowToastOnSubsequentJoins =
+	require(RobloxGui.Modules.Flags.GetFFlagVoiceBanShowToastOnSubsequentJoins)
 local GetFFlagUpdateNudgeV3VoiceBanUI = require(RobloxGui.Modules.Flags.GetFFlagUpdateNudgeV3VoiceBanUI)
+local GetFFlagEnableInExpVoiceUpsell = require(RobloxGui.Modules.Flags.GetFFlagEnableInExpVoiceUpsell)
+local GetFFlagBatchVoiceParticipantsUpdates = require(RobloxGui.Modules.Flags.GetFFlagBatchVoiceParticipantsUpdates)
 
 local VoiceChat = require(CorePackages.Workspace.Packages.VoiceChat)
 local Constants = VoiceChat.Constants
@@ -85,7 +89,8 @@ local HttpService = game:GetService("HttpService")
 local HttpRbxApiService = game:GetService("HttpRbxApiService")
 -- We require here because one of the side effects of BlockingUtility.lua sets up PlayerBlockedEvent
 local BlockingUtility = require(RobloxGui.Modules.BlockingUtility)
-local MicrophoneDevicePermissionsLogging = require(RobloxGui.Modules.Settings.Resources.MicrophoneDevicePermissionsLogging)
+local MicrophoneDevicePermissionsLogging =
+	require(RobloxGui.Modules.Settings.Resources.MicrophoneDevicePermissionsLogging)
 
 local AvatarChatService = if GetFFlagAvatarChatServiceEnabled() then game:GetService("AvatarChatService") else nil
 local FFlagEasierUnmutingPassMuteStatus = game:DefineFastFlag("EasierUnmutingPassMuteStatus", false)
@@ -825,7 +830,11 @@ function VoiceChatServiceManager:canUseServiceAsync()
 				if not game:IsLoaded() then
 					game.Loaded:Wait()
 				end
-				if FFlagHideUIWhenVoiceDefaultDisabled and not VoiceChatService.UseNewAudioApi and not VoiceChatService.EnableDefaultVoice then
+				if
+					FFlagHideUIWhenVoiceDefaultDisabled
+					and not VoiceChatService.UseNewAudioApi
+					and not VoiceChatService.EnableDefaultVoice
+				then
 					reject()
 					return
 				end
@@ -940,6 +949,12 @@ function VoiceChatServiceManager:createPromptInstance(onReadyForSignal, promptTy
 				promptType == VoiceChatPromptType.VoiceToxicityModal
 				or promptType == VoiceChatPromptType.VoiceToxicityToast
 			)
+		local isVoiceConsentModal = GetFFlagEnableInExpVoiceUpsell()
+			and (
+				promptType == VoiceChatPromptType.VoiceConsentModalV1
+				or promptType == VoiceChatPromptType.VoiceConsentModalV2
+				or promptType == VoiceChatPromptType.VoiceConsentModalV3
+			)
 		self.voiceChatPromptInstance = Roact.mount(
 			Roact.createElement(VoiceChatPrompt, {
 				Analytics = Analytics.new(),
@@ -984,6 +999,9 @@ function VoiceChatServiceManager:createPromptInstance(onReadyForSignal, promptTy
 						self:reportBanMessage("Understood")
 						self.Analytics:reportBanMessageEvent("Understood")
 					end
+					elseif isVoiceConsentModal then function()
+						self:showPrompt(VoiceChatPromptType.VoiceConsentAcceptedToast)
+					end
 					else nil,
 				onSecondaryActivated = if promptType == VoiceChatPromptType.VoiceToxicityModal
 					then function()
@@ -999,6 +1017,9 @@ function VoiceChatServiceManager:createPromptInstance(onReadyForSignal, promptTy
 						self:ShowVoiceToxicityFeedbackToast()
 						self:reportBanMessage("Denied")
 						self.Analytics:reportBanMessageEvent("Denied")
+					end
+					elseif isVoiceConsentModal then function()
+						self:showPrompt(VoiceChatPromptType.VoiceConsentDeclinedToast)
 					end
 					else nil,
 			}),
@@ -1606,6 +1627,7 @@ function VoiceChatServiceManager:SetupParticipantListeners()
 						ExperienceChat.Events.VoiceParticipantAdded(tostring(userId))
 					end
 				end
+				local updatedParticipants = {}
 				for _, state in pairs(updatedStates) do
 					local userId = state["userId"]
 					local lastState = self.participants[userId]
@@ -1630,19 +1652,26 @@ function VoiceChatServiceManager:SetupParticipantListeners()
 					end
 
 					self.participants[tostring(userId)] = state
+					if GetFFlagBatchVoiceParticipantsUpdates() then
+						updatedParticipants[tostring(userId)] = state
+					end
 				end
 
 				self:_updateRecentUsersInteractionData()
 
 				if #updatedStates > 0 then
-					self.participantsUpdate:Fire(self.participants)
+					self.participantsUpdate:Fire(
+						if GetFFlagBatchVoiceParticipantsUpdates()
+							then updatedParticipants
+							else self.participants
+					)
 				end
 			end
 		)
 
 		self.stateConnection = self.service.StateChanged:Connect(function(oldState, newState)
 			if getFFlagMicrophoneDevicePermissionsPromptLogging() then
-				MicrophoneDevicePermissionsLogging:setClientSessionId(self:GetSessionId());
+				MicrophoneDevicePermissionsLogging:setClientSessionId(self:GetSessionId())
 			end
 
 			local inFailedState = newState == (Enum :: any).VoiceChatState.Failed
@@ -1809,7 +1838,8 @@ end
 
 function VoiceChatServiceManager:GetLikelySpeakingUsersEvent(): RemoteEvent | nil
 	if not self.LikelySpeakingUsersEvent then
-		self.LikelySpeakingUsersEvent = RobloxReplicatedStorage:WaitForChild("SendLikelySpeakingUsers", 3) :: RemoteEvent | nil
+		self.LikelySpeakingUsersEvent =
+			RobloxReplicatedStorage:WaitForChild("SendLikelySpeakingUsers", 3) :: RemoteEvent | nil
 	end
 	return self.LikelySpeakingUsersEvent
 end

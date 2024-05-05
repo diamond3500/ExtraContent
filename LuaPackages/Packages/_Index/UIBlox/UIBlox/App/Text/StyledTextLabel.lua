@@ -26,6 +26,8 @@ StyledTextLabel.validateProps = t.strictInterface({
 	colorStyle = t.union(validateColorInfo, validateColorToken),
 	-- Controls the truncation of the text displayed in this text label
 	textTruncate = t.optional(t.EnumItem),
+	-- Controls the wrapping of the text displayed in this text label
+	textWrapped = t.optional(t.boolean),
 	-- Determines the horizontal alignment of rendered text
 	textXAlignment = t.optional(t.EnumItem),
 	-- Determines the vertical alignment of rendered text
@@ -44,6 +46,7 @@ StyledTextLabel.validateProps = t.strictInterface({
 	automaticSize = t.optional(t.EnumItem),
 	lineHeight = t.optional(t.number),
 	clipsDescendants = t.optional(t.boolean),
+	onAbsoluteSizeChange = t.optional(t.callback),
 })
 
 StyledTextLabel.defaultProps = {
@@ -68,11 +71,13 @@ function StyledTextLabel:render()
 		TextXAlignment = self.props.textXAlignment,
 		TextYAlignment = self.props.textYAlignment,
 		TextTruncate = self.props.textTruncate,
+		TextWrapped = self.props.textWrapped,
 		LayoutOrder = self.props.layoutOrder,
 		RichText = self.props.richText,
 		AutomaticSize = self.props.automaticSize,
 		LineHeight = self.props.lineHeight,
 		ClipsDescendants = self.props.clipsDescendants,
+		[Roact.Change.AbsoluteSize] = self.props.onAbsoluteSizeChange,
 	})
 end
 

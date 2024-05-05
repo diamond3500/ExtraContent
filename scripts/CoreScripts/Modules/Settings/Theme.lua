@@ -4,6 +4,7 @@ local CoreGui = game:GetService('CoreGui')
 local GuiService = game:GetService("GuiService")
 local RobloxGui = CoreGui:WaitForChild('RobloxGui')
 
+local isTenFootInterface = require(RobloxGui.Modules.TenFootInterface):IsEnabled()
 local AppFonts = require(CorePackages.Workspace.Packages.Style).AppFonts
 local DarkTheme = require(CorePackages.Workspace.Packages.Style).Themes.DarkTheme
 local UIBlox = require(CorePackages.UIBlox)
@@ -18,6 +19,8 @@ local EnableInGameMenuModernizationStickyBar = require(RobloxGui.Modules.Flags.G
 local GetFFlagAddAnimatedFocusState = require(script.Parent.Flags.GetFFlagAddAnimatedFocusState)
 local ExperienceMenuABTestManager = require(RobloxGui.Modules.ExperienceMenuABTestManager)
 local ChromeEnabled = require(script.Parent.Parent.Chrome.Enabled)
+local GetUIBloxEnableFontNameMapping = require(CorePackages.Workspace.Packages.SharedFlags).UIBlox.GetUIBloxEnableFontNameMapping
+local FFlagIncreasePlayerNameSizeConsole = game:DefineFastFlag("IncreasePlayerNameSizeConsole", false)
 
 local AppFontBaseSize = 16 * 1.2
 
@@ -28,10 +31,11 @@ local UseStickyBarEnabled = EnableInGameMenuModernizationStickyBar()
 local UseIconButtons = false
 local UseBottomButtonBarOnMobile = false
 
-local nominalSizeFactor = 0.833
+-- Roblox -> Nominal scaling factor depending on font
+local nominalSizeFactor = if GetUIBloxEnableFontNameMapping() then 0.794 else 0.833
 local topCornerInset, _ = GuiService:GetGuiInset()
 
--- roughly maps SourceSans font size to Gotham using nominalSizeFactor, rounding down
+-- roughly maps SourceSans font size to Gotham/Builder using nominalSizeFactor, rounding down
 local fontSizeMap = {
 	[ Enum.FontSize.Size14 ] = Enum.FontSize.Size11,
 	[ Enum.FontSize.Size18 ]  = Enum.FontSize.Size14,
@@ -43,7 +47,7 @@ local fontSizeMap = {
 local nullColor = Color3.fromRGB(0, 0, 0);
 local nullFont: any? = AppFonts.default:getDefault()
 local nullFontSize: any? = fontSizeMap[Enum.FontSize.Size24]
-local nullTextSize: any? = 20
+local nullTextSize: any? = if GetUIBloxEnableFontNameMapping() then 19 else 20
 
 local AppTheme = {
 	MenuContainer = {
@@ -66,6 +70,10 @@ local AppTheme = {
 		Color = Color3.fromRGB(0,0,0),
 		Transparency = 1.0,
 	},
+	IGM_ButtonNonInteractable ={
+		Color = Color3.fromRGB(100, 100, 100),
+		Transparency = 0.0,
+	},
 	IGM_ButtonHover = {
 		Color = Color3.fromRGB(56, 57, 59),
 		Transparency = 0.0,
@@ -78,7 +86,6 @@ local AppTheme = {
 		Color = Color3.fromRGB(217, 217, 217),
 		Transparency = 0.0,
 	},
-	-- TODO temporary focus state color, awaiting design feedback
 	Player_RowSelection = {
 		Color = Color3.new(.396, 0.4, 0.408),
 		Transparency = 0.9,
@@ -86,7 +93,6 @@ local AppTheme = {
 }
 
 local AppFont = {
-	-- TODO Gotham is a temporary font, should be switched to new one when available
 	Confirmation_Font = {
 		Font = AppFonts.default:getBold(),
 		RelativeSize = fontSizeMap[Enum.FontSize.Size36],
@@ -95,13 +101,14 @@ local AppFont = {
 	Button_Font = {
 		Font = AppFonts.default:getMedium(),
 		RelativeSize = fontSizeMap[Enum.FontSize.Size24],
-		TextSize = 18,
+		TextSize = if GetUIBloxEnableFontNameMapping() then 22 * nominalSizeFactor else 18,
 	},
 	Username = {
-		RelativeSize = if UseBiggerText then fontSizeMap[Enum.FontSize.Size24] else fontSizeMap[Enum.FontSize.Size18],
+		RelativeSize = if UseBiggerText or (FFlagIncreasePlayerNameSizeConsole and isTenFootInterface) then fontSizeMap[Enum.FontSize.Size24] else fontSizeMap[Enum.FontSize.Size18],
 	},
 	DisplayName = {
-		RelativeSize = Enum.FontSize.Size18,
+		
+		RelativeSize = if FFlagIncreasePlayerNameSizeConsole and isTenFootInterface then Enum.FontSize.Size24 else Enum.FontSize.Size18,
 		Font = AppFonts.default:getMedium(),
 	},
 	Settings_Font = {
@@ -133,7 +140,7 @@ local AppFont = {
 	},
 	Utility_Text_Font = {
 		Font = AppFonts.default:getDefault(),
-		TextSize = 18,
+		TextSize = if GetUIBloxEnableFontNameMapping() then 22 * nominalSizeFactor else 18,
 	},
 	Utility_Text_Small_Font = {
 		Font = AppFonts.default:getDefault(),
@@ -235,6 +242,7 @@ local ComponentThemeKeys = {
 	Bold = "Bold_Font",
 	ShareLinkTitle = "Utility_Text_Font",
 
+	ButtonNonInteractable = "IGM_ButtonNonInteractable",
 }
 
 

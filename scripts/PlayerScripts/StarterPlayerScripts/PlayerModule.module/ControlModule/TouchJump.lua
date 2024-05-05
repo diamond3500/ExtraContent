@@ -17,11 +17,11 @@ local BaseCharacterController = require(script.Parent:WaitForChild("BaseCharacte
 local TouchJump = setmetatable({}, BaseCharacterController)
 TouchJump.__index = TouchJump
 
-local FFlagUserResizeAwareTouchControls do
+local FFlagUserFixTouchJumpBug do
 	local success, result = pcall(function()
-		return UserSettings():IsUserFeatureEnabled("UserResizeAwareTouchControls")
+		return UserSettings():IsUserFeatureEnabled("UserFixTouchJumpBug")
 	end)
-	FFlagUserResizeAwareTouchControls = success and result
+	FFlagUserFixTouchJumpBug = success and result
 end
 
 function TouchJump.new()
@@ -57,6 +57,9 @@ function TouchJump:EnableButton(enable)
 		end
 	else
 		self.jumpButton.Visible = false
+		if FFlagUserFixTouchJumpBug then
+			self.touchObject = nil
+		end
 		self.isJumping = false
 		self.jumpButton.ImageRectOffset = Vector2.new(1, 146)
 	end
@@ -148,87 +151,65 @@ function TouchJump:Create()
 		return
 	end
 
-	if FFlagUserResizeAwareTouchControls then
-		if self.jumpButton then
-			self.jumpButton:Destroy()
-			self.jumpButton = nil
-		end
-		if self.absoluteSizeChangedConn then
-			self.absoluteSizeChangedConn:Disconnect()
-			self.absoluteSizeChangedConn = nil
-		end
-	
-		self.jumpButton = Instance.new("ImageButton")
-		self.jumpButton.Name = "JumpButton"
-		self.jumpButton.Visible = false
-		self.jumpButton.BackgroundTransparency = 1
-		self.jumpButton.Image = TOUCH_CONTROL_SHEET
-		self.jumpButton.ImageRectOffset = Vector2.new(1, 146)
-		self.jumpButton.ImageRectSize = Vector2.new(144, 144)
-		
-		local function ResizeJumpButton()
-			local minAxis = math.min(self.parentUIFrame.AbsoluteSize.x, self.parentUIFrame.AbsoluteSize.y)
-			local isSmallScreen = minAxis <= 500
-			local jumpButtonSize = isSmallScreen and 70 or 120
-	
-			self.jumpButton.Size = UDim2.new(0, jumpButtonSize, 0, jumpButtonSize)
-			self.jumpButton.Position = isSmallScreen and UDim2.new(1, -(jumpButtonSize*1.5-10), 1, -jumpButtonSize - 20) or
-				UDim2.new(1, -(jumpButtonSize*1.5-10), 1, -jumpButtonSize * 1.75)
-		end
+	if self.jumpButton then
+		self.jumpButton:Destroy()
+		self.jumpButton = nil
+	end
+	if self.absoluteSizeChangedConn then
+		self.absoluteSizeChangedConn:Disconnect()
+		self.absoluteSizeChangedConn = nil
+	end
 
-		ResizeJumpButton()
-		self.absoluteSizeChangedConn = self.parentUIFrame:GetPropertyChangedSignal("AbsoluteSize"):Connect(ResizeJumpButton)
-	else
-		if self.jumpButton then
-			self.jumpButton:Destroy()
-			self.jumpButton = nil
-		end
-
+	self.jumpButton = Instance.new("ImageButton")
+	self.jumpButton.Name = "JumpButton"
+	self.jumpButton.Visible = false
+	self.jumpButton.BackgroundTransparency = 1
+	self.jumpButton.Image = TOUCH_CONTROL_SHEET
+	self.jumpButton.ImageRectOffset = Vector2.new(1, 146)
+	self.jumpButton.ImageRectSize = Vector2.new(144, 144)
+	
+	local function ResizeJumpButton()
 		local minAxis = math.min(self.parentUIFrame.AbsoluteSize.x, self.parentUIFrame.AbsoluteSize.y)
 		local isSmallScreen = minAxis <= 500
 		local jumpButtonSize = isSmallScreen and 70 or 120
 
-		self.jumpButton = Instance.new("ImageButton")
-		self.jumpButton.Name = "JumpButton"
-		self.jumpButton.Visible = false
-		self.jumpButton.BackgroundTransparency = 1
-		self.jumpButton.Image = TOUCH_CONTROL_SHEET
-		self.jumpButton.ImageRectOffset = Vector2.new(1, 146)
-		self.jumpButton.ImageRectSize = Vector2.new(144, 144)
 		self.jumpButton.Size = UDim2.new(0, jumpButtonSize, 0, jumpButtonSize)
-
 		self.jumpButton.Position = isSmallScreen and UDim2.new(1, -(jumpButtonSize*1.5-10), 1, -jumpButtonSize - 20) or
 			UDim2.new(1, -(jumpButtonSize*1.5-10), 1, -jumpButtonSize * 1.75)
 	end
 
+	ResizeJumpButton()
+	self.absoluteSizeChangedConn = self.parentUIFrame:GetPropertyChangedSignal("AbsoluteSize"):Connect(ResizeJumpButton)
+
+	self.touchObject = nil
 	local touchObject: InputObject? = nil
 	self.jumpButton.InputBegan:connect(function(inputObject)
 		--A touch that starts elsewhere on the screen will be sent to a frame's InputBegan event
 		--if it moves over the frame. So we check that this is actually a new touch (inputObject.UserInputState ~= Enum.UserInputState.Begin)
-		if touchObject or inputObject.UserInputType ~= Enum.UserInputType.Touch
+		if self.touchObject or inputObject.UserInputType ~= Enum.UserInputType.Touch
 			or inputObject.UserInputState ~= Enum.UserInputState.Begin then
 			return
 		end
 
-		touchObject = inputObject
+		self.touchObject = inputObject
 		self.jumpButton.ImageRectOffset = Vector2.new(146, 146)
 		self.isJumping = true
 	end)
 
 	local OnInputEnded = function()
-		touchObject = nil
+		self.touchObject = nil
 		self.isJumping = false
 		self.jumpButton.ImageRectOffset = Vector2.new(1, 146)
 	end
 
 	self.jumpButton.InputEnded:connect(function(inputObject: InputObject)
-		if inputObject == touchObject then
+		if inputObject == self.touchObject then
 			OnInputEnded()
 		end
 	end)
 
 	GuiService.MenuOpened:connect(function()
-		if touchObject then
+		if self.touchObject then
 			OnInputEnded()
 		end
 	end)

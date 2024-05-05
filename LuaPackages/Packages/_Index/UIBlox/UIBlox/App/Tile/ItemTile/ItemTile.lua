@@ -9,7 +9,6 @@ local React = require(Packages.React)
 local Cryo = require(Packages.Cryo)
 local t = require(Packages.t)
 
-local enumerateValidator = require(UIBlox.Utility.enumerateValidator)
 local Images = require(UIBlox.App.ImageSet.Images)
 local ItemRestrictionStatus = require(ItemTileRoot.ItemRestrictionStatus)
 local ItemTileStatus = require(ItemTileRoot.ItemTileStatus)
@@ -56,7 +55,7 @@ ItemTile.validateProps = t.strictInterface({
 	bannerText = t.optional(t.string),
 
 	-- Optional enum specifying the item icon type, will create an icon showing the item type on the card
-	itemIconType = t.optional(enumerateValidator(ItemTileEnums.ItemIconType)),
+	itemIconType = t.optional(ItemTileEnums.ItemIconType.isEnumValue),
 
 	-- Whether the tile is selected or not
 	isSelected = t.optional(t.boolean),
@@ -71,7 +70,7 @@ ItemTile.validateProps = t.strictInterface({
 	isPremium = t.optional(t.boolean),
 
 	-- Enums specifying the restriction types if there are restrictions for the item
-	restrictionTypes = t.optional(t.map(enumerateValidator(ItemTileEnums.Restriction), t.boolean)),
+	restrictionTypes = t.optional(t.map(ItemTileEnums.Restriction.isEnumValue, t.boolean)),
 
 	-- Optional information about the restriction
 	restrictionInfo = t.optional(t.table),
@@ -83,7 +82,7 @@ ItemTile.validateProps = t.strictInterface({
 	statusText = t.optional(t.string),
 
 	-- Enum specifying the style for the status component
-	statusStyle = t.optional(enumerateValidator(ItemTileEnums.StatusStyle)),
+	statusStyle = t.optional(ItemTileEnums.StatusStyle.isEnumValue),
 
 	-- optional parameters for RoactGamepad
 	NextSelectionLeft = t.optional(t.table),
@@ -109,6 +108,12 @@ ItemTile.validateProps = t.strictInterface({
 
 	-- Pass through React.Tag
 	[React.Tag] = t.optional(t.string),
+
+	-- The thumbnail aspect ratio
+	aspectRatio = t.optional(t.number),
+
+	-- The thumbnail scale type
+	scaleType = t.optional(t.enum(Enum.ScaleType)),
 })
 
 ItemTile.defaultProps = {
@@ -146,6 +151,8 @@ function ItemTile:render()
 	local Selectable = self.props.Selectable
 	local titleFontStyle = self.props.titleFontStyle
 	local renderTileInset = self.props.renderTileInset
+	local aspectRatio = self.props.aspectRatio
+	local scaleType = self.props.scaleType
 
 	local hasOverlayComponents = false
 	local overlayComponents = {}
@@ -196,7 +203,8 @@ function ItemTile:render()
 		addSubtitleSpace = addSubtitleSpace,
 		titleFontStyle = titleFontStyle,
 		renderTileInset = renderTileInset,
-
+		thumbnailAspectRatio = aspectRatio,
+		thumbnailScaleType = scaleType,
 		NextSelectionLeft = self.props.NextSelectionLeft,
 		NextSelectionRight = self.props.NextSelectionRight,
 		NextSelectionUp = self.props.NextSelectionUp,

@@ -10,11 +10,6 @@ return function()
 
 	local TEST_DATA = ScriptContext:DeserializeScriptProfilerString(require(script.Parent.TestData))
 
-	-- CLI-94090 remove when roblox-cli 602 is retired from testing
-	if not TEST_DATA.Version then
-		return
-	end
-
 	it("should create and destroy without errors", function()
 		local store = Store.new(function()
 			return {
@@ -38,10 +33,11 @@ return function()
 					average = 1,
 					searchFilter = {},
 					showPlugins = true,
-					pluginOffsets = { Total = 0, },
-					pluginGCOffsets = { Total = 0, },
-					gcNodeOffsets = { Total = 0, },
+					pluginOffsets = { Total = 0 },
+					pluginGCOffsets = { Total = 0 },
+					gcNodeOffsets = { Total = 0 },
 					showGC = false,
+					expandedNodes = {},
 				}),
 			}),
 		})

@@ -12,6 +12,9 @@ local Roact = require(Packages.Roact)
 local t = require(Packages.t)
 local Cryo = require(Packages.Cryo)
 
+local ReactUtils = require(Packages.ReactUtils)
+local EventConnection = ReactUtils.EventConnection
+
 local Interactable = require(Core.Control.Interactable)
 
 local ControlState = require(Core.Control.Enum.ControlState)
@@ -29,10 +32,8 @@ local validateTypographyInfo = require(UIBlox.Core.Style.Validator.validateTypog
 local HoverButtonBackground = require(Core.Button.HoverButtonBackground)
 local StandardButtonSize = require(Button.Enum.StandardButtonSize)
 local UIBloxConfig = require(UIBlox.UIBloxConfig)
-local ExternalEventConnection = require(UIBlox.Utility.ExternalEventConnection)
 
 local validateImage = require(Core.ImageSet.Validator.validateImage)
-local enumerateValidator = require(UIBlox.Utility.enumerateValidator)
 
 local CONTENT_PADDING = 5
 local PLACEHOLDER_ABSOLUTE_SIZE_PX = 100
@@ -153,7 +154,7 @@ GenericButton.validateProps = t.interface({
 	userInteractionEnabled = t.optional(t.boolean),
 
 	--Which standard button size we should use, instead of fixed Size, to determine button height and font size
-	standardSize = t.optional(enumerateValidator(StandardButtonSize)),
+	standardSize = t.optional(StandardButtonSize.isEnumValue),
 
 	--For standard buttons, optionally override the default max width of 640 for Regular and Small,
 	--or set a max width for XSmall (e.g. width of parent container)
@@ -165,6 +166,7 @@ GenericButton.validateProps = t.interface({
 
 	-- Override for the button text
 	buttonTextOverride = t.optional(t.strictInterface({
+		RichText = t.optional(t.boolean),
 		Size = t.optional(t.UDim2),
 		TextSize = t.optional(t.number),
 		TextWrapped = t.optional(t.boolean),
@@ -172,7 +174,7 @@ GenericButton.validateProps = t.interface({
 		TextXAlignment = t.optional(t.enum(Enum.TextXAlignment)),
 	})),
 
-	forwardedRef = t.optional(t.table),
+	forwardedRef = t.optional(t.union(t.table, t.callback)),
 
 	-- Note that this component can accept all valid properties of the Roblox ImageButton instance
 })
@@ -501,7 +503,7 @@ function GenericButton:renderButton(loadingProgress)
 				}),
 				HoverBackground = showHoverBackground and Roact.createElement(HoverButtonBackground) or nil,
 				EventConnection = UIBloxConfig.useRobloxGuiFocusedChangedEventInGenericButton
-						and Roact.createElement(ExternalEventConnection, {
+						and Roact.createElement(EventConnection, {
 							event = RunService.RobloxGuiFocusedChanged,
 							callback = self.onRobloxGuiFocusedChanged,
 						})

@@ -5,9 +5,18 @@ local networkingSquadTypes = require(script.Parent.Parent.networkingSquadTypes)
 return function(config: networkingSquadTypes.Config)
 	local roduxNetworking: any = config.roduxNetworking
 
+	local mockResponse
 	local GetExperienceInvite = roduxNetworking.GET(
 		{ Name = "GetExperienceInvite" },
 		function(requestBuilder, request: networkingSquadTypes.GetExperienceInviteRequest)
+			if config.useMockedResponse then
+				mockResponse = {
+					responseBody = {
+						experienceInvite = request.mockedExperienceInvite,
+					},
+				}
+			end
+
 			return requestBuilder(SQUAD_URL):path("v1"):path("squad"):id(request.inviteId)
 		end
 	)
@@ -15,16 +24,7 @@ return function(config: networkingSquadTypes.Config)
 	if config.useMockedResponse then
 		GetExperienceInvite.Mock.clear()
 		GetExperienceInvite.Mock.reply(function()
-			return {
-				responseBody = {
-					experienceInvite = {
-						created = 1666384726,
-						inviteId = 123,
-						squadId = "12345",
-						universeId = "1663370770",
-					},
-				},
-			}
+			return mockResponse
 		end)
 	end
 

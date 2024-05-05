@@ -6,8 +6,6 @@ local ProfilerData = require(script.Parent.ProfilerDataFormatV2)
 local ProfilerUtil = require(script.Parent.ProfilerUtil)
 
 local getDurations = ProfilerUtil.getDurations
-local getSourceName = ProfilerUtil.getSourceName
-local getLine = ProfilerUtil.getLine
 local getNativeFlag = ProfilerUtil.getNativeFlag
 local getPluginFlag = ProfilerUtil.getPluginFlag
 local standardizeChildren = ProfilerUtil.standardizeChildren
@@ -32,33 +30,30 @@ local VALUE_PADDING = Constants.ScriptProfilerFormatting.ValuePadding
 
 local MS_FORMAT = "%.3f"
 local PERCENT_FORMAT = "%.3f%%"
-local TOOLTIP_FORMAT = "%s:%s"
 
 local ROOT_LABEL = "<root>"
 local ANON_LABEL = "<anonymous>"
 
+local FFlagScriptProfilerRememberExpandedNodes = game:DefineFastFlag("ScriptProfilerRememberExpandedNodes2", false)
 local FFlagScriptProfilerPluginAnnotation = game:DefineFastFlag("ScriptProfilerPluginAnnotation", false)
-local FFlagScriptProfilerNativeFrames = game:DefineFastFlag("ScriptProfilerNativeFrames", false)
-local FFlagScriptProfilerSetRoot = game:DefineFastFlag("ScriptProfilerSetRoot", false)
-local FFlagScriptProfilerSearch = game:DefineFastFlag("ScriptProfilerSearch", false)
 local FFlagScriptProfilerSetTerminalRootFix = game:DefineFastFlag("ScriptProfilerSetTerminalRootFix", false)
-local FFlagScriptProfilerHideGCOverhead = game:DefineFastFlag("ScriptProfilerHideGCOverhead", false)
+local FFlagScriptProfilerHideGCOverhead = game:DefineFastFlag("ScriptProfilerHideGCOverhead2", false)
 
 local ProfilerViewEntryComponent = Roact.PureComponent:extend("ProfilerViewEntry")
 
-local ProfilerViewEntry = ProfilerViewEntryComponent
-
-if FFlagScriptProfilerSetRoot then
-	local function mapDispatchToProps(dispatch)
-		return {
-			dispatchSetScriptProfilerRoot = function(nodeId: ProfilerData.NodeId, nodeName: string?)
-				dispatch(SetScriptProfilerRoot(nodeId, nodeName))
-			end,
-		}
-	end
-
-	ProfilerViewEntry  = RoactRodux.UNSTABLE_connect2(nil, mapDispatchToProps)(ProfilerViewEntryComponent)
+local function mapDispatchToProps(dispatch)
+	return {
+		dispatchSetScriptProfilerRoot = function(
+			nodeId: ProfilerData.NodeId,
+			funcId: ProfilerData.FunctionId,
+			nodeName: string?
+		)
+			dispatch(SetScriptProfilerRoot(nodeId, funcId, nodeName))
+		end,
+	}
 end
+
+local ProfilerViewEntry = RoactRodux.UNSTABLE_connect2(nil, mapDispatchToProps)(ProfilerViewEntryComponent)
 
 type BorderedCellLabelProps = {
 	text: string,
@@ -71,15 +66,15 @@ local function BorderedCellLabel(props: BorderedCellLabelProps)
 		Label = Roact.createElement(CellLabel, {
 			text = props.text,
 			size = props.size,
-			pos = props.pos
+			pos = props.pos,
 		}),
 		LeftBorder = Roact.createElement("Frame", {
 			Size = UDim2.new(UDim.new(0, LINE_WIDTH), props.size.Y),
 			Position = UDim2.fromOffset(-VALUE_PADDING, 0) + props.pos,
 			AnchorPoint = Vector2.new(0, 0),
 			BackgroundColor3 = LINE_COLOR,
-			BorderSizePixel = 0
-		})
+			BorderSizePixel = 0,
+		}),
 	})
 end
 
@@ -90,67 +85,55 @@ local function getNodeName(props: any): string
 
 	local func = data.Functions[functionId]
 
-	local isNative = getNativeFlag(data, func)
-	local isPlugin = getPluginFlag(data, func)
-
-	local defaultName = if depth == 0 then ROOT_LABEL else ANON_LABEL
+	local defaultName = if depth == 0 and functionId == 0 then ROOT_LABEL else ANON_LABEL
 	local name = props.nodeName
 	name = if not name or #name == 0 then defaultName else name
-
-	if FFlagScriptProfilerPluginAnnotation and isPlugin then
-		name = name .. " <plugin>"
-	end
-
-	if FFlagScriptProfilerNativeFrames and isNative then
-		name = name .. " <native>"
-	end
 
 	return name
 end
 
 function ProfilerViewEntryComponent:init()
-
 	self.state = {
-		expanded = self.props.depth == 0,
+		expanded = self.props.depth == 0
+			or (FFlagScriptProfilerRememberExpandedNodes and self.props.expandedNodes[self.props.nodeId]),
 		showTooltip = false,
-		tooltipPos = UDim2.fromOffset(0, 0)
+		tooltipPos = UDim2.fromOffset(0, 0),
 	}
 
-	self.onButtonPress = function ()
-		self:setState(function (_)
+	self.onButtonPress = function()
+		if FFlagScriptProfilerRememberExpandedNodes then
+			self.props.expandedNodes[self.props.nodeId] = not self.state.expanded
+		end
+
+		self:setState(function(_)
 			return {
-				expanded = not self.state.expanded
+				expanded = not self.state.expanded,
 			}
 		end)
 	end
 
-	self.onMouseEnter = function (_, x, y)
+	self.onMouseEnter = function(_, x, y)
 		self:setState({
 			showTooltip = true,
-			tooltipPos = UDim2.fromOffset(x, y)
+			tooltipPos = UDim2.fromOffset(x, y),
 		})
 	end
 
-	self.onMouseMove = function (_, x, y)
+	self.onMouseMove = function(_, x, y)
 		self:setState({
 			showTooltip = true,
-			tooltipPos = UDim2.fromOffset(x, y)
+			tooltipPos = UDim2.fromOffset(x, y),
 		})
 	end
 
-	self.onMouseLeave = function ()
+	self.onMouseLeave = function()
 		self:setState({
-			showTooltip = false
+			showTooltip = false,
 		})
 	end
 
-
-	self.onMouse2Click = function ()
-		if not FFlagScriptProfilerSetRoot then
-			return
-		end
-
-		self.props.dispatchSetScriptProfilerRoot(self.props.nodeId, getNodeName(self.props))
+	self.onMouse2Click = function()
+		self.props.dispatchSetScriptProfilerRoot(self.props.nodeId, self.props.functionId, getNodeName(self.props))
 	end
 end
 
@@ -166,14 +149,14 @@ function ProfilerViewEntryComponent:renderChildren(childData)
 		local showPlugins = self.props.showPlugins
 		local showGC = self.props.showGC
 		local gcNodeOffsets = self.props.gcNodeOffsets
+		local expandedNodes = self.props.expandedNodes
 
 		local rootData = self.props.data :: ProfilerData.RootDataFormat
 		local gcFuncId = rootData.GCFuncId
 
 		if childData then
 			for functionId, nodeId in pairs(childData) do
-
-				if FFlagScriptProfilerSearch and #searchFilter > 0 and not searchFilter[nodeId] then
+				if #searchFilter > 0 and not searchFilter[nodeId] then
 					continue
 				end
 
@@ -203,15 +186,18 @@ function ProfilerViewEntryComponent:renderChildren(childData)
 					showPlugins = showPlugins,
 					showGC = showGC,
 					gcNodeOffsets = gcNodeOffsets,
+					expandedNodes = expandedNodes,
 				})
 			end
-		elseif (FFlagScriptProfilerSetTerminalRootFix and self.props.nodeId == 0) or (not FFlagScriptProfilerSetTerminalRootFix and self.props.depth == 0) then
+		elseif
+			(FFlagScriptProfilerSetTerminalRootFix and self.props.nodeId == 0)
+			or (not FFlagScriptProfilerSetTerminalRootFix and self.props.depth == 0)
+		then
 			-- Since this is the "root node", childData should be nil, instead generate children from Category root IDs
 			assert(childData == nil)
 
 			for index, category in rootData.Categories do
-
-				if FFlagScriptProfilerSearch and #searchFilter > 0 and not searchFilter[category.NodeId] then
+				if #searchFilter > 0 and not searchFilter[category.NodeId] then
 					continue
 				end
 
@@ -245,6 +231,7 @@ function ProfilerViewEntryComponent:renderChildren(childData)
 					pluginGCOffset = pluginGCOffset,
 					showGC = showGC,
 					gcNodeOffsets = gcNodeOffsets,
+					expandedNodes = expandedNodes,
 				})
 			end
 		end
@@ -261,14 +248,13 @@ function ProfilerViewEntryComponent:renderValues(values)
 		children[key] = Roact.createElement(BorderedCellLabel, {
 			text = tostring(value),
 			size = childSize,
-			pos = childPosition + UDim2.fromScale(VALUE_CELL_WIDTH * (i-1), 0)
+			pos = childPosition + UDim2.fromScale(VALUE_CELL_WIDTH * (i - 1), 0),
 		})
 	end
 	return children
 end
 
 function ProfilerViewEntryComponent:render()
-
 	local props = self.props
 
 	local size = props.size or UDim2.new(1, 0, 0, ENTRY_HEIGHT)
@@ -334,17 +320,21 @@ function ProfilerViewEntryComponent:render()
 		selfDurationText = string.format(MS_FORMAT, selfDuration * 1000)
 	end
 
-	local values = {totalDurationText, selfDurationText}
+	local values = { totalDurationText, selfDurationText }
 
 	local name = getNodeName(props)
 
-	local sourceName = getSourceName(data, func)
-	sourceName = if not sourceName or #sourceName == 0 then name else sourceName
+	local hoverText = ProfilerUtil.getSourceLocationString(data, func, name)
 
-	local hoverText = sourceName :: string
-	local lineNumber = getLine(data, func)
-	if lineNumber and lineNumber >= 1 then
-		hoverText = string.format(TOOLTIP_FORMAT, sourceName, tostring(lineNumber))
+	local isNative = getNativeFlag(data, func)
+	local isPlugin = getPluginFlag(data, func)
+
+	if FFlagScriptProfilerPluginAnnotation and isPlugin then
+		name = name .. " <plugin>"
+	end
+
+	if isNative then
+		name = name .. " <native>"
 	end
 
 	local nameWidth = UDim.new(1 - VALUE_CELL_WIDTH * #values, -offset)
@@ -353,18 +343,20 @@ function ProfilerViewEntryComponent:render()
 		Size = size,
 		BackgroundTransparency = 1,
 		LayoutOrder = layoutOrder,
-		AutomaticSize = Enum.AutomaticSize.Y
+		AutomaticSize = Enum.AutomaticSize.Y,
 	}, {
 
-		tooltip = if self.state.showTooltip then Roact.createElement(Tooltip, {
-			text = hoverText,
-			pos = self.state.tooltipPos
-		}) else nil,
+		tooltip = if self.state.showTooltip
+			then Roact.createElement(Tooltip, {
+				text = hoverText,
+				pos = self.state.tooltipPos,
+			})
+			else nil,
 
 		layout = Roact.createElement("UIListLayout", {
 			FillDirection = Enum.FillDirection.Vertical,
 			HorizontalAlignment = Enum.HorizontalAlignment.Right,
-			SortOrder = Enum.SortOrder.LayoutOrder
+			SortOrder = Enum.SortOrder.LayoutOrder,
 		}),
 
 		button = Roact.createElement(BannerButton, {
@@ -386,7 +378,7 @@ function ProfilerViewEntryComponent:render()
 			}),
 			values = Roact.createFragment(self:renderValues(values)),
 		}),
-		children = Roact.createFragment(self:renderChildren(childData))
+		children = Roact.createFragment(self:renderChildren(childData)),
 	})
 end
 

@@ -4,8 +4,6 @@ local App = Indicator.Parent
 local UIBlox = App.Parent
 local Packages = UIBlox.Parent
 
-local UIBloxConfig = require(UIBlox.UIBloxConfig)
-
 local Roact = require(Packages.Roact)
 local t = require(Packages.t)
 local ImageSetLabel = require(UIBlox.Core.ImageSet.ImageSetComponent).Label
@@ -20,7 +18,6 @@ local getIconSize = require(App.ImageSet.getIconSize)
 local IconSize = require(App.ImageSet.Enum.IconSize)
 local GenericTextLabel = require(UIBlox.Core.Text.GenericTextLabel.GenericTextLabel)
 local withStyle = require(UIBlox.Core.Style.withStyle)
-local enumerateValidator = require(UIBlox.Utility.enumerateValidator)
 local VoteStates = require(Indicator.Enum.VoteStates)
 
 local ICON_RATING = Images["icons/status/games/rating_large"]
@@ -100,7 +97,7 @@ RateCount.validateProps = t.strictInterface({
 			* `VoteStates.votedDown`: VoteDown button is on and VoteUp button is off
 			* `VoteStates.votedUp`: VoteDown button is off and VoteUp button is on
 	]]
-	voteState = t.optional(enumerateValidator(VoteStates)),
+	voteState = t.optional(VoteStates.isEnumValue),
 	-- A callback function for the click event on vote down button
 	onVoteDownActivated = t.optional(t.callback),
 	-- A callback function for the click event on vote up button
@@ -140,7 +137,7 @@ RateCount.validateProps = t.strictInterface({
 		-- Size of vote buttons.
 		buttonSize = t.optional(t.integer),
 		-- The icon size in vote buttons. If icon size is larger, it will be used as actual button size.
-		buttonIconSizeEnum = t.optional(enumerateValidator(IconSize)),
+		buttonIconSizeEnum = t.optional(IconSize.isEnumValue),
 	})),
 })
 
@@ -205,9 +202,7 @@ function RateCount:render()
 		local buttonGroupGap = styleProps.buttonGroupGap
 		local buttonSize = styleProps.buttonSize
 		local buttonIconSizeEnum = styleProps.buttonIconSizeEnum
-		local iconButtonSize = if UIBloxConfig.useTokensSizeInIconButton
-			then math.max(getIconSize(buttonIconSizeEnum, style), buttonSize)
-			else buttonSize
+		local iconButtonSize = math.max(getIconSize(buttonIconSizeEnum, style), buttonSize)
 
 		local textSectionSizeOffset = -(
 			statWidgetIconSize
@@ -281,7 +276,7 @@ function RateCount:render()
 				size = UDim2.fromOffset(buttonSize, buttonSize),
 				icon = isVoteDownChecked and ICON_VOTE_DOWN_ON or ICON_VOTE_DOWN_OFF,
 				iconColor3 = style.Theme.IconEmphasis.Color,
-				iconSize = if UIBloxConfig.useTokensSizeInIconButton then buttonIconSizeEnum else nil,
+				iconSize = buttonIconSizeEnum,
 				onActivated = self.onVoteDownActivated,
 				showBackground = true,
 			}),
@@ -290,7 +285,7 @@ function RateCount:render()
 				size = UDim2.fromOffset(buttonSize, buttonSize),
 				icon = isVoteUpChecked and ICON_VOTE_UP_ON or ICON_VOTE_UP_OFF,
 				iconColor3 = style.Theme.IconEmphasis.Color,
-				iconSize = if UIBloxConfig.useTokensSizeInIconButton then buttonIconSizeEnum else nil,
+				iconSize = buttonIconSizeEnum,
 				onActivated = self.onVoteUpActivated,
 				showBackground = true,
 			}),

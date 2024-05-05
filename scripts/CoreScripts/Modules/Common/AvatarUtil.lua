@@ -7,9 +7,10 @@
 	- AvatarUtil:connectPlayerCharacterChanges(player, callback : (character) -> ())
 ]]
 
-local FFlagServerAvatarUtil = game:DefineFastFlag("ServerAvatarUtil", false)
 local Players = game:GetService("Players")
 local WAIT_TIME = 0.1
+
+local FFlagFixAvatarUtilCharacter = game:DefineFastFlag("FixAvatarUtilCharacter", false)
 
 -- Private Helper class 
 local PlayerTracker = {}
@@ -36,6 +37,13 @@ function PlayerTracker.new(player : Player)
 	self.connections["characterAppearanceChangedConnection"] = player.CharacterAppearanceLoaded:Connect(function(char)
 		self:onCharacterChanged(char)
 	end)
+
+	if FFlagFixAvatarUtilCharacter then
+		-- manually trigger for existing character
+		if self.player.Character then
+			self:onCharacterChanged(self.player.Character)
+		end
+	end
 	
 	return self
 end
@@ -60,10 +68,8 @@ function PlayerTracker:onCharacterChanged(character : Model)
 	end)
 
 	-- observe changes on any existing descendants
-	if FFlagServerAvatarUtil then
-		for i, desc in pairs(character:GetDescendants()) do
-			self:onDescendantAdded(desc)
-		end
+	for i, desc in pairs(character:GetDescendants()) do
+		self:onDescendantAdded(desc)
 	end
 
 	-- call callbacks
@@ -137,20 +143,7 @@ function AvatarUtil:connectLocalCharacterChanges(callback : Callback)
 		player = Players.LocalPlayer
 	end
 
-	if FFlagServerAvatarUtil then
-		self:connectPlayerCharacterChanges(player, callback)
-	else
-		-- create a playerTracker if it does not already exist
-		if not self.playerConnections[player] then
-			self.playerConnections[player] = PlayerTracker.new(player)
-		end
-
-		-- connect callback
-		local connection = self.playerConnections[player].characterChangedEvent.Event:Connect(callback)
-		
-		-- fire once in the beginning
-		self.playerConnections[player]:fireCharacterChanged()
-	end
+	self:connectPlayerCharacterChanges(player, callback)
 end
 
  -- connect a callback to AvatarUtil that will be called whenever the given player's

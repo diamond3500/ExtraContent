@@ -65,7 +65,6 @@ local FFlagLocalizeVersionLabels = settings():GetFFlag("LocalizeVersionLabels")
 local FFlagEnableInGameMenuDurationLogger = require(RobloxGui.Modules.Common.Flags.GetFFlagEnableInGameMenuDurationLogger)()
 
 local isNewInGameMenuEnabled = require(RobloxGui.Modules.isNewInGameMenuEnabled)
-local isRoactAbuseReportMenuEnabled = require(RobloxGui.Modules.TrustAndSafety.isRoactAbuseReportMenuEnabled)
 
 local GetFFlagAbuseReportEnableReportSentPage = require(RobloxGui.Modules.Flags.GetFFlagAbuseReportEnableReportSentPage)
 local GetFFlagVoiceChatUILogging = require(RobloxGui.Modules.Flags.GetFFlagVoiceChatUILogging)
@@ -81,6 +80,7 @@ local FFlagAvatarChatCoreScriptSupport = require(RobloxGui.Modules.Flags.FFlagAv
 local GetFFlagVoiceRecordingIndicatorsEnabled = require(RobloxGui.Modules.Flags.GetFFlagVoiceRecordingIndicatorsEnabled)
 local GetFFlagEnableTeleportBackButton = require(RobloxGui.Modules.Flags.GetFFlagEnableTeleportBackButton)
 local ChromeEnabled = require(RobloxGui.Modules.Chrome.Enabled)()
+local GetFFlagOpenControlsOnMenuOpen = require(RobloxGui.Modules.Chrome.Flags.GetFFlagOpenControlsOnMenuOpen)
 local FFlagLuaEnableGameInviteModalSettingsHub = game:DefineFastFlag("LuaEnableGameInviteModalSettingsHub", false)
 local GetFFlagFix10ftBottomButtons = require(RobloxGui.Modules.Settings.Flags.GetFFlagFix10ftBottomButtons)
 local GetFFlagLuaInExperienceCoreScriptsGameInviteUnification = require(RobloxGui.Modules.Flags.GetFFlagLuaInExperienceCoreScriptsGameInviteUnification)
@@ -91,6 +91,8 @@ local GetFFlagRightAlignMicText =  require(RobloxGui.Modules.Settings.Flags.GetF
 local GetFFlagFixResumeSourceAnalytics =  require(RobloxGui.Modules.Settings.Flags.GetFFlagFixResumeSourceAnalytics)
 local GetFFlagShouldInitWithFirstPageWithTabHeader =  require(RobloxGui.Modules.Settings.Flags.GetFFlagShouldInitWithFirstPageWithTabHeader)
 local FFlagPreventHiddenSwitchPage = game:DefineFastFlag("PreventHiddenSwitchPage", false)
+local GetFFlagEnableScreenshotUtility = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagEnableScreenshotUtility
+
 
 --[[ SERVICES ]]
 local RobloxReplicatedStorage = game:GetService("RobloxReplicatedStorage")
@@ -158,12 +160,10 @@ local Constants = require(RobloxGui.Modules:WaitForChild("InGameMenu"):WaitForCh
 local shouldLocalize = PolicyService:IsSubjectToChinaPolicies()
 
 local VoiceChatServiceManager = require(RobloxGui.Modules.VoiceChat.VoiceChatServiceManager).default
-local FFlagAddCapturesGuacPolicy = require(CorePackages.Workspace.Packages.Screenshots).Flags.FFlagAddCapturesGuacPolicy
 local GetFFlagOldMenuNewIcons = require(RobloxGui.Modules.Flags.GetFFlagOldMenuNewIcons)
 local GetFFlagPlayerListAnimateMic = require(RobloxGui.Modules.Flags.GetFFlagPlayerListAnimateMic)
 local NotchSupportExperiment = require(RobloxGui.Modules.Settings.Experiments.NotchSupportExperiment)
 local GetFFlagInGameMenuV1FadeBackgroundAnimation = require(RobloxGui.Modules.Settings.Flags.GetFFlagInGameMenuV1FadeBackgroundAnimation)
-local GetShowCapturesTab = require(RobloxGui.Modules.Settings.Experiments.GetShowCapturesTab)
 local GetFFlagSwitchInExpTranslationsPackage = require(RobloxGui.Modules.Flags.GetFFlagSwitchInExpTranslationsPackage)
 local FFlagSettingsHubRaceConditionFix = game:DefineFastFlag("SettingsHubRaceConditionFix", false)
 
@@ -270,6 +270,7 @@ local function CreateSettingsHub()
 	this.BottomBarButtons = {}
 	this.BottomBarButtonsComponents = {}
 	this.ResizedConnection = nil
+	this.TakingScreenshot = false
 	if GetFFlagEnableTeleportBackButton() then
 		this.BackBarVisibleConnection = nil
 	end
@@ -2763,7 +2764,7 @@ local function CreateSettingsHub()
 		end
 	end
 
-	function setVisibilityInternal(visible, noAnimation, customStartPage, switchedFromGamepadInput, analyticsContext)
+	function setVisibilityInternal(visible, noAnimation, customStartPage, switchedFromGamepadInput, analyticsContext, takingScreenshot)
 		this.OpenStateChangedCount = this.OpenStateChangedCount + 1
 
 		local visibilityChanged = visible ~= this.Visible
@@ -2803,6 +2804,10 @@ local function CreateSettingsHub()
 		end
 
 		if this.Visible then
+			if GetFFlagOpenControlsOnMenuOpen() then
+				this.TakingScreenshot = false
+			end
+
 			this.ResizedConnection = RobloxGui.Changed:connect(function(prop)
 				if prop == "AbsoluteSize" then
 					onScreenSizeChanged()
@@ -2962,6 +2967,10 @@ local function CreateSettingsHub()
 
 			this.GameSettingsPage:OpenSettingsPage()
 		else
+			if GetFFlagOpenControlsOnMenuOpen() then
+				this.TakingScreenshot = takingScreenshot or false
+			end
+
 			if ChromeEnabled then
 				this.CurrentPageSignal:fire("")
 			end
@@ -3127,10 +3136,10 @@ local function CreateSettingsHub()
 		end
 	end
 
-	function this:SetVisibility(visible, noAnimation, customStartPage, switchedFromGamepadInput, analyticsContext)
+	function this:SetVisibility(visible, noAnimation, customStartPage, switchedFromGamepadInput, analyticsContext, takingScreenshot)
 		if this.Visible == visible then return end
 
-		setVisibilityInternal(visible, noAnimation, customStartPage, switchedFromGamepadInput, analyticsContext)
+		setVisibilityInternal(visible, noAnimation, customStartPage, switchedFromGamepadInput, analyticsContext, takingScreenshot)
 	end
 
 	function this:GetVisibility()
@@ -3306,11 +3315,7 @@ local function CreateSettingsHub()
 	this.GameSettingsPage = require(RobloxGui.Modules.Settings.Pages.GameSettings)
 	this.GameSettingsPage:SetHub(this)
 
-	if isRoactAbuseReportMenuEnabled() then
-		this.ReportAbusePage = require(RobloxGui.Modules.Settings.Pages.ReportAbuseMenuNewContainerPage)
-	else
-		this.ReportAbusePage = require(RobloxGui.Modules.Settings.Pages.ReportAbuseMenu)
-	end
+	this.ReportAbusePage = require(RobloxGui.Modules.Settings.Pages.ReportAbuseMenuNewContainerPage)
 	this.ReportAbusePage:SetHub(this)
 
 	if GetFFlagAbuseReportEnableReportSentPage() then
@@ -3356,14 +3361,10 @@ local function CreateSettingsHub()
 			-- Create the embedded Roact app for the ShareGame page
 			-- This is accomplished via a Roact Portal into the ShareGame page frame
 			local CorePackages = game:GetService("CorePackages")
-			local GetFFlagRemoveAppTempCommonTemp = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagRemoveAppTempCommonTemp
-			local DEPRECATED_EventStream = require(CorePackages.AppTempCommon.Temp.EventStream)
 			local EventStream = require(CorePackages.Workspace.Packages.Analytics).AnalyticsReporters.EventStream
 			local Diag = require(CorePackages.Workspace.Packages.Analytics).AnalyticsReporters.Diag
 
-			local eventStream = if GetFFlagRemoveAppTempCommonTemp()
-				then EventStream.new(AnalyticsService)
-				else DEPRECATED_EventStream.new()
+			local eventStream = EventStream.new(AnalyticsService)
 			local inviteToGameAnalytics = InviteToGameAnalytics.new()
 				:withEventStream(eventStream)
 				:withDiag(Diag.new(AnalyticsService))
@@ -3380,17 +3381,22 @@ local function CreateSettingsHub()
 		end
 	end
 
-	local eligibleForCapturesFeature = false
-	if FFlagAddCapturesGuacPolicy then
-		local policy = ScreenshotsPolicy.PolicyImplementation.read()
-		eligibleForCapturesFeature  = if policy then ScreenshotsPolicy.Mapper(policy).eligibleForCapturesFeature() else false
-	end
+	local policy = ScreenshotsPolicy.PolicyImplementation.read()
+	local eligibleForCapturesFeature = if policy then ScreenshotsPolicy.Mapper(policy).eligibleForCapturesFeature() else false
 
-	if eligibleForCapturesFeature or GetShowCapturesTab() then
+	if eligibleForCapturesFeature then
 		local ShotsPageWrapper = require(RobloxGui.Modules.Settings.Pages.ShotsPageWrapper)
 
+		local function closeSettingsMenu()
+			this:SetVisibility(false, true)
+		end
+
 		this.ScreenshotsApp = ScreenshotsApp
-		this.ScreenshotsApp.mountMenuPage(ShotsPageWrapper.Page, Theme)
+		if GetFFlagEnableScreenshotUtility() then
+			this.ScreenshotsApp.mountMenuPage(ShotsPageWrapper.Page, closeSettingsMenu, Theme, ChromeEnabled)
+		else
+			this.ScreenshotsApp.mountMenuPage(ShotsPageWrapper.Page, closeSettingsMenu, Theme)
+		end
 
 		this.ShotsPage = ShotsPageWrapper
 		this.ShotsPage:ConnectHubToApp(this, this.PageViewClipper, this.ScreenshotsApp)
@@ -3570,6 +3576,10 @@ end
 
 function moduleApiTable:GetRespawnBehaviour()
 	return SettingsHubInstance:GetRespawnBehaviour()
+end
+
+function moduleApiTable:GetTakingScreenshot()
+	return if GetFFlagOpenControlsOnMenuOpen() then SettingsHubInstance.TakingScreenshot else nil
 end
 
 moduleApiTable.RespawnBehaviourChangedEvent = SettingsHubInstance.RespawnBehaviourChangedEvent

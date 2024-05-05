@@ -27,6 +27,7 @@ local UserGameSettings = Settings:GetService("UserGameSettings")
 local Url = require(RobloxGui.Modules.Common.Url)
 local VoiceChatService = nil
 local TextChatService = game:GetService("TextChatService")
+local SafetyService = game:GetService("SafetyService")
 local ExperienceStateCaptureService = nil
 if game:GetEngineFeature("CaptureModeEnabled") then
 	ExperienceStateCaptureService = game:GetService("ExperienceStateCaptureService")
@@ -40,6 +41,7 @@ local PermissionsProtocol = require(CorePackages.Workspace.Packages.PermissionsP
 local cameraDevicePermissionGrantedSignal = require(CoreGui.RobloxGui.Modules.Settings.cameraDevicePermissionGrantedSignal)
 local getFFlagDoNotPromptCameraPermissionsOnMount = require(RobloxGui.Modules.Flags.getFFlagDoNotPromptCameraPermissionsOnMount)
 local GetFFlagSelfViewCameraSettings = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagSelfViewCameraSettings
+local GetFFlagAlwaysShowVRToggle = require(RobloxGui.Modules.Flags.GetFFlagAlwaysShowVRToggle)
 
 
 -------------- CONSTANTS --------------
@@ -163,6 +165,7 @@ local PlayerPermissionsModule = require(RobloxGui.Modules.PlayerPermissionsModul
 local GetHasGuiHidingPermission = require(RobloxGui.Modules.Common.GetHasGuiHidingPermission)
 local Theme = require(RobloxGui.Modules.Settings.Theme)
 local Cryo = require(CorePackages.Cryo)
+local GfxReset = require(script.Parent.Parent.GfxReset)
 
 ------------ Variables -------------------
 RobloxGui:WaitForChild("Modules"):WaitForChild("TenFootInterface")
@@ -211,13 +214,15 @@ local GetFIntVoiceChatDeviceChangeDebounceDelay = require(RobloxGui.Modules.Flag
 local GetFFlagVoiceChatUILogging = require(RobloxGui.Modules.Flags.GetFFlagVoiceChatUILogging)
 local GetFFlagEnableUniveralVoiceToasts = require(RobloxGui.Modules.Flags.GetFFlagEnableUniveralVoiceToasts)
 local GetFFlagVoiceChatUseSoundServiceInputApi = require(RobloxGui.Modules.Flags.GetFFlagVoiceChatUseSoundServiceInputApi)
-local GetFFlagEnableAudioOutputDevice = require(RobloxGui.Modules.Flags.GetFFlagEnableAudioOutputDevice)
-local FFlagHideEmptyInputDeviceSelector = game:DefineFastFlag("HideEmptyInputDeviceSelector", false)
 local GetFFlagEnableExplicitSettingsChangeAnalytics = require(RobloxGui.Modules.Settings.Flags.GetFFlagEnableExplicitSettingsChangeAnalytics)
 local GetFFlagGameSettingsCameraModeFixEnabled = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagGameSettingsCameraModeFixEnabled
 local GetFFlagFixCyclicFullscreenIndexEvent = require(RobloxGui.Modules.Settings.Flags.GetFFlagFixCyclicFullscreenIndexEvent)
 local FFlagDisableFeedbackSoothsayerCheck = game:DefineFastFlag("DisableFeedbackSoothsayerCheck", false)
 local FFlagUserShowGuiHideToggles = game:DefineFastFlag("UserShowGuiHideToggles", false)
+local FFlagFixDeveloperConsoleButtonSizeAndPositioning = game:DefineFastFlag("FixDeveloperConsoleButtonSizeAndPositioning", false)
+local FFlagEnableTFFeedbackModeEntryCheck = game:DefineFastFlag("EnableTFFeedbackModeEntryCheck", false)
+local FFlagFeedbackEntryPointButtonSizeAdjustment = game:DefineFastFlag("FeedbackEntryPointButtonSizeAdjustment2", false)
+local FFlagFeedbackEntryPointImprovedStrictnessCheck = game:DefineFastFlag("FeedbackEntryPointImprovedStrictnessCheck", false)
 
 local function reportSettingsChangeForAnalytics(fieldName, oldValue, newValue, extraData)
 	if not GetFFlagEnableExplicitSettingsChangeAnalytics() or oldValue == newValue or oldValue == nil or newValue == nil then
@@ -292,10 +297,16 @@ end
 --------------- FLAGS ----------------
 game:DefineFastInt("V1MenuLanguageSelectionFeaturePerMillageRollout", 0)
 game:DefineFastString("V1MenuLanguageSelectionFeatureForcedUserIds", "")
+local FFlagIGMEnableGFXReset = game:DefineFastFlag("IGMEnableGFXReset", false)
 
 ----------- CLASS DECLARATION --------------
 
 local function Initialize()
+
+	if FFlagIGMEnableGFXReset then
+		GfxReset.RunGfxReset()
+	end
+
 	local settingsPageFactory = require(RobloxGui.Modules.Settings.SettingsPageFactory)
 	local this = settingsPageFactory:CreateNewPage()
 
@@ -442,25 +453,31 @@ local function Initialize()
 
 				table.insert(framerateCaps, 1, -1)
 
-				this.FramerateCapFrame, this.FramerateCapLabel, this.FramerateCapMode =
-					utility:AddNewRow(
-						this,
-						RobloxTranslator:FormatByKey("Feature.SettingsHub.GameSettings.MaximumFramerate"),
-						"Selector",
-						framerateCapsToText,
-						table.find(framerateCaps, GameSettings.FramerateCap)
-					)
-				this.FramerateCapFrame.LayoutOrder = 12
+				-- `task.defer` being used because DropDown requires the hub to be set,
+				-- but that isn't done until a later call.
+				task.defer(function()
+					this.FramerateCapFrame, this.FramerateCapLabel, this.FramerateCapMode =
+						utility:AddNewRow(
+							this,
+							RobloxTranslator:FormatByKey("Feature.SettingsHub.GameSettings.MaximumFramerate"),
+							"DropDown",
+							framerateCapsToText,
+							table.find(framerateCaps, GameSettings.FramerateCap),
+							nil,
+							RobloxTranslator:FormatByKey("Feature.SettingsHub.GameSettings.MaximumFramerate.Description")
+						)
+					this.FramerateCapFrame.LayoutOrder = 12
 
-				this.FramerateCapMode.IndexChanged:Connect(function(newIndex)
-					local oldValue = GameSettings.FramerateCap
-					GameSettings.FramerateCap = tonumber(framerateCaps[newIndex])
+					this.FramerateCapMode.IndexChanged:Connect(function(newIndex)
+						local oldValue = GameSettings.FramerateCap
+						GameSettings.FramerateCap = tonumber(framerateCaps[newIndex])
 
-					if GetFFlagEnableExplicitSettingsChangeAnalytics() then
-						reportSettingsChangeForAnalytics("framerate_cap", oldValue, GameSettings.FramerateCap)
-					end
+						if GetFFlagEnableExplicitSettingsChangeAnalytics() then
+							reportSettingsChangeForAnalytics("framerate_cap", oldValue, GameSettings.FramerateCap)
+						end
 
-					reportSettingsForAnalytics()
+						reportSettingsForAnalytics()
+					end)
 				end)
 			end
 		end
@@ -471,6 +488,15 @@ local function Initialize()
 
 		-- DEPRECATED Remove with FixGraphicsQuality
 		function SetGraphicsQuality(newValue, automaticSettingAllowed)
+
+			if FFlagIGMEnableGFXReset then
+				local override, overrideValue = GfxReset.TemporaryOverride(newValue)
+				if override then
+					settings().Rendering.QualityLevel = overrideValue
+					return
+				end
+			end
+
 			local percentage = newValue / GRAPHICS_QUALITY_LEVELS
 			local newQualityLevel = math.floor((settings().Rendering:GetMaxQualityLevel() - 1) * percentage)
 			if newQualityLevel == 20 then
@@ -1339,8 +1365,12 @@ local function Initialize()
 				end
 			end
 		end
-		onVREnabledChanged()
-		VRService:GetPropertyChangedSignal("VREnabled"):connect(onVREnabledChanged)
+		if (GetFFlagAlwaysShowVRToggle()) then
+			createVROption()
+		else
+			onVREnabledChanged()
+			VRService:GetPropertyChangedSignal("VREnabled"):connect(onVREnabledChanged)
+		end
 
 		------------------------------------------------------
 		------------------
@@ -1749,8 +1779,25 @@ local function Initialize()
 
 		local function rolesCheckCallback(enableFeedbackUI)
 			if enableFeedbackUI then
+				-- Either the engine feature is off and so we do the default behavior of always executing the below code, or feedback entry point is enabled and we want to enter it on click
+				if not FFlagFeedbackEntryPointImprovedStrictnessCheck then
+					if game:GetEngineFeature("ExperienceStateCaptureMinMemEnabled") and not this.FeedbackEntryPointEnabled then
+						return
+					end
+				end
+
 				local function onToggleFeedbackMode()
+					if FFlagFeedbackEntryPointImprovedStrictnessCheck then
+						-- Perform this check in the on toggle function itself instead of when setting it up to have it execute in all expected scenarios
+						if game:GetEngineFeature("ExperienceStateCaptureMinMemEnabled") and not this.FeedbackEntryPointEnabled then
+							return
+						end
+					end
 					this.HubRef:PopMenu(false, true);
+					if game:GetEngineFeature("SafetyServiceCaptureModeReportProp") then
+						-- Explicit false set for Safety Service capture mode before entering Feedback mode
+						SafetyService.IsCaptureModeForReport = false
+					end
 					if ExperienceStateCaptureService ~= nil then
 						-- In this function ExperienceStateCaptureService should always exist, but just in case we do a nil check before we attempt a toggle
 						ExperienceStateCaptureService:ToggleCaptureMode()
@@ -1758,14 +1805,34 @@ local function Initialize()
 				end
 
 				local toggleFeedbackModeButton, toggleFeedbackModeText = nil, nil
-				toggleFeedbackModeButton, toggleFeedbackModeText = utility:MakeStyledButton("toggleFeedbackModeButton", "Give Feedback", UDim2.new(0, 300, 1, -20), onToggleFeedbackMode, this)
+				if FFlagFeedbackEntryPointButtonSizeAdjustment then
+					toggleFeedbackModeButton, toggleFeedbackModeText = utility:MakeStyledButton("toggleFeedbackModeButton", "Give Feedback", UDim2.new(1, 0, 1, -20), onToggleFeedbackMode, this)
+					-- Adjust size and position of button relative to frame for use in utility:AddNewRowObject
+					toggleFeedbackModeButton.Size = UDim2.new(0.6, 0, 1, -20)
+					toggleFeedbackModeButton.Position = UDim2.new(0.4, 0, 0, 12)
+				else
+					toggleFeedbackModeButton, toggleFeedbackModeText = utility:MakeStyledButton("toggleFeedbackModeButton", "Give Feedback", UDim2.new(0, 300, 1, -20), onToggleFeedbackMode, this)
+					toggleFeedbackModeButton.Position = UDim2.new(1, -400, 0, 12)
+				end
+				
 				toggleFeedbackModeButton.ZIndex = 2
 				toggleFeedbackModeButton.Selectable = true
 				toggleFeedbackModeText.ZIndex = 2
-				toggleFeedbackModeButton.Position = UDim2.new(1, -400, 0, 12)
 
-				local row = utility:AddNewRowObject(this, "Give Translation Feedback", toggleFeedbackModeButton)
-				row.LayoutOrder = SETTINGS_MENU_LAYOUT_ORDER["FeedbackModeButton"]
+				-- other rows are set to "this", update alongside engine feature so that we can update the row from openSettingsPage
+				if game:GetEngineFeature("ExperienceStateCaptureMinMemEnabled") then
+					this.toggleFeedbackModeButton = toggleFeedbackModeButton
+					this.toggleFeedbackModeText = toggleFeedbackModeText
+				end
+
+				if FFlagFeedbackEntryPointButtonSizeAdjustment then
+					-- Nil for spacing param, and true for final param enables automatic sizing of the label, see Utility.lua for implementation
+					local row = utility:AddNewRowObject(this, "Give Translation Feedback", toggleFeedbackModeButton, nil, true)
+					row.LayoutOrder = SETTINGS_MENU_LAYOUT_ORDER["FeedbackModeButton"]
+				else
+					local row = utility:AddNewRowObject(this, "Give Translation Feedback", toggleFeedbackModeButton)
+					row.LayoutOrder = SETTINGS_MENU_LAYOUT_ORDER["FeedbackModeButton"]
+				end
 			end
 		end
 
@@ -2616,13 +2683,25 @@ local function Initialize()
 				end
 			end
 
-			local devConsoleButton, devConsoleText, setButtonRowRef =
-				utility:MakeStyledButton("DevConsoleButton", "Open", UDim2.new(0, 300, 1, -20), onOpenDevConsole, this)
-			devConsoleText.Font = Theme.font(Enum.Font.SourceSans)
-			devConsoleButton.Position = UDim2.new(1, -400, 0, 12)
-			local row = utility:AddNewRowObject(this, "Developer Console", devConsoleButton)
-			row.LayoutOrder = SETTINGS_MENU_LAYOUT_ORDER["DeveloperConsoleButton"]
-			setButtonRowRef(row)
+			if FFlagFixDeveloperConsoleButtonSizeAndPositioning then
+				local devConsoleButton, devConsoleText, setButtonRowRef =
+					utility:MakeStyledButton("DevConsoleButton", "Open", UDim2.new(1, 0, 1, -20), onOpenDevConsole, this)
+				devConsoleText.Font = Theme.font(Enum.Font.SourceSans)
+				devConsoleButton.Size = UDim2.new(0.6, -10, 1, -20)
+				devConsoleButton.Position = UDim2.new(0.4, 10, 0, 12)
+				-- Nil for spacing parameter, true for auto spacing the left hand label
+				local row = utility:AddNewRowObject(this, "Developer Console", devConsoleButton, nil, true)
+				row.LayoutOrder = SETTINGS_MENU_LAYOUT_ORDER["DeveloperConsoleButton"]
+				setButtonRowRef(row)
+			else
+				local devConsoleButton, devConsoleText, setButtonRowRef =
+					utility:MakeStyledButton("DevConsoleButton", "Open", UDim2.new(0, 300, 1, -20), onOpenDevConsole, this)
+				devConsoleText.Font = Theme.font(Enum.Font.SourceSans)
+				devConsoleButton.Position = UDim2.new(1, -400, 0, 12)
+				local row = utility:AddNewRowObject(this, "Developer Console", devConsoleButton)
+				row.LayoutOrder = SETTINGS_MENU_LAYOUT_ORDER["DeveloperConsoleButton"]
+				setButtonRowRef(row)
+			end
 		end
 
 		if RunService:IsStudio() then
@@ -2850,7 +2929,7 @@ local function Initialize()
 
 					if this.VoiceChatOptionsEnabled then
 						VoiceChatServiceManager:SwitchDevice(deviceType, deviceName, deviceGuid)
-					elseif GetFFlagEnableAudioOutputDevice() then
+					else
 						SwitchOutputDevice(deviceName, deviceGuid)
 					end
 				end
@@ -2958,14 +3037,10 @@ local function Initialize()
 		else
 
 			if GetFFlagVoiceChatUILogging() then
-				if FFlagHideEmptyInputDeviceSelector then
-					if #deviceNames > 0 then
-						log:warning("Errors in get {} device info success: {} VCSSuccess: {}", deviceType, success, VCSSuccess)
-					else
-						log:warning("Empty deviceNames list for {}", deviceType)
-					end
+				if #deviceNames > 0 then
+					log:warning("Errors in get {} device info success: {} VCSSuccess: {}", deviceType, success, VCSSuccess)
 				else
-					log:warning("Errors in get {} device info", deviceType)
+					log:warning("Empty deviceNames list for {}", deviceType)
 				end
 			end
 			this[deviceType.."DeviceNames"] = {}
@@ -2982,13 +3057,11 @@ local function Initialize()
 			this[deviceType.."DeviceSelector"]:SetSelectionIndex(selectedIndex)
 		end
 
-		if FFlagHideEmptyInputDeviceSelector then
-			if this[deviceType.."DeviceFrame"] then
-				if #deviceNames > 0 then
-					this[deviceType.."DeviceFrame"].Visible = true
-				else
-					this[deviceType.."DeviceFrame"].Visible = false
-				end
+		if this[deviceType.."DeviceFrame"] then
+			if #deviceNames > 0 then
+				this[deviceType.."DeviceFrame"].Visible = true
+			else
+				this[deviceType.."DeviceFrame"].Visible = false
 			end
 		end
 	end
@@ -3027,7 +3100,7 @@ local function Initialize()
 		if this.VoiceChatOptionsEnabled then
 			updateVoiceChatDevices(VOICE_CHAT_DEVICE_TYPE.Input)
 			updateVoiceChatDevices(VOICE_CHAT_DEVICE_TYPE.Output)
-		elseif GetFFlagEnableAudioOutputDevice() then
+		else
 			updateAudioOutputDevices()
 		end
 	end
@@ -3265,15 +3338,37 @@ local function Initialize()
 
 	this.PageOpen = false
 
+	if game:GetEngineFeature("ExperienceStateCaptureMinMemEnabled") then
+		-- Dynamic tracker for status of whether feedback entry point is available or not
+		-- Since this is dynamic, not passing this check is expected to show an "unavailable" status for feedback mode, since it may become available later on in the session
+		this.FeedbackEntryPointEnabled = true
+	end
+
+	-- Static checks for if feedback entry point is available, not passing this check will completely hide the entry point setting
+	local function staticFeedbackEntryPointChecksPassed()
+		if RunService:IsStudio() then
+			return false
+		end
+
+		if game:GetEngineFeature("CaptureModeEnabled") == false then
+			return false
+		end
+
+		if FFlagEnableTFFeedbackModeEntryCheck and isTenFootInterface then
+			return false
+		end
+
+		return true
+	end
+
 	this.OpenSettingsPage = function()
 		this.PageOpen = true
-		if this.VoiceChatOptionsEnabled or GetFFlagEnableAudioOutputDevice() then
-			-- Update device info each time user opens the menu
-			-- TODO: This should be simplified by new API
-			updateAudioOptions()
-			setupDeviceChangedListener()
-			this.startVolume = GameSettings.MasterVolume
-		end
+		
+		-- Update device info each time user opens the menu
+		-- TODO: This should be simplified by new API
+		updateAudioOptions()
+		setupDeviceChangedListener()
+		this.startVolume = GameSettings.MasterVolume
 
 		if (FFlagAvatarChatCoreScriptSupport or GetFFlagSelfViewCameraSettings()) and this.VideoOptionsEnabled then
 			if game:GetEngineFeature("VideoCaptureService") then
@@ -3283,6 +3378,23 @@ local function Initialize()
 		end
 
 		updateUiToggleSelection()
+
+		-- On settings page open, double check the capture service to see if feedback mode should be enterable
+		-- Only do this if static checks passed and we are expecting to see options at all
+		if game:GetEngineFeature("ExperienceStateCaptureMinMemEnabled") and this.toggleFeedbackModeButton and this.toggleFeedbackModeText then
+			this.FeedbackEntryPointEnabled = ExperienceStateCaptureService ~= nil and ExperienceStateCaptureService:CanEnterCaptureMode()
+			if this.FeedbackEntryPointEnabled then
+				-- Matches with adjustbutton in settings menu for consistency
+				this.toggleFeedbackModeButton.Active = true
+				this.toggleFeedbackModeButton.Enabled.Value = true
+				this.toggleFeedbackModeText.Text = "Give Feedback"
+			else
+				this.toggleFeedbackModeButton.Active = false
+				this.toggleFeedbackModeButton.Enabled.Value = false
+				this.toggleFeedbackModeText.TextColor3 = Theme.color("ButtonNonInteractable", Color3.fromRGB(100, 100, 100))
+				this.toggleFeedbackModeText.Text = "Unavailable"
+			end
+		end
 	end
 
 	this.CloseSettingsPage = function()
@@ -3305,18 +3417,6 @@ local function Initialize()
 		then
 			VoiceChatServiceManager:CheckAndShowNotAudiblePrompt()
 		end
-	end
-
-	local function isFeedbackModeEntryPointEnabled()
-		if RunService:IsStudio() then
-			return false
-		end
-
-		if game:GetEngineFeature("CaptureModeEnabled") == false then
-			return false
-		end
-
-		return true
 	end
 
 	function isLangaugeSelectionDropdownEnabled()
@@ -3381,7 +3481,7 @@ local function Initialize()
 			end
 		end
 
-		if isFeedbackModeEntryPointEnabled() then
+		if staticFeedbackEntryPointChecksPassed() then
 			createFeedbackModeOptions()
 		end
 	end

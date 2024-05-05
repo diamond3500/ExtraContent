@@ -54,9 +54,10 @@ local FFlagAddPublishAssetPrompt = game:DefineFastFlag("AddPublishAssetPrompt6",
 local isCharacterNameHandlerEnabled = require(CorePackages.Workspace.Packages.SharedFlags).isCharacterNameHandlerEnabled
 local GetFFlagIrisAlwaysOnTopEnabled = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagIrisAlwaysOnTopEnabled
 local GetFFlagEnableSocialContextToast = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagEnableSocialContextToast
+local GetFFlagLuaAppEnableSquadPage = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagLuaAppEnableSquadPage
+local GetFFlagEnableAppChatInExperience = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagEnableAppChatInExperience
 
 local FFlagLuaAppEnableToastNotificationsCoreScripts = game:DefineFastFlag("LuaAppEnableToastNotificationsCoreScripts4", false)
-local FFlagCoreScriptsGlobalEffects = require(CorePackages.Workspace.Packages.SharedFlags).FFlagCoreScriptsGlobalEffects
 local FFlagAdPortalTeleportPromptLua = game:DefineFastFlag("AdPortalTeleportPromptLua", false)
 
 local GetFFlagVoiceUserAgency3 = require(RobloxGui.Modules.Flags.GetFFlagVoiceUserAgency3)
@@ -65,7 +66,8 @@ local getFFlagMicrophoneDevicePermissionsPromptLogging = require(RobloxGui.Modul
 
 game:DefineFastFlag("MoodsEmoteFix3", false)
 local FFlagEnableSendCameraAccessAnalytics = game:DefineFastFlag("EnableSendCameraAccessAnalytics", false)
-local FFlagEnableExperienceNotificationPrompts = game:DefineFastFlag("EnableExperienceNotificationPrompts", false)
+
+local FFlagEnableExperienceNotificationPrompts = game:DefineFastFlag("EnableExperienceNotificationPrompts2", false)
 
 local UIBlox = require(CorePackages.UIBlox)
 local uiBloxConfig = require(CoreGuiModules.UIBloxInGameConfig)
@@ -96,7 +98,7 @@ end
 
 local GetFFlagJoinWithoutMicPermissions = require(RobloxGui.Modules.Flags.GetFFlagJoinWithoutMicPermissions)
 if GetFFlagJoinWithoutMicPermissions() then
-	local ExperienceChat = require(CorePackages.ExperienceChat)
+	local ExperienceChat = require(CorePackages.ExperienceChat) :: any
 	ExperienceChat.GlobalFlags.JoinWithoutMicPermissions = true
 end
 
@@ -338,6 +340,13 @@ if GetFFlagRtMessaging() then
 	game:GetService("RtMessagingService")
 end
 
+if GetFFlagLuaAppEnableSquadPage() then
+	coroutine.wrap(function()
+		local squad = safeRequire(CorePackages.Workspace.Packages.Squads).renderCoreScriptSquad
+		squad.new()
+	end)()
+end
+
 if game:GetEngineFeature("FacialAnimationStreaming2") then
 	ScriptContext:AddCoreScriptLocal("CoreScripts/FacialAnimationStreaming", script.Parent)
 end
@@ -398,11 +407,9 @@ if GetFFlagVoiceUserAgency3() then
 	ScriptContext:AddCoreScriptLocal("CoreScripts/VoiceUserAgency", RobloxGui)
 end
 
-if FFlagCoreScriptsGlobalEffects then
-	-- Mounts a react root that persists while the user is in-experience.
-	-- This allows us to use react-based listeners that trigger effects
-	ScriptContext:AddCoreScriptLocal("CoreScripts/CoreScriptsGlobalEffects", script.Parent)
-end
+-- Mounts a react root that persists while the user is in-experience.
+-- This allows us to use react-based listeners that trigger effects
+ScriptContext:AddCoreScriptLocal("CoreScripts/CoreScriptsGlobalEffects", script.Parent)
 
 local SoundManager = require(CorePackages.Workspace.Packages.SoundManager).SoundManager
 SoundManager.init()
@@ -430,4 +437,8 @@ end
 
 if FFlagEnableSendCameraAccessAnalytics then
 	ScriptContext:AddCoreScriptLocal("CoreScripts/SendCameraAccessAnalytics", RobloxGui)
+end
+
+if GetFFlagEnableAppChatInExperience() then
+	ScriptContext:AddCoreScriptLocal("CoreScripts/AppChatMain", RobloxGui)
 end

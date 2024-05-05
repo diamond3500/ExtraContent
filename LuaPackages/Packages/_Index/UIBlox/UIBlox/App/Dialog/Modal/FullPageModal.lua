@@ -54,6 +54,7 @@ function FullPageModal:init()
 	self.state = {
 		buttonFrameSize = Vector2.new(0, 0),
 		footerContentSize = Vector2.new(0, 0),
+		titleContainerSize = Vector2.new(0, ModalTitle:GetHeight()),
 	}
 
 	self.changeButtonFrameSize = function(rbx)
@@ -71,6 +72,14 @@ function FullPageModal:init()
 			})
 		end
 	end
+
+	self.changeTitleContainerSize = function(rbx)
+		if self.state.titleContainerSize ~= rbx.AbsoluteSize then
+			self:setState({
+				titleContainerSize = rbx.AbsoluteSize,
+			})
+		end
+	end
 end
 
 function FullPageModal:render()
@@ -83,10 +92,11 @@ function FullPageModal:render()
 		TitleContainer = Roact.createElement(ModalTitle, {
 			title = self.props.title,
 			onCloseClicked = self.props.onCloseClicked,
+			onTitleSizeChanged = self.changeTitleContainerSize,
 		}),
 		Content = Roact.createElement("Frame", {
-			Size = UDim2.new(1, 0, 1, -ModalTitle:GetHeight()),
-			Position = UDim2.new(0, 0, 0, ModalTitle:GetHeight()),
+			Size = UDim2.new(1, 0, 1, -self.state.titleContainerSize.Y),
+			Position = UDim2.new(0, 0, 0, self.state.titleContainerSize.Y),
 			BackgroundTransparency = 1,
 		}, {
 			Roact.createElement("UIListLayout", {

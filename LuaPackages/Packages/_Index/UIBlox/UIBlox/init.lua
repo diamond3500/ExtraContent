@@ -8,6 +8,8 @@ local StyleTypes = require(script.App.Style.StyleTypes)
 local ResponsiveLayoutConfigReader = require(script.Core.Layout.Responsive.ResponsiveLayoutConfigReader)
 local DialogOverlay = require(script.App.Dialog.Overlay.Overlay)
 
+local ReactUtils = require(script.Parent.ReactUtils)
+
 export type Font = Fonts.Font
 export type FontPalette = Fonts.FontPalette
 
@@ -60,10 +62,17 @@ local function initializeLibrary(configs)
 		Control = strict({
 			Enum = strict({
 				ControlState = require(script.Core.Control.Enum.ControlState),
+				ControlStateEvent = require(script.Core.Control.Enum.ControlStateEvent),
 				SelectionMode = require(script.Core.Control.Enum.SelectionMode),
+			}),
+			Hooks = strict({
+				useGuiControlState = require(script.Core.Control.Hooks.useGuiControlState),
+				useGuiControlStateWithBinding = require(script.Core.Control.Hooks.useGuiControlStateWithBinding),
 			}),
 			Interactable = require(script.Core.Control.Interactable),
 			InteractableList = require(script.Core.Control.InteractableList),
+			-- TODO: UIBLOX-707 remove once package dependency is resolved
+			FeedbackManagerInjectionContext = require(script.Core.Control.FeedbackManagerInjectionContext),
 		}),
 
 		Spatial = strict({
@@ -91,14 +100,16 @@ local function initializeLibrary(configs)
 		}),
 
 		Hooks = strict({
-			useExternalEvent = require(script.Utility.useExternalEvent),
+			-- Kept for backwards compatibility. Consumers should reference ReactUtils directly
+			useExternalEvent = ReactUtils.useEventConnection,
+			useLazyRef = ReactUtils.useLazyRef,
+			useInitializedValue = ReactUtils.useInitializedValue,
+			useForwardRef = ReactUtils.useForwardRef,
+			useProperties = ReactUtils.useProperties,
+			usePropertiesDeferred = ReactUtils.usePropertiesDeferred,
+
 			useIsGamepad = require(script.Utility.useIsGamepad),
 			useInputType = require(script.Utility.useInputType),
-			useLazyRef = require(script.Utility.useLazyRef),
-			useInitializedValue = require(script.Utility.useInitializedValue),
-			useForwardRef = require(script.Utility.useForwardRef),
-			useProperties = require(script.Utility.useProperties),
-			usePropertiesDeferred = require(script.Utility.usePropertiesDeferred),
 		}),
 
 		Enums = strict({
@@ -183,12 +194,6 @@ local function initializeLibrary(configs)
 			Carousel = strict({
 				ResponsiveCarousel = require(script.App.Container.Carousel.ResponsiveCarousel),
 				FreeFlowCarousel = require(script.App.Container.Carousel.FreeFlowCarousel),
-				--[[
-					TODO: Remove ScrollButton when we switch the new carouels without infinite scroller
-					We need this temporarily for the old carousels only, see https://jira.rbx.com/browse/APPFDN-230
-					Only to be used in ScrollingAppCarousel
-				]]
-				ScrollButton = require(script.App.Container.Carousel.ScrollButton),
 			}),
 			Grid = strict({
 				ResponsiveGrid = require(script.App.Container.Grid.ResponsiveGrid),
@@ -334,6 +339,7 @@ local function initializeLibrary(configs)
 				Placement = require(script.App.Navigation.Enum.Placement),
 			}),
 			SystemBar = require(script.App.Navigation.SystemBar),
+			NavigationBar = require(script.App.Navigation.NavigationBar),
 			PrimaryNavBar = strict({
 				ContextBar = require(script.App.Navigation.PrimaryNavBar.ContextBar),
 				IconTab = require(script.App.Navigation.PrimaryNavBar.IconTab),
@@ -417,7 +423,8 @@ local function initializeLibrary(configs)
 	}
 
 	UIBlox.Utility = {
-		ExternalEventConnection = require(script.Utility.ExternalEventConnection),
+		-- Keeping for backwards compatibility - consumers should use ReactUtils directly.
+		ExternalEventConnection = ReactUtils.EventConnection,
 		SpringAnimatedItem = require(script.Utility.SpringAnimatedItem),
 	}
 

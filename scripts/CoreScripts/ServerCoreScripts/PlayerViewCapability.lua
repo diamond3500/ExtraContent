@@ -5,6 +5,8 @@ local RobloxGui = CoreGui:WaitForChild("RobloxGui", math.huge)
 assert(RobloxGui ~= nil, "RobloxGui should exist")
 
 local GetFFlagPlayerViewRemoteEnabled = require(RobloxGui.Modules.Common.Flags.GetFFlagPlayerViewRemoteEnabled)
+local GetFFlagPlayerViewValidateRequesteeEnabled =
+	require(RobloxGui.Modules.Common.Flags.GetFFlagPlayerViewValidateRequesteeEnabled)
 
 local RequestDeviceCameraOrientationCapability = Instance.new("RemoteEvent")
 RequestDeviceCameraOrientationCapability.Name = "RequestDeviceCameraOrientationCapability"
@@ -30,17 +32,40 @@ if GetFFlagPlayerViewRemoteEnabled() then
 
 	local requests = {}
 
+	if GetFFlagPlayerViewValidateRequesteeEnabled() then
+		Players.PlayerRemoving:Connect(function(player)
+			local userId = tostring(player.UserId)
+			requests[userId] = nil
+		end)
+	end
+
 	RequestDeviceCameraCFrameRemoteEvent.OnServerEvent:Connect(function(player, requesteeUserId)
-		local requesteeUserIdStr = tostring(requesteeUserId)
+		if GetFFlagPlayerViewValidateRequesteeEnabled() then
+			local requestee = Players:GetPlayerByUserId(requesteeUserId)
+			if not requestee then
+				return
+			end
 
-		if not requests[requesteeUserIdStr] then
-			requests[requesteeUserIdStr] = {}
-		end
+			local requesteeUserIdStr = tostring(requesteeUserId)
 
-		requests[requesteeUserIdStr][tostring(player.UserId)] = os.clock()
-		local requestee = Players:GetPlayerByUserId(requesteeUserId)
-		if requestee then
+			if not requests[requesteeUserIdStr] then
+				requests[requesteeUserIdStr] = {}
+			end
+
+			requests[requesteeUserIdStr][tostring(player.UserId)] = os.clock()
 			RequestDeviceCameraCFrameRemoteEvent:FireClient(requestee)
+		else
+			local requesteeUserIdStr = tostring(requesteeUserId)
+
+			if not requests[requesteeUserIdStr] then
+				requests[requesteeUserIdStr] = {}
+			end
+
+			requests[requesteeUserIdStr][tostring(player.UserId)] = os.clock()
+			local requestee = Players:GetPlayerByUserId(requesteeUserId)
+			if requestee then
+				RequestDeviceCameraCFrameRemoteEvent:FireClient(requestee)
+			end
 		end
 	end)
 

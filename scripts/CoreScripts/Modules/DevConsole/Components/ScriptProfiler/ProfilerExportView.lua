@@ -3,7 +3,19 @@ local CorePackages = game:GetService("CorePackages")
 local Roact = require(CorePackages.Roact)
 local RoactRodux = require(CorePackages.RoactRodux)
 
+-- Temporary: Remove with FFlagScriptProfilerUseNewAPI
+-- Used only to work around CI where we try to get the ScriptProfilerService on versions of roblox-cli that do not implement it.
+-- Can be removed once all CLI's in CI are >= 620.
+local HAS_SCRIPTPROFILERSERVICE = pcall(function()
+	game:GetService("ScriptProfilerService")
+end)
+
+local FFlagScriptProfilerUseNewAPI = game:DefineFastFlag("ScriptProfilerUseNewAPI", false)
+
 local ScriptContext = game:GetService("ScriptContext")
+local ScriptProfiler: any = if FFlagScriptProfilerUseNewAPI and HAS_SCRIPTPROFILERSERVICE
+	then game:GetService("ScriptProfilerService")
+	else nil
 
 local ProfilerData = require(script.Parent.ProfilerDataFormatV2)
 
@@ -107,7 +119,13 @@ function ProfilerExportView:renderExportInputAndButton(isClient: boolean, export
 					BackgroundColor3 = BACKGROUND_COLOR,
 
 					[Roact.Event.Activated] = function()
-						local savedToPath = ScriptContext:SaveScriptProfilingData(exportData, exportFilename)
+						local savedToPath
+
+						if FFlagScriptProfilerUseNewAPI then
+							savedToPath = ScriptProfiler:SaveScriptProfilingData(exportData, exportFilename)
+						else
+							savedToPath = ScriptContext:SaveScriptProfilingData(exportData, exportFilename)
+						end
 
 						if isClient then
 							self:setState({
@@ -141,14 +159,36 @@ function ProfilerExportView:renderExportSection(isClient: boolean, header: strin
 	end
 
 	return Roact.createElement("Frame", {
-			Size = UDim2.new(1, 0, 0, ROW_HEIGHT * 3),
+		Size = UDim2.new(1, 0, 0, ROW_HEIGHT * 3),
+		BackgroundTransparency = 1,
+		LayoutOrder = 2,
+	}, {
+		Label = Roact.createElement("TextLabel", {
+			Size = UDim2.new(0, BUTTON_WIDTH, 0, ROW_HEIGHT),
+			Position = UDim2.new(OFFSET, 0, 0, 0),
+			Text = header,
+			Font = HEADER_FONT,
+			TextSize = TEXT_SIZE,
+			TextColor3 = Constants.Color.Text,
+			TextXAlignment = Enum.TextXAlignment.Left,
+			TextYAlignment = Enum.TextYAlignment.Center,
+			BackgroundColor3 = BACKGROUND_COLOR,
 			BackgroundTransparency = 1,
-			LayoutOrder = 2,
-		}, {
-			Label = Roact.createElement("TextLabel", {
-				Size = UDim2.new(0, BUTTON_WIDTH, 0, ROW_HEIGHT),
-				Position = UDim2.new(OFFSET, 0, 0, 0),
-				Text = header,
+		}),
+
+		HorizontalLine = Roact.createElement("Frame", {
+			Size = UDim2.new(1, 0, 0, 1),
+			Position = UDim2.new(0, 0, 0, ROW_HEIGHT),
+		}),
+
+		Export = self:renderExportInputAndButton(isClient, exportFilename, serializedData),
+
+		SavedPath = if not savePath
+			then nil
+			else Roact.createElement("TextBox", {
+				Size = UDim2.new(1 - (OFFSET / 2), 0, 0, ROW_HEIGHT),
+				Position = UDim2.new(OFFSET / 2, 0, 0, 2 * ROW_HEIGHT * 1.25),
+				Text = "Saved to " .. savePath,
 				Font = HEADER_FONT,
 				TextSize = TEXT_SIZE,
 				TextColor3 = Constants.Color.Text,
@@ -156,36 +196,10 @@ function ProfilerExportView:renderExportSection(isClient: boolean, header: strin
 				TextYAlignment = Enum.TextYAlignment.Center,
 				BackgroundColor3 = BACKGROUND_COLOR,
 				BackgroundTransparency = 1,
+				TextEditable = false,
+				ClearTextOnFocus = false,
 			}),
-
-			HorizontalLine = Roact.createElement("Frame", {
-				Size = UDim2.new(1, 0, 0, 1),
-				Position = UDim2.new(0, 0, 0, ROW_HEIGHT),
-			}),
-
-			Export = self:renderExportInputAndButton(
-				isClient,
-				exportFilename,
-				serializedData
-			),
-
-			SavedPath = if not savePath
-				then nil
-				else Roact.createElement("TextBox", {
-					Size = UDim2.new(1 - (OFFSET / 2), 0, 0, ROW_HEIGHT),
-					Position = UDim2.new(OFFSET / 2, 0, 0, 2 * ROW_HEIGHT * 1.25),
-					Text = "Saved to " .. savePath,
-					Font = HEADER_FONT,
-					TextSize = TEXT_SIZE,
-					TextColor3 = Constants.Color.Text,
-					TextXAlignment = Enum.TextXAlignment.Left,
-					TextYAlignment = Enum.TextYAlignment.Center,
-					BackgroundColor3 = BACKGROUND_COLOR,
-					BackgroundTransparency = 1,
-					TextEditable = false,
-					ClearTextOnFocus = false,
-				}),
-		})
+	})
 end
 
 function ProfilerExportView:render()

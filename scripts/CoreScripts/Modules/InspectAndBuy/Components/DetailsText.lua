@@ -24,6 +24,10 @@ local GetFFlagIBEnableCollectiblesSystemSupport =
 	require(InspectAndBuyFolder.Flags.GetFFlagIBEnableCollectiblesSystemSupport)
 local GetFFlagIBEnableLimitedItemBugFixAndAlignment =
 require(InspectAndBuyFolder.Flags.GetFFlagIBEnableLimitedItemBugFixAndAlignment)
+local GetFFlagIBEnableNewDataCollectionForCollectibleSystem =
+	require(InspectAndBuyFolder.Flags.GetFFlagIBEnableNewDataCollectionForCollectibleSystem)
+local GetFFlagIBEnableLimitedBundle = require(InspectAndBuyFolder.Flags.GetFFlagIBEnableLimitedBundle)
+
 local PremiumIcon = UIBloxImages["icons/status/premium"]
 local BY_KEY = "InGame.InspectMenu.Label.By"
 local TEXT_SIZE_SMALL = 12
@@ -49,7 +53,13 @@ end
 function DetailsText:setText()
 	local assetInfo = self.props.assetInfo or {}
 	local partOfBundle = assetInfo.bundlesAssetIsIn and #assetInfo.bundlesAssetIsIn == 1
+	if GetFFlagIBEnableNewDataCollectionForCollectibleSystem() then
+		partOfBundle = assetInfo.parentBundleId ~= nil
+	end
 	local partOfBundleAndOffsale = partOfBundle and not assetInfo.isForSale
+	if GetFFlagIBEnableLimitedBundle() then
+		partOfBundleAndOffsale = partOfBundle
+	end
 	local bundleInfo = self.props.bundleInfo or {}
 
 	if partOfBundleAndOffsale then
@@ -72,6 +82,11 @@ function DetailsText:render()
 	local assetInfo = self.props.assetInfo or {}
 	local partOfBundle = assetInfo.bundlesAssetIsIn and #assetInfo.bundlesAssetIsIn == 1
 	local multipleBundles = assetInfo.bundlesAssetIsIn and #assetInfo.bundlesAssetIsIn > 1
+	if GetFFlagIBEnableNewDataCollectionForCollectibleSystem() then
+		partOfBundle = assetInfo.parentBundleId ~= nil
+		local assetBundles = self.props.assetBundles[assetInfo.assetId]
+		multipleBundles = partOfBundle and #assetBundles > 1
+	end
 	local showPremiumIcon = assetInfo.premiumPricing ~= nil
 	local creatorHasVerifiedBadge = assetInfo.creatorHasVerifiedBadge or false
 	local premiumIconPadding = showPremiumIcon and (UIBloxIconSize.Regular + PREMIUM_ICON_PADDING) or 0
@@ -200,6 +215,7 @@ return RoactRodux.connect(function(state, props)
 		locale = state.locale,
 		assetInfo = state.assets[assetId],
 		bundleInfo = state.bundles,
+		assetBundles = if GetFFlagIBEnableNewDataCollectionForCollectibleSystem() then state.assetBundles else nil,
 		showFavoritesCount = not state.isSubjectToChinaPolicies,
 	}
 end)(DetailsText)

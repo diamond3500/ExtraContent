@@ -5,12 +5,6 @@ return {
 	-- Indicate whether to enable the new layout for menu/cell
 	enableNewMenuLayout = false,
 
-	-- Enables token usage in IconTab
-	useTokensInIconTab = false,
-
-	-- Enable IconButton to calculate size based on token values
-	useTokensSizeInIconButton = false,
-
 	-- enable trace level log
 	enableTraceLevelLog = false,
 
@@ -19,9 +13,6 @@ return {
 
 	-- Add gamepad support to LinkButton
 	enableLinkButtonGamepadSupport = false,
-
-	-- Destroy laser pointers if the PointerOverlay component is unmounted
-	destroyLaserPointersOnUnmount = false,
 
 	-- Use new selection cursor in related components
 	useNewSelectionCursor = false,
@@ -63,6 +54,34 @@ return {
 	-- Use GetTextBoundsAsync instead of GetTextSize to guarantee a correct result
 	useGetTextBoundsAsync = false,
 
+	-- use new refactored interactable
+	refactorInteractable = false,
+
 	-- Support ControlState.Selected in the hover controller for TooltipV2
 	supportControlStateSelectedForTooltipHover = false,
+
+	-- Make expansion animation happen immediately when selection changes instead of in separate useEffect
+	mediaGalleryExpandedViewImmediateAnimation = false,
+
+	-- Use new designed HeaderBar
+	useNewHeaderBar = false,
+
+	-- have the System Slider trigger onDragStart and onDragEnd for gamepad
+	sliderGamepadDragStartAndEnd = false,
+
+	-- Use InteractionFeedbackManager, which is injected via InteractionFeedbackContext
+	enableInteractionFeedback = false,
+
+	-- Fix existing bugs and update MediaGallerySingle
+	updateMediaGallerySingle = false,
+	-- Multiply FontSizeMax by line height to get the correct textbound in GenericTextLabel
+	fixGenericTextLabelTextBound = false,
+
+	-- Use design tokens to set interactive alert's min/max size
+	interactiveAlertDesignTokenMinMaxSize = false,
+
+	-- Use design tokens to set alert title's header font size
+	alertTitleDesignTokenHeader = false,
+	-- Strips RichText tags from string before calculating size of text
+	ignoreRichTextTagsForTextSizeCalculation = false,
 }

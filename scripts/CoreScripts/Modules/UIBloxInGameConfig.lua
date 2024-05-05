@@ -7,9 +7,11 @@ return {
 	useNewThemeColorPalettes = SharedFlags.GetFFlagLuaAppUseUIBloxColorPalettes()
 		and UIBloxFlags.GetUIBloxUseNewThemeColorPalettes(),
 	enableNewMenuLayout = UIBloxFlags.GetFFlagUIBloxEnableNewMenuLayout(),
-	destroyLaserPointersOnUnmount = SharedFlags.GetFFlagHideExperienceLoadingJudder(),
 	useRobloxGuiFocusedChangedEventInGenericButton = UIBloxFlags.FFlagUIBloxUseRobloxGuiFocused,
 	useInputResponsiveShortcutBarChanges = UIBloxFlags.FFlagUIBloxUseInputResponsiveShortcutBarChanges,
 	enableFontNameMapping = UIBloxFlags.GetUIBloxEnableFontNameMapping(),
 	useGetTextBoundsAsync = UIBloxFlags.GetFFlagUIBloxUseGetTextBoundsAsync(),
+	useTokensWithScale = UIBloxFlags.GetFFlagUIBloxUseTokensWithScale(),
+	useNewHeaderBar = UIBloxFlags.GetFFlagUIBloxUseNewHeaderBar(),
+	ignoreRichTextTagsForTextSizeCalculation = UIBloxFlags.GetFFlagUIBloxIgnoreRichTextTagsForTextSizeCalculation(),
 }

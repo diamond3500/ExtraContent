@@ -33,13 +33,9 @@ local LocalizationProvider = require(CorePackages.Workspace.Packages.Localizatio
 
 local utility = require(RobloxGui.Modules.Settings.Utility)
 
-local reportAbuseMenu = require(RobloxGui.Modules.Settings.Pages.ReportAbuseMenu)
-local reportAbuseMenuNew = require(RobloxGui.Modules.Settings.Pages.ReportAbuseMenuNewContainerPage)
+local reportAbuseMenu = require(RobloxGui.Modules.Settings.Pages.ReportAbuseMenuNewContainerPage)
 local SocialUtil = require(RobloxGui.Modules:WaitForChild("SocialUtil"))
 local Diag = require(CorePackages.Workspace.Packages.Analytics).AnalyticsReporters.Diag
-local GetFFlagRemoveAppTempCommonTemp =
-    require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagRemoveAppTempCommonTemp
-local DEPRECATED_EventStream = require(CorePackages.AppTempCommon.Temp.EventStream)
 local EventStream = require(CorePackages.Workspace.Packages.Analytics).AnalyticsReporters.EventStream
 local ShareGameIcons = require(ShareGameDirectory.Spritesheets.ShareGameIcons)
 local isTenFootInterface = require(RobloxGui.Modules.TenFootInterface):IsEnabled()
@@ -58,7 +54,6 @@ local FFlagUpdateFriendLabelOnChange = game:DefineFastFlag("UpdateFriendLabelOnC
 local FFlagFixPlayersExtremeTruncation = game:DefineFastFlag("FixPlayersExtremeTruncation", false)
 local GetFFlagLuaInExperienceCoreScriptsGameInviteUnification = require(RobloxGui.Modules.Flags.GetFFlagLuaInExperienceCoreScriptsGameInviteUnification)
 local GetFFlagAddAnimatedFocusState = require(script.Parent.Parent.Flags.GetFFlagAddAnimatedFocusState)
-local isRoactAbuseReportMenuEnabled = require(RobloxGui.Modules.TrustAndSafety.isRoactAbuseReportMenuEnabled)
 
 local GameInviteAnalyticsManager
 if GetFFlagLuaInExperienceCoreScriptsGameInviteUnification() then
@@ -866,11 +861,7 @@ local function Initialize()
 
 			if showRightSideButtons(player) then
 				local reportPlayerFunction = function()
-					if isRoactAbuseReportMenuEnabled() then
-						reportAbuseMenuNew:ReportPlayer(player, "MenuPlayerList")
-					else
-						reportAbuseMenu:ReportPlayer(player, "MenuPlayerList")
-					end
+					reportAbuseMenu:ReportPlayer(player, "MenuPlayerList")
 				end
 
 				local reportButton = utility:MakeStyledImageButton("ReportPlayer", REPORT_PLAYER_IMAGE,
@@ -1601,9 +1592,7 @@ local function Initialize()
 				inviteToGameAnalytics = GameInviteAnalyticsManager:withButtonName(GameInviteAnalyticsManager.ButtonName.SettingsHub)
 			else
 				inviteToGameAnalytics = InviteToGameAnalytics.new()
-					:withEventStream(if GetFFlagRemoveAppTempCommonTemp()
-						then EventStream.new(AnalyticsService)
-						else DEPRECATED_EventStream.new())
+					:withEventStream(EventStream.new(AnalyticsService))
 					:withDiag(Diag.new(AnalyticsService))
 					:withButtonName(InviteToGameAnalytics.ButtonName.SettingsHub)
 			end

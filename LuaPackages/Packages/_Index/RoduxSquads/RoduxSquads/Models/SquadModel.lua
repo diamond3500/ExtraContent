@@ -23,12 +23,16 @@ end
 function SquadModel.mock(mergeTable)
 	mergeTable = mergeTable or {}
 
+	local members = Cryo.List.map(mergeTable.members or { { userId = 1234, rank = 0 } }, function(member)
+		return SquadMemberModel.mock(member)
+	end)
+
 	local self = SquadModel.new({
-		createdUtc = mergeTable.createdUtc or 1666635183,
-		updatedUtc = mergeTable.updatedUtc or 1666635183,
 		squadId = mergeTable.squadId or "12345",
-		inviteLinkToken = mergeTable.inviteLinkToken or "45678",
-		members = { SquadMemberModel.mock(mergeTable.members) },
+		initiatorId = mergeTable.initiatorId or 54321,
+		createdUtc = mergeTable.createdUtc or 1666635183,
+		channelId = mergeTable.channelId or "23456",
+		members = members,
 	})
 
 	return self
@@ -40,10 +44,10 @@ function SquadModel.format(squadData)
 	end)
 
 	local self = SquadModel.new({
-		createdUtc = squadData.createdUtc,
-		updatedUtc = squadData.updatedUtc,
 		squadId = squadData.squadId,
-		inviteLinkToken = squadData.inviteLinkToken,
+		initiatorId = squadData.initiatorId,
+		createdUtc = squadData.createdUtc,
+		channelId = squadData.channelId,
 		members = members,
 	})
 
@@ -51,10 +55,10 @@ function SquadModel.format(squadData)
 end
 
 SquadModel.isValid = t.strictInterface({
-	createdUtc = t.number, -- Milliseconds
-	updatedUtc = t.number, -- Milliseconds
 	squadId = t.string,
-	inviteLinkToken = t.string,
+	initiatorId = t.number,
+	createdUtc = t.number, -- Milliseconds
+	channelId = t.string,
 	members = t.array(SquadMemberModel.isValid),
 })
 

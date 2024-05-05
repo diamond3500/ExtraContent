@@ -7,14 +7,6 @@ local React = require(CorePackages.Packages.React)
 local RoactRodux = require(CorePackages.RoactRodux)
 
 local Modules = CoreGui.RobloxGui.Modules
-local GetFFlagEnableStyleProviderCleanUp =
-	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagEnableStyleProviderCleanUp
-local AppDarkTheme = if GetFFlagEnableStyleProviderCleanUp()
-	then nil
-	else require(CorePackages.Workspace.Packages.Style).Themes.DarkTheme
-local AppFont = if GetFFlagEnableStyleProviderCleanUp()
-	then nil
-	else require(CorePackages.Workspace.Packages.Style).Fonts.Gotham
 local renderWithCoreScriptsStyleProvider = require(Modules.Common.renderWithCoreScriptsStyleProvider)
 local ShareGame = Modules.Settings.Pages.ShareGame
 local Colors = require(Modules.Common.Constants).COLORS
@@ -23,11 +15,7 @@ local InviteEvents = require(CorePackages.Workspace.Packages.GameInvite).GameInv
 local InviteStatus = ShareGameConstants.InviteStatus
 local RobloxTranslator = require(ShareGame.getTranslator)()
 
-local GetFFlagRemoveAppTempCommonTemp =
-	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagRemoveAppTempCommonTemp
-local httpRequest: any = if GetFFlagRemoveAppTempCommonTemp()
-	then require(Modules.Common.httpRequest)
-	else require(CorePackages.AppTempCommon.Temp.httpRequest)
+local httpRequest: any = require(Modules.Common.httpRequest)
 
 local InviteUserIdToPlaceId = require(ShareGame.Thunks.InviteUserIdToPlaceId)
 local RetrievalStatus = require(CorePackages.Workspace.Packages.Http).Enum.RetrievalStatus
@@ -311,19 +299,7 @@ end, function(dispatch: (any) -> any)
 		end,
 	}
 end)(function(props)
-	if GetFFlagEnableStyleProviderCleanUp() then
-		return renderWithCoreScriptsStyleProvider({
-			SingleUserInvite = React.createElement(InviteSingleUserContainer, props),
-		})
-	else
-		-- Style Provider For UIBlox components
-		return React.createElement(UIBlox.Style.Provider, {
-			style = {
-				Theme = AppDarkTheme,
-				Font = AppFont,
-			},
-		}, {
-			SingleUserInvite = React.createElement(InviteSingleUserContainer, props),
-		})
-	end
+	return renderWithCoreScriptsStyleProvider({
+		SingleUserInvite = React.createElement(InviteSingleUserContainer, props),
+	})
 end)
