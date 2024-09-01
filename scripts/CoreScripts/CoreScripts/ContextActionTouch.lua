@@ -42,7 +42,8 @@ game:GetService("ContentProvider"):Preload(ContextDownImage)
 game:GetService("ContentProvider"):Preload(ContextUpImage)
 
 local CoreGui = game:GetService("CoreGui")
-local RobloxGui = CoreGui:WaitForChild("RobloxGui")
+local CorePackages = game:GetService("CorePackages")
+local RobloxGui = CoreGui.RobloxGui
 local CoreUtility = require(RobloxGui.Modules.CoreUtility)
 
 local localPlayer = playersService.LocalPlayer

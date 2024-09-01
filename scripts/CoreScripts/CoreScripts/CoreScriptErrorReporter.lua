@@ -9,7 +9,7 @@ local RunService = game:GetService("RunService")
 local ScriptContext = game:GetService("ScriptContext")
 local UserInputService = game:GetService("UserInputService")
 
-local RobloxGui = CoreGui:WaitForChild("RobloxGui")
+local RobloxGui = CoreGui.RobloxGui
 local RateLimiter = require(RobloxGui.Modules.ErrorReporting.RateLimiter)
 local PiiFilter = require(RobloxGui.Modules.ErrorReporting.PiiFilter)
 

@@ -9,12 +9,18 @@ local UGCValidationService = game:GetService("UGCValidationService")
 local StudioService = if RunService:IsStudio() then game:GetService("StudioService") else nil
 local RbxAnalyticsService = game:GetService("RbxAnalyticsService")
 
+local getFFlagUGCValidateCoplanarTriTestBody = require(root.flags.getFFlagUGCValidateCoplanarTriTestBody)
+local getFFlagUGCValidateCoplanarTriTestAccessory = require(root.flags.getFFlagUGCValidateCoplanarTriTestAccessory)
 local getFFlagUGCValidationAnalytics = require(root.flags.getFFlagUGCValidationAnalytics)
 local getFFlagUGCValidateTestInactiveControls = require(root.flags.getFFlagUGCValidateTestInactiveControls)
 local getFFlagUGCValidateAccessoriesScaleType = require(root.flags.getFFlagUGCValidateAccessoriesScaleType)
 local getFFlagUGCValidationFixResetPhysicsError = require(root.flags.getFFlagUGCValidationFixResetPhysicsError)
 local getEngineFeatureEngineUGCValidationReportScriptTime =
 	require(root.flags.getEngineFeatureEngineUGCValidationReportScriptTime)
+local getFFlagUGCValidateCageOrigin = require(root.flags.getFFlagUGCValidateCageOrigin)
+local getFFlagUGCValidateTotalSurfaceAreaTestBody = require(root.flags.getFFlagUGCValidateTotalSurfaceAreaTestBody)
+local getFFlagUGCValidateTotalSurfaceAreaTestAccessory =
+	require(root.flags.getFFlagUGCValidateTotalSurfaceAreaTestAccessory)
 
 local function joinTables(...)
 	local result = {}
@@ -135,7 +141,15 @@ Analytics.ErrorType = {
 	validateThumbnailConfiguration_OutsideView = "validateThumbnailConfiguration_OutsideView",
 	validateUVSpace_FailedToExecute = "validateUVSpace_FailedToExecute",
 	validateUVSpace_InvalidUVSpace = "validateUVSpace_InvalidUVSpace",
+	validateVertexDensity_FailedToExecute = "validateVertexDensity_FailedToExecute",
+	validateVertexDensity_MaxDensityExceeded = "validateVertexDensity_MaxDensityExceeded",
 }
+
+if getFFlagUGCValidateCoplanarTriTestBody() or getFFlagUGCValidateCoplanarTriTestAccessory() then
+	Analytics.ErrorType.validateCoplanarIntersection_FailedToExecute = "validateCoplanarIntersection_FailedToExecute"
+	Analytics.ErrorType.validateCoplanarIntersection_CoplanarIntersection =
+		"validateCoplanarIntersection_CoplanarIntersection"
+end
 
 if getFFlagUGCValidateTestInactiveControls() then
 	Analytics.ErrorType.validateDynamicHeadMeshPartFormat_ValidateDynamicHeadMeshControls =
@@ -145,6 +159,18 @@ end
 if getFFlagUGCValidationFixResetPhysicsError() then
 	Analytics.ErrorType.resetPhysicsData_FailedToLoadMesh = "resetPhysicsData_FailedToLoadMesh"
 	Analytics.ErrorType.validateFullBody_MeshIdsMissing = "validateFullBody_MeshIdsMissing"
+end
+
+if getFFlagUGCValidateCageOrigin() then
+	Analytics.ErrorType.validateLayeredClothingAccessory_CageOriginOutOfBounds =
+		"validateLayeredClothingAccessory_CageOriginOutOfBounds"
+	Analytics.ErrorType.validateBodyPart_CageOriginOutOfBounds = "validateBodyPart_CageOriginOutOfBounds"
+end
+
+if getFFlagUGCValidateTotalSurfaceAreaTestBody() or getFFlagUGCValidateTotalSurfaceAreaTestAccessory() then
+	Analytics.ErrorType.validateTotalSurfaceArea_FailedToExecute = "validateTotalSurfaceArea_FailedToExecute"
+	Analytics.ErrorType.validateTotalSurfaceArea_maxTotalSurfaceAreaExceeded =
+		"validateTotalSurfaceArea_maxTotalSurfaceAreaExceeded"
 end
 
 setmetatable(Analytics.ErrorType, {

@@ -6,7 +6,7 @@ local CorePackages = game:GetService("CorePackages")
 local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
-local RobloxGui = CoreGui:WaitForChild("RobloxGui")
+local RobloxGui = CoreGui.RobloxGui
 
 local CoreUtility = require(RobloxGui.Modules.CoreUtility)
 local AppFonts = require(CorePackages.Workspace.Packages.Style).AppFonts

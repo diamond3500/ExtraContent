@@ -6,7 +6,8 @@
 
 local Players =  game:GetService("Players")
 local CoreGui = game:GetService("CoreGui")
-local RobloxGui = CoreGui:WaitForChild("RobloxGui")
+local CorePackages = game:GetService("CorePackages")
+local RobloxGui = CoreGui.RobloxGui
 local FaceAnimatorService = game:GetService("FaceAnimatorService")
 local VoiceChatServiceManager = require(RobloxGui.Modules.VoiceChat.VoiceChatServiceManager).default
 

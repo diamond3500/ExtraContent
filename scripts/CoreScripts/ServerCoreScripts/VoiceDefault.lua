@@ -7,6 +7,7 @@ local FFlagSetNewDeviceToFalse = game:DefineFastFlag("SetNewDeviceToFalse", fals
 local FFlagFixNewPlayerCheck = game:DefineFastFlag("FixNewPlayerCheck", false)
 local FFlagOnlyMakeInputsForVoiceUsers = game:DefineFastFlag("OnlyMakeInputsForVoiceUsers", false)
 local FFlagSendLikelySpeakingUsers = game:DefineFastFlag("SendLikelySpeakingUsers", false)
+local FFlagReceiveLikelySpeakingUsersEvent = game:DefineFastFlag("ReceiveLikelySpeakingUsersEventV3", false)
 local FFlagUseAudioInstanceAdded = game:DefineFastFlag("VoiceDefaultUseAudioInstanceAdded", false)
 	and game:GetEngineFeature("AudioInstanceAddedApiEnabled")
 
@@ -226,11 +227,13 @@ if FFlagSendLikelySpeakingUsers then
 	SendLikelySpeakingUsers.Name = "SendLikelySpeakingUsers"
 	SendLikelySpeakingUsers.Parent = RobloxReplicatedStorage
 	local likelySpeakingPlayers: {[number]: boolean} = {}
+	local canPollLikelySpeaking: {[number]: boolean} = {}
 	log("Setting up likely speaking users")
 	Players.PlayerAdded:Connect(function(player)
 		local ok, result = pcall(function()
 			return VoiceChatService:IsVoiceEnabledForUserIdAsync(player.UserId)
 		end)
+		canPollLikelySpeaking[player.UserId] = true
 		if ok and result then
 			log("Sending likely speaking user for ", player.Name)
 			likelySpeakingPlayers[player.UserId] = true
@@ -243,5 +246,23 @@ if FFlagSendLikelySpeakingUsers then
 	Players.PlayerRemoving:Connect(function(player)
 		-- We don't need to send any events here. This is only to stop likelySpeakingPlayers from growing excessively large
 		likelySpeakingPlayers[player.UserId] = nil
+		canPollLikelySpeaking[player.UserId] = nil
 	end)
+
+	if FFlagReceiveLikelySpeakingUsersEvent then
+		-- This allows clients to poll for LikelySpeakingUsers
+		log("Setting Up ReceiveLikelySpeakingUsers")
+		local ReceiveLikelySpeakingUsers = Instance.new("RemoteEvent")
+		ReceiveLikelySpeakingUsers.Name = "ReceiveLikelySpeakingUsers"
+		ReceiveLikelySpeakingUsers.Parent = RobloxReplicatedStorage
+		ReceiveLikelySpeakingUsers.OnServerEvent:Connect(function(player)
+			log("Got Ping Request from ", player.Name)
+			-- Players can only call this once per session
+			if canPollLikelySpeaking[player.UserId] then
+				canPollLikelySpeaking[player.UserId] = nil
+				SendLikelySpeakingUsers:FireClient(player, likelySpeakingPlayers)
+				log("Sending likely speaking users to ", player.Name)
+			end
+		end)
+	end
 end

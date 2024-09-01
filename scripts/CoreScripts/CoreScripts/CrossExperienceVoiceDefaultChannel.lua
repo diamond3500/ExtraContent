@@ -5,12 +5,16 @@ local CorePackages = game:GetService("CorePackages")
 local NotificationService = game:GetService("NotificationService")
 local Players = game:GetService("Players")
 local ExperienceService = game:GetService("ExperienceService")
+local Promise = require(CorePackages.Promise)
 
-local RobloxGui = CoreGui:WaitForChild("RobloxGui")
+local RobloxGui = CoreGui.RobloxGui
 local VoiceChatCore = require(CorePackages.Workspace.Packages.VoiceChatCore)
+local Rodux = require(CorePackages.Packages.Rodux)
+local CrossExperience = require(CorePackages.Workspace.Packages.CrossExperience)
 local CoreVoiceManager = VoiceChatCore.CoreVoiceManager.default
+local createPersistenceMiddleware = CrossExperience.Middlewares.createPersistenceMiddleware
 
-local CoreGuiModules = RobloxGui:WaitForChild("Modules")
+local CoreGuiModules = RobloxGui.Modules
 local BlockingUtility = require(CoreGuiModules.BlockingUtility)
 
 local FFlagDebugDefaultChannelStartMuted = game:DefineFastFlag("DebugDefaultChannelStartMuted", true)
@@ -23,11 +27,45 @@ local GetFFlagEnableLuaVoiceChatAnalytics = require(RobloxGui.Modules.Flags.GetF
 local GenerateDefaultChannelAvailable = game:GetEngineFeature("VoiceServiceGenerateDefaultChannelAvailable")
 local EnableDefaultVoiceAvailable = game:GetEngineFeature("VoiceServiceEnableDefaultVoiceAvailable")
 local NotificationServiceIsConnectedAvailable = game:GetEngineFeature("NotificationServiceIsConnectedAvailable")
+local AudioFocusManagementEnabled = game:GetEngineFeature("EnableAudioFocusManagement")
 
 local log = require(RobloxGui.Modules.Logger):new(script.Name)
 local Analytics = VoiceChatCore.Analytics.new()
 
 local VoiceChatService = game:GetService("VoiceChatService")
+
+local PersistenceMiddleware = createPersistenceMiddleware({
+	storeKey = CrossExperience.Constants.STORAGE_CEV_STORE_KEY,
+})
+
+local PartySoundsAudioPlayer = CrossExperience.PartySoundsAudioPlayer
+
+local createReducers = function()
+	-- In order to simplify the data sync between this background state and foreground state I am using the expected foreground store shape
+	return Rodux.combineReducers({
+		Squad = Rodux.combineReducers({
+			CrossExperienceVoice = CrossExperience.installReducer(),
+		})
+	})
+end
+
+local initialState = PersistenceMiddleware.restore()
+local store = Rodux.Store.new(createReducers(), nil, {
+	Rodux.thunkMiddleware,
+	PersistenceMiddleware.getMiddleware(),
+})
+
+local experienceType = CrossExperience.Constants.EXPERIENCE_TYPE_VOICE
+local cevEventListener = CrossExperience.EventListener.new(experienceType)
+
+-- For debugging purposes can pass "log" as a second parameter
+cevEventListener:subscribe(store)
+
+CrossExperience.Communication.notify(CrossExperience.Constants.EVENTS.PARTY_VOICE_EXPERIENCE_JOINED, {
+	jobId = game.JobId,
+	placeId = game.PlaceId,
+	gameId = game.GameId,
+})
 
 -- Since this script starts significantly faster due to small Lua size for CEV DM, VoiceChatService.UseNewAudioApi is not yet replicated and has incorrect value, hence the game.Loaded wait
 if not game:IsLoaded() then
@@ -36,49 +74,99 @@ end
 
 local localUserId = (Players.LocalPlayer and Players.LocalPlayer.UserId) or -1
 
--- IRIS-1799: Enum.ExperienceEventType currently does not exist in GameEngine as we are refactoring the communication layer.
--- We are also not going to expose ExperienceEventType publicaly in Enum.
--- This handling needs to get redone but leaving the code in for reference as we will need the same logic, we will just probably have the event name as string
+local onPlayerAdded = function(player)
+	CrossExperience.Communication.notify(CrossExperience.Constants.EVENTS.PARTY_VOICE_PARTICIPANT_ADDED, {
+		userId = player.UserId,
+		isLocalUser = player.UserId == localUserId,
+		username = player.Name,
+		displayname = player.DisplayName,
+	})
+end
+
+local onPlayerRemoved = function(player)
+	CrossExperience.Communication.notify(CrossExperience.Constants.EVENTS.PARTY_VOICE_PARTICIPANT_REMOVED, {
+		userId = player.UserId,
+		isLocalUser = player.UserId == localUserId,
+	})
+	PartySoundsAudioPlayer.default:PlaySound("leave")
+end
+
+local onLocalPlayerActiveChanged = function(result)
+	local eventName = if result.isActive then CrossExperience.Constants.EVENTS.PARTY_VOICE_PARTICIPANT_IS_ACTIVE else CrossExperience.Constants.EVENTS.PARTY_VOICE_PARTICIPANT_IS_INACTIVE
+	CrossExperience.Communication.notify(eventName, {
+		userId = localUserId,
+		isLocalUser = true,
+	})
+end
+
+local onLocalPlayerMuteChanged = function (isMuted)
+	local eventName = if isMuted then CrossExperience.Constants.EVENTS.PARTY_VOICE_PARTICIPANT_WAS_MUTED else CrossExperience.Constants.EVENTS.PARTY_VOICE_PARTICIPANT_WAS_UNMUTED
+	CrossExperience.Communication.notify(eventName, {
+		userId = localUserId,
+		isLocalUser = true,
+	})
+end
+
+local onParticipantsUpdated = function (participants)
+	for userId, participantState in pairs(participants) do
+		local isActive = participantState.isSignalActive
+		local isMuted = participantState.isMuted
+
+		local activeEventName = if isActive then CrossExperience.Constants.EVENTS.PARTY_VOICE_PARTICIPANT_IS_ACTIVE else CrossExperience.Constants.EVENTS.PARTY_VOICE_PARTICIPANT_IS_INACTIVE
+		local mutedEventName = if isMuted then CrossExperience.Constants.EVENTS.PARTY_VOICE_PARTICIPANT_WAS_MUTED else CrossExperience.Constants.EVENTS.PARTY_VOICE_PARTICIPANT_WAS_UNMUTED
+
+		local eventPayload = {
+			userId = userId,
+			isLocalUser = userId == localUserId,
+		}
+
+		CrossExperience.Communication.notify(activeEventName, eventPayload)
+		CrossExperience.Communication.notify(mutedEventName, eventPayload)
+	end
+end
+
+local toggleMutePlayer = function (params)
+	local userId = tonumber(params.userId)
+	local isLocalPlayer = localUserId == userId
+	if isLocalPlayer then
+		CoreVoiceManager:ToggleMic("Squads")
+	else
+		CoreVoiceManager:ToggleMutePlayer(userId)
+	end
+end
 
 function handleParticipants()
-	-- local onPlayerAdded = function(player)
-	-- 	pcall(function()
-	-- 		ExperienceService:PublishEvent(game.PlaceId, Enum.ExperienceEventType.ParticipantAdded, {
-	-- 			userId = tostring(player.UserId),
-	-- 			isLocalUser = player.UserId == localUserId,
-	-- 			username = player.Name,
-	-- 			displayname = player.DisplayName,
-	-- 		})
-	-- 	end)
-	-- end
+	Players.PlayerAdded:Connect(function(player)
+		onPlayerAdded(player)
+		PartySoundsAudioPlayer.default:PlaySound("join")
+	end)
+	Players.PlayerRemoving:Connect(onPlayerRemoved)
 
-	-- for _, player in pairs(Players:GetPlayers()) do
-	-- 	if player:IsA("Player") then
-	-- 		onPlayerAdded(player)
-	-- 	end
-	-- end
-	-- Players.PlayerAdded:Connect(onPlayerAdded)
-
-	-- Players.PlayerRemoving:Connect(function(player)
-	-- 	pcall(function()
-	-- 		ExperienceService:PublishEvent(game.PlaceId, Enum.ExperienceEventType.ParticipantRemoving, {
-	-- 			userId = tostring(player.UserId),
-	-- 			isLocalUser = player.UserId == localUserId,
-	-- 		})
-	-- 	end)
-	-- end)
+	for _, player in pairs(Players:GetPlayers()) do
+		if player:IsA("Player") then
+			onPlayerAdded(player)
+			if player.UserId == localUserId then
+				PartySoundsAudioPlayer.default:PlaySound("join")
+			end
+		end
+	end
 end
 
 function handleMicrophone()
-	-- pcall(function()
-	-- 	ExperienceService:SubscribeToEvent(tostring(game.PlaceId), Enum.ExperienceEventType.MicToggled, function(_)
-	-- 		CoreVoiceManager:asyncInit()
-	-- 		:andThen(function()
-	-- 			CoreVoiceManager:ToggleMic("BackgroundDM")
-	-- 		end)
-	-- 		:catch(function() end)
-	-- 	end)
-	-- end)
+	CoreVoiceManager.muteChanged.Event:Connect(onLocalPlayerMuteChanged)
+
+	CrossExperience.Communication.addObserver(experienceType, CrossExperience.Constants.EVENTS.MUTE_PARTY_VOICE_PARTICIPANT, function (params)
+		toggleMutePlayer(params)
+	end)
+
+	CrossExperience.Communication.addObserver(experienceType, CrossExperience.Constants.EVENTS.UNMUTE_PARTY_VOICE_PARTICIPANT, function (params)
+		toggleMutePlayer(params)
+	end)
+end
+
+function onCoreVoiceManagerInitialized()
+	CoreVoiceManager:getService().PlayerMicActivitySignalChange:Connect(onLocalPlayerActiveChanged)
+	CoreVoiceManager.participantsUpdate.Event:Connect(onParticipantsUpdated)
 end
 
 -- This function is used to unmute the microphone once when the player joins the default channel
@@ -179,6 +267,83 @@ CoreVoiceManager:asyncInit():andThen(function()
 	local joinInProgress = initializeDefaultChannel(false)
 	if joinInProgress == false then
 		-- TODO: We should communicate to foreground experience that it failed similar to VoiceChatServiceManager:InitialJoinFailedPrompt()
+	else
+		onCoreVoiceManagerInitialized()
+	end
+
+	if AudioFocusManagementEnabled then
+		local success, AudioFocusService = pcall(function()
+			return game:GetService("AudioFocusService")
+		end)
+		if success and AudioFocusService then
+			local contextId = CrossExperience.Constants.AUDIO_FOCUS_MANAGEMENT.CEV.CONTEXT_ID
+			local focusPriority = CrossExperience.Constants.AUDIO_FOCUS_MANAGEMENT.CEV.FOCUS_PRIORITY
+			AudioFocusService:RegisterContextIdFromLua(contextId)
+
+			local deafenAll = function()
+				CoreVoiceManager:MuteAll(true, "AudioFocusManagement CEV")
+				if not CoreVoiceManager.localMuted then
+					CoreVoiceManager:ToggleMic()
+				end
+			end
+
+			local undeafenAll = function()
+				CoreVoiceManager:MuteAll(false, "AudioFocusManagement CEV")
+				if CoreVoiceManager.localMuted then
+					CoreVoiceManager:ToggleMic()
+				end
+			end
+
+			AudioFocusService.OnDeafenVoiceAudio:Connect(function(serviceContextId)
+				if serviceContextId == contextId then
+					log:info("CEV OnDeafenVoiceAudio fired" .. serviceContextId)
+					deafenAll()
+				end
+			end)
+
+			AudioFocusService.OnUndeafenVoiceAudio:Connect(function(serviceContextId)
+				if serviceContextId == contextId then
+					log:info("CEV OnUndeafenVoiceAudio fired" .. serviceContextId)
+					undeafenAll()
+				end
+			end)
+
+
+			local requestAudioFocusWithPromise = function(id, prio)
+				return Promise.new(function(resolve, reject)
+					local requestSuccess, focusGranted = pcall(AudioFocusService.RequestFocus, AudioFocusService, id, prio)
+					if requestSuccess then
+						resolve(focusGranted) -- Still resolve, but indicate failure to grant focus
+					else
+						reject('Failed to call RequestFocus due to an error') -- Reject the promise in case of an error
+					end
+				end)
+			end
+
+			requestAudioFocusWithPromise(contextId, focusPriority)
+			:andThen(function(focusGranted)
+				if focusGranted then
+					log:info("CEV audio focus request granted, preparing to undeafen.")
+					CoreVoiceManager.muteChanged.Event:Once(function(muted)
+						if muted ~= nil then
+							CoreVoiceManager:MuteAll(false, "AudioFocusManagement CEV")
+						end
+					end)
+				else
+					log:info("CEV audio focus request denied, preparing to deafen.")
+					CoreVoiceManager.muteChanged.Event:Once(function(muted)
+						if muted ~= nil then
+							CoreVoiceManager:MuteAll(true, "AudioFocusManagement CEV")
+						end
+					end)
+				end
+			end)
+			:catch(function()
+				log:info('[CEV] Error requesting focus inside CEV')
+			end)
+		else
+			log:info("AudioFocusService did not initialize")
+		end
 	end
 end):catch(function(err)
 	-- If voice chat doesn't initialize, silently halt rather than throwing

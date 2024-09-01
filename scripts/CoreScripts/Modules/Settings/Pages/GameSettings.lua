@@ -40,8 +40,13 @@ local isCamEnabledForUserAndPlace = require(RobloxGui.Modules.Settings.isCamEnab
 local PermissionsProtocol = require(CorePackages.Workspace.Packages.PermissionsProtocol).PermissionsProtocol.default
 local cameraDevicePermissionGrantedSignal = require(CoreGui.RobloxGui.Modules.Settings.cameraDevicePermissionGrantedSignal)
 local getFFlagDoNotPromptCameraPermissionsOnMount = require(RobloxGui.Modules.Flags.getFFlagDoNotPromptCameraPermissionsOnMount)
-local GetFFlagSelfViewCameraSettings = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagSelfViewCameraSettings
+local SharedFlags = require(CorePackages.Workspace.Packages.SharedFlags)
+local GetFFlagSelfViewCameraSettings = SharedFlags.GetFFlagSelfViewCameraSettings
 local GetFFlagAlwaysShowVRToggle = require(RobloxGui.Modules.Flags.GetFFlagAlwaysShowVRToggle)
+local GetFFlagAddHapticsToggle = SharedFlags.GetFFlagAddHapticsToggle
+local GetFFlagEnablePreferredTextSizeSettingInMenus = SharedFlags.GetFFlagEnablePreferredTextSizeSettingInMenus
+local FFlagCameraSensitivityPadding = game:DefineFastFlag("CameraSensitivityPadding", false)
+local GetFFlagEnablePreferredTextSizeStyleFixesInExperienceMenu = require(script.Parent.Parent.Flags.GetFFlagEnablePreferredTextSizeStyleFixesInExperienceMenu)
 
 
 -------------- CONSTANTS --------------
@@ -119,13 +124,15 @@ local SETTINGS_MENU_LAYOUT_ORDER = {
 	["DeviceFrameInput"] = 60,
 	["DeviceFrameOutput"] = 61,
 	["VolumeFrame"] = 62,
+	["HapticsFrame"] = 63,
 	-- Graphics
 	["FullScreenFrame"] = 70,
 	["GraphicsEnablerFrame"] = 71,
 	["GraphicsQualityFrame"] = 72,
 	["ReducedMotionFrame"] = 73,
 	["PreferredTransparencyFrame"] = 74,
-	["UiNavigationKeyBindEnabledFrame"] = 75,
+	["PreferredTextSizeFrame"] = 75,
+	["UiNavigationKeyBindEnabledFrame"] = 76,
 	-- Performance
 	["PerformanceStatsFrame"] = 80,
 	["MicroProfilerFrame"] = 81,
@@ -169,6 +176,7 @@ local GetHasGuiHidingPermission = require(RobloxGui.Modules.Common.GetHasGuiHidi
 local Theme = require(RobloxGui.Modules.Settings.Theme)
 local Cryo = require(CorePackages.Cryo)
 local GfxReset = require(script.Parent.Parent.GfxReset)
+local Create = require(CorePackages.Workspace.Packages.AppCommonLib).Create
 
 ------------ Variables -------------------
 RobloxGui:WaitForChild("Modules"):WaitForChild("TenFootInterface")
@@ -216,9 +224,8 @@ local UseMicroProfiler = (isMobileClient or isDesktopClient) and canUseMicroProf
 local GetFIntVoiceChatDeviceChangeDebounceDelay = require(RobloxGui.Modules.Flags.GetFIntVoiceChatDeviceChangeDebounceDelay)
 local GetFFlagVoiceChatUILogging = require(RobloxGui.Modules.Flags.GetFFlagVoiceChatUILogging)
 local GetFFlagEnableUniveralVoiceToasts = require(RobloxGui.Modules.Flags.GetFFlagEnableUniveralVoiceToasts)
-local GetFFlagVoiceChatUseSoundServiceInputApi = require(RobloxGui.Modules.Flags.GetFFlagVoiceChatUseSoundServiceInputApi)
 local GetFFlagEnableExplicitSettingsChangeAnalytics = require(RobloxGui.Modules.Settings.Flags.GetFFlagEnableExplicitSettingsChangeAnalytics)
-local GetFFlagGameSettingsCameraModeFixEnabled = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagGameSettingsCameraModeFixEnabled
+local GetFFlagGameSettingsCameraModeFixEnabled = SharedFlags.GetFFlagGameSettingsCameraModeFixEnabled
 local GetFFlagFixCyclicFullscreenIndexEvent = require(RobloxGui.Modules.Settings.Flags.GetFFlagFixCyclicFullscreenIndexEvent)
 local FFlagDisableFeedbackSoothsayerCheck = game:DefineFastFlag("DisableFeedbackSoothsayerCheck", false)
 local FFlagUserShowGuiHideToggles = game:DefineFastFlag("UserShowGuiHideToggles", false)
@@ -227,6 +234,7 @@ local FFlagEnableTFFeedbackModeEntryCheck = game:DefineFastFlag("EnableTFFeedbac
 local FFlagFeedbackEntryPointButtonSizeAdjustment = game:DefineFastFlag("FeedbackEntryPointButtonSizeAdjustment2", false)
 local FFlagFeedbackEntryPointImprovedStrictnessCheck = game:DefineFastFlag("FeedbackEntryPointImprovedStrictnessCheck", false)
 local FFlagFixSensitivityTextPrecision = game:DefineFastFlag("FixSensitivityTextPrecision", false)
+local GetFFlagEnableShowVoiceUI = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagEnableShowVoiceUI
 
 local function reportSettingsChangeForAnalytics(fieldName, oldValue, newValue, extraData)
 	if not GetFFlagEnableExplicitSettingsChangeAnalytics() or oldValue == newValue or oldValue == nil or newValue == nil then
@@ -292,6 +300,9 @@ local function reportSettingsForAnalytics()
 
 	stringTable["reduced_motion"] = tostring(GameSettings.ReducedMotion)
 	stringTable["preferred_transparency"] = tostring(GameSettings.PreferredTransparency)
+	if GetFFlagEnablePreferredTextSizeSettingInMenus() then
+		stringTable["preferred_text_size"] = tostring(GameSettings.PreferredTextSize)
+	end 
 	stringTable["ui_navigation_key_bind_enabled"] = tostring(GameSettings.UiNavigationKeyBindEnabled)
 
 	stringTable["universeid"] = tostring(game.GameId)
@@ -835,6 +846,31 @@ local function Initialize()
 		)
 	end
 
+	local function createPreferredTextSizeOptions()
+		local items = Enum.PreferredTextSize:GetEnumItems()
+		local startValue = GameSettings.PreferredTextSize.Value - 1
+
+		local preferredTextSizeLabel = RobloxTranslator:FormatByKey("Feature.Accessibility.Heading.PreferredTextSize")
+		local preferredTextSizeDescription = RobloxTranslator:FormatByKey("Feature.Accessibility.Description.PreferredTextSize")
+		local preferredTextSizeLeftLabel = RobloxTranslator:FormatByKey("Feature.Accessibility.PreferredTextSize.Default")
+		local preferredTextSizeRightLabel = RobloxTranslator:FormatByKey("Feature.Accessibility.PreferredTextSize.Largest")
+ 
+		this.PreferredTextSizeFrame, this.PreferredTextSizeLabel, this.PreferredTextSizeSlider =
+			utility:AddNewRow(this, preferredTextSizeLabel, "Slider", 3, startValue, nil, preferredTextSizeDescription, preferredTextSizeLeftLabel, preferredTextSizeRightLabel)
+		this.PreferredTextSizeFrame.LayoutOrder = SETTINGS_MENU_LAYOUT_ORDER["PreferredTextSizeFrame"]
+
+		this.PreferredTextSizeSlider.ValueChanged:connect(
+			function(newValue)
+				local oldValue = GameSettings.PreferredTextSize
+				GameSettings.PreferredTextSize = items[newValue+1]
+				if GetFFlagEnableExplicitSettingsChangeAnalytics() then
+					reportSettingsChangeForAnalytics('preferred_text_size', oldValue, GameSettings.PreferredTextSize)
+				end
+				reportSettingsForAnalytics()
+			end
+		)
+	end
+
 	local function createUiNavigationKeyBindOptions()
 		local startIndex = 2
 		if GameSettings.UiNavigationKeyBindEnabled then
@@ -886,7 +922,7 @@ local function Initialize()
 		this.PerformanceStatsFrame.LayoutOrder = SETTINGS_MENU_LAYOUT_ORDER["PerformanceStatsFrame"]
 
 		this.PerformanceStatsOverrideText =
-			utility:Create "TextLabel" {
+			Create "TextLabel" {
 			Name = "PerformanceStatsLabel",
 			Text = "Set by Developer",
 			TextColor3 = Color3.new(1, 1, 1),
@@ -942,7 +978,7 @@ local function Initialize()
 		this.InformationFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
 
 		this.InformationText =
-			utility:Create "TextLabel" {
+			Create "TextLabel" {
 			Name = "InformationLabel",
 			Text = "Information Loading",
 			Font = Theme.font(Enum.Font.SourceSans),
@@ -1120,7 +1156,7 @@ local function Initialize()
 				settingsDisabledInVR[this.ShiftLockFrame] = true
 
 				this.ShiftLockOverrideText =
-					utility:Create "TextLabel" {
+					Create "TextLabel" {
 					Name = "ShiftLockOverrideLabel",
 					Text = "Set by Developer",
 					TextColor3 = Color3.new(1, 1, 1),
@@ -1283,7 +1319,7 @@ local function Initialize()
 			settingsDisabledInVR[this.CameraMode] = true
 
 			this.CameraModeOverrideText =
-				utility:Create "TextLabel" {
+				Create "TextLabel" {
 				Name = "CameraDevOverrideLabel",
 				Text = "Set by Developer",
 				TextColor3 = Color3.new(1, 1, 1),
@@ -1583,7 +1619,7 @@ local function Initialize()
 			settingsDisabledInVR[this.MovementMode] = true
 
 			this.MovementModeOverrideText =
-				utility:Create "TextLabel" {
+				Create "TextLabel" {
 				Name = "MovementDevOverrideLabel",
 				Text = "Set by Developer",
 				TextColor3 = Color3.new(1, 1, 1),
@@ -1841,11 +1877,23 @@ local function Initialize()
 				if FFlagFeedbackEntryPointButtonSizeAdjustment then
 					toggleFeedbackModeButton, toggleFeedbackModeText = utility:MakeStyledButton("toggleFeedbackModeButton", "Give Feedback", UDim2.new(1, 0, 1, -20), onToggleFeedbackMode, this)
 					-- Adjust size and position of button relative to frame for use in utility:AddNewRowObject
-					toggleFeedbackModeButton.Size = UDim2.new(0.6, 0, 1, -20)
-					toggleFeedbackModeButton.Position = UDim2.new(0.4, 0, 0, 12)
+					if GetFFlagEnablePreferredTextSizeStyleFixesInExperienceMenu() then 
+						toggleFeedbackModeButton.Size = UDim2.new(0.6, 0, 0, 40)
+						toggleFeedbackModeButton.Position = UDim2.new(0.4, 0, 0.5, 0)
+						toggleFeedbackModeButton.AnchorPoint = Vector2.new(0, 0.5)
+					else 
+						toggleFeedbackModeButton.Size = UDim2.new(0.6, 0, 1, -20)
+						toggleFeedbackModeButton.Position = UDim2.new(0.4, 0, 0, 12)
+					end 
 				else
 					toggleFeedbackModeButton, toggleFeedbackModeText = utility:MakeStyledButton("toggleFeedbackModeButton", "Give Feedback", UDim2.new(0, 300, 1, -20), onToggleFeedbackMode, this)
-					toggleFeedbackModeButton.Position = UDim2.new(1, -400, 0, 12)
+					if GetFFlagEnablePreferredTextSizeStyleFixesInExperienceMenu() then 
+						toggleFeedbackModeButton.Size = UDim2.new(0, 300, 0, 30)
+						toggleFeedbackModeButton.Position = UDim2.new(0.4, 0, 0.5, 0)
+						toggleFeedbackModeButton.AnchorPoint = Vector2.new(0, 0.5)
+					else 	
+						toggleFeedbackModeButton.Position = UDim2.new(1, -400, 0, 12)
+					end
 				end
 				
 				toggleFeedbackModeButton.ZIndex = 2
@@ -2381,6 +2429,30 @@ local function Initialize()
 		)
 	end
 
+	local function createHapticsToggle()
+		local initialIndex = GameSettings.HapticStrength == 0 and 1 or 2
+		this.HapticsFrame, _, this.HapticsSelector =
+			utility:AddNewRow(this, "Haptics", "Selector", {"Off", "On"}, initialIndex)
+		this.HapticsFrame.LayoutOrder = SETTINGS_MENU_LAYOUT_ORDER["HapticsFrame"]
+
+		this.HapticsSelector.IndexChanged:connect(
+			function(newIndex)
+				local oldValue = GameSettings.HapticStrength
+
+				if newIndex == 2 then
+					GameSettings.HapticStrength = 1
+				else
+					GameSettings.HapticStrength = 0
+				end
+
+				if GetFFlagEnableExplicitSettingsChangeAnalytics() then
+					reportSettingsChangeForAnalytics('haptics_toggle', oldValue, GameSettings.HapticStrength)
+				end
+				reportSettingsForAnalytics()
+			end
+		)
+	end
+
 	local function createCameraInvertedOptions()
 		local initialIndex = 1
 		local success =
@@ -2479,6 +2551,7 @@ local function Initialize()
 		-- affects both first and third person.
 		local AdvancedMouseSteps = 10
 		local textBoxWidth = 60
+		local textBoxPadding = 20
 		local canSetSensitivity = true
 		local _MouseAdvancedStart = tostring(GameSettings.MouseSensitivityFirstPerson.X)
 
@@ -2490,14 +2563,18 @@ local function Initialize()
 		this.MouseAdvancedEntry.SliderFrame.Size =
 			UDim2.new(
 			this.MouseAdvancedEntry.SliderFrame.Size.X.Scale,
-			this.MouseAdvancedEntry.SliderFrame.Size.X.Offset - textBoxWidth,
+			if FFlagCameraSensitivityPadding 
+				then this.MouseAdvancedEntry.SliderFrame.Size.X.Offset - textBoxWidth - textBoxPadding
+				else this.MouseAdvancedEntry.SliderFrame.Size.X.Offset - textBoxWidth,
 			this.MouseAdvancedEntry.SliderFrame.Size.Y.Scale,
 			this.MouseAdvancedEntry.SliderFrame.Size.Y.Offset - 6
 		)
 		this.MouseAdvancedEntry.SliderFrame.Position =
 			UDim2.new(
 			this.MouseAdvancedEntry.SliderFrame.Position.X.Scale,
-			this.MouseAdvancedEntry.SliderFrame.Position.X.Offset - textBoxWidth,
+			if FFlagCameraSensitivityPadding 
+				then this.MouseAdvancedEntry.SliderFrame.Size.X.Offset - textBoxWidth - textBoxPadding
+				else this.MouseAdvancedEntry.SliderFrame.Size.X.Offset - textBoxWidth,
 			this.MouseAdvancedEntry.SliderFrame.Position.Y.Scale,
 			this.MouseAdvancedEntry.SliderFrame.Position.Y.Offset
 		)
@@ -2505,7 +2582,7 @@ local function Initialize()
 		this.MouseAdvancedEntry:SetInteractable(true)
 
 		local textBox =
-			utility:Create "TextBox" {
+			Create "TextBox" {
 			Name = "CameraSensitivityTextBox",
 			TextColor3 = Color3.new(1, 1, 1),
 			BorderColor3 = Color3.new(0.8, 0.8, 0.8),
@@ -2513,7 +2590,7 @@ local function Initialize()
 			Font = Theme.font(Enum.Font.SourceSans),
 			TextSize = Theme.textSize(18),
 			Size = UDim2.new(0, textBoxWidth, 0.8, 0),
-			Position = UDim2.new(1, -2, 0.5, 0),
+			Position = UDim2.new(1, if FFlagCameraSensitivityPadding then textBoxPadding / 2 else -2, 0.5, 0),
 			AnchorPoint = Vector2.new(0, 0.5),
 			ZIndex = 3,
 			Selectable = false,
@@ -2522,7 +2599,7 @@ local function Initialize()
 		}
 
 		if Theme.UIBloxThemeEnabled then
-			utility:Create'UICorner'
+			Create'UICorner'
 			{
 				CornerRadius = Theme.DefaultCornerRadius,
 				Parent = textBox,
@@ -2704,7 +2781,11 @@ local function Initialize()
 			utility:MakeStyledButton("AdjustButton", "Adjust", UDim2.new(0, 300, 1, -20), showOverscanScreen, this)
 		adjustText.Font = Theme.font(Enum.Font.SourceSans)
 		adjustButton.Position = UDim2.new(1, -400, 0, 12)
-
+		if GetFFlagEnablePreferredTextSizeStyleFixesInExperienceMenu() then 
+			adjustButton.Size = UDim2.new(0, 300, 0, 40)
+			adjustButton.Position = UDim2.new(1, -400, 0.5, 0)
+			adjustButton.AnchorPoint = Vector2.new(0, 0.5)
+		end 
 		if RunService:IsStudio() then
 			adjustButton.Selectable = false
 			adjustButton.Active = false
@@ -2737,8 +2818,14 @@ local function Initialize()
 				local devConsoleButton, devConsoleText, setButtonRowRef =
 					utility:MakeStyledButton("DevConsoleButton", "Open", UDim2.new(1, 0, 1, -20), onOpenDevConsole, this)
 				devConsoleText.Font = Theme.font(Enum.Font.SourceSans)
-				devConsoleButton.Size = UDim2.new(0.6, -10, 1, -20)
-				devConsoleButton.Position = UDim2.new(0.4, 10, 0, 12)
+				if GetFFlagEnablePreferredTextSizeStyleFixesInExperienceMenu() then
+					devConsoleButton.Size = UDim2.new(0.6, -10, 0, 35)
+					devConsoleButton.Position = UDim2.new(0.4, 10, 0.5, 0)
+					devConsoleButton.AnchorPoint = Vector2.new(0, 0.5)
+				else 
+					devConsoleButton.Size = UDim2.new(0.6, -10, 1, -20)
+					devConsoleButton.Position = UDim2.new(0.4, 10, 0, 12)
+				end
 				-- Nil for spacing parameter, true for auto spacing the left hand label
 				local row = utility:AddNewRowObject(this, "Developer Console", devConsoleButton, nil, true)
 				row.LayoutOrder = SETTINGS_MENU_LAYOUT_ORDER["DeveloperConsoleButton"]
@@ -2747,7 +2834,13 @@ local function Initialize()
 				local devConsoleButton, devConsoleText, setButtonRowRef =
 					utility:MakeStyledButton("DevConsoleButton", "Open", UDim2.new(0, 300, 1, -20), onOpenDevConsole, this)
 				devConsoleText.Font = Theme.font(Enum.Font.SourceSans)
-				devConsoleButton.Position = UDim2.new(1, -400, 0, 12)
+				if GetFFlagEnablePreferredTextSizeStyleFixesInExperienceMenu() then 
+					devConsoleButton.Size = UDim2.new(0.6, -10, 0, 35)
+					devConsoleButton.Position = UDim2.new(1, -400, 0.5, 0)
+					devConsoleButton.AnchorPoint = Vector2.new(0, 0.5)
+				else
+					devConsoleButton.Position = UDim2.new(1, -400, 0, 12)
+				end
 				local row = utility:AddNewRowObject(this, "Developer Console", devConsoleButton)
 				row.LayoutOrder = SETTINGS_MENU_LAYOUT_ORDER["DeveloperConsoleButton"]
 				setButtonRowRef(row)
@@ -3063,7 +3156,7 @@ local function Initialize()
 
 		local success, deviceNames, deviceGuids, selectedIndex = pcall(function()
 			if deviceType == VOICE_CHAT_DEVICE_TYPE.Input then
-				if game:GetEngineFeature("UseFmodForInputDevices") and GetFFlagVoiceChatUseSoundServiceInputApi() then
+				if game:GetEngineFeature("UseFmodForInputDevices") then
 					return SoundService:GetInputDevices()
 				else
 					return VoiceChatService:GetMicDevices()
@@ -3207,6 +3300,16 @@ local function Initialize()
 				if not GetFFlagEnableUniveralVoiceToasts() then
 					VoiceChatServiceManager:CheckAndShowNotAudiblePrompt()
 				end
+				if GetFFlagEnableShowVoiceUI() then
+					VoiceChatServiceManager.showVoiceUI.Event:Connect(function()
+						this.VoiceChatOptionsEnabled = true
+						this[VOICE_CHAT_DEVICE_TYPE.Input.."DeviceFrame"].Visible = true
+					end)
+					VoiceChatServiceManager.hideVoiceUI.Event:Connect(function()
+						this.VoiceChatOptionsEnabled = false
+						this[VOICE_CHAT_DEVICE_TYPE.Input.."DeviceFrame"].Visible = false
+					end)
+				end
 			end):catch(function()
 				if GetFFlagVoiceChatUILogging() then
 					log:warning("Failed to init VoiceChatServiceManager")
@@ -3317,10 +3420,18 @@ local function Initialize()
 	end
 
 	createVolumeOptions()
+	if GetFFlagAddHapticsToggle() then
+		createHapticsToggle()
+	end
 	createGraphicsOptions()
 
 	createReducedMotionOptions()
 	createPreferredTransparencyOptions()
+
+	if GetFFlagEnablePreferredTextSizeSettingInMenus() then
+		createPreferredTextSizeOptions()
+	end
+
 	if UserInputService.KeyboardEnabled then
 		createUiNavigationKeyBindOptions()
 	end

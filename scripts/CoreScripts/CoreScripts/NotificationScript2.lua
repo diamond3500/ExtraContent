@@ -28,7 +28,8 @@ local AnalyticsService = game:GetService("RbxAnalyticsService")
 local VRService = game:GetService("VRService")
 local GroupService = game:GetService("GroupService")
 local TeleportService = game:GetService("TeleportService")
-local RobloxGui = CoreGui:WaitForChild("RobloxGui")
+local CorePackages = game:GetService("CorePackages")
+local RobloxGui = CoreGui.RobloxGui
 local Settings = UserSettings()
 local GameSettings = Settings.GameSettings
 
@@ -40,13 +41,11 @@ local FFlagUseNotificationsLocalization = success and result
 
 local FFlagLogAcceptFriendshipEvent = game:DefineFastFlag("LogAcceptFriendshipEvent", false)
 
-local FFlagChangePlayerNameToDisplayName = game:DefineFastFlag("ChangePlayerNameToDisplayName", false)
-
 local GetFixGraphicsQuality = require(RobloxGui.Modules.Flags.GetFixGraphicsQuality)
 
 local shouldSaveScreenshotToAlbum = require(RobloxGui.Modules.shouldSaveScreenshotToAlbum)
 
-local RobloxTranslator = require(RobloxGui:WaitForChild("Modules"):WaitForChild("RobloxTranslator"))
+local RobloxTranslator = require(RobloxGui.Modules.RobloxTranslator)
 
 local FFlagNotificationsNoLongerRequireControllerState = game:DefineFastFlag("NotificationsNoLongerRequireControllerState", false)
 
@@ -72,13 +71,12 @@ local BindableEvent_SendNotificationInfo = Instance.new("BindableEvent")
 BindableEvent_SendNotificationInfo.Name = "SendNotificationInfo"
 BindableEvent_SendNotificationInfo.Parent = RobloxGui
 local isPaused = false
-RobloxGui:WaitForChild("Modules"):WaitForChild("TenFootInterface")
 local isTenFootInterface = require(RobloxGui.Modules.TenFootInterface):IsEnabled()
 
 local pointsNotificationsActive = true
 local badgesNotificationsActive = true
 
-local SocialUtil = require(RobloxGui.Modules:WaitForChild("SocialUtil"))
+local SocialUtil = require(RobloxGui.Modules.SocialUtil)
 local GameTranslator = require(RobloxGui.Modules.GameTranslator)
 local PolicyService = require(RobloxGui.Modules.Common.PolicyService)
 
@@ -448,7 +446,8 @@ local function createNotification(title, text, image)
 
 	notificationFrame.Parent = nil
 
-	GuiService:AddSelectionParent(HttpService:GenerateGUID(false), notificationFrame)
+	-- AddSelectionParent is deprecated
+	(GuiService :: any):AddSelectionParent(HttpService:GenerateGUID(false), notificationFrame)
 
 	return notificationFrame
 end
@@ -750,15 +749,9 @@ local function sendFriendNotification(fromPlayer)
 	local declineText = "Decline"
 	sendNotificationInfo({
 		GroupName = "Friends",
-		Title = if FFlagChangePlayerNameToDisplayName then 
-				fromPlayer.DisplayName 
-			else 
-				fromPlayer.Name,
+		Title = fromPlayer.DisplayName,
 		Text = "Sent you a friend request!",
-		DetailText = if FFlagChangePlayerNameToDisplayName then 
-				fromPlayer.DisplayName 
-			else 
-				fromPlayer.Name,
+		DetailText = fromPlayer.DisplayName,
 		Image = getFriendImage(fromPlayer.UserId),
 		Duration = 8,
 		Callback = function(buttonChosen)

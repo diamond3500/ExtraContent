@@ -10,6 +10,7 @@
 ]]
 local RunService = game:GetService('RunService')
 local Players = game:GetService('Players')
+local CorePackages = game:GetService("CorePackages")
 while not Players.LocalPlayer do
 	wait()
 end
@@ -18,8 +19,7 @@ local CurrentVehicleSeat = nil
 local VehicleSeatHeartbeatCn = nil
 local VehicleSeatHUDChangedCn = nil
 
-local RobloxGui = game:GetService("CoreGui"):WaitForChild("RobloxGui")
-RobloxGui:WaitForChild("Modules"):WaitForChild("TenFootInterface")
+local RobloxGui = game:GetService("CoreGui").RobloxGui
 local isTenFootInterface = require(RobloxGui.Modules.TenFootInterface):IsEnabled()
 
 --[[ Images ]]--

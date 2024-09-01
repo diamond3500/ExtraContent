@@ -36,6 +36,7 @@ local GuiService = game:GetService("GuiService")
 local AnalyticsService = game:GetService("RbxAnalyticsService")
 local RunService = game:GetService("RunService")
 local ChatService = game:GetService("Chat")
+local CorePackages = game:GetService("CorePackages")
 
 local hasTrackedAvatarContextMenu = false
 function enableAvatarContextMenu(enabled)
@@ -54,14 +55,14 @@ StarterGui:RegisterGetCore("AvatarContextMenuEnabled", function()
 end)
 
 --- MODULES
-local RobloxGui = CoreGuiService:WaitForChild("RobloxGui")
-local CoreGuiModules = RobloxGui:WaitForChild("Modules")
-local AvatarMenuModules = CoreGuiModules:WaitForChild("AvatarContextMenu")
+local RobloxGui = CoreGuiService.RobloxGui
+local CoreGuiModules = RobloxGui.Modules
+local AvatarMenuModules = CoreGuiModules.AvatarContextMenu
 
-local ContextMenuGui = require(AvatarMenuModules:WaitForChild("ContextMenuGui"))
-local ContextMenuItemsModule = require(AvatarMenuModules:WaitForChild("ContextMenuItems"))
-local ContextMenuUtil = require(AvatarMenuModules:WaitForChild("ContextMenuUtil"))
-local SelectedCharacterIndicator = require(AvatarMenuModules:WaitForChild("SelectedCharacterIndicator"))
+local ContextMenuGui = require(AvatarMenuModules.ContextMenuGui)
+local ContextMenuItemsModule = require(AvatarMenuModules.ContextMenuItems)
+local ContextMenuUtil = require(AvatarMenuModules.ContextMenuUtil)
+local SelectedCharacterIndicator = require(AvatarMenuModules.SelectedCharacterIndicator)
 local ThemeHandler = require(AvatarMenuModules.ThemeHandler)
 
 local Backpack = require(CoreGuiModules.BackpackScript)

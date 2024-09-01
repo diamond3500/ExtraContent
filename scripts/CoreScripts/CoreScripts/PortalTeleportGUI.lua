@@ -22,7 +22,7 @@ local runCount = 0
 local pi = math.pi
 
 -- Modules
-local RobloxGui = CoreGui:WaitForChild("RobloxGui")
+local RobloxGui = CoreGui.RobloxGui
 local RobloxTranslator = require(RobloxGui.Modules.RobloxTranslator)
 local AppFonts = require(CorePackages.Workspace.Packages.Style).AppFonts
 

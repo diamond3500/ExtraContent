@@ -34,6 +34,8 @@ PlayerTile.validateProps = t.strictInterface({
 	title = t.optional(t.string),
 	-- The subtitle text for the player tile
 	subtitle = t.optional(t.string),
+	-- The style for the subtitle, defaults to CaptionHeader.
+	subtitleFontStyle = t.optional(t.union(validateFontInfo, validateTypographyInfo)),
 
 	hasVerifiedBadge = t.optional(t.boolean),
 	-- Whether it's gamepad/keyboard selectable or not
@@ -56,12 +58,22 @@ PlayerTile.validateProps = t.strictInterface({
 		iconTransparency = t.optional(t.number),
 		onActivated = t.optional(t.callback),
 		fontStyle = t.optional(t.union(validateFontInfo, validateTypographyInfo)),
+		horizontalAlignment = t.optional(t.EnumItem),
 	}),
 	-- The size of the tile
 	tileSize = t.optional(t.UDim2),
+	-- The size of the thumbnail frame
+	thumbnailFrameSize = t.optional(t.UDim2),
+	-- Whether the thumbnail should be circular
+	isCircular = t.optional(t.boolean),
+	-- Alignment of the title and subtitle to the tile
+	horizontalAlignment = t.optional(t.EnumItem),
+	-- The vertical padding above the footer, defaults to tokens.Global.Space_50
+	footerTopPadding = t.optional(t.integer),
 	-- A function that fires when the tile is pressed
 	onActivated = t.optional(t.callback),
 	forwardedRef = t.optional(t.table),
+	openTypeFeatures = t.optional(t.string),
 })
 
 PlayerTile.defaultProps = {
@@ -70,6 +82,8 @@ PlayerTile.defaultProps = {
 	tileSize = UDim2.new(0, 150, 0, 150),
 	onActivated = function() end,
 	Selectable = false,
+	isCircular = false,
+	openTypeFeatures = nil,
 }
 
 local ANIMATION_SPRING_SETTINGS = {
@@ -100,6 +114,7 @@ local function footer(props)
 			iconPadding = 0,
 			iconSize = UDim2.fromOffset(tokens.Global.Size_150, tokens.Global.Size_150),
 			textHeight = tokens.Global.Size_350,
+			horizontalAlignment = props.horizontalAlignment,
 		}, props.playerContext)
 
 		return Roact.createElement("Frame", {
@@ -125,27 +140,28 @@ local function thumbnailOverlayComponents(props)
 			BackgroundTransparency = 1,
 			Size = UDim2.new(1, 0, 1, 0),
 		}, {
-			ButtonBackgroundGradient = not Cryo.isEmpty(props.buttons) and Roact.createElement("Frame", {
-				Size = UDim2.new(1, 0, 0, buttonHeight + outerButtonPadding * 2),
-				AnchorPoint = Vector2.new(0, 1),
-				Position = UDim2.new(0, 0, 1, 0),
-				LayoutOrder = 1,
-			}, {
-				UIGradient = Roact.createElement("UIGradient", {
-					Rotation = 90,
-					Color = ColorSequence.new({
-						ColorSequenceKeypoint.new(0, style.Theme.BackgroundUIContrast.Color),
-						ColorSequenceKeypoint.new(1, style.Theme.BackgroundUIContrast.Color),
+			ButtonBackgroundGradient = (not props.isCircular and not Cryo.isEmpty(props.buttons))
+				and Roact.createElement("Frame", {
+					Size = UDim2.new(1, 0, 0, buttonHeight + outerButtonPadding * 2),
+					AnchorPoint = Vector2.new(0, 1),
+					Position = UDim2.new(0, 0, 1, 0),
+					LayoutOrder = 1,
+				}, {
+					UIGradient = Roact.createElement("UIGradient", {
+						Rotation = 90,
+						Color = ColorSequence.new({
+							ColorSequenceKeypoint.new(0, style.Theme.BackgroundUIContrast.Color),
+							ColorSequenceKeypoint.new(1, style.Theme.BackgroundUIContrast.Color),
+						}),
+						Transparency = NumberSequence.new({
+							NumberSequenceKeypoint.new(0, 1),
+							NumberSequenceKeypoint.new(1, style.Theme.BackgroundUIContrast.Transparency),
+						}),
 					}),
-					Transparency = NumberSequence.new({
-						NumberSequenceKeypoint.new(0, 1),
-						NumberSequenceKeypoint.new(1, style.Theme.BackgroundUIContrast.Transparency),
+					UICorner = Roact.createElement("UICorner", {
+						CornerRadius = UDim.new(0, 8),
 					}),
 				}),
-				UICorner = Roact.createElement("UICorner", {
-					CornerRadius = UDim.new(0, 8),
-				}),
-			}),
 			HoverTransparency = Roact.createElement(SpringAnimatedItem.AnimatedImageLabel, {
 				springOptions = ANIMATION_SPRING_SETTINGS,
 				animatedValues = {
@@ -170,7 +186,7 @@ local function thumbnailOverlayComponents(props)
 				},
 			}, {
 				corner = Roact.createElement("UICorner", {
-					CornerRadius = UDim.new(0, 8),
+					CornerRadius = if props.isCircular then UDim.new(0.5, 0) else UDim.new(0, 8),
 				}),
 			}),
 			ButtonContainer = Roact.createElement("Frame", {
@@ -259,6 +275,8 @@ function PlayerTile:render()
 
 	return withStyle(function(style)
 		local tokens = style.Tokens
+		local subtitleFontStyle = self.props.subtitleFontStyle or tokens.Semantic.Typography.CaptionHeader
+		local footerTopPadding = self.props.footerTopPadding or tokens.Global.Space_50
 
 		return Roact.createElement("Frame", {
 			Size = tileSize,
@@ -280,14 +298,14 @@ function PlayerTile:render()
 				innerPadding = INNER_PADDING,
 				titleTopPadding = tokens.Global.Space_100,
 				subtitleTopPadding = tokens.Global.Space_25,
-				footerTopPadding = tokens.Global.Space_50,
+				footerTopPadding = footerTopPadding,
 				name = title,
 				nameTextColor = tokens.Semantic.Color.Text.Emphasis.Color3,
 				titleFontStyle = tokens.Semantic.Typography.Subheader,
 				hasVerifiedBadge = self.props.hasVerifiedBadge,
 				titleTextLineCount = 1,
 				subtitle = self.props.subtitle,
-				subtitleFontStyle = tokens.Semantic.Typography.CaptionHeader,
+				subtitleFontStyle = subtitleFontStyle,
 				onActivated = onActivated,
 				thumbnail = thumbnail,
 				backgroundImage = Images[style.Theme.PlayerBackgroundDefault.Image],
@@ -297,6 +315,10 @@ function PlayerTile:render()
 					mouseEntered = self.state.mouseEntered,
 				})),
 				addSubtitleSpace = title == nil,
+				isCircular = self.props.isCircular,
+				horizontalAlignment = self.props.horizontalAlignment,
+				thumbnailFrameSize = self.props.thumbnailFrameSize,
+				openTypeFeatures = self.props.openTypeFeatures,
 			}),
 		})
 	end)

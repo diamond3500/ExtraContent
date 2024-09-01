@@ -13,7 +13,7 @@ local ContextActionService = game:GetService("ContextActionService")
 local CorePackages = game:GetService("CorePackages")
 
 local RobloxGui = CoreGui.RobloxGui
-local Util = require(RobloxGui.Modules.Settings.Utility)
+local Create = require(CorePackages.Workspace.Packages.AppCommonLib).Create
 
 local LaserPointer = require(RobloxGui.Modules.VR.LaserPointer)
 
@@ -22,6 +22,8 @@ local VRControllerModel = require(RobloxGui.Modules.VR.VRControllerModel)
 local SplashScreenManager = require(CorePackages.Workspace.Packages.SplashScreenManager).SplashScreenManager
 
 local SafetyBubble = require(script.Parent.SafetyBubble)
+
+local FFlagVRServiceControllerAPIs = require(RobloxGui.Modules.Flags.FFlagVRServiceControllerAPIs)
 
 local VRHub = {}
 local RegisteredModules = {}
@@ -35,7 +37,7 @@ VRHub.LaserPointer = nil
 VRHub.ControllerModelsEnabled = false
 VRHub.LeftControllerModel = nil
 VRHub.RightControllerModel = nil
-VRHub.ControllerModelsEnabledSetByDeveloper = true
+VRHub.ControllerModelsEnabledSetByDeveloper = true -- remove with FFlagVRServiceControllerAPIs
 
 VRHub.isFPSAtTarget = SplashScreenManager.isFPSAtTarget()
 VRHub.SafetyBubble = nil
@@ -77,11 +79,30 @@ local function enableControllerModels(enabled)
 	end
 end
 
+-- This function exists to support the deprecated lua API
+-- game.StarterGui:SetCore("VREnableControllerModels", "<value>")
+-- Any usage of these old APIs should redirect to the newer 
+-- VRService.ControllerModels = Enum.VRControllerModelMode.<Value>
 StarterGui:RegisterSetCore("VREnableControllerModels", function(enabled)
-	enabled = if enabled then true else false
-	VRHub.ControllerModelsEnabledSetByDeveloper = enabled
-	enableControllerModels(enabled)
+	if FFlagVRServiceControllerAPIs then
+		if enabled then
+			VRService.ControllerModels = Enum.VRControllerModelMode.Transparent
+		else
+			VRService.ControllerModels = Enum.VRControllerModelMode.Disabled
+		end
+	else
+		enabled = if enabled then true else false
+		VRHub.ControllerModelsEnabledSetByDeveloper = enabled
+		enableControllerModels(enabled)
+	end
 end)
+
+if FFlagVRServiceControllerAPIs then
+	VRService:GetPropertyChangedSignal("ControllerModels"):Connect(function()
+		enableControllerModels(VRService.ControllerModels == Enum.VRControllerModelMode.Transparent)
+	end)
+end
+
 
 local start = tick()
 local function onRenderSteppedLast()
@@ -152,7 +173,12 @@ local function onVREnabledChanged()
 				VRHub.LaserPointer:setMode(LaserPointer.Mode.Disabled)
 			end
 		end
-		enableControllerModels(VRHub.ControllerModelsEnabledSetByDeveloper)
+		if FFlagVRServiceControllerAPIs then
+			enableControllerModels(VRService.ControllerModels == Enum.VRControllerModelMode.Transparent)
+		else
+			enableControllerModels(VRHub.ControllerModelsEnabledSetByDeveloper)
+		end
+
 		RunService:BindToRenderStep(vrUpdateRenderstepName, Enum.RenderPriority.Last.Value, onRenderSteppedLast)
 
 		if VRHub.LaserPointer then
@@ -183,10 +209,18 @@ local function onVRSessionStateChanged()
 	if VRService.VRSessionState == Enum.VRSessionState.Focused then
 		if VRHub.LaserPointer and VRHub.LaserPointer.Mode.Disabled then
 			VRHub.LaserPointer:setMode(LaserPointer.Mode.Navigation)
-			enableControllerModels(VRHub.ControllerModelsEnabledSetByDeveloper)
+			if FFlagVRServiceControllerAPIs then
+				enableControllerModels(VRService.ControllerModels == Enum.VRControllerModelMode.Transparent)
+			else
+				enableControllerModels(VRHub.ControllerModelsEnabledSetByDeveloper)
+			end
 		end
 		if not VRHub.ControllerModelsEnabled then
-			enableControllerModels(VRHub.ControllerModelsEnabledSetByDeveloper)
+			if FFlagVRServiceControllerAPIs then
+				enableControllerModels(VRService.ControllerModels == Enum.VRControllerModelMode.Transparent)
+			else
+				enableControllerModels(VRHub.ControllerModelsEnabledSetByDeveloper)
+			end
 		end
 	else
 		if VRHub.LaserPointer and VRHub.LaserPointer.Mode.Navigation then
@@ -232,7 +266,7 @@ function VRHub:GetOpenedModules()
 	return result
 end
 
-VRHub.ModuleOpened = Util:Create("BindableEvent")({
+VRHub.ModuleOpened = Create("BindableEvent")({
 	Name = "VRModuleOpened",
 })
 --Wrapper function to document the arguments to the event
@@ -247,7 +281,7 @@ function VRHub:FireModuleOpened(moduleName)
 	end
 end
 
-VRHub.ModuleClosed = Util:Create("BindableEvent")({
+VRHub.ModuleClosed = Create("BindableEvent")({
 	Name = "VRModuleClosed",
 })
 --Wrapper function to document the arguments to the event
@@ -273,7 +307,7 @@ end
 
 VRHub.ShowHighlightedLeaveGameIcon = false
 
-VRHub.ShowHighlightedLeaveGameIconToggled = Util:Create("BindableEvent")({
+VRHub.ShowHighlightedLeaveGameIconToggled = Create("BindableEvent")({
 	Name = "ShowHighlightedLeaveGameIconToggled",
 })
 
@@ -287,11 +321,11 @@ end
 VRHub.ShowTopBar = true
 VRHub.ShowMoreMenu = false
 
-VRHub.ShowTopBarChanged = Util:Create("BindableEvent")({
+VRHub.ShowTopBarChanged = Create("BindableEvent")({
 	Name = "ShowTopBarChanged",
 })
 
-VRHub.ShowMoreMenuChanged = Util:Create("BindableEvent")({
+VRHub.ShowMoreMenuChanged = Create("BindableEvent")({
 	Name = "ShowMoreMenuChanged",
 })
 

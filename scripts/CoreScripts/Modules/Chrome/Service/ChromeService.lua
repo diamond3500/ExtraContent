@@ -1,4 +1,6 @@
 local CorePackages = game:GetService("CorePackages")
+local CoreGui = game:GetService("CoreGui")
+local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 local LocalizationService = game:GetService("LocalizationService")
 local UserInputService = game:GetService("UserInputService")
 local LuauPolyfill = require(CorePackages.Packages.LuauPolyfill)
@@ -12,19 +14,20 @@ local utils = require(script.Parent.ChromeUtils)
 local LocalStore = require(script.Parent.LocalStore)
 local ViewportUtil = require(script.Parent.ViewportUtil)
 local WindowSizeSignal = require(script.Parent.WindowSizeSignal)
+local ContainerSlotSignal = require(script.Parent.ContainerSlotSignal)
 local ObservableValue = utils.ObservableValue
 local NotifySignal = utils.NotifySignal
 local AvailabilitySignal = utils.AvailabilitySignal
 local Types = require(script.Parent.Types)
+local Constants = require(script.Parent.Parent.Unibar.Constants)
+local ChromeEnabled = require(script.Parent.Parent.Enabled)
 
 local GetFFlagEnableUnibarSneakPeak = require(script.Parent.Parent.Flags.GetFFlagEnableUnibarSneakPeak)
 local GetFFlagEnableChromeFTUX = require(script.Parent.Parent.Flags.GetFFlagEnableChromeFTUX)
 local GetFFlagEnableUnibarMaxDefaultOpen = require(script.Parent.Parent.Flags.GetFFlagEnableUnibarMaxDefaultOpen)
 local GetFFlagEnableChromeEscapeFix = require(script.Parent.Parent.Flags.GetFFlagEnableChromeEscapeFix)
 local GetFFlagEnableChromeDefaultOpen = require(script.Parent.Parent.Flags.GetFFlagEnableChromeDefaultOpen)
-local GetFFlagNewUnibarIA = require(script.Parent.Parent.Flags.GetFFlagNewUnibarIA)
 local GetFFlagEnableChromePinIntegrations = require(script.Parent.Parent.Flags.GetFFlagEnableChromePinIntegrations)
-local EnabledPinnedChat = require(script.Parent.Parent.Flags.GetFFlagEnableChromePinnedChat)()
 local GetFFlagChromeSurveySupport = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagChromeSurveySupport
 local GetFFlagOpenControlsOnMenuOpen = require(script.Parent.Parent.Flags.GetFFlagOpenControlsOnMenuOpen)
 local GetFFlagSupportCompactUtility = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagSupportCompactUtility
@@ -32,6 +35,9 @@ local GetFFlagDisableMostRecentlyUsed = require(script.Parent.Parent.Flags.GetFF
 local GetFFlagEnableSaveUserPins = require(script.Parent.Parent.Flags.GetFFlagEnableSaveUserPins)
 local GetFFlagUseSelfieViewFlatIcon = require(script.Parent.Parent.Flags.GetFFlagUseSelfieViewFlatIcon)
 local GetFFlagEnableUserPinPortraitFix = require(script.Parent.Parent.Flags.GetFFlagEnableUserPinPortraitFix)
+local GetFFlagSupportChromeContainerSizing = require(script.Parent.Parent.Flags.GetFFlagSupportChromeContainerSizing)
+local GetFFlagFixChromeReferences = require(RobloxGui.Modules.Flags.GetFFlagFixChromeReferences)
+local GetFFlagDisableCompactUtilityCore = require(script.Parent.Parent.Flags.GetFFlagDisableCompactUtilityCore)
 local FFlagPreserveWindowsCompactUtility = game:DefineFastFlag("PreserveWindowsCompactUtility", false)
 
 local DEFAULT_PINS = game:DefineFastString("ChromeServiceDefaultPins", "leaderboard,trust_and_safety")
@@ -105,6 +111,7 @@ export type ChromeService = {
 	register: (ChromeService, Types.IntegrationRegisterProps) -> Types.IntegrationProps,
 	updateMenuList: (ChromeService) -> (),
 	availabilityChanged: (ChromeService, Types.IntegrationProps) -> (),
+	containerWidthSlotsChanged: (ChromeService, Types.IntegrationProps) -> (),
 	subMenuNotifications: (ChromeService, subMenuId: Types.IntegrationId) -> utils.NotifySignal,
 	totalNotifications: (ChromeService) -> utils.NotifySignal,
 	notificationIndicator: (ChromeService) -> ObservableIntegration,
@@ -141,6 +148,7 @@ export type ChromeService = {
 	toggleWindow: (ChromeService, componentId: Types.IntegrationId) -> (),
 	isWindowOpen: (ChromeService, componentId: Types.IntegrationId) -> boolean,
 	updateWindowSizeSignals: (ChromeService) -> (),
+	updateContainerSlotSignals: (ChromeService) -> (),
 	windowPosition: (ChromeService, componentId: Types.IntegrationId) -> UDim2?,
 	updateScreenSize: (
 		ChromeService,
@@ -151,6 +159,7 @@ export type ChromeService = {
 	) -> (),
 	updateWindowPosition: (ChromeService, componentId: Types.IntegrationId, position: UDim2) -> (),
 	createIconProps: (ChromeService, Types.IntegrationId, number?, boolean?) -> Types.IntegrationComponentProps,
+	createContainerProps: (ChromeService, Types.IntegrationId, number?, boolean?) -> Types.IntegrationComponentProps,
 	orderAlignment: (ChromeService) -> ObservableAlignment,
 	configureOrderAlignment: (ChromeService, alignment: Enum.HorizontalAlignment) -> (),
 
@@ -282,6 +291,14 @@ function ChromeService.new(): ChromeService
 
 	local service = (setmetatable(self, ChromeService) :: any) :: ChromeService
 
+	if GetFFlagFixChromeReferences() then
+		--[[ If you're hitting this assert, try the following:
+			local Chrome = RobloxGui.Modules.Chrome
+			local ChromeEnabled = require(Chrome.Enabled)
+			local ChromeService = if ChromeEnabled() then require(Chrome.Service) else nil ]]
+		assert(ChromeEnabled(), "ChromeService should not be initialized when Chrome is not enabled")
+	end
+
 	-- todo: Consider moving this outside of ChromeService to reduce dependency on Roblox instances
 	ViewportUtil.viewport:connect(function(viewportInfo: ViewportUtil.ViewportInfo)
 		service:updateScreenSize(
@@ -360,18 +377,22 @@ function ChromeService:updateScreenSize(
 
 	if isMobileDevice then
 		if isTinyPortrait then
-			mostRecentlyUsedAndPinnedSlots = 0
+			mostRecentlyUsedAndPinnedSlots = if GetFFlagSupportChromeContainerSizing()
+				then Constants.MOBILE_TINY_PORTRAIT_SLOTS - Constants.CORE_SLOTS
+				else 0
 		elseif isPortrait then
-			mostRecentlyUsedAndPinnedSlots = 1
+			mostRecentlyUsedAndPinnedSlots = if GetFFlagSupportChromeContainerSizing()
+				then Constants.MOBILE_PORTRAIT_SLOTS - Constants.CORE_SLOTS
+				else 1
 		else
-			mostRecentlyUsedAndPinnedSlots = 2
-		end
-
-		if EnabledPinnedChat and not GetFFlagNewUnibarIA() then
-			mostRecentlyUsedAndPinnedSlots = math.max(0, mostRecentlyUsedAndPinnedSlots - 1)
+			mostRecentlyUsedAndPinnedSlots = if GetFFlagSupportChromeContainerSizing()
+				then Constants.MOBILE_LANDSCAPE_SLOTS - Constants.CORE_SLOTS
+				else 2
 		end
 	else
-		mostRecentlyUsedAndPinnedSlots = 4
+		mostRecentlyUsedAndPinnedSlots = if GetFFlagSupportChromeContainerSizing()
+			then Constants.NON_MOBILE_SLOTS - Constants.CORE_SLOTS
+			else 4
 	end
 
 	-- 2) Repopulate most recently and user pin lists if the slot count changes
@@ -387,6 +408,9 @@ function ChromeService:updateScreenSize(
 
 	-- 3) Update window size signals
 	self:updateWindowSizeSignals()
+
+	-- 4) Update container slot width signals
+	self:updateContainerSlotSignals()
 end
 
 function ChromeService:rebuildMostRecentlyUsed()
@@ -453,6 +477,16 @@ function ChromeService:updateWindowSizeSignals()
 	for i, v in self._integrations do
 		if v.windowSize then
 			v.windowSize:updateConstraints()
+		end
+	end
+end
+
+function ChromeService:updateContainerSlotSignals()
+	if GetFFlagSupportChromeContainerSizing() then
+		for i, v in self._integrations do
+			if v.containerWidthSlots then
+				v.containerWidthSlots:updateConstraints()
+			end
 		end
 	end
 end
@@ -733,6 +767,22 @@ function ChromeService:register(component: Types.IntegrationRegisterProps): Type
 		component.windowSize = WindowSizeSignal.new()
 	end
 
+	-- Add a containerWidthSlots signal for integrations with containers if missing
+	if
+		GetFFlagSupportChromeContainerSizing()
+		and component.containerWidthSlots == nil
+		and component.components
+		and component.components.Container
+	then
+		component.containerWidthSlots = ContainerSlotSignal.new()
+	end
+
+	if GetFFlagSupportChromeContainerSizing() and component.containerWidthSlots then
+		conns[#conns + 1] = component.containerWidthSlots:connect(function()
+			self:containerWidthSlotsChanged(component :: Types.IntegrationProps)
+		end)
+	end
+
 	component = self:updateLocalization(component)
 
 	local populatedComponent = component :: Types.IntegrationProps
@@ -771,6 +821,36 @@ function ChromeService:createIconProps(
 	end
 end
 
+function ChromeService:createContainerProps(
+	id: Types.IntegrationId,
+	order: number?,
+	recentlyUsedItem: boolean?
+): Types.IntegrationComponentProps
+	local iconOrder = order or 0
+	if self._integrations[id] then
+		return {
+			id = id,
+			children = {},
+			order = iconOrder,
+			component = self._integrations[id].components.Container,
+			integration = self._integrations[id],
+			isDivider = false,
+			recentlyUsedItem = recentlyUsedItem or false,
+			activated = function()
+				self:activate(id)
+			end,
+		}
+	else
+		return {
+			id = id,
+			children = {},
+			order = iconOrder,
+			activated = noop,
+			integration = DummyIntegration,
+		}
+	end
+end
+
 function reverseOrder(t)
 	local n = #t
 	local revOrder = {}
@@ -791,6 +871,11 @@ function ChromeService:updateMenuList()
 	local function iconProps(id, recentlyUsedItem: boolean?): Types.IntegrationComponentProps
 		order += 1
 		return self:createIconProps(id, order, recentlyUsedItem)
+	end
+
+	local function containerProps(id, recentlyUsedItem: boolean?): Types.IntegrationComponentProps
+		order += 1
+		return self:createContainerProps(id, order, recentlyUsedItem)
 	end
 
 	local function windowProps(id): Types.IntegrationComponentProps
@@ -888,7 +973,13 @@ function ChromeService:updateMenuList()
 								validIconCount += 1
 							end
 						else
-							table.insert(parent.children, iconProps(v))
+							if
+								GetFFlagSupportChromeContainerSizing() and self._integrations[v].components.Container
+							then
+								table.insert(parent.children, containerProps(v))
+							else
+								table.insert(parent.children, iconProps(v))
+							end
 							validIconCount += 1
 						end
 					end
@@ -940,6 +1031,11 @@ end
 
 function ChromeService:availabilityChanged(component: Types.IntegrationProps)
 	self:updateNotificationTotals()
+	self:updateMenuList()
+end
+
+-- Update menu list when visible container size changes
+function ChromeService:containerWidthSlotsChanged(component: Types.IntegrationProps)
 	self:updateMenuList()
 end
 
@@ -1046,7 +1142,7 @@ function ChromeService:configureSubMenu(parent: Types.IntegrationId, menuConfig:
 end
 
 function ChromeService:configureCompactUtility(utility: Types.CompactUtilityId, menuConfig: Types.MenuConfig)
-	if GetFFlagSupportCompactUtility() then
+	if GetFFlagSupportCompactUtility() and not GetFFlagDisableCompactUtilityCore() then
 		self._compactUtilityConfig[utility] = menuConfig
 		self:updateMenuList()
 	end
@@ -1054,7 +1150,7 @@ end
 
 function ChromeService:toggleCompactUtility(utility: Types.CompactUtilityId)
 	local currentUtility = self._currentCompactUtility:get()
-	if GetFFlagSupportCompactUtility() then
+	if GetFFlagSupportCompactUtility() and not GetFFlagDisableCompactUtilityCore() then
 		-- turn utility on if no current compact utility or a different utility turned on
 		if not currentUtility or currentUtility ~= utility then
 			self._currentCompactUtility:set(utility)

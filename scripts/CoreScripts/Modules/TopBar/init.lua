@@ -9,6 +9,7 @@ local LocalizationService = game:GetService("LocalizationService")
 local Localization = require(CorePackages.Workspace.Packages.InExperienceLocales).Localization
 local LocalizationProvider = require(CorePackages.Workspace.Packages.Localization).LocalizationProvider
 local DesignTokenProvider = require(CorePackages.Workspace.Packages.Style).DesignTokenProvider
+local CrossExperienceVoice = require(CorePackages.Workspace.Packages.CrossExperienceVoice)
 
 local Roact = require(CorePackages.Roact)
 local Rodux = require(CorePackages.Rodux)
@@ -43,6 +44,7 @@ local TopBarAppPolicy = require(script.TopBarAppPolicy)
 local SetSmallTouchDevice = require(script.Actions.SetSmallTouchDevice)
 local SetInspectMenuOpen = require(script.Actions.SetInspectMenuOpen)
 local SetGamepadMenuOpen = require(script.Actions.SetGamepadMenuOpen)
+local SetGamepadNavigationDialogOpen = require(script.Actions.SetGamepadNavigationDialogOpen)
 local UpdateUnreadMessagesBadge = require(script.Actions.UpdateUnreadMessagesBadge)
 
 local GetCanChat = require(script.Thunks.GetCanChat)
@@ -57,6 +59,11 @@ local GetFFlagEnableTeleportBackButton = require(RobloxGui.Modules.Flags.GetFFla
 local SharedFlags = require(CorePackages.Workspace.Packages.SharedFlags)
 local FFlagAddMenuNavigationToggleDialog = SharedFlags.FFlagAddMenuNavigationToggleDialog
 local FFlagEnableGamepadMenuSelector = SharedFlags.FFlagEnableGamepadMenuSelector
+local FFlagGamepadNavigationDialogABTest = require(script.Flags.FFlagGamepadNavigationDialogABTest)
+
+-- Cross Experience Voice
+local GetFFlagEnableCrossExpVoice = SharedFlags.GetFFlagEnableCrossExpVoice
+local CrossExperienceVoiceComponent = CrossExperienceVoice.Component
 
 -- FTUX
 local FTUX = RobloxGui.Modules.FTUX
@@ -134,10 +141,12 @@ function TopBar.new()
 	-- Nest Providers in reverse order of hierarchy
 	local TopBarWithProviders = Roact.createElement(TopBarApp)
 
-	if FFlagAddMenuNavigationToggleDialog then
+	if FFlagAddMenuNavigationToggleDialog or FFlagGamepadNavigationDialogABTest then
 		TopBarWithProviders = Roact.createElement(DesignTokenProvider, {
 			tokenMappers = {
-				MenuNavigationPrompt = if FFlagEnableGamepadMenuSelector then MenuNavigationPromptTokenMapper else nil,
+				MenuNavigationPrompt = if (FFlagEnableGamepadMenuSelector or FFlagGamepadNavigationDialogABTest)
+					then MenuNavigationPromptTokenMapper
+					else nil,
 			},
 		}, {
 			TopBarApp = TopBarWithProviders,
@@ -165,6 +174,7 @@ function TopBar.new()
 								})
 							or nil,
 						TopBarApp = (not GetFFlagEnableTeleportBackButton()) and TopBarWithProviders or nil,
+						CrossExperienceVoice = GetFFlagEnableCrossExpVoice() and Roact.createElement(CrossExperienceVoiceComponent) or nil,
 					}),
 				}),
 			})
@@ -179,6 +189,27 @@ function TopBar.new()
 		self.store:dispatch(UpdateUnreadMessagesBadge(1))
 	end)
 
+	if FFlagGamepadNavigationDialogABTest then
+		local UserInputService = game:GetService("UserInputService")
+		local connection = nil
+		local function disconnectGamepadConnected()
+			if connection then
+				connection:Disconnect()
+				connection = nil
+			end
+		end
+		if UserInputService:GetGamepadConnected(Enum.UserInputType.Gamepad1) then
+			self:setGamepadNavigationDialogOpen(true)
+		else
+			connection = UserInputService.GamepadConnected:Connect(function()
+				self:setGamepadNavigationDialogOpen(true)
+				disconnectGamepadConnected()
+			end)
+		end
+
+		GuiService:GetPropertyChangedSignal("MenuIsOpen"):Connect(disconnectGamepadConnected)
+	end
+
 	return self
 end
 
@@ -188,6 +219,10 @@ end
 
 function TopBar:setGamepadMenuOpen(open)
 	self.store:dispatch(SetGamepadMenuOpen(open))
+end
+
+function TopBar:setGamepadNavigationDialogOpen(open)
+	self.store:dispatch(SetGamepadNavigationDialogOpen(open))
 end
 
 return TopBar.new()

@@ -1,11 +1,13 @@
 return function()
 	local CorePackages = game:GetService("CorePackages")
-	local Players = game:GetService("Players")
 
 	local Roact = require(CorePackages.Roact)
 	local Rodux = require(CorePackages.Rodux)
 	local RoactRodux = require(CorePackages.RoactRodux)
 	local UnitTestHelpers = require(CorePackages.Workspace.Packages.UnitTestHelpers)
+
+	local Localization = require(CorePackages.Workspace.Packages.InExperienceLocales).Localization
+	local LocalizationProvider = require(CorePackages.Workspace.Packages.Localization).LocalizationProvider
 
 	local PublishAvatarPromptFolder = script.Parent.Parent
 	local Reducer = require(PublishAvatarPromptFolder.Reducer)
@@ -26,15 +28,9 @@ return function()
 				Rodux.thunkMiddleware,
 			})
 
-			local humanoidModel = Players:CreateHumanoidModelFromDescription(
-				Instance.new("HumanoidDescription"),
-				Enum.HumanoidRigType.R15
-			)
-
 			store:dispatch(
 				OpenPublishAvatarPrompt(
 					PromptType.PublishAvatar,
-					humanoidModel,
 					"12345",
 					{ Enum.ExperienceAuthScope.CreatorAssetsCreate }
 				)
@@ -44,8 +40,12 @@ return function()
 				store = store,
 			}, {
 				ThemeProvider = UnitTestHelpers.createStyleProvider({
-					PublishAvatarPrompt = Roact.createElement(PublishAvatarPrompt, {
-						screenSize = Vector2.new(1920, 1080),
+					LocalizationProvider = Roact.createElement(LocalizationProvider, {
+						localization = Localization.new("en-us"),
+					}, {
+						PublishAvatarPrompt = Roact.createElement(PublishAvatarPrompt, {
+							screenSize = Vector2.new(1920, 1080),
+						}),
 					}),
 				}),
 			})

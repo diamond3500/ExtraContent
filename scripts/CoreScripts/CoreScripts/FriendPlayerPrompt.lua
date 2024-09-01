@@ -10,20 +10,22 @@ local StarterGui = game:GetService("StarterGui")
 local PlayersService = game:GetService("Players")
 local CoreGuiService = game:GetService("CoreGui")
 local AnalyticsService = game:GetService("RbxAnalyticsService")
+local CorePackages = game:GetService("CorePackages")
 
-local RobloxGui = CoreGuiService:WaitForChild("RobloxGui")
+
+local RobloxGui = CoreGuiService.RobloxGui
 local LocalPlayer = PlayersService.LocalPlayer
 while LocalPlayer == nil do
 	PlayersService.ChildAdded:wait()
 	LocalPlayer = PlayersService.LocalPlayer
 end
 
-local CoreGuiModules = RobloxGui:WaitForChild("Modules")
-local PromptCreator = require(CoreGuiModules:WaitForChild("PromptCreator"))
-local SocialUtil = require(CoreGuiModules:WaitForChild("SocialUtil"))
-local FriendingUtility = require(CoreGuiModules:WaitForChild("FriendingUtility"))
+local CoreGuiModules = RobloxGui.Modules
+local PromptCreator = require(CoreGuiModules.PromptCreator)
+local SocialUtil = require(CoreGuiModules.SocialUtil)
+local FriendingUtility = require(CoreGuiModules.FriendingUtility)
 
-local RobloxTranslator = require(CoreGuiModules:WaitForChild("RobloxTranslator"))
+local RobloxTranslator = require(CoreGuiModules.RobloxTranslator)
 
 local LegacyThumbnailUrls = require(CoreGuiModules.Common.LegacyThumbnailUrls)
 

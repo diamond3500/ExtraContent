@@ -9,8 +9,9 @@ local LocalizationService = game:GetService("LocalizationService")
 local HttpRbxApiService = game:GetService("HttpRbxApiService")
 local HttpService = game:GetService("HttpService")
 local VRService = game:GetService("VRService")
+local CorePackages = game:GetService("CorePackages")
 
-local create = require(RobloxGui:WaitForChild("Modules"):WaitForChild("Common"):WaitForChild("Create"))
+local Create = require(CorePackages:WaitForChild("Workspace"):WaitForChild("Packages"):WaitForChild("AppCommonLib")).Create -- WaitForChild used here because Workspace is not available on startup
 local ErrorPrompt = require(RobloxGui.Modules.ErrorPrompt)
 local Url = require(RobloxGui.Modules.Common.Url)
 
@@ -31,16 +32,9 @@ local LEAVE_GAME_FRAME_WAITS = 2
 local DEFAULT_ERROR_PROMPT_KEY = "ErrorPrompt"
 
 local FFlagCoreScriptShowTeleportPrompt = require(RobloxGui.Modules.Flags.FFlagCoreScriptShowTeleportPrompt)
-local GetFFlagFixChromeAllowlistWait = require(RobloxGui.Modules.Flags.GetFFlagFixChromeAllowlistWait)
 local FFlagErrorPromptResizesHeight = require(RobloxGui.Modules.Flags.FFlagErrorPromptResizesHeight)
 
-local fflagCreatorBanWhitespaceSub = game:DefineFastFlag("CreatorBanWhitespaceSub", false)
-local fflagCreatorBanReconnectDisabled = game:DefineFastFlag("CreatorBanReconnectDisabled", false)
-
-local TopBarConstant
-if not GetFFlagFixChromeAllowlistWait() then
-	TopBarConstant = require(RobloxGui.Modules.TopBar.Constants)
-end
+local FFlagRemoveKickWhitespaceSub = require(RobloxGui.Modules.Flags.FFlagRemoveKickWhitespaceSub)
 
 local function safeGetFInt(name, defaultValue)
 	local success, result = pcall(function()
@@ -58,9 +52,6 @@ end
 
 -- use the default TopBarHeight before Chrome service loads
 local inGameGlobalGuiInset = 36
-if not GetFFlagFixChromeAllowlistWait() then
-	inGameGlobalGuiInset = TopBarConstant.TopBarHeight
-end
 
 local defaultTimeoutTime = safeGetFInt("DefaultTimeoutTimeMs", 10000) / 1000
 
@@ -140,7 +131,7 @@ local function fetchStarterPlaceId(universeId)
 end
 
 -- Screengui holding the prompt and make it on top of blur
-local screenGui = create("ScreenGui")({
+local screenGui = Create("ScreenGui")({
 	Parent = CoreGui,
 	Name = "RobloxPromptGui",
 	OnTopOfCoreBlur = true,
@@ -149,7 +140,7 @@ local screenGui = create("ScreenGui")({
 })
 
 -- semi-transparent frame overlay
-local promptOverlay = create("Frame")({
+local promptOverlay = Create("Frame")({
 	Name = "promptOverlay",
 	BackgroundColor3 = Color3.new(0, 0, 0),
 	BackgroundTransparency = 1,
@@ -159,16 +150,14 @@ local promptOverlay = create("Frame")({
 	Parent = screenGui,
 })
 
-if GetFFlagFixChromeAllowlistWait() then
-	-- Update promptOverlay height after ChromeService fully loads
-	coroutine.wrap(function()
-		local TopBarConstant = require(RobloxGui.Modules.TopBar.Constants)
-		local updatedInGameGlobalGuiInset = TopBarConstant.TopBarHeight
+-- Update promptOverlay height after ChromeService fully loads
+coroutine.wrap(function()
+	local TopBarConstant = require(RobloxGui.Modules.TopBar.Constants)
+	local updatedInGameGlobalGuiInset = TopBarConstant.TopBarHeight
 
-		promptOverlay.Size = UDim2.new(1, 0, 1, updatedInGameGlobalGuiInset)
-		promptOverlay.Position = UDim2.new(0, 0, 0, -updatedInGameGlobalGuiInset)
-	end)()
-end
+	promptOverlay.Size = UDim2.new(1, 0, 1, updatedInGameGlobalGuiInset)
+	promptOverlay.Position = UDim2.new(0, 0, 0, -updatedInGameGlobalGuiInset)
+end)()
 
 -- Button Callbacks --
 local reconnectFunction = function()
@@ -239,16 +228,13 @@ local reconnectDisabledList = {
 	[Enum.ConnectionError.PlacelaunchUserLeft] = true,
 	[Enum.ConnectionError.PlacelaunchRestricted] = true,
 	[Enum.ConnectionError.PlacelaunchUserPrivacyUnauthorized] = true,
+	[Enum.ConnectionError.PlacelaunchCreatorBan] = true,
 }
 -- When removing engine feature CoreGuiOverflowDetection, move this into the above list.
 if coreGuiOverflowDetection then
 	-- Older versions of the engine don't have this variant, using subscript
 	-- syntax instead avoids a possible type error.
 	reconnectDisabledList[Enum.ConnectionError["DisconnectClientFailure"]] = true
-end
-
-if fflagCreatorBanReconnectDisabled then
-	reconnectDisabledList[Enum.ConnectionError['PlacelaunchCreatorBan']] = true
 end
 
 local ButtonList = {
@@ -493,8 +479,10 @@ local function getErrorString(errorMsg: string, errorCode, reconnectError)
 	end
 
 	if errorCode == Enum.ConnectionError.DisconnectLuaKick then
-		-- Collapse all whitespace to single spaces, destroying any newlines.
-		errorMsg = errorMsg:gsub("%s+", " ")
+		if not FFlagRemoveKickWhitespaceSub() then
+			-- Collapse all whitespace to single spaces, destroying any newlines.
+			errorMsg = errorMsg:gsub("%s+", " ")
+		end
 		-- Limit final message length to a reasonable value
 		errorMsg = errorMsg:sub(1, fintMaxKickMessageLength)
 		
@@ -507,12 +495,6 @@ local function getErrorString(errorMsg: string, errorCode, reconnectError)
 			return attemptTranslation
 		end
 		return errorMsg
-	end
-
-	if fflagCreatorBanWhitespaceSub and not FFlagErrorPromptResizesHeight() then
-		if errorCode == Enum.ConnectionError.PlacelaunchCreatorBan then
-			return errorMsg:gsub("%s+", " ")
-		end
 	end
 
 	local key = string.gsub(tostring(errorCode), "Enum", "InGame")

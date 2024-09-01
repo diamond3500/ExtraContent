@@ -9,17 +9,17 @@
 local StarterGui = game:GetService("StarterGui")
 local PlayersService = game:GetService("Players")
 local CoreGuiService = game:GetService("CoreGui")
-
-local RobloxGui = CoreGuiService:WaitForChild("RobloxGui")
+local CorePackages = game:GetService("CorePackages")
+local RobloxGui = CoreGuiService.RobloxGui
 local LocalPlayer = PlayersService.LocalPlayer
 while LocalPlayer == nil do
 	PlayersService.ChildAdded:wait()
 	LocalPlayer = PlayersService.LocalPlayer
 end
 
-local CoreGuiModules = RobloxGui:WaitForChild("Modules")
-local PromptCreator = require(CoreGuiModules:WaitForChild("PromptCreator"))
-local SocialUtil = require(CoreGuiModules:WaitForChild("SocialUtil"))
+local CoreGuiModules = RobloxGui.Modules
+local PromptCreator = require(CoreGuiModules.PromptCreator)
+local SocialUtil = require(CoreGuiModules.SocialUtil)
 local BlockingUtility = require(CoreGuiModules.BlockingUtility)
 
 local REGULAR_THUMBNAIL_IMAGE_SIZE = Enum.ThumbnailSize.Size150x150

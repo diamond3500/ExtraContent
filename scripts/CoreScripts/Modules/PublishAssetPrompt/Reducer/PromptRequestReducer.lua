@@ -15,7 +15,9 @@ local CloseOpenPrompt = require(Root.Actions.CloseOpenPrompt)
 local OpenResultModal = require(Root.Actions.OpenResultModal)
 local CloseResultModal = require(Root.Actions.CloseResultModal)
 local OpenValidationErrorModal = require(Root.Actions.OpenValidationErrorModal)
-local SetHumanoidModel = require(Root.Actions.SetHumanoidModel)
+local SetSerializedModel = require(Root.Actions.SetSerializedModel)
+local SetPriceInRobux = require(Root.Actions.SetPriceInRobux)
+local SetPromptVisibility = require(Root.Actions.SetPromptVisibility)
 
 local EMPTY_STATE = {
 	promptInfo = {}, -- Contains all data required by the prompt that is currently being shown
@@ -49,10 +51,18 @@ local PromptRequestReducer = Rodux.createReducer(EMPTY_STATE, {
 		})
 	end,
 
-	[SetHumanoidModel.name] = function(state, action)
+	[SetSerializedModel.name] = function(state, action)
 		return Cryo.Dictionary.join(state, {
 			promptInfo = Cryo.Dictionary.join(state.promptInfo, {
-				humanoidModel = action.humanoidModel,
+				serializedModel = action.serializedModel,
+			}),
+		})
+	end,
+
+	[SetPriceInRobux.name] = function(state, action)
+		return Cryo.Dictionary.join(state, {
+			promptInfo = Cryo.Dictionary.join(state.promptInfo, {
+				priceInRobux = action.priceInRobux,
 			}),
 		})
 	end,
@@ -88,6 +98,14 @@ local PromptRequestReducer = Rodux.createReducer(EMPTY_STATE, {
 		return Cryo.Dictionary.join(state, {
 			promptInfo = Cryo.Dictionary.join(state.promptInfo, {
 				errorMessage = action.errorMessage,
+			}),
+		})
+	end,
+
+	[SetPromptVisibility.name] = function(state, action)
+		return Cryo.Dictionary.join(state, {
+			promptInfo = Cryo.Dictionary.join(state.promptInfo, {
+				promptVisible = action.promptVisible,
 			}),
 		})
 	end,

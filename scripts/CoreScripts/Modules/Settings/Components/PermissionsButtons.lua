@@ -12,6 +12,8 @@ local FaceAnimatorService = game:GetService("FaceAnimatorService")
 local StarterGui = game:GetService("StarterGui")
 local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 local VideoCaptureService = game:GetService("VideoCaptureService")
+local AnalyticsService = game:GetService("RbxAnalyticsService")
+local IXPService = game:GetService("IXPService")
 
 local Roact = require(CorePackages.Roact)
 local UIBlox = require(CorePackages.UIBlox)
@@ -41,13 +43,19 @@ local FFlagAvatarChatCoreScriptSupport = require(RobloxGui.Modules.Flags.FFlagAv
 local GetFFlagUpdateSelfieViewOnBan = require(RobloxGui.Modules.Flags.GetFFlagUpdateSelfieViewOnBan)
 local GetFFlagShowMicConnectingIconAndToast = require(RobloxGui.Modules.Flags.GetFFlagShowMicConnectingIconAndToast)
 local FFlagMuteNonFriendsEvent = require(RobloxGui.Modules.Flags.FFlagMuteNonFriendsEvent)
-local getFFlagDoNotPromptCameraPermissionsOnMount =
-require(RobloxGui.Modules.Flags.getFFlagDoNotPromptCameraPermissionsOnMount)
 local GetFFlagRemoveInGameChatBubbleChatReferences =
 	require(RobloxGui.Modules.Flags.GetFFlagRemoveInGameChatBubbleChatReferences)
 local GetFFlagJoinWithoutMicPermissions = require(RobloxGui.Modules.Flags.GetFFlagJoinWithoutMicPermissions)
 local GetFFlagEnableInExpVoiceUpsell = require(RobloxGui.Modules.Flags.GetFFlagEnableInExpVoiceUpsell)
+local GetFFlagEnableInExpJoinVoiceAnalytics = require(RobloxGui.Modules.Flags.GetFFlagEnableInExpJoinVoiceAnalytics)
 local GetFFlagPassShouldRequestPermsArg = require(RobloxGui.Modules.Flags.GetFFlagPassShouldRequestPermsArg)
+local EngineFeatureRbxAnalyticsServiceExposePlaySessionId =
+	game:GetEngineFeature("RbxAnalyticsServiceExposePlaySessionId")
+local GetFFlagFixPermissionsButtonsEvents = require(RobloxGui.Modules.Settings.Flags.GetFFlagFixPermissionsButtonsEvents)
+local GetFStringVoiceUpsellLayer = require(CorePackages.Workspace.Packages.SharedFlags).GetFStringVoiceUpsellLayer
+local GetFFlagUseMicPermForEnrollment = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagUseMicPermForEnrollment
+local GetFFlagEnableInExpPhoneVoiceUpsellEntrypoints = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagEnableInExpPhoneVoiceUpsellEntrypoints 
+local GetFFlagEnableShowVoiceUI = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagEnableShowVoiceUI 
 
 if GetFFlagRemoveInGameChatBubbleChatReferences() then
 	displayCameraDeniedToast = require(RobloxGui.Modules.VoiceChat.Helpers.displayCameraDeniedToast)
@@ -82,6 +90,7 @@ PermissionsButtons.validateProps = t.strictInterface({
 	shouldFillScreen = t.boolean,
 	selfViewOpen = t.boolean,
 	useNewMenuTheme = t.boolean,
+	hubRef = t.any,
 })
 
 local function createDivider(layoutOrder)
@@ -109,14 +118,17 @@ function PermissionsButtons:init()
 		then true
 		else false
 
-	local showSelfView = FFlagAvatarChatCoreScriptSupport
-		and StarterGui:GetCoreGuiEnabled(Enum.CoreGuiType.SelfView)
-		and (self.state.hasCameraPermissions or self.state.hasMicPermissions)
-	if getFFlagDoNotPromptCameraPermissionsOnMount() then
+	local showSelfView = nil
+	if GetFFlagEnableShowVoiceUI() then
+		showSelfView = FFlagAvatarChatCoreScriptSupport
+			and StarterGui:GetCoreGuiEnabled(Enum.CoreGuiType.SelfView)
+			and (isCamEnabledForUserAndPlace() or (self.state.hasMicPermissions and VoiceChatServiceManager.voiceUIVisible) or self.state.hasCameraPermissions)
+	else
 		showSelfView = FFlagAvatarChatCoreScriptSupport
 			and StarterGui:GetCoreGuiEnabled(Enum.CoreGuiType.SelfView)
 			and (isCamEnabledForUserAndPlace() or self.state.hasMicPermissions or self.state.hasCameraPermissions)
-	end
+	end		
+
 	self:setState({
 		allPlayersMuted = false,
 		microphoneEnabled = microphoneEnabled,
@@ -127,6 +139,7 @@ function PermissionsButtons:init()
 		showSelfView = showSelfView,
 		hasCameraPermissions = false,
 		hasMicPermissions = false,
+		isFetchingMicPermissions = if GetFFlagUseMicPermForEnrollment() then true else nil,
 	})
 
 	if GetFFlagShowMicConnectingIconAndToast() then
@@ -141,7 +154,11 @@ function PermissionsButtons:init()
 					-- Before we enable and join voice through the upsell, mic permissions state should be false. However
 					-- after enabling and connecting to voice, the user should have provided mic permissions. We should
 					-- confirm that we have mic permissions so we can change that state and update the UI accordingly.
-					if GetFFlagEnableInExpVoiceUpsell() and GetFFlagPassShouldRequestPermsArg() and not self.state.hasMicPermissions then
+					if
+						GetFFlagEnableInExpVoiceUpsell()
+						and GetFFlagPassShouldRequestPermsArg()
+						and not self.state.hasMicPermissions
+					then
 						self:getMicPermission(false)
 					end
 				end
@@ -201,6 +218,24 @@ function PermissionsButtons:init()
 		})
 	end
 
+	-- voice UI visibility
+	if GetFFlagEnableShowVoiceUI() then
+		self:setState({
+			isVoiceUIVisible = if VoiceChatServiceManager.voiceUIVisible ~= nil then VoiceChatServiceManager.voiceUIVisible else false,
+		})
+
+		VoiceChatServiceManager.showVoiceUI.Event:Connect(function()
+			self:setState({
+				isVoiceUIVisible = true,
+			})
+		end)
+		VoiceChatServiceManager.hideVoiceUI.Event:Connect(function()
+			self:setState({
+				isVoiceUIVisible = false,
+			})
+		end)
+	end
+
 	-- toggle video permissions
 	self.toggleVideo = function()
 		if not FaceAnimatorService or not FaceAnimatorService:IsStarted() then
@@ -218,7 +253,7 @@ function PermissionsButtons:init()
 
 	-- toggle video permissions and request device permissions if denied
 	self.onVideoButtonPressed = function()
-		if getFFlagDoNotPromptCameraPermissionsOnMount() and not self.state.hasCameraPermissions then
+		if not self.state.hasCameraPermissions then
 			-- If the user has not granted permissions
 			local callback = function(response)
 				self:setState({
@@ -260,10 +295,16 @@ function PermissionsButtons:init()
 	self.onCoreGuiChanged = function()
 		local coreGuiState = StarterGui:GetCoreGuiEnabled(Enum.CoreGuiType.SelfView)
 		if self.state.showSelfView ~= coreGuiState then
-			local showSelfView = FFlagAvatarChatCoreScriptSupport
-				and coreGuiState
-				and (self.state.hasCameraPermissions or self.state.hasMicPermissions)
-			if getFFlagDoNotPromptCameraPermissionsOnMount() then
+			local showSelfView = nil
+			if GetFFlagEnableShowVoiceUI() then
+				showSelfView = FFlagAvatarChatCoreScriptSupport
+					and StarterGui:GetCoreGuiEnabled(Enum.CoreGuiType.SelfView)
+					and (
+						isCamEnabledForUserAndPlace()
+						or (self.state.hasMicPermissions and self.state.isVoiceUIVisible)
+						or self.state.hasCameraPermissions
+					)
+			else
 				showSelfView = FFlagAvatarChatCoreScriptSupport
 					and StarterGui:GetCoreGuiEnabled(Enum.CoreGuiType.SelfView)
 					and (
@@ -301,6 +342,13 @@ function PermissionsButtons:init()
 		local ageVerificationResponse = VoiceChatServiceManager:FetchAgeVerificationOverlay()
 		local voiceInExpUpsellVariant = ageVerificationResponse.showVoiceInExperienceUpsellVariant
 
+		if GetFFlagEnableInExpJoinVoiceAnalytics() then
+			VoiceChatServiceManager.Analytics:reportJoinVoiceButtonEvent(
+				"clicked",
+				self:GetInExpJoinVoiceAnalyticsData()
+			)
+		end
+
 		if VoiceChatServiceManager:UserOnlyEligibleForVoice() then
 			VoiceChatServiceManager:SetInExpUpsellEntrypoint(VoiceConstants.IN_EXP_UPSELL_ENTRYPOINTS.JOIN_VOICE)
 
@@ -308,6 +356,12 @@ function PermissionsButtons:init()
 			VoiceChatServiceManager:showPrompt(promptToShow)
 		elseif VoiceChatServiceManager:UserVoiceEnabled() and not self.state.hasMicPermissions then
 			VoiceChatServiceManager:showPrompt(VoiceChatPromptType.Permission)
+		elseif GetFFlagEnableInExpPhoneVoiceUpsellEntrypoints()
+			and not VoiceChatServiceManager:UserVoiceEnabled()
+			and VoiceChatServiceManager:FetchPhoneVerificationUpsell(VoiceConstants.IN_EXP_PHONE_UPSELL_IXP_LAYER) == VoiceConstants.PHONE_UPSELL_VALUE_PROP.VoiceChat then
+			-- Close menu with no animation before we open the phone upsell modal
+			self.props.hubRef:SetVisibility(false, true)
+			VoiceChatServiceManager:ShowInExperiencePhoneVoiceUpsell(VoiceConstants.IN_EXP_UPSELL_ENTRYPOINTS.JOIN_VOICE, VoiceConstants.IN_EXP_PHONE_UPSELL_IXP_LAYER)
 		end
 	end
 
@@ -316,7 +370,6 @@ function PermissionsButtons:init()
 			-- When we enable and join voice through this button, we unmute the user
 			if VoiceChatServiceManager.inExpUpsellEntrypoint == VoiceConstants.IN_EXP_UPSELL_ENTRYPOINTS.JOIN_VOICE then
 				VoiceChatServiceManager:ToggleMic()
-				VoiceChatServiceManager:showPrompt(VoiceChatPromptType.VoiceConsentAcceptedToast)
 			end
 		end
 	end
@@ -342,6 +395,7 @@ function PermissionsButtons:getMicPermission(shouldRequestPerms: boolean?)
 	local callback = function(response)
 		self:setState({
 			hasMicPermissions = response.hasMicPermissions,
+			isFetchingMicPermissions = if GetFFlagUseMicPermForEnrollment() then false else nil,
 		})
 	end
 	getCamMicPermissions(
@@ -369,22 +423,59 @@ function PermissionsButtons:getCameraButtonVisibleAtMount()
 end
 
 function PermissionsButtons:getJoinVoiceButtonVisibleAtMount()
-	local userInInExperienceUpsellTreatment = VoiceChatServiceManager:UserInInExperienceUpsellTreatment()
+	local userInInExperienceUpsellTreatment
+	if VoiceChatServiceManager:UserVoiceEnabled() then
+		-- We may still be waiting for user to accept or deny mic permissions. If we are still waiting, don't show join voice button yet
+		if self.state.isFetchingMicPermissions then
+			return false
+		end
+
+		-- If we don't have mic permissions, the user may see the join voice button if they're part of the treatment group
+		if not self.state.hasMicPermissions then
+			local ageVerificationOverlayData = VoiceChatServiceManager:FetchAgeVerificationOverlay(false)
+			if ageVerificationOverlayData and ageVerificationOverlayData.elegibleToSeeVoiceUpsell then
+				local FStringVoiceUpsellLayer = GetFStringVoiceUpsellLayer()
+				if FStringVoiceUpsellLayer ~= "" then
+					IXPService:LogUserLayerExposure(FStringVoiceUpsellLayer)
+				end
+			end
+
+			userInInExperienceUpsellTreatment = VoiceChatServiceManager:UserInInExperienceUpsellTreatment()
+			return userInInExperienceUpsellTreatment
+		end
+	end
+
 	local userVoiceUpsellEligible = VoiceChatServiceManager:UserOnlyEligibleForVoice()
-		or (VoiceChatServiceManager:UserVoiceEnabled() and not self.state.hasMicPermissions)
-	return userInInExperienceUpsellTreatment and userVoiceUpsellEligible
+	-- Order matters here, we want to short circuit to avoid the fetch when the user is already voice enabled
+	if 
+		GetFFlagEnableInExpPhoneVoiceUpsellEntrypoints()
+		and not userVoiceUpsellEligible
+		and not VoiceChatServiceManager:UserVoiceEnabled() 
+		and VoiceChatServiceManager:FetchPhoneVerificationUpsell(VoiceConstants.IN_EXP_PHONE_UPSELL_IXP_LAYER) == VoiceConstants.PHONE_UPSELL_VALUE_PROP.VoiceChat
+	then
+		return true
+	end
+
+	-- Don't fetch age verification overlay data if user is not only voice eligible
+	if not userVoiceUpsellEligible then
+		return false
+	end
+	userInInExperienceUpsellTreatment = VoiceChatServiceManager:UserInInExperienceUpsellTreatment()
+	return userInInExperienceUpsellTreatment
 end
 
 function PermissionsButtons:didUpdate(prevProps, prevState)
-	local coreGuiState = StarterGui:GetCoreGuiEnabled(Enum.CoreGuiType.SelfView)
 	if
 		self.state.hasCameraPermissions ~= prevState.hasCameraPermissions
 		or self.state.hasMicPermissions ~= prevState.hasMicPermissions
+		or (GetFFlagEnableShowVoiceUI() and self.state.isVoiceUIVisible ~= prevState.isVoiceUIVisible)
 	then
-		local showSelfView = FFlagAvatarChatCoreScriptSupport
-			and coreGuiState
-			and (self.state.hasCameraPermissions or self.state.hasMicPermissions)
-		if getFFlagDoNotPromptCameraPermissionsOnMount() then
+		local showSelfView = nil
+		if GetFFlagEnableShowVoiceUI() then
+			showSelfView = FFlagAvatarChatCoreScriptSupport
+				and StarterGui:GetCoreGuiEnabled(Enum.CoreGuiType.SelfView)
+				and (isCamEnabledForUserAndPlace() or (self.state.hasMicPermissions and self.state.isVoiceUIVisible) or self.state.hasCameraPermissions)
+		else
 			showSelfView = FFlagAvatarChatCoreScriptSupport
 				and StarterGui:GetCoreGuiEnabled(Enum.CoreGuiType.SelfView)
 				and (isCamEnabledForUserAndPlace() or self.state.hasMicPermissions or self.state.hasCameraPermissions)
@@ -396,23 +487,32 @@ function PermissionsButtons:didUpdate(prevProps, prevState)
 end
 
 function PermissionsButtons:didMount()
-	if getFFlagDoNotPromptCameraPermissionsOnMount() then
-		self:getMicPermission()
-		self:getCameraPermissionWithoutRequest()
-	else
-		self:getPermissions()
-	end
+	self:getMicPermission()
+	self:getCameraPermissionWithoutRequest()
 end
 
 function PermissionsButtons:isShowingPermissionButtons()
-	if getFFlagDoNotPromptCameraPermissionsOnMount() then
+	if GetFFlagEnableShowVoiceUI() then
+		return (self.state.hasMicPermissions and self.state.isVoiceUIVisible)
+			or self.state.hasCameraPermissions
+			or self.state.showSelfView
+			or self:getCameraButtonVisibleAtMount()
+			or (GetFFlagEnableInExpVoiceUpsell() and self:getJoinVoiceButtonVisibleAtMount())
+	else
 		return self.state.hasMicPermissions
 			or self.state.hasCameraPermissions
 			or self.state.showSelfView
 			or self:getCameraButtonVisibleAtMount()
 			or (GetFFlagEnableInExpVoiceUpsell() and self:getJoinVoiceButtonVisibleAtMount())
 	end
-	return self.state.hasMicPermissions or self.state.hasCameraPermissions or self.state.showSelfView
+end
+
+function PermissionsButtons:GetInExpJoinVoiceAnalyticsData()
+	local sessionId = ""
+	if EngineFeatureRbxAnalyticsServiceExposePlaySessionId then
+		sessionId = AnalyticsService:GetPlaySessionId()
+	end
+	return game.GameId, game.PlaceId, sessionId
 end
 
 function PermissionsButtons:render()
@@ -423,11 +523,13 @@ function PermissionsButtons:render()
 	if GetFFlagJoinWithoutMicPermissions() then
 		shouldShowMicButtons = self.state.voiceServiceInitialized and not VoiceChatServiceManager:VoiceChatEnded()
 	end
-	local shouldShowCameraButtons = self.state.hasCameraPermissions
-	if getFFlagDoNotPromptCameraPermissionsOnMount() then
-		-- Show the camera button if the camera is enabled + eligible in user settings and camera is enabled in experience
-		shouldShowCameraButtons = self:getCameraButtonVisibleAtMount()
+
+	if GetFFlagEnableShowVoiceUI() then
+		-- Mic button should only show if voice UI is visible
+		shouldShowMicButtons = shouldShowMicButtons and self.state.isVoiceUIVisible
 	end
+	-- Show the camera button if the camera is enabled + eligible in user settings and camera is enabled in experience
+	local shouldShowCameraButtons = self:getCameraButtonVisibleAtMount()
 	-- Show join voice button in voice enabled experiences, for voice eligible users who haven't enabled voice and voice enabled users with denied mic permissions
 	local shouldShowJoinVoiceButton = GetFFlagEnableInExpVoiceUpsell() and self:getJoinVoiceButtonVisibleAtMount()
 
@@ -451,127 +553,256 @@ function PermissionsButtons:render()
 		micImage = MIC_OFF_IMAGE
 	end
 
-	return self:isShowingPermissionButtons()
-		and Roact.createElement("Frame", {
-			AutomaticSize = Enum.AutomaticSize.XY,
-			ZIndex = self.props.ZIndex,
-			BackgroundTransparency = 1,
-			Position = UDim2.new(0, 0, 0, 0),
-			Size = UDim2.new(self.props.shouldFillScreen and 1 or 0, 0, 0, 0),
-			AnchorPoint = if isTopCloseButton then Vector2.new(0, 0) else Vector2.new(0.5, 0.5),
-			LayoutOrder = self.props.LayoutOrder,
-			Visible = not self.props.isTenFootInterface, -- Not Visible on Xbox
-		}, {
-			UIPaddingPermissionsContainer = Roact.createElement("UIPadding", {
-				PaddingLeft = UDim.new(0, if self.props.isSmallTouchScreen then 54 else 74), -- Close Button location
-				PaddingTop = UDim.new(0, 4), -- Top Padding from button to edge of screen
-			}),
-			UIListLayout = Roact.createElement("UIListLayout", {
-				FillDirection = Enum.FillDirection.Horizontal,
-				VerticalAlignment = Enum.VerticalAlignment.Center,
-				HorizontalAlignment = Enum.HorizontalAlignment.Left,
-				SortOrder = Enum.SortOrder.LayoutOrder,
-				Padding = UDim.new(0, if self.props.isSmallTouchScreen then SMALL_PADDING_SIZE else PADDING_SIZE),
-			}),
-			Divider1 = createDivider(1),
-			Container = Roact.createElement("Frame", {
-				AutomaticSize = Enum.AutomaticSize.X,
-				Size = UDim2.fromOffset(0, Y_HEIGHT),
+	return if GetFFlagFixPermissionsButtonsEvents()
+		then Roact.createFragment({
+			Frame = self:isShowingPermissionButtons() and Roact.createElement("Frame", {
+				AutomaticSize = Enum.AutomaticSize.XY,
+				ZIndex = self.props.ZIndex,
 				BackgroundTransparency = 1,
-				ClipsDescendants = true,
-				LayoutOrder = 2,
+				Position = UDim2.new(0, 0, 0, 0),
+				Size = UDim2.new(self.props.shouldFillScreen and 1 or 0, 0, 0, 0),
+				AnchorPoint = if isTopCloseButton then Vector2.new(0, 0) else Vector2.new(0.5, 0.5),
+				LayoutOrder = self.props.LayoutOrder,
+				Visible = not self.props.isTenFootInterface, -- Not Visible on Xbox
 			}, {
-				UIListLayoutPermissionsContainer = Roact.createElement("UIListLayout", {
+				UIPaddingPermissionsContainer = Roact.createElement("UIPadding", {
+					PaddingLeft = UDim.new(0, if self.props.isSmallTouchScreen then 54 else 74), -- Close Button location
+					PaddingTop = UDim.new(0, 4), -- Top Padding from button to edge of screen
+				}),
+				UIListLayout = Roact.createElement("UIListLayout", {
 					FillDirection = Enum.FillDirection.Horizontal,
 					VerticalAlignment = Enum.VerticalAlignment.Center,
 					HorizontalAlignment = Enum.HorizontalAlignment.Left,
 					SortOrder = Enum.SortOrder.LayoutOrder,
 					Padding = UDim.new(0, if self.props.isSmallTouchScreen then SMALL_PADDING_SIZE else PADDING_SIZE),
 				}),
-				if GetFFlagUpdateSelfieViewOnBan()
-					then shouldShowMicButtons and Roact.createElement(PermissionButton, {
-						LayoutOrder = 1,
-						image = if showMuteAll then MUTE_ALL_IMAGE else UNMUTE_ALL_IMAGE,
-						callback = self.toggleMuteAll,
-						useNewMenuTheme = self.props.useNewMenuTheme,
-					})
-					else Roact.createElement(PermissionButton, {
-						LayoutOrder = 1,
-						image = if showMuteAll then MUTE_ALL_IMAGE else UNMUTE_ALL_IMAGE,
-						callback = self.toggleMuteAll,
+				Divider1 = createDivider(1),
+				Container = Roact.createElement("Frame", {
+					AutomaticSize = Enum.AutomaticSize.X,
+					Size = UDim2.fromOffset(0, Y_HEIGHT),
+					BackgroundTransparency = 1,
+					ClipsDescendants = true,
+					LayoutOrder = 2,
+				}, {
+					UIListLayoutPermissionsContainer = Roact.createElement("UIListLayout", {
+						FillDirection = Enum.FillDirection.Horizontal,
+						VerticalAlignment = Enum.VerticalAlignment.Center,
+						HorizontalAlignment = Enum.HorizontalAlignment.Left,
+						SortOrder = Enum.SortOrder.LayoutOrder,
+						Padding = UDim.new(
+							0,
+							if self.props.isSmallTouchScreen then SMALL_PADDING_SIZE else PADDING_SIZE
+						),
+					}),
+					if GetFFlagUpdateSelfieViewOnBan()
+						then shouldShowMicButtons and Roact.createElement(PermissionButton, {
+							LayoutOrder = 1,
+							image = if showMuteAll then MUTE_ALL_IMAGE else UNMUTE_ALL_IMAGE,
+							callback = self.toggleMuteAll,
+							useNewMenuTheme = self.props.useNewMenuTheme,
+						})
+						else Roact.createElement(PermissionButton, {
+							LayoutOrder = 1,
+							image = if showMuteAll then MUTE_ALL_IMAGE else UNMUTE_ALL_IMAGE,
+							callback = self.toggleMuteAll,
+							useNewMenuTheme = self.props.useNewMenuTheme,
+						}),
+					JoinVoiceButton = shouldShowJoinVoiceButton and Roact.createElement(PermissionButton, {
+						LayoutOrder = 2,
+						image = JOIN_VOICE_IMAGE,
+						callback = self.onJoinVoicePressed,
 						useNewMenuTheme = self.props.useNewMenuTheme,
 					}),
-				JoinVoiceButton = shouldShowJoinVoiceButton and Roact.createElement(PermissionButton, {
-					LayoutOrder = 2,
-					image = JOIN_VOICE_IMAGE,
-					callback = self.onJoinVoicePressed,
-					useNewMenuTheme = self.props.useNewMenuTheme,
+					ToggleMicButton = shouldShowMicButtons and Roact.createElement(PermissionButton, {
+						LayoutOrder = if GetFFlagEnableInExpVoiceUpsell() then 3 else 2,
+						image = micImage,
+						callback = self.toggleMic,
+						useNewMenuTheme = self.props.useNewMenuTheme,
+						imageLabelProps = micImageLabelProps,
+					}),
+					EnableVideoButton = shouldShowCameraButtons and Roact.createElement(PermissionButton, {
+						LayoutOrder = if GetFFlagEnableInExpVoiceUpsell() then 4 else 3,
+						image = if self.state.cameraEnabled then VIDEO_IMAGE else VIDEO_OFF_IMAGE,
+						callback = self.onVideoButtonPressed,
+						useNewMenuTheme = self.props.useNewMenuTheme,
+					}),
+					EnableSelfViewButton = self.state.showSelfView and Roact.createElement(PermissionButton, {
+						LayoutOrder = if GetFFlagEnableInExpVoiceUpsell() then 5 else 4,
+						image = if self.state.selfViewOpen then SELF_VIEW_IMAGE else SELF_VIEW_OFF_IMAGE,
+						callback = self.toggleSelfView,
+						useNewMenuTheme = self.props.useNewMenuTheme,
+					}),
 				}),
-				ToggleMicButton = shouldShowMicButtons and Roact.createElement(PermissionButton, {
-					LayoutOrder = if GetFFlagEnableInExpVoiceUpsell() then 3 else 2,
-					image = micImage,
-					callback = self.toggleMic,
-					useNewMenuTheme = self.props.useNewMenuTheme,
-					imageLabelProps = micImageLabelProps,
-				}),
-				EnableVideoButton = shouldShowCameraButtons and Roact.createElement(PermissionButton, {
-					LayoutOrder = if GetFFlagEnableInExpVoiceUpsell() then 4 else 3,
-					image = if self.state.cameraEnabled then VIDEO_IMAGE else VIDEO_OFF_IMAGE,
-					callback = if getFFlagDoNotPromptCameraPermissionsOnMount()
-						then self.onVideoButtonPressed
-						else self.toggleVideo,
-					useNewMenuTheme = self.props.useNewMenuTheme,
-				}),
-				EnableSelfViewButton = self.state.showSelfView and Roact.createElement(PermissionButton, {
-					LayoutOrder = if GetFFlagEnableInExpVoiceUpsell() then 5 else 4,
-					image = if self.state.selfViewOpen then SELF_VIEW_IMAGE else SELF_VIEW_OFF_IMAGE,
-					callback = self.toggleSelfView,
-					useNewMenuTheme = self.props.useNewMenuTheme,
+				Divider2 = createDivider(5),
+				RecordingIndicator = shouldShowRecordingIndicator and Roact.createElement(RecordingIndicator, {
+					micOn = self.state.microphoneEnabled,
+					hasMicPermissions = self.state.hasMicPermissions,
+					isSmallTouchScreen = self.props.isSmallTouchScreen,
 				}),
 			}),
-			Divider2 = createDivider(5),
-			RecordingIndicator = shouldShowRecordingIndicator and Roact.createElement(RecordingIndicator, {
-				micOn = self.state.microphoneEnabled,
-				hasMicPermissions = self.state.hasMicPermissions,
-				isSmallTouchScreen = self.props.isSmallTouchScreen,
+			Events = Roact.createFragment({
+				MuteChangedEvent = Roact.createElement(ExternalEventConnection, {
+					event = VoiceChatServiceManager.muteChanged.Event,
+					callback = self.muteChangedEvent,
+				}),
+				SelfViewChangedEvent = Roact.createElement(ExternalEventConnection, {
+					event = StarterGui.CoreGuiChangedSignal,
+					callback = self.onCoreGuiChanged,
+				}),
+				MuteAllChangedEvent = Roact.createElement(ExternalEventConnection, {
+					event = VoiceChatServiceManager.muteAllChanged.Event,
+					callback = self.toggleMuteAllIcon,
+				}),
+				VideoCaptureEnabledEvent = Roact.createElement(ExternalEventConnection, {
+					event = FaceAnimatorService:GetPropertyChangedSignal("VideoAnimationEnabled"),
+					callback = self.updateVideoCaptureEnabled,
+				}),
+				VoiceStateChangeEvent = if GetFFlagShowMicConnectingIconAndToast()
+						and self.state.voiceServiceInitialized
+					then Roact.createElement(ExternalEventConnection, {
+						event = VoiceChatServiceManager:getService().StateChanged,
+						callback = self.onVoiceStateChange,
+					})
+					else nil,
+				MuteNonFriendsEvent = if FFlagMuteNonFriendsEvent
+					then Roact.createElement(ExternalEventConnection, {
+						event = VoiceChatServiceManager.mutedNonFriends.Event,
+						callback = function()
+							self.toggleMuteAllIcon(false)
+						end,
+					})
+					else nil,
+				VoiceJoinProgressChanged = if GetFFlagEnableInExpVoiceUpsell()
+					then Roact.createElement(ExternalEventConnection, {
+						event = VoiceChatServiceManager.VoiceJoinProgressChanged.Event,
+						callback = self.voiceJoinProgressCallback,
+					})
+					else nil,
 			}),
-			MuteChangedEvent = Roact.createElement(ExternalEventConnection, {
-				event = VoiceChatServiceManager.muteChanged.Event,
-				callback = self.muteChangedEvent,
-			}),
-			SelfViewChangedEvent = Roact.createElement(ExternalEventConnection, {
-				event = StarterGui.CoreGuiChangedSignal,
-				callback = self.onCoreGuiChanged,
-			}),
-			MuteAllChangedEvent = Roact.createElement(ExternalEventConnection, {
-				event = VoiceChatServiceManager.muteAllChanged.Event,
-				callback = self.toggleMuteAllIcon,
-			}),
-			VideoCaptureEnabledEvent = Roact.createElement(ExternalEventConnection, {
-				event = FaceAnimatorService:GetPropertyChangedSignal("VideoAnimationEnabled"),
-				callback = self.updateVideoCaptureEnabled,
-			}),
-			VoiceStateChangeEvent = if GetFFlagShowMicConnectingIconAndToast()
-					and self.state.voiceServiceInitialized
-				then Roact.createElement(ExternalEventConnection, {
-					event = VoiceChatServiceManager:getService().StateChanged,
-					callback = self.onVoiceStateChange,
-				})
-				else nil,
-			MuteNonFriendsEvent = if FFlagMuteNonFriendsEvent
-				then Roact.createElement(ExternalEventConnection, {
-					event = VoiceChatServiceManager.mutedNonFriends.Event,
-					callback = function()
-						self.toggleMuteAllIcon(false)
-					end,
-				})
-				else nil,
-			VoiceJoinProgressChanged = if GetFFlagEnableInExpVoiceUpsell()
-				then Roact.createElement(ExternalEventConnection, {
-					event = VoiceChatServiceManager.VoiceJoinProgressChanged.Event,
-					callback = self.voiceJoinProgressCallback,
-				}) else nil,
 		})
+		else self:isShowingPermissionButtons()
+			and Roact.createElement("Frame", {
+				AutomaticSize = Enum.AutomaticSize.XY,
+				ZIndex = self.props.ZIndex,
+				BackgroundTransparency = 1,
+				Position = UDim2.new(0, 0, 0, 0),
+				Size = UDim2.new(self.props.shouldFillScreen and 1 or 0, 0, 0, 0),
+				AnchorPoint = if isTopCloseButton then Vector2.new(0, 0) else Vector2.new(0.5, 0.5),
+				LayoutOrder = self.props.LayoutOrder,
+				Visible = not self.props.isTenFootInterface, -- Not Visible on Xbox
+			}, {
+				UIPaddingPermissionsContainer = Roact.createElement("UIPadding", {
+					PaddingLeft = UDim.new(0, if self.props.isSmallTouchScreen then 54 else 74), -- Close Button location
+					PaddingTop = UDim.new(0, 4), -- Top Padding from button to edge of screen
+				}),
+				UIListLayout = Roact.createElement("UIListLayout", {
+					FillDirection = Enum.FillDirection.Horizontal,
+					VerticalAlignment = Enum.VerticalAlignment.Center,
+					HorizontalAlignment = Enum.HorizontalAlignment.Left,
+					SortOrder = Enum.SortOrder.LayoutOrder,
+					Padding = UDim.new(0, if self.props.isSmallTouchScreen then SMALL_PADDING_SIZE else PADDING_SIZE),
+				}),
+				Divider1 = createDivider(1),
+				Container = Roact.createElement("Frame", {
+					AutomaticSize = Enum.AutomaticSize.X,
+					Size = UDim2.fromOffset(0, Y_HEIGHT),
+					BackgroundTransparency = 1,
+					ClipsDescendants = true,
+					LayoutOrder = 2,
+				}, {
+					UIListLayoutPermissionsContainer = Roact.createElement("UIListLayout", {
+						FillDirection = Enum.FillDirection.Horizontal,
+						VerticalAlignment = Enum.VerticalAlignment.Center,
+						HorizontalAlignment = Enum.HorizontalAlignment.Left,
+						SortOrder = Enum.SortOrder.LayoutOrder,
+						Padding = UDim.new(
+							0,
+							if self.props.isSmallTouchScreen then SMALL_PADDING_SIZE else PADDING_SIZE
+						),
+					}),
+					if GetFFlagUpdateSelfieViewOnBan()
+						then shouldShowMicButtons and Roact.createElement(PermissionButton, {
+							LayoutOrder = 1,
+							image = if showMuteAll then MUTE_ALL_IMAGE else UNMUTE_ALL_IMAGE,
+							callback = self.toggleMuteAll,
+							useNewMenuTheme = self.props.useNewMenuTheme,
+						})
+						else Roact.createElement(PermissionButton, {
+							LayoutOrder = 1,
+							image = if showMuteAll then MUTE_ALL_IMAGE else UNMUTE_ALL_IMAGE,
+							callback = self.toggleMuteAll,
+							useNewMenuTheme = self.props.useNewMenuTheme,
+						}),
+					JoinVoiceButton = shouldShowJoinVoiceButton and Roact.createElement(PermissionButton, {
+						LayoutOrder = 2,
+						image = JOIN_VOICE_IMAGE,
+						callback = self.onJoinVoicePressed,
+						useNewMenuTheme = self.props.useNewMenuTheme,
+					}),
+					ToggleMicButton = shouldShowMicButtons and Roact.createElement(PermissionButton, {
+						LayoutOrder = if GetFFlagEnableInExpVoiceUpsell() then 3 else 2,
+						image = micImage,
+						callback = self.toggleMic,
+						useNewMenuTheme = self.props.useNewMenuTheme,
+						imageLabelProps = micImageLabelProps,
+					}),
+					EnableVideoButton = shouldShowCameraButtons and Roact.createElement(PermissionButton, {
+						LayoutOrder = if GetFFlagEnableInExpVoiceUpsell() then 4 else 3,
+						image = if self.state.cameraEnabled then VIDEO_IMAGE else VIDEO_OFF_IMAGE,
+						callback = self.onVideoButtonPressed,
+						useNewMenuTheme = self.props.useNewMenuTheme,
+					}),
+					EnableSelfViewButton = self.state.showSelfView and Roact.createElement(PermissionButton, {
+						LayoutOrder = if GetFFlagEnableInExpVoiceUpsell() then 5 else 4,
+						image = if self.state.selfViewOpen then SELF_VIEW_IMAGE else SELF_VIEW_OFF_IMAGE,
+						callback = self.toggleSelfView,
+						useNewMenuTheme = self.props.useNewMenuTheme,
+					}),
+				}),
+				Divider2 = createDivider(5),
+				RecordingIndicator = shouldShowRecordingIndicator and Roact.createElement(RecordingIndicator, {
+					micOn = self.state.microphoneEnabled,
+					hasMicPermissions = self.state.hasMicPermissions,
+					isSmallTouchScreen = self.props.isSmallTouchScreen,
+				}),
+				MuteChangedEvent = Roact.createElement(ExternalEventConnection, {
+					event = VoiceChatServiceManager.muteChanged.Event,
+					callback = self.muteChangedEvent,
+				}),
+				SelfViewChangedEvent = Roact.createElement(ExternalEventConnection, {
+					event = StarterGui.CoreGuiChangedSignal,
+					callback = self.onCoreGuiChanged,
+				}),
+				MuteAllChangedEvent = Roact.createElement(ExternalEventConnection, {
+					event = VoiceChatServiceManager.muteAllChanged.Event,
+					callback = self.toggleMuteAllIcon,
+				}),
+				VideoCaptureEnabledEvent = Roact.createElement(ExternalEventConnection, {
+					event = FaceAnimatorService:GetPropertyChangedSignal("VideoAnimationEnabled"),
+					callback = self.updateVideoCaptureEnabled,
+				}),
+				VoiceStateChangeEvent = if GetFFlagShowMicConnectingIconAndToast()
+						and self.state.voiceServiceInitialized
+					then Roact.createElement(ExternalEventConnection, {
+						event = VoiceChatServiceManager:getService().StateChanged,
+						callback = self.onVoiceStateChange,
+					})
+					else nil,
+				MuteNonFriendsEvent = if FFlagMuteNonFriendsEvent
+					then Roact.createElement(ExternalEventConnection, {
+						event = VoiceChatServiceManager.mutedNonFriends.Event,
+						callback = function()
+							self.toggleMuteAllIcon(false)
+						end,
+					})
+					else nil,
+				VoiceJoinProgressChanged = if GetFFlagEnableInExpVoiceUpsell()
+					then Roact.createElement(ExternalEventConnection, {
+						event = VoiceChatServiceManager.VoiceJoinProgressChanged.Event,
+						callback = self.voiceJoinProgressCallback,
+					})
+					else nil,
+			})
 end
 
 function PermissionsButtons:willUnmount()

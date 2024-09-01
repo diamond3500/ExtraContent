@@ -4,6 +4,7 @@
 local Style = script.Parent
 local Core = Style.Parent
 local UIBlox = Core.Parent
+local getTextSizeOffset = require(UIBlox.Utility.getTextSizeOffset)
 
 local Packages = UIBlox.Parent
 local React = require(Packages.React)
@@ -21,6 +22,8 @@ local UIBloxConfig = require(UIBlox.UIBloxConfig)
 
 local getTokens = TokenPackage.getTokens
 local validateTokens = TokenPackage.validateTokens
+local getFoundationTokens = TokenPackage.getFoundationTokens
+local TokensMappers = TokenPackage.Mappers
 
 type AppStyle = StyleTypes.AppStyle
 type Tokens = StyleTypes.Tokens
@@ -59,20 +62,27 @@ local defaultStyle: StyleProps = {
 local function AppStyleProvider(props: Props)
 	local style: StyleProps = Object.assign({}, defaultStyle, props.style)
 	local themeName, setThemeName = React.useState(style.themeName)
-	local enableFontNameMapping = UIBloxConfig.enableFontNameMapping
-	local tokens: Tokens =
-		getTokens(style.deviceType, themeName, UIBloxConfig.useTokensWithScale, enableFontNameMapping) :: Tokens
+	local tokens: Tokens = getTokens(style.deviceType, themeName, UIBloxConfig.useTokensWithScale) :: Tokens
+	local textSizeOffset, setTextSizeOffset = React.useState(0)
+	local theme = getThemeFromName(themeName)
+
+	if UIBloxConfig.useFoundationColors then
+		local foundationTokens = getFoundationTokens(style.deviceType, themeName)
+		tokens = TokensMappers.mapColorTokensToFoundation(tokens, foundationTokens)
+		theme = TokensMappers.mapThemeToFoundation(theme, foundationTokens)
+	end
 
 	-- TODO: Add additional validation for tokens here to make it safe. We can remove the call after design token stuff is fully stable.
 	assert(validateTokens(tokens), "Invalid tokens!")
 	local appStyle: AppStyle = {
-		Font = getFontFromName(style.fontName, enableFontNameMapping, tokens),
-		Theme = getThemeFromName(themeName),
+		Font = getFontFromName(style.fontName, tokens),
+		Theme = theme,
 		Tokens = tokens,
 		Settings = if style.settings
 			then {
 				PreferredTransparency = style.settings.preferredTransparency,
 				ReducedMotion = style.settings.reducedMotion,
+				PreferredTextSize = style.settings.preferredTextSize,
 			}
 			else Constants.DefaultSettings,
 	}
@@ -86,6 +96,13 @@ local function AppStyleProvider(props: Props)
 		end
 	end, { isMountedRef, style.themeName, setThemeName } :: { any })
 
+	React.useEffect(function()
+		local success, newTextSizeOffset = getTextSizeOffset(tokens.Semantic.Typography.Body.Font)
+		if success then
+			setTextSizeOffset(newTextSizeOffset)
+		end
+	end, { style.settings.preferredTextSize })
+
 	local handleThemeUpdate = React.useCallback(function(_self: any, newThemeName: ThemeName | string)
 		if isMountedRef.current then
 			setThemeName(newThemeName)
@@ -96,6 +113,9 @@ local function AppStyleProvider(props: Props)
 		value = {
 			style = appStyle,
 			updateTheme = handleThemeUpdate,
+			derivedValues = {
+				textSizeOffset = textSizeOffset,
+			},
 		},
 	}, Roact.oneChild(props.children :: any))
 end

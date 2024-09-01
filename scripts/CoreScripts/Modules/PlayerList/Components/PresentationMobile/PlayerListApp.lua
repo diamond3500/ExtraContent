@@ -33,6 +33,7 @@ local WithLayoutValues = LayoutValues.WithLayoutValues
 local FFlagPlayerListFixMobileScrolling = require(PlayerList.Flags.FFlagPlayerListFixMobileScrolling)
 local FFlagPlayerListFixBackgroundFlicker = require(PlayerList.Flags.FFlagPlayerListFixBackgroundFlicker)
 local GetFFlagPlayerListChromePushdown = require(PlayerList.Flags.GetFFlagPlayerListChromePushdown)
+local GetFFlagFixDropDownVisibility = require(PlayerList.Flags.GetFFlagFixDropDownVisibility)
 
 local MOTOR_OPTIONS = {
 	dampingRatio = 1,
@@ -75,7 +76,7 @@ local function playerListSizeFromViewportSize(viewportSize)
 	-- Remap from min/max to x/y
 	local sX = viewportSize.x > viewportSize.y and sMax or sMin
 	local sY = viewportSize.y > viewportSize.x and sMax or sMin
-	
+
 	-- Increase y-axis border to avoid chrome overlap on landscape
 	if GetFFlagPlayerListChromePushdown() and ChromeEnabled and viewportSize.y < viewportSize.x then
 		sY -= (TopBarConstants.TopBarHeight - BORDER_SIZE)
@@ -303,8 +304,12 @@ function PlayerListApp:didUpdate(previousProps, previousState)
 	local backgroundTransparency = (isDropDownVisible or isVisible) and 0.7 or 1
 	self.bgTransparencyMotor:setGoal(Otter.spring(backgroundTransparency, MOTOR_OPTIONS))
 
+	local isDropDownEnabled = if GetFFlagFixDropDownVisibility
+		then isDropDownVisible and isVisible
+		else isDropDownVisible
+
 	local bodyScale = 1.25
-	if isDropDownVisible then
+	if isDropDownEnabled then
 		bodyScale = 0.95
 	elseif isVisible then
 		bodyScale = 1
@@ -313,7 +318,7 @@ function PlayerListApp:didUpdate(previousProps, previousState)
 	self.frameScaleMotor:setGoal(Otter.spring(bodyScale, MOTOR_OPTIONS))
 
 	local bodyTransparency = 1
-	if isDropDownVisible then
+	if isDropDownEnabled then
 		bodyTransparency = 0.8 * self.props.preferredTransparency
 	elseif isVisible then
 		bodyTransparency = 0.2 * self.props.preferredTransparency

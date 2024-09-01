@@ -76,13 +76,14 @@ type AnalyticsWrapperMeta = {
 	reportBanMessageEvent: (AnalyticsWrapper, string) -> (),
 	reportReconnectDueToMissedSequence: (AnalyticsWrapper) -> (),
 	reportOutOfOrderSequence: (AnalyticsWrapper) -> (),
-	reportReceivedNudge: (AnalyticsWrapper, { type: string, deliveryTime: string }, number, string) -> (),
 	reportClosedNudge: (AnalyticsWrapper, number, string) -> (),
 	reportAcknowledgedNudge: (AnalyticsWrapper, number, string) -> (),
 	reportDeniedNudge: (AnalyticsWrapper, number, string) -> (),
 	reportVoiceMuteIndividual: (AnalyticsWrapper, VoiceMuteIndividualArgs) -> (),
 	reportVoiceMuteGroup: (AnalyticsWrapper, VoiceMuteGroupArgs) -> (),
 	reportVoiceMuteSelf: (AnalyticsWrapper, VoiceMuteSelfArgs) -> (),
+	reportJoinVoiceButtonEvent: (AnalyticsWrapper, string, number, number, string) -> (),
+	reportInExpConsent: (AnalyticsWrapper, string, string, number, number, string) -> (),
 }
 
 -- Replace this when Luau supports it
@@ -99,6 +100,9 @@ type LogLevel = "info" | "warning" | "error"
 
 type NudgeCloseType = "ACKNOWLEDGED" | "CLOSED" | "DENIED"
 local closedNudgeType = "closedNudge"
+
+type InExpConsentEventType = "shown" | "accepted" | "denied"
+local InExpConsentEventName = "inExpConsentModalEvent"
 
 function Analytics.new(impl: AnalyticsService?)
 	if not impl then
@@ -185,23 +189,6 @@ function Analytics:reportOutOfOrderSequence()
 	self._impl:ReportCounter("voiceChat-outOfOrderSequence", 1)
 end
 
-function Analytics:reportReceivedNudge(
-	report: { type: string, deliveryTime: string },
-	userId: number,
-	voiceSessionId: string
-)
-	local deliveryTime = (DateTime.fromIsoDate(report.deliveryTime) :: DateTime).UnixTimestampMillis
-	local durationInMs = DateTime.now().UnixTimestampMillis - deliveryTime
-	self._impl:ReportCounter("voicechat-receivednudge", 1)
-	self._impl:ReportCounter("voicechat-receivednudgeduration", durationInMs)
-	self._impl:SendEventDeferred("client", "voiceChat", "receivedNudge", {
-		type = report.type,
-		durationInMs = durationInMs,
-		userId = userId,
-		voiceSessionId = voiceSessionId,
-	})
-end
-
 function Analytics:reportClosedNudge(userId: number, voiceSessionId: string)
 	self._impl:ReportCounter("voicechat-closednudge", 1)
 	self._impl:SendEventDeferred("client", "voiceChat", closedNudgeType, {
@@ -258,6 +245,36 @@ function Analytics:reportVoiceMuteSelf(args: VoiceMuteSelfArgs)
 		channel_id = args.channelId,
 		context = args.context,
 		muted = args.muted,
+	})
+end
+
+function Analytics:reportJoinVoiceButtonEvent(
+	eventType: string,
+	universe_id: number,
+	place_id: number,
+	play_session_id: string
+)
+	self._impl:SendEventDeferred("client", "voice", "joinVoiceButtonEvent", {
+		eventType = eventType,
+		universeId = universe_id,
+		placeId = place_id,
+		playSessionId = play_session_id,
+	})
+end
+
+function Analytics:reportInExpConsent(
+	eventType: string,
+	entry: string,
+	universe_id: number,
+	place_id: number,
+	play_session_id: string
+)
+	self._impl:SendEventDeferred("client", "voiceChat", InExpConsentEventName, {
+		eventType = eventType :: InExpConsentEventType,
+		entry = entry,
+		universeId = universe_id,
+		placeId = place_id,
+		playSessionId = play_session_id,
 	})
 end
 

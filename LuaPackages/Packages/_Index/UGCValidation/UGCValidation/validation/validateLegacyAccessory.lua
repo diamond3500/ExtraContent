@@ -4,6 +4,7 @@ local root = script.Parent.Parent
 local Types = require(root.util.Types)
 local Constants = require(root.Constants)
 
+local validateCoplanarIntersection = require(root.validation.validateCoplanarIntersection)
 local validateInstanceTree = require(root.validation.validateInstanceTree)
 local validateMeshTriangles = require(root.validation.validateMeshTriangles)
 local validateModeration = require(root.validation.validateModeration)
@@ -19,6 +20,7 @@ local validateCanLoad = require(root.validation.validateCanLoad)
 local validateThumbnailConfiguration = require(root.validation.validateThumbnailConfiguration)
 local validateAccessoryName = require(root.validation.validateAccessoryName)
 local validateScaleType = require(root.validation.validateScaleType)
+local validateTotalSurfaceArea = require(root.validation.validateTotalSurfaceArea)
 
 local createAccessorySchema = require(root.util.createAccessorySchema)
 local getAttachment = require(root.util.getAttachment)
@@ -27,6 +29,7 @@ local getAccessoryScale = require(root.util.getAccessoryScale)
 local getEditableMeshFromContext = require(root.util.getEditableMeshFromContext)
 local getEditableImageFromContext = require(root.util.getEditableImageFromContext)
 
+local getFFlagUGCValidateCoplanarTriTestAccessory = require(root.flags.getFFlagUGCValidateCoplanarTriTestAccessory)
 local getFFlagUGCValidateMeshVertColors = require(root.flags.getFFlagUGCValidateMeshVertColors)
 local getFFlagUGCValidateThumbnailConfiguration = require(root.flags.getFFlagUGCValidateThumbnailConfiguration)
 local getFFlagUGCValidationNameCheck = require(root.flags.getFFlagUGCValidationNameCheck)
@@ -35,6 +38,8 @@ local FFlagLegacyAccessoryCheckAvatarPartScaleType =
 	game:DefineFastFlag("LegacyAccessoryCheckAvatarPartScaleType", false)
 local getEngineFeatureUGCValidateEditableMeshAndImage =
 	require(root.flags.getEngineFeatureUGCValidateEditableMeshAndImage)
+local getFFlagUGCValidateTotalSurfaceAreaTestAccessory =
+	require(root.flags.getFFlagUGCValidateTotalSurfaceAreaTestAccessory)
 
 local function validateLegacyAccessory(validationContext: Types.ValidationContext): (boolean, { string }?)
 	local instances = validationContext.instances
@@ -214,6 +219,14 @@ local function validateLegacyAccessory(validationContext: Types.ValidationContex
 	end
 
 	if hasMeshContent then
+		if getFFlagUGCValidateTotalSurfaceAreaTestAccessory() then
+			success, failedReason = validateTotalSurfaceArea(meshInfo, meshScale, validationContext)
+			if not success then
+				table.insert(reasons, table.concat(failedReason, "\n"))
+				validationResult = false
+			end
+		end
+
 		if FFlagLegacyAccessoryCheckAvatarPartScaleType and handle:FindFirstChild("AvatarPartScaleType") then
 			local accessoryScale = getAccessoryScale(handle, attachment)
 			boundsInfo = {
@@ -244,6 +257,14 @@ local function validateLegacyAccessory(validationContext: Types.ValidationContex
 
 		if getFFlagUGCValidateMeshVertColors() then
 			success, failedReason = validateMeshVertColors(meshInfo, false, validationContext)
+			if not success then
+				table.insert(reasons, table.concat(failedReason, "\n"))
+				validationResult = false
+			end
+		end
+
+		if getFFlagUGCValidateCoplanarTriTestAccessory() then
+			success, failedReason = validateCoplanarIntersection(meshInfo, meshScale, validationContext)
 			if not success then
 				table.insert(reasons, table.concat(failedReason, "\n"))
 				validationResult = false

@@ -10,6 +10,7 @@
 local GuiService = game:GetService("GuiService")
 local HttpService = game:GetService("HttpService")
 local UserGameSettings = UserSettings():GetService("UserGameSettings")
+local CorePackages = game:GetService("CorePackages")
 
 local CoreGui = game:GetService("CoreGui")
 local RobloxGui = CoreGui:WaitForChild("RobloxGui")
@@ -19,6 +20,7 @@ local TweenService = game:GetService("TweenService")
 local utility = require(RobloxGui.Modules.Settings.Utility)
 local StyleWidgets = require(RobloxGui.Modules.StyleWidgets)
 local Theme = require(RobloxGui.Modules.Settings.Theme)
+local Create = require(CorePackages.Workspace.Packages.AppCommonLib).Create
 
 ----------- VARIABLES --------------
 RobloxGui:WaitForChild("Modules"):WaitForChild("TenFootInterface")
@@ -26,6 +28,8 @@ local isTenFootInterface = require(RobloxGui.Modules.TenFootInterface):IsEnabled
 
 local success, result = pcall(function() return settings():GetFFlag('UseNotificationsLocalization') end)
 local FFlagUseNotificationsLocalization = success and result
+local FFlagFixIGMTabTransitions = require(script.Parent.Flags.GetFFlagFixIGMTabTransitions)
+local GetFFlagEnablePreferredTextSizeStyleFixesInExperienceMenu = require(script.Parent.Flags.GetFFlagEnablePreferredTextSizeStyleFixesInExperienceMenu)
 
 ----------- CLASS DECLARATION --------------
 local function Initialize()
@@ -43,7 +47,7 @@ local function Initialize()
 	local displayed = false
 
 	------ TAB CREATION -------
-	this.TabHeader = utility:Create'TextButton'
+	this.TabHeader = Create'TextButton'
 	{
 		Name = "Header",
 		Text = "",
@@ -62,7 +66,7 @@ local function Initialize()
 		end
 	end)
 
-	local icon = utility:Create'ImageLabel'
+	local icon = Create'ImageLabel'
 	{
 		Name = "Icon",
 		BackgroundTransparency = 1,
@@ -72,7 +76,7 @@ local function Initialize()
 		ImageTransparency = 0.5,
 		Parent = this.TabHeader
 	};
-	local _iconAspectRatio = utility:Create'UIAspectRatioConstraint'
+	local _iconAspectRatio = Create'UIAspectRatioConstraint'
 	{
 		Name = "AspectRatioConstraint",
 		AspectRatio = 1,
@@ -84,7 +88,7 @@ local function Initialize()
 		titleTextYOffset = -2
 	end
 
-	local title = utility:Create'TextLabel'
+	local title = Create'TextLabel'
 	{
 		Name = "Title",
 		Text = "",
@@ -108,6 +112,9 @@ local function Initialize()
 	else
 		title.Parent = icon
 	end
+	if GetFFlagEnablePreferredTextSizeStyleFixesInExperienceMenu() and utility:IsPortrait() and utility:IsSmallTouchScreen() then 
+		titleTextSizeConstraint.Parent = title
+	end
 
 	if utility:IsSmallTouchScreen() then
 		title.FontSize =  Theme.fontSize(Enum.FontSize.Size18)
@@ -120,7 +127,7 @@ local function Initialize()
 	local _tabSelection
 	local tabLabel
 	if Theme.UIBloxThemeEnabled then
-		_tabSelection = utility:Create'ImageLabel'
+		_tabSelection = Create'ImageLabel'
 		{
 		  Name = "TabSelection",
 		  Visible = false,
@@ -132,7 +139,7 @@ local function Initialize()
 		  Parent = this.TabHeader,
 		}
 
-		tabLabel = utility:Create'Frame'
+		tabLabel = Create'Frame'
 		{
 			Name = "TabLabel",
 			Size = UDim2.new(1,0,1,0 ),
@@ -141,7 +148,7 @@ local function Initialize()
 			Parent = this.TabHeader,
 		}
 
-		utility:Create'UIListLayout'
+		Create'UIListLayout'
 		{
 			Name = "Layout",
 			FillDirection = Enum.FillDirection.Horizontal,
@@ -260,7 +267,7 @@ local function Initialize()
 	utility:OnResized(this.TabHeader, onResized)
 
 	------ PAGE CREATION -------
-	this.Page = utility:Create'Frame'
+	this.Page = Create'Frame'
 	{
 		Name = "Page",
 		BackgroundTransparency = 1,
@@ -269,7 +276,7 @@ local function Initialize()
 	};
 
 	if Theme.UIBloxThemeEnabled then
-		utility:Create'UIPadding'
+		Create'UIPadding'
 		{
 			PaddingLeft = UDim.new(0, 12),
 			PaddingRight = UDim.new(0, 11),
@@ -277,7 +284,7 @@ local function Initialize()
 		}
 	end
 
-	this.PageListLayout = utility:Create'UIListLayout'
+	this.PageListLayout = Create'UIListLayout'
 	{
 		Name = "RowListLayout",
 		FillDirection = Enum.FillDirection.Vertical,
@@ -359,6 +366,12 @@ local function Initialize()
 
 		local endPos = UDim2.new(0,0,0,0)
 		local animationComplete = function()
+			if FFlagFixIGMTabTransitions() then
+				if UserGameSettings.ReducedMotion then
+					pageParent.InnerCanvasGroupShow.GroupTransparency = 0
+				end
+				this.Page.Position = endPos
+			end
 			this.Page.Visible = true
 			displayed = true
 			this.Displayed:Fire()
@@ -409,6 +422,9 @@ local function Initialize()
 		if this.Page.Parent then
 			local endPos = UDim2.new(1 * direction,0,0,0)
 			local animationComplete = function()
+				if FFlagFixIGMTabTransitions() and UserGameSettings.ReducedMotion then
+					pageParent.InnerCanvasGroupShow.GroupTransparency = 1
+				end
 				this.Page.Visible = false
 				this.Page.Position = UDim2.new(this.TabPosition - newPagePos,0,0,0)
 				displayed = false

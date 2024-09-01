@@ -30,13 +30,16 @@ local VRHub = require(RobloxGui.Modules.VR.VRHub)
 local PolicyService = require(RobloxGui.Modules.Common.PolicyService)
 local PerfUtils = require(RobloxGui.Modules.Common.PerfUtils)
 local MouseIconOverrideService = require(CorePackages.InGameServices.MouseIconOverrideService)
-local isSubjectToDesktopPolicies = require(CorePackages.Workspace.Packages.SharedFlags).isSubjectToDesktopPolicies
+local SharedFlags = CorePackages.Workspace.Packages.SharedFlags
+local isSubjectToDesktopPolicies = require(SharedFlags).isSubjectToDesktopPolicies
 local MenuBackButton = require(RobloxGui.Modules.Settings.Components.MenuBackButton)
 local RoactAppExperiment = require(CorePackages.Packages.RoactAppExperiment)
 local IXPServiceWrapper = require(RobloxGui.Modules.Common.IXPServiceWrapper)
 local AppFonts = require(CorePackages.Workspace.Packages.Style).AppFonts
 local ScreenshotsPolicy  = require(CorePackages.Workspace.Packages.Screenshots).ScreenshotsPolicy
 local InExperienceCapabilities = require(CorePackages.Workspace.Packages.InExperienceCapabilities).InExperienceCapabilities
+local getCamMicPermissions = require(CoreGui.RobloxGui.Modules.Settings.getCamMicPermissions)
+local Create = require(CorePackages.Workspace.Packages.AppCommonLib).Create
 
 local Theme = require(script.Parent.Theme)
 
@@ -57,6 +60,8 @@ local VERSION_BAR_HEIGHT = isTenFootInterface and 32 or (utility:IsSmallTouchScr
 
 local BOTTOM_BUTTON_BAR_HEIGHT = 80
 local BOTTOM_BUTTON_10FT_SIZE = 72
+
+local CHECK_LEAVE_GAME_UPSELL_COOLDOWN = game:DefineFastInt("CheckLeaveGameUpsellCooldown", 300)
 
 -- [[ FAST FLAGS ]]
 local FFlagUseNotificationsLocalization = settings():GetFFlag('UseNotificationsLocalization')
@@ -83,18 +88,23 @@ local ChromeEnabled = require(RobloxGui.Modules.Chrome.Enabled)()
 local GetFFlagOpenControlsOnMenuOpen = require(RobloxGui.Modules.Chrome.Flags.GetFFlagOpenControlsOnMenuOpen)
 local GetFFlagEnableCapturesInChrome = require(RobloxGui.Modules.Chrome.Flags.GetFFlagEnableCapturesInChrome)
 local FFlagLuaEnableGameInviteModalSettingsHub = game:DefineFastFlag("LuaEnableGameInviteModalSettingsHub", false)
-local GetFFlagFix10ftBottomButtons = require(RobloxGui.Modules.Settings.Flags.GetFFlagFix10ftBottomButtons)
 local GetFFlagLuaInExperienceCoreScriptsGameInviteUnification = require(RobloxGui.Modules.Flags.GetFFlagLuaInExperienceCoreScriptsGameInviteUnification)
-local GetFStringGameInviteMenuLayer = require(CorePackages.Workspace.Packages.SharedFlags).GetFStringGameInviteMenuLayer
-local GetFFlagFix10ftMenuGap = require(RobloxGui.Modules.Settings.Flags.GetFFlagFix10ftMenuGap)
+local GetFStringGameInviteMenuLayer = require(SharedFlags).GetFStringGameInviteMenuLayer
 local GetFFlagFixSettingsHubVRBackgroundError =  require(RobloxGui.Modules.Settings.Flags.GetFFlagFixSettingsHubVRBackgroundError)
 local GetFFlagRightAlignMicText =  require(RobloxGui.Modules.Settings.Flags.GetFFlagRightAlignMicText)
-local GetFFlagFixResumeSourceAnalytics =  require(RobloxGui.Modules.Settings.Flags.GetFFlagFixResumeSourceAnalytics)
-local GetFFlagShouldInitWithFirstPageWithTabHeader =  require(RobloxGui.Modules.Settings.Flags.GetFFlagShouldInitWithFirstPageWithTabHeader)
 local FFlagPreventHiddenSwitchPage = game:DefineFastFlag("PreventHiddenSwitchPage", false)
-local GetFFlagEnableScreenshotUtility = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagEnableScreenshotUtility
+local GetFFlagEnableScreenshotUtility = require(SharedFlags).GetFFlagEnableScreenshotUtility
 local FFlagIGMThemeResizeFix = game:DefineFastFlag("IGMThemeResizeFix", false)
-local FFlagFixReducedMotionStuckIGM = game:DefineFastFlag("FixReducedMotionStuckIGM", false)
+local FFlagFixReducedMotionStuckIGM = game:DefineFastFlag("FixReducedMotionStuckIGM2", false)
+local GetFFlagEnableInExpJoinVoiceAnalytics = require(RobloxGui.Modules.Flags.GetFFlagEnableInExpJoinVoiceAnalytics)
+local GetFFlagEnableShowVoiceUI = require(SharedFlags).GetFFlagEnableShowVoiceUI
+local GetFFlagUseMicPermForEnrollment = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagUseMicPermForEnrollment
+local GetFFlagEnableAppChatInExperience = require(SharedFlags).GetFFlagEnableAppChatInExperience
+local FFlagSettingsHubCurrentPageSignal = game:DefineFastFlag("SettingsHubCurrentPageSignal", false)
+local EngineFeatureRbxAnalyticsServiceExposePlaySessionId = game:GetEngineFeature("RbxAnalyticsServiceExposePlaySessionId")
+local GetFFlagEnableInExpPhoneVoiceUpsellEntrypoints = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagEnableInExpPhoneVoiceUpsellEntrypoints
+local GetFFlagEnableLeaveGameUpsellEntrypoint = require(RobloxGui.Modules.Settings.Flags.GetFFlagEnableLeaveGameUpsellEntrypoint)
+local GetFFlagFixIGMBottomBarVisibility = require(RobloxGui.Modules.Settings.Flags.GetFFlagFixIGMBottomBarVisibility)
 
 --[[ SERVICES ]]
 local RobloxReplicatedStorage = game:GetService("RobloxReplicatedStorage")
@@ -162,26 +172,15 @@ local Constants = require(RobloxGui.Modules:WaitForChild("InGameMenu"):WaitForCh
 local shouldLocalize = PolicyService:IsSubjectToChinaPolicies()
 
 local VoiceChatServiceManager = require(RobloxGui.Modules.VoiceChat.VoiceChatServiceManager).default
-local GetFFlagOldMenuNewIcons = require(RobloxGui.Modules.Flags.GetFFlagOldMenuNewIcons)
+local VoiceConstants = require(RobloxGui.Modules.VoiceChat.Constants)
 local GetFFlagPlayerListAnimateMic = require(RobloxGui.Modules.Flags.GetFFlagPlayerListAnimateMic)
 local NotchSupportExperiment = require(RobloxGui.Modules.Settings.Experiments.NotchSupportExperiment)
 local GetFFlagInGameMenuV1FadeBackgroundAnimation = require(RobloxGui.Modules.Settings.Flags.GetFFlagInGameMenuV1FadeBackgroundAnimation)
 local GetFFlagSwitchInExpTranslationsPackage = require(RobloxGui.Modules.Flags.GetFFlagSwitchInExpTranslationsPackage)
 local FFlagSettingsHubRaceConditionFix = game:DefineFastFlag("SettingsHubRaceConditionFix", false)
 
-local MuteStatusIcons = {
-	MicOn = "rbxasset://textures/ui/Settings/Players/Unmute@2x.png",
-	MicOff = "rbxasset://textures/ui/Settings/Players/Muted@2x.png",
-	MicDisabled = "rbxasset://textures/ui/Settings/Players/Blocked@2x.png",
-	Loading = "rbxasset://textures/ui/Settings/Players/Unmuted-White@2x.png",
-}
-
-local PlayerMuteStatusIcons = MuteStatusIcons
-
-if GetFFlagOldMenuNewIcons() then
-	MuteStatusIcons = VoiceChatServiceManager.MuteStatusIcons
-	PlayerMuteStatusIcons = VoiceChatServiceManager.PlayerMuteStatusIcons
-end
+local MuteStatusIcons = VoiceChatServiceManager.MuteStatusIcons
+local PlayerMuteStatusIcons = VoiceChatServiceManager.PlayerMuteStatusIcons
 
 local SPRING_PARAMS = {}
 if GetFFlagVoiceRecordingIndicatorsEnabled() then
@@ -212,7 +211,7 @@ local chat = require(RobloxGui.Modules.ChatSelector)
 
 local SETTINGS_SHIELD_ACTIVE_POSITION
 local SETTINGS_SHIELD_SIZE
-if not (GetFFlagFix10ftMenuGap() and Theme.UIBloxThemeEnabled) and isTenFootInterface then
+if not Theme.UIBloxThemeEnabled and isTenFootInterface then
 	SETTINGS_SHIELD_ACTIVE_POSITION = UDim2.new(0,0,0,0)
 	SETTINGS_SHIELD_SIZE = UDim2.new(1,0,1,0)
 else
@@ -279,11 +278,19 @@ local function CreateSettingsHub()
 	this.PreferredTransparencyChangedConnection = nil
 	this.TabConnection = nil
 	this.LeaveGamePage = require(RobloxGui.Modules.Settings.Pages.LeaveGame)
+	this.LeaveGameUpsellPage = if GetFFlagEnableLeaveGameUpsellEntrypoint() then require(RobloxGui.Modules.Settings.Pages.LeaveGameUpsell.LeaveGameUpsell) else nil
 	this.ResetCharacterPage = require(RobloxGui.Modules.Settings.Pages.ResetCharacter)
 	this.SettingsShowSignal = utility:CreateSignal()
 	this.CurrentPageSignal = utility:CreateSignal()
 	this.OpenStateChangedCount = 0
 	this.BottomButtonFrame = nil
+	this.hasMicPermissions = false
+	if GetFFlagEnableLeaveGameUpsellEntrypoint() then
+		this.checkedUpsell = false
+		this.leaveGameUpsellProp = VoiceConstants.PHONE_UPSELL_VALUE_PROP.None
+		this.sessionStartTime = os.time()
+	end
+	this.isFetchingMicPermissions = true
 
 	local voiceAnalytics = VoiceAnalytics.new(AnalyticsService, "SettingsHub")
 
@@ -327,7 +334,14 @@ local function CreateSettingsHub()
 		whichPage = whichPage or this.Pages.CurrentPage
 
 		if utility:IsPortrait() or utility:IsSmallTouchScreen() then
-			return Theme.AlwaysShowBottomBar()
+			-- If ShouldShowBottomBar is false, it should should take precedence, even if AlwaysShowBottomBar() is true
+			if GetFFlagFixIGMBottomBarVisibility() then
+				if not Theme.AlwaysShowBottomBar() then
+					return false
+				end
+			else
+				return Theme.AlwaysShowBottomBar()
+			end
 		end
 
 		return whichPage ~= nil and whichPage.ShouldShowBottomBar == true
@@ -475,7 +489,7 @@ local function CreateSettingsHub()
 			wholeButton.Visible = false
 			wholeButton:Destroy()
 		end
-		local tenFootButtonHeight = if GetFFlagFix10ftBottomButtons() and Theme.UIBloxThemeEnabled then BOTTOM_BUTTON_10FT_SIZE else 120
+		local tenFootButtonHeight = if Theme.UIBloxThemeEnabled then BOTTOM_BUTTON_10FT_SIZE else 120
 		local buttonSize = if isTenFootInterface then UDim2.new(0, 320, 0, tenFootButtonHeight) else UDim2.new(0, 260, 0, Theme.LargeButtonHeight)
 
 		updateButtonPosition("LeaveGame", UDim2.new(0.5, if isTenFootInterface then -160 else -130, 0.5, -25), buttonSize)
@@ -512,7 +526,7 @@ local function CreateSettingsHub()
 
 		local size = UDim2.new(0,260,0,Theme.LargeButtonHeight)
 		if isTenFootInterface then
-			size = if Theme.UIBloxThemeEnabled and GetFFlagFix10ftBottomButtons() then UDim2.new(0,320,0,BOTTOM_BUTTON_10FT_SIZE) else UDim2.new(0,320,0,120)
+			size = if Theme.UIBloxThemeEnabled then UDim2.new(0,320,0,BOTTOM_BUTTON_10FT_SIZE) else UDim2.new(0,320,0,120)
 		end
 
 		this[buttonName], this[textName] = utility:MakeStyledButton(name .. "Button", text, size, clickFunc, nil, this)
@@ -550,7 +564,7 @@ local function CreateSettingsHub()
 				image = keyboardImage
 			end
 
-			hintLabel = utility:Create'ImageLabel'
+			hintLabel = Create'ImageLabel'
 			{
 				Name = hintName,
 				ZIndex = this.Shield.ZIndex + 2,
@@ -603,11 +617,7 @@ local function CreateSettingsHub()
 
 		local hotKeyFunc = function(contextName, inputState, inputObject)
 			if inputState == Enum.UserInputState.Begin then
-				if GetFFlagFixResumeSourceAnalytics() then
-					hotFunc()
-				else
-					clickFunc()
-				end
+				hotFunc()
 			end
 		end
 
@@ -621,7 +631,7 @@ local function CreateSettingsHub()
 
 		local size = sizeOverride or UDim2.new(0,260,0,70)
 		if isTenFootInterface then
-			size = if Theme.UIBloxThemeEnabled and GetFFlagFix10ftBottomButtons() then UDim2.new(0,320,0,BOTTOM_BUTTON_10FT_SIZE) else UDim2.new(0,320,0,120)
+			size = if Theme.UIBloxThemeEnabled then UDim2.new(0,320,0,BOTTOM_BUTTON_10FT_SIZE) else UDim2.new(0,320,0,120)
 		end
 
 		this[buttonName], this[textName] = utility:MakeStyledButton(name .. "Button", text, size, clickFunc, nil, this)
@@ -651,7 +661,7 @@ local function CreateSettingsHub()
 				image = fnOrValue(keyboardImage)
 			end
 
-			hintLabel = utility:Create'ImageLabel'
+			hintLabel = Create'ImageLabel'
 			{
 				Name = hintName,
 				ZIndex = this.Shield.ZIndex + 2,
@@ -661,7 +671,7 @@ local function CreateSettingsHub()
 			};
 
 			hintLabel.AnchorPoint = Vector2.new(0.5,0.5)
-			local imageSize = GetFFlagOldMenuNewIcons() and UDim2.fromOffset(50, 50) or UDim2.fromOffset(30, 40)
+			local imageSize = UDim2.fromOffset(50, 50)
 			hintLabel.Size = text == "" and imageSize or UDim2.new(0,50,0,50)
 			hintLabel.Position = text == "" and UDim2.new(0.5,0,0.475,0) or UDim2.new(0.15,0,0.475,0)
 
@@ -787,80 +797,175 @@ local function CreateSettingsHub()
 
 	local voiceChatServiceConnected = false
 	local voiceEnabled = false
+	local muteChangedEvent = nil
+	local settingShowSignalEvent = nil
 	local function setupVoiceListeners()
 		if game:GetEngineFeature("VoiceChatSupported")
 			and not voiceChatServiceConnected
 		then
 			voiceChatServiceConnected = true
-			VoiceChatServiceManager:asyncInit():andThen(function()
-				voiceEnabled = true
-				if GetFFlagVoiceRecordingIndicatorsEnabled() then
-					this.VoiceRecordingText.Visible = true
-					local VCS = VoiceChatServiceManager:getService()
-					VCS.StateChanged:Connect(function(_oldState, newState)
-						if newState == (Enum :: any).VoiceChatState.Ended then
-							this.VoiceRecordingText.Visible = false
-							voiceEnabled = false
-							hideVoiceUx()
-						elseif newState == (Enum :: any).VoiceChatState.Joined then
-							-- If voice has been turned off, but now rejoined
-							if voiceEnabled == false then
-								addMuteButtonToBar()
-							end
-							this.VoiceRecordingText.Visible = true
-						end
-					end)
-				end
-				VoiceChatServiceManager:SetupParticipantListeners()
-				addMuteButtonToBar()
-				if GetFFlagMuteButtonRaceConditionFix() then
-					VoiceChatServiceManager.muteChanged.Event:Connect(function(muted)
-						updateIcon()
-						if GetFFlagVoiceRecordingIndicatorsEnabled() then
-							this.isMuted = muted
-							this.lastVoiceRecordingIndicatorTextUpdated = tick()
-							this.voiceRecordingIndicatorTextMotor:setGoal(Otter.instant(0))
-							if this.isMuted then
-								this.VoiceRecordingText.Text = tryTranslate("InGame.CommonUI.Label.MicOff", "Mic Off")
-							else
-								this.VoiceRecordingText.Text = tryTranslate("InGame.CommonUI.Label.MicOnRecording", "Mic On (recording audio)")
-							end
-						end
-					end)
-
-					if GetFFlagPlayerListAnimateMic() then
-						local renderStepName = 'settings-hub-renderstep'
-						this.SettingsShowSignal:connect(function(isOpen)
-							local frame = 0
-							local renderSteppedConnected = false
-							if isOpen and not renderSteppedConnected then
-								renderSteppedConnected = true
-								RunService:BindToRenderStep(renderStepName, Enum.RenderPriority.Last.Value, function()
-									frame = frame + 1
-									-- This looks a little less flickery if we only do it once every 3 frames
-									if frame % 3 == 0 then
-										updateIcon()
-									end
-								end)
-							elseif renderSteppedConnected then
-								renderSteppedConnected = false
-								RunService:UnbindFromRenderStep(renderStepName)
-							end
-
-							if GetFFlagVoiceRecordingIndicatorsEnabled() then
-								if isOpen then
-									this.lastVoiceRecordingIndicatorTextUpdated = tick()
-									this.voiceRecordingIndicatorTextMotor:setGoal(Otter.instant(0))
+			if GetFFlagEnableShowVoiceUI() then
+				local function showUI()
+					voiceEnabled = true
+					if GetFFlagVoiceRecordingIndicatorsEnabled() then
+						this.VoiceRecordingText.Visible = true
+						local VCS = VoiceChatServiceManager:getService()
+						VCS.StateChanged:Connect(function(_oldState, newState)
+							if newState == (Enum :: any).VoiceChatState.Joined then
+								-- If voice has been turned off, but now rejoined
+								if voiceEnabled == false then
+									addMuteButtonToBar()
 								end
+								this.VoiceRecordingText.Visible = true
 							end
 						end)
 					end
+					VoiceChatServiceManager:SetupParticipantListeners()
+					if GetFFlagEnableInExpJoinVoiceAnalytics() then
+						local callback = function(response)
+							this.hasMicPermissions = response.hasMicPermissions
+						end
+						getCamMicPermissions(callback, nil, true, "PermissionsButtons.getPermissions")
+					end
+					addMuteButtonToBar()
+					if GetFFlagMuteButtonRaceConditionFix() then
+						muteChangedEvent = VoiceChatServiceManager.muteChanged.Event:Connect(function(muted)
+							updateIcon()
+							if GetFFlagVoiceRecordingIndicatorsEnabled() then
+								this.isMuted = muted
+								this.lastVoiceRecordingIndicatorTextUpdated = tick()
+								this.voiceRecordingIndicatorTextMotor:setGoal(Otter.instant(0))
+								if this.isMuted then
+									this.VoiceRecordingText.Text = tryTranslate("InGame.CommonUI.Label.MicOff", "Mic Off")
+								else
+									this.VoiceRecordingText.Text = tryTranslate("InGame.CommonUI.Label.MicOnRecording", "Mic On (recording audio)")
+								end
+							end
+						end)
+
+						if GetFFlagPlayerListAnimateMic() then
+							local renderStepName = 'settings-hub-renderstep'
+							settingShowSignalEvent = this.SettingsShowSignal:connect(function(isOpen)
+								local frame = 0
+								local renderSteppedConnected = false
+								if isOpen and not renderSteppedConnected then
+									renderSteppedConnected = true
+									RunService:BindToRenderStep(renderStepName, Enum.RenderPriority.Last.Value, function()
+										frame = frame + 1
+										-- This looks a little less flickery if we only do it once every 3 frames
+										if frame % 3 == 0 then
+											updateIcon()
+										end
+									end)
+								elseif renderSteppedConnected then
+									renderSteppedConnected = false
+									RunService:UnbindFromRenderStep(renderStepName)
+								end
+
+								if GetFFlagVoiceRecordingIndicatorsEnabled() then
+									if isOpen then
+										this.lastVoiceRecordingIndicatorTextUpdated = tick()
+										this.voiceRecordingIndicatorTextMotor:setGoal(Otter.instant(0))
+									end
+								end
+							end)
+						end
+					end
 				end
-			end):catch(function(err)
-				if GetFFlagVoiceChatUILogging() then
-					log:warning("Failed to init VoiceChatServiceManager {}", err)
+				local function hideUI()
+					this.VoiceRecordingText.Visible = false
+					voiceEnabled = false
+					hideVoiceUx()
+					if muteChangedEvent then
+						muteChangedEvent:Disconnect()
+					end
+					if settingShowSignalEvent then
+						settingShowSignalEvent:Disconnect()
+					end
 				end
-			end)
+
+				if VoiceChatServiceManager.voiceUIVisible then
+					showUI()
+				end
+				VoiceChatServiceManager.showVoiceUI.Event:Connect(showUI)
+				VoiceChatServiceManager.hideVoiceUI.Event:Connect(hideUI)
+			else
+				VoiceChatServiceManager:asyncInit():andThen(function()
+					voiceEnabled = true
+					if GetFFlagVoiceRecordingIndicatorsEnabled() then
+						this.VoiceRecordingText.Visible = true
+						local VCS = VoiceChatServiceManager:getService()
+						VCS.StateChanged:Connect(function(_oldState, newState)
+							if newState == (Enum :: any).VoiceChatState.Ended then
+								this.VoiceRecordingText.Visible = false
+								voiceEnabled = false
+								hideVoiceUx()
+							elseif newState == (Enum :: any).VoiceChatState.Joined then
+								-- If voice has been turned off, but now rejoined
+								if voiceEnabled == false then
+									addMuteButtonToBar()
+								end
+								this.VoiceRecordingText.Visible = true
+							end
+						end)
+					end
+					VoiceChatServiceManager:SetupParticipantListeners()
+					if GetFFlagEnableInExpJoinVoiceAnalytics() then
+						local callback = function(response)
+							this.hasMicPermissions = response.hasMicPermissions
+						end
+						getCamMicPermissions(callback, nil, true, "PermissionsButtons.getPermissions")
+					end
+					addMuteButtonToBar()
+					if GetFFlagMuteButtonRaceConditionFix() then
+						VoiceChatServiceManager.muteChanged.Event:Connect(function(muted)
+							updateIcon()
+							if GetFFlagVoiceRecordingIndicatorsEnabled() then
+								this.isMuted = muted
+								this.lastVoiceRecordingIndicatorTextUpdated = tick()
+								this.voiceRecordingIndicatorTextMotor:setGoal(Otter.instant(0))
+								if this.isMuted then
+									this.VoiceRecordingText.Text = tryTranslate("InGame.CommonUI.Label.MicOff", "Mic Off")
+								else
+									this.VoiceRecordingText.Text = tryTranslate("InGame.CommonUI.Label.MicOnRecording", "Mic On (recording audio)")
+								end
+							end
+						end)
+
+						if GetFFlagPlayerListAnimateMic() then
+							local renderStepName = 'settings-hub-renderstep'
+							this.SettingsShowSignal:connect(function(isOpen)
+								local frame = 0
+								local renderSteppedConnected = false
+								if isOpen and not renderSteppedConnected then
+									renderSteppedConnected = true
+									RunService:BindToRenderStep(renderStepName, Enum.RenderPriority.Last.Value, function()
+										frame = frame + 1
+										-- This looks a little less flickery if we only do it once every 3 frames
+										if frame % 3 == 0 then
+											updateIcon()
+										end
+									end)
+								elseif renderSteppedConnected then
+									renderSteppedConnected = false
+									RunService:UnbindFromRenderStep(renderStepName)
+								end
+
+								if GetFFlagVoiceRecordingIndicatorsEnabled() then
+									if isOpen then
+										this.lastVoiceRecordingIndicatorTextUpdated = tick()
+										this.voiceRecordingIndicatorTextMotor:setGoal(Otter.instant(0))
+									end
+								end
+							end)
+						end
+					end
+				end):catch(function(err)
+					if GetFFlagVoiceChatUILogging() then
+						log:warning("Failed to init VoiceChatServiceManager {}", err)
+					end
+				end)
+			end
 		end
 	end
 
@@ -923,12 +1028,13 @@ local function CreateSettingsHub()
 			shouldFillScreen = shouldFillScreen,
 			selfViewOpen = this.selfViewOpen,
 			useNewMenuTheme = Theme.UIBloxThemeEnabled,
+			hubRef = if GetFFlagEnableInExpPhoneVoiceUpsellEntrypoints() then this else nil,
 		})
 	end
 
 	this.createBackgroundFadeGui = function()
 		if not this.FullscreenGui then
-			this.FullscreenGui = utility:Create("ScreenGui")
+			this.FullscreenGui = Create("ScreenGui")
 			{
 				Name = "FSSettingsMenuBackground",
 				ScreenInsets = Enum.ScreenInsets.None,
@@ -940,7 +1046,7 @@ local function CreateSettingsHub()
 		end
 
 		if not this.FullscreenBackgroundCover then
-			this.FullscreenBackgroundCover = utility:Create("Frame")
+			this.FullscreenBackgroundCover = Create("Frame")
 			{
 				Name = "BackgroundCover",
 				Size = UDim2.fromScale(1, 1),
@@ -960,7 +1066,7 @@ local function CreateSettingsHub()
 			PageViewSizeReducer = 5
 		end
 
-		this.ClippingShield = utility:Create'Frame'
+		this.ClippingShield = Create'Frame'
 		{
 			Name = "SettingsClippingShield",
 			Size = SETTINGS_SHIELD_SIZE,
@@ -979,7 +1085,7 @@ local function CreateSettingsHub()
 			ShieldInstanceType = "ImageButton"
 		end
 
-		this.CanvasGroup = utility:Create("CanvasGroup")
+		this.CanvasGroup = Create("CanvasGroup")
 		{
 			Name = "CanvasGroup",
 			Size = UDim2.fromScale(1, 1),
@@ -988,7 +1094,7 @@ local function CreateSettingsHub()
 			Parent = this.ClippingShield
 		}
 
-		this.Shield = utility:Create(ShieldInstanceType)
+		this.Shield = Create(ShieldInstanceType)
 		{
 			Name = "SettingsShield",
 			Size = UDim2.new(1,0,1,0),
@@ -1001,7 +1107,7 @@ local function CreateSettingsHub()
 			ZIndex = SETTINGS_BASE_ZINDEX,
 			Parent = this.ClippingShield
 		};
-		this.VRShield = utility:Create("Frame") {
+		this.VRShield = Create("Frame") {
 			Name = "VRBackground",
 			Parent = this.Shield,
 
@@ -1017,7 +1123,7 @@ local function CreateSettingsHub()
 		local canGetCoreScriptVersion = game:GetEngineFeature("CoreScriptVersionEnabled")
 
 		if canGetCoreScriptVersion then
-			this.VersionContainer = utility:Create("ScrollingFrame") {
+			this.VersionContainer = Create("ScrollingFrame") {
 				Name = "VersionContainer",
 				Parent = this.Shield,
 
@@ -1037,7 +1143,7 @@ local function CreateSettingsHub()
 				Visible = false
 			}
 		else
-			this.VersionContainer = utility:Create("Frame") {
+			this.VersionContainer = Create("Frame") {
 				Name = "VersionContainer",
 				Parent = this.Shield,
 
@@ -1055,7 +1161,7 @@ local function CreateSettingsHub()
 			}
 		end
 
-		local _versionContainerLayout = utility:Create("UIListLayout") {
+		local _versionContainerLayout = Create("UIListLayout") {
 			Name = "VersionContainer",
 			Parent = this.VersionContainer,
 
@@ -1072,7 +1178,7 @@ local function CreateSettingsHub()
 			label.Size = canGetCoreScriptVersion and UDim2.new(0, label.TextBounds.X + marginSize, 0, VERSION_BAR_HEIGHT) or defaultSize
 		end
 
-		this.ServerVersionLabel = utility:Create("TextLabel") {
+		this.ServerVersionLabel = Create("TextLabel") {
 			Name = "ServerVersionLabel",
 			Parent = this.VersionContainer,
 			LayoutOrder = 2,
@@ -1109,7 +1215,7 @@ local function CreateSettingsHub()
 			robloxVersion = string.format("%s (%.6s)", robloxVersion, result)
 		end
 
-		this.ClientVersionLabel = utility:Create("TextLabel") {
+		this.ClientVersionLabel = Create("TextLabel") {
 			Name = "ClientVersionLabel",
 			Parent = this.VersionContainer,
 			LayoutOrder = 1,
@@ -1125,7 +1231,7 @@ local function CreateSettingsHub()
 		addSizeToLabel(this.ClientVersionLabel)
 		this.ClientVersionLabel.TextScaled = not (canGetCoreScriptVersion or this.ClientVersionLabel.TextFits)
 
-		this.PlaceVersionLabel = utility:Create("TextLabel") {
+		this.PlaceVersionLabel = Create("TextLabel") {
 			Name = "PlaceVersionLabel",
 			Parent = this.VersionContainer,
 			BackgroundTransparency = 1,
@@ -1153,7 +1259,7 @@ local function CreateSettingsHub()
 		local shouldShowEnvLabel = not PolicyService:IsSubjectToChinaPolicies()
 
 		if shouldShowEnvLabel then
-			this.EnvironmentLabel = utility:Create("TextLabel") {
+			this.EnvironmentLabel = Create("TextLabel") {
 				Name = "EnvironmentLabel",
 				Parent = this.VersionContainer,
 				AnchorPoint = Vector2.new(0.5,0),
@@ -1179,7 +1285,7 @@ local function CreateSettingsHub()
 				if RobloxTranslator then
 					playSessionIdString = RobloxTranslator:FormatByKey("InGame.HelpMenu.Label.PlaySessionId", { RBX_STR = playSessionId })
 				end
-				this.PlaySessionIdLabel = utility:Create("TextLabel") {
+				this.PlaySessionIdLabel = Create("TextLabel") {
 					Name = "PlaySessionIdLabel",
 					Parent = this.VersionContainer,
 					BackgroundTransparency = 1,
@@ -1237,7 +1343,7 @@ local function CreateSettingsHub()
 			end
 		end
 
-		this.OverridesPlayerScriptsLabel = utility:Create("TextLabel") {
+		this.OverridesPlayerScriptsLabel = Create("TextLabel") {
 			Name = "OverridesPlayerScriptsLabel",
 			Parent = this.VersionContainer,
 			AnchorPoint = Vector2.new(0.5,0),
@@ -1284,7 +1390,7 @@ local function CreateSettingsHub()
 			if shouldTryLocalizeVersionLabels then
 				coreScriptVersionString = tryTranslate("InGame.HelpMenu.Label.ClientCoreScriptVersion", "Client CoreScript Version: ")
 			end
-			this.CoreScriptVersionLabel = utility:Create("TextLabel") {
+			this.CoreScriptVersionLabel = Create("TextLabel") {
 				Name = "CoreScriptVersionLabel",
 				Parent = this.VersionContainer,
 				LayoutOrder = 6,
@@ -1305,7 +1411,7 @@ local function CreateSettingsHub()
 			end)
 		end
 
-		this.Modal = utility:Create'TextButton' -- Force unlocks the mouse, really need a way to do this via UIS
+		this.Modal = Create'TextButton' -- Force unlocks the mouse, really need a way to do this via UIS
 		{
 			Name = 'Modal',
 			BackgroundTransparency = 1,
@@ -1318,7 +1424,7 @@ local function CreateSettingsHub()
 		}
 
 		if Theme.EnableDarkenBackground then
-			this.DarkenBackground = utility:Create("Frame")
+			this.DarkenBackground = Create("Frame")
 			{
 				Name = 'DarkenBackground',
 				ZIndex = this.Shield.ZIndex-1,
@@ -1330,7 +1436,7 @@ local function CreateSettingsHub()
 		end
 
 		local menuPos = Theme.MenuContainerPosition()
-		this.MenuContainer = utility:Create(ShieldInstanceType)
+		this.MenuContainer = Create(ShieldInstanceType)
 		{
 			Name = 'MenuContainer',
 			ZIndex = this.Shield.ZIndex,
@@ -1342,7 +1448,7 @@ local function CreateSettingsHub()
 			AutomaticSize = menuPos.AutomaticSize,
 			Parent = this.Shield
 		}
-		this.MenuContainerPadding = utility:Create'UIPadding'
+		this.MenuContainerPadding = Create'UIPadding'
 		{
 			Parent = this.MenuContainer,
 		}
@@ -1366,7 +1472,7 @@ local function CreateSettingsHub()
 			this.MenuContainerPadding.PaddingBottom = pad.PaddingBottom
 			this.MenuContainerPadding.PaddingTop = pad.PaddingTop
 
-			utility:Create'UICorner'
+			Create'UICorner'
 			{
 				CornerRadius = Theme.MenuContainerCornerRadius,
 				Parent = this.MenuContainer,
@@ -1374,7 +1480,7 @@ local function CreateSettingsHub()
 
 			if Theme.EnableVerticalBottomBar then
 
-				this.MainColumn = utility:Create'Frame'
+				this.MainColumn = Create'Frame'
 				{
 					Name = 'MainColumn',
 					BackgroundTransparency =1,
@@ -1386,7 +1492,7 @@ local function CreateSettingsHub()
 
 				menuParent = this.MainColumn
 
-				this.VerticalMenuDivider = utility:Create'Frame'
+				this.VerticalMenuDivider = Create'Frame'
 				{
 					Name = 'VerticalMenuDivider',
 					BackgroundTransparency = Theme.transparency("Divider"),
@@ -1395,7 +1501,7 @@ local function CreateSettingsHub()
 					Visible = true,
 					Parent = this.MenuContainer
 				}
-				this.VerticalMenu = utility:Create'Frame'
+				this.VerticalMenu = Create'Frame'
 				{
 					Name = 'VerticalMenu',
 					BackgroundTransparency =1,
@@ -1403,7 +1509,7 @@ local function CreateSettingsHub()
 					Visible = false,
 					Parent = this.MenuContainer
 				}
-				utility:Create'UIListLayout'
+				Create'UIListLayout'
 				{
 					Name = "MenuListLayout",
 					Padding = UDim.new(0, 10),
@@ -1414,7 +1520,7 @@ local function CreateSettingsHub()
 					Parent = this.VerticalMenu
 				}
 
-				this.MenuListLayout = utility:Create'UIListLayout'
+				this.MenuListLayout = Create'UIListLayout'
 				{
 					Name = "MenuListLayout",
 					FillDirection = Enum.FillDirection.Horizontal,
@@ -1435,7 +1541,58 @@ local function CreateSettingsHub()
 			end
 		end
 
-		this.MenuListLayout = utility:Create'UIListLayout'
+		if GetFFlagUseMicPermForEnrollment() then
+			local setMicPermissionsCallback = function(response)
+				this.hasMicPermissions = response.hasMicPermissions
+				this.isFetchingMicPermissions = false
+			end
+			getCamMicPermissions(setMicPermissionsCallback, nil, true)
+		end
+
+		if GetFFlagEnableInExpJoinVoiceAnalytics() then
+			this.SettingsShowSignal:connect(function(isOpen)
+				if GetFFlagUseMicPermForEnrollment() then
+					if isOpen then
+						if VoiceChatServiceManager:UserVoiceEnabled() then
+							-- We may still be waiting for user to accept or deny mic permissions. If we are still waiting, don't fire the analytic event
+							if this.isFetchingMicPermissions then
+								return
+							end
+						end
+
+						local userVoiceUpsellEligible = VoiceChatServiceManager:UserOnlyEligibleForVoice()
+							or (VoiceChatServiceManager:UserVoiceEnabled() and not this.hasMicPermissions)
+
+						-- Don't fetch age verification overlay data if user is not eligible for upsell
+						if not userVoiceUpsellEligible then
+							return
+						end
+
+						local userInInExperienceUpsellTreatment = VoiceChatServiceManager:UserInInExperienceUpsellTreatment()
+						if userInInExperienceUpsellTreatment then
+							local sessionId = ""
+							if EngineFeatureRbxAnalyticsServiceExposePlaySessionId then
+								sessionId = AnalyticsService:GetPlaySessionId()
+							end
+							VoiceChatServiceManager.Analytics:reportJoinVoiceButtonEvent("shown", game.GameId, game.PlaceId, sessionId)
+						end
+					end
+				else
+					local userInInExperienceUpsellTreatment = VoiceChatServiceManager:UserInInExperienceUpsellTreatment()
+					local userVoiceUpsellEligible = VoiceChatServiceManager:UserOnlyEligibleForVoice()
+						or (VoiceChatServiceManager:UserVoiceEnabled() and not this.hasMicPermissions)
+					if isOpen and userInInExperienceUpsellTreatment and userVoiceUpsellEligible then
+						local sessionId = ""
+						if EngineFeatureRbxAnalyticsServiceExposePlaySessionId then
+							sessionId = AnalyticsService:GetPlaySessionId()
+						end
+						VoiceChatServiceManager.Analytics:reportJoinVoiceButtonEvent("shown", game.GameId, game.PlaceId, sessionId)
+					end
+				end
+			end)
+		end
+
+		this.MenuListLayout = Create'UIListLayout'
 		{
 			Name = "MenuListLayout",
 			FillDirection = Enum.FillDirection.Vertical,
@@ -1444,7 +1601,7 @@ local function CreateSettingsHub()
 			SortOrder = Enum.SortOrder.LayoutOrder,
 			Parent = menuParent
 		}
-		this.MenuAspectRatio = utility:Create'UIAspectRatioConstraint'
+		this.MenuAspectRatio = Create'UIAspectRatioConstraint'
 		{
 			Name = 'MenuAspectRatio',
 			AspectRatio = 800 / 600,
@@ -1453,7 +1610,7 @@ local function CreateSettingsHub()
 		}
 
 		if Theme.UIBloxThemeEnabled then
-			this.HubBar = utility:Create'ImageLabel'
+			this.HubBar = Create'ImageLabel'
 			{
 				Name = "HubBar",
 				BackgroundColor3 = Theme.color("HubBarContainer"),
@@ -1464,7 +1621,7 @@ local function CreateSettingsHub()
 				LayoutOrder = 0,
 				Parent = menuParent
 			}
-			utility:Create'Frame'
+			Create'Frame'
 			{
 				BackgroundColor3 = Theme.color("Divider"),
 				BackgroundTransparency = Theme.transparency("Divider"),
@@ -1476,7 +1633,7 @@ local function CreateSettingsHub()
 			}
 
 		else
-			this.HubBar = utility:Create'ImageLabel'
+			this.HubBar = Create'ImageLabel'
 			{
 				Name = "HubBar",
 				ZIndex = this.Shield.ZIndex + 1,
@@ -1492,7 +1649,7 @@ local function CreateSettingsHub()
 			}
 		end
 
-		this.HubBarListLayout = utility:Create'UIListLayout'
+		this.HubBarListLayout = Create'UIListLayout'
 		{
 			FillDirection = Enum.FillDirection.Horizontal,
 			HorizontalAlignment = Enum.HorizontalAlignment.Center,
@@ -1525,7 +1682,7 @@ local function CreateSettingsHub()
 			this.HubBar.Position = UDim2.new(0.5,0,0.1,0)
 		end
 
-		this.VoiceRecordingIndicatorFrame = if GetFFlagVoiceRecordingIndicatorsEnabled() and not FFlagAvatarChatCoreScriptSupport then utility:Create'Frame'
+		this.VoiceRecordingIndicatorFrame = if GetFFlagVoiceRecordingIndicatorsEnabled() and not FFlagAvatarChatCoreScriptSupport then Create'Frame'
 			{
 				Size = if GetFFlagRightAlignMicText() and ChromeEnabled then UDim2.new(1, 0, 0, 100) else UDim2.fromOffset(0, 100),
 				Position = UDim2.new(0,0,0,0),
@@ -1533,7 +1690,7 @@ local function CreateSettingsHub()
 				BackgroundTransparency = 1,
 			} else nil
 
-		this.VoiceRecordingText = if GetFFlagVoiceRecordingIndicatorsEnabled() then utility:Create'TextLabel'
+		this.VoiceRecordingText = if GetFFlagVoiceRecordingIndicatorsEnabled() then Create'TextLabel'
 			{
 				Parent = this.VoiceRecordingIndicatorFrame,
 				Text = "",
@@ -1598,7 +1755,7 @@ local function CreateSettingsHub()
 			end)
 		end
 
-		this.PageViewClipper = utility:Create'Frame'
+		this.PageViewClipper = Create'Frame'
 		{
 			Name = 'PageViewClipper',
 			BackgroundTransparency = 1,
@@ -1611,7 +1768,7 @@ local function CreateSettingsHub()
 			LayoutOrder = 1,
 			Parent = menuParent,
 
-			utility:Create'ImageButton'{
+			Create'ImageButton'{
 				Name = 'InputCapture',
 				BackgroundTransparency = 1,
 				Size = UDim2.new(1, 0, 1, 0),
@@ -1619,7 +1776,7 @@ local function CreateSettingsHub()
 			}
 		}
 
-		this.PageView = utility:Create'ScrollingFrame'
+		this.PageView = Create'ScrollingFrame'
 		{
 			Name = "PageView",
 			AnchorPoint = Vector2.new(0.5, 0.5),
@@ -1663,7 +1820,7 @@ local function CreateSettingsHub()
 			end
 		end
 
-		this.PageViewInnerFrame = utility:Create'Frame'
+		this.PageViewInnerFrame = Create'Frame'
 		{
 			Name = "PageViewInnerFrame",
 			Position = UDim2.new(0, 0, 0, 0),
@@ -1676,14 +1833,14 @@ local function CreateSettingsHub()
 			LayoutOrder = 1,
 		};
 		if Theme.UIBloxThemeEnabled then
-			utility:Create'UIPadding'
+			Create'UIPadding'
 			{
 				PaddingTop = UDim.new(0, 5),
 				Parent = this.PageViewInnerFrame,
 			}
 		end
 
-		this.InnerCanvasGroupShow = utility:Create("CanvasGroup")
+		this.InnerCanvasGroupShow = Create("CanvasGroup")
 		{
 			Name = "InnerCanvasGroupShow",
 			Size = UDim2.fromScale(1, 1),
@@ -1692,7 +1849,7 @@ local function CreateSettingsHub()
 			Parent = this.PageViewInnerFrame
 		}
 
-		this.InnerCanvasGroupHide = utility:Create("CanvasGroup")
+		this.InnerCanvasGroupHide = Create("CanvasGroup")
 		{
 			Name = "InnerCanvasGroupHide",
 			Size = UDim2.fromScale(1, 1),
@@ -1703,7 +1860,7 @@ local function CreateSettingsHub()
 
 		if Theme.UseStickyBar() then
 			this.PageView.AutomaticCanvasSize = Enum.AutomaticSize.Y
-			utility:Create'UIListLayout'
+			Create'UIListLayout'
 			{
 				FillDirection = Enum.FillDirection.Vertical,
 				VerticalAlignment = Enum.VerticalAlignment.Top,
@@ -1720,7 +1877,7 @@ local function CreateSettingsHub()
 				0.5, -(this.HubBar.Position.Y.Offset - this.HubBar.Size.Y.Offset))
 		end
 
-		this.BottomButtonFrame = utility:Create'Frame'
+		this.BottomButtonFrame = Create'Frame'
 		{
 			Name = "BottomButtonFrame",
 			Size = this.HubBar.Size,
@@ -1733,7 +1890,7 @@ local function CreateSettingsHub()
 
 		if Theme.UIBloxThemeEnabled then
 			this.BottomButtonFrame.Size = UDim2.new(1,0, 0, 80)
-			this.MenuListLayout = utility:Create'UIListLayout'
+			this.MenuListLayout = Create'UIListLayout'
 			{
 				Padding = UDim.new(0, 12),
 				FillDirection = Enum.FillDirection.Horizontal,
@@ -1753,7 +1910,11 @@ local function CreateSettingsHub()
 			this:AddToMenuStack(this.Pages.CurrentPage)
 			this.HubBar.Visible = false
 			removeBottomBarBindings()
-			this:SwitchToPage(this.LeaveGamePage, nil, 1, true)
+			if GetFFlagEnableLeaveGameUpsellEntrypoint() and this.leaveGameUpsellProp ~= VoiceConstants.PHONE_UPSELL_VALUE_PROP.None then
+				this:SwitchToPage(this.LeaveGameUpsellPage, nil, 1, true)
+			else
+				this:SwitchToPage(this.LeaveGamePage, nil, 1, true)
+			end
 		end
 
 		local resumeFunc = function(source)
@@ -1762,16 +1923,14 @@ local function CreateSettingsHub()
 				Constants.AnalyticsTargetName,
 				Constants.AnalyticsResumeGameName,
 				Constants.AnalyticsMenuActionName,
-				{ source = if Theme.UIBloxThemeEnabled then
-					if GetFFlagFixResumeSourceAnalytics() then source else Constants.AnalyticsResumeShieldSource
-				else Constants.AnalyticsResumeButtonSource }
+				{ source = if Theme.UIBloxThemeEnabled then source else Constants.AnalyticsResumeButtonSource }
 			)
 		end
 
 		if Theme.UIBloxThemeEnabled then
-			this.Shield.Activated:Connect(if GetFFlagFixResumeSourceAnalytics() then
-				function() resumeFunc(Constants.AnalyticsResumeShieldSource) end
-				else resumeFunc
+			this.Shield.Activated:Connect(function()
+				resumeFunc(Constants.AnalyticsResumeShieldSource)
+			end
 			)
 		end
 
@@ -1814,12 +1973,12 @@ local function CreateSettingsHub()
 		end
 
 		local resumeGameText = "Resume"
-		local resumeButtonFunc = if GetFFlagFixResumeSourceAnalytics() then
-			function() resumeFunc(Constants.AnalyticsResumeButtonSource) end
-			else resumeFunc
-		local resumeHotkeyFunc = if GetFFlagFixResumeSourceAnalytics() then
-			function() resumeFunc(Constants.AnalyticsResumeGamepadSource) end
-			else nil
+		local resumeButtonFunc = function()
+			resumeFunc(Constants.AnalyticsResumeButtonSource)
+		end
+		local resumeHotkeyFunc = function()
+			resumeFunc(Constants.AnalyticsResumeGamepadSource)
+		end
 		addBottomBarButtonOld("Resume", resumeGameText, buttonB,
 			"rbxasset://textures/ui/Settings/Help/EscapeIcon.png", UDim2.new(0.5,isTenFootInterface and 200 or 140,0.5,-25),
 			resumeButtonFunc, {Enum.KeyCode.ButtonB, Enum.KeyCode.ButtonStart}, resumeHotkeyFunc
@@ -1827,7 +1986,7 @@ local function CreateSettingsHub()
 
 		if Theme.UIBloxThemeEnabled or isSubjectToDesktopPolicies() then
 			if Theme.UIBloxThemeEnabled then
-				this.HubBarContainer = utility:Create'ImageLabel'
+				this.HubBarContainer = Create'ImageLabel'
 				{
 					Name = "HubBarContainer",
 					ZIndex = this.Shield.ZIndex + 2,
@@ -1839,7 +1998,7 @@ local function CreateSettingsHub()
 					Parent = this.HubBar
 				}
 			else
-				this.HubBarContainer = utility:Create'ImageLabel'
+				this.HubBarContainer = Create'ImageLabel'
 				{
 					Name = "HubBarContainer",
 					ZIndex = this.Shield.ZIndex + 2,
@@ -1859,7 +2018,7 @@ local function CreateSettingsHub()
 
 			if Theme.ShowHomeButton then
 				if Theme.UIBloxThemeEnabled then
-					this.HubBarHomeButton = utility:Create'ImageButton'
+					this.HubBarHomeButton = Create'ImageButton'
 					{
 						Name = "HubBarHomeButton",
 						ZIndex = this.Shield.ZIndex + 2,
@@ -1871,13 +2030,13 @@ local function CreateSettingsHub()
 						Position = UDim2.new(0, 0, 0, 0),
 						Parent = this.HubBar
 					}
-					utility:Create'UICorner'
+					Create'UICorner'
 					{
 						CornerRadius = Theme.DefaultCornerRadius,
 						Parent = this.HubBarHomeButton,
 					}
 				else
-					this.HubBarHomeButton = utility:Create'ImageButton'
+					this.HubBarHomeButton = Create'ImageButton'
 					{
 						Name = "HubBarHomeButton",
 						ZIndex = this.Shield.ZIndex + 2,
@@ -1891,13 +2050,13 @@ local function CreateSettingsHub()
 						Parent = this.HubBar
 					}
 				end
-				this.HubBarHomeButtonAspectRatio = utility:Create'UIAspectRatioConstraint'
+				this.HubBarHomeButtonAspectRatio = Create'UIAspectRatioConstraint'
 				{
 					AspectRatio = 1,
 					DominantAxis = Enum.DominantAxis.Height,
 					Parent = this.HubBarHomeButton
 				}
-				this.HubBarHomeButtonIcon = utility:Create'ImageLabel'
+				this.HubBarHomeButtonIcon = Create'ImageLabel'
 				{
 					Name = "HubBarHomeButtonIcon",
 					ZIndex = this.Shield.ZIndex + 3,
@@ -2086,7 +2245,7 @@ local function CreateSettingsHub()
 			else
 				barSize = this.HubBar.Size.Y.Offset + this.BottomButtonFrame.Size.Y.Offset
 			end
-			extraSpace = bufferSize*2+barSize
+			extraSpace = bufferSize*2+(if this.Pages.CurrentPage.DisableTopPadding then 0 else barSize)
 			extraTopPadding = (GetFFlagEnableTeleportBackButton() and getBackBarVisible() and this.BackBarRef:getValue()) and this.BackBarRef:getValue().Size.Y.Offset or 0
 		end
 
@@ -2597,7 +2756,7 @@ local function CreateSettingsHub()
 		this.Pages.CurrentPage = pageToSwitchTo
 		this.Pages.CurrentPage.Active = true
 
-		if ChromeEnabled then
+		if ChromeEnabled or FFlagSettingsHubCurrentPageSignal then
 			this.CurrentPageSignal:fire(this.Pages.CurrentPage and this.Pages.CurrentPage.Page.Name or nil)
 		end
 
@@ -2626,7 +2785,7 @@ local function CreateSettingsHub()
 			local bottomExtra = UDim.new(0, 0)
 			local hasBottomButtons = (not (utility:IsPortrait() or utility:IsSmallTouchScreen())) or Theme.AlwaysShowBottomBar()
 
-			if this.HubBar and not shouldShowHubBar(pageToSwitchTo) then
+			if this.HubBar and not shouldShowHubBar(pageToSwitchTo) and not pageToSwitchTo.DisableTopPadding then
 				topExtra = UDim.new(0, this.HubBar.AbsoluteSize.Y)
 			end
 
@@ -2704,7 +2863,7 @@ local function CreateSettingsHub()
 		this.Pages.CurrentPage = pageToSwitchTo
 		this.Pages.CurrentPage:Display(this.PageViewInnerFrame, skipAnimation)
 		this.Pages.CurrentPage.Active = true
-		if ChromeEnabled then
+		if ChromeEnabled or FFlagSettingsHubCurrentPageSignal then
 			this.CurrentPageSignal:fire(this.Pages.CurrentPage and this.Pages.CurrentPage.Page.Name or nil)
 		end
 
@@ -2722,6 +2881,11 @@ local function CreateSettingsHub()
 			if this.MenuStack[#this.MenuStack] ~= this.Pages.CurrentPage and not ignoreStack then
 				this.MenuStack[#this.MenuStack + 1] = this.Pages.CurrentPage
 			end
+		end
+
+		-- When switching page, we want to call this to expand PageViewClipper size if needed by TopPadding being disabled
+		if pageToSwitchTo.DisableTopPadding then
+			onScreenSizeChanged()
 		end
 
 		local eventTable = {}
@@ -2769,6 +2933,37 @@ local function CreateSettingsHub()
 		end
 	end
 
+	function checkLeaveGameUpsell()
+		if not GetFFlagEnableLeaveGameUpsellEntrypoint() then
+			return
+		end
+
+		-- os.time seems to fail occasionally, so if its nil we'll try once to recover during the check
+		if not this.sessionStartTime then
+				this.sessionStartTime = os.time()
+			end
+		if not this.sessionStartTime then
+			return
+		end
+
+		if not this.checkedUpsell and this.leaveGameUpsellProp == VoiceConstants.PHONE_UPSELL_VALUE_PROP.None then
+			this.checkedUpsell = true
+			this.leaveGameUpsellProp =
+			VoiceChatServiceManager:FetchPhoneVerificationUpsell(VoiceConstants.EXIT_CONFIRMATION_PHONE_UPSELL_IXP_LAYER, this.sessionStartTime, true)
+			this.LeaveGameUpsellPage:SetUpsellProp(this.leaveGameUpsellProp)
+			task.delay(CHECK_LEAVE_GAME_UPSELL_COOLDOWN, function()
+				this.checkedUpsell = false
+			end)
+		elseif this.checkedUpsell then
+			-- This just checks local cache unless it hasn't been set yet
+			local newUpsellProp = VoiceChatServiceManager:FetchPhoneVerificationUpsell(VoiceConstants.EXIT_CONFIRMATION_PHONE_UPSELL_IXP_LAYER, this.sessionStartTime, false)
+			if this.leaveGameUpsellProp ~= newUpsellProp then
+				this.leaveGameUpsellProp = newUpsellProp
+				this.LeaveGameUpsellPage:SetUpsellProp(this.leaveGameUpsellProp)
+			end
+		end
+
+	end
 	function setVisibilityInternal(visible, noAnimation, customStartPage, switchedFromGamepadInput, analyticsContext, takingScreenshot)
 		this.OpenStateChangedCount = this.OpenStateChangedCount + 1
 
@@ -2886,8 +3081,15 @@ local function CreateSettingsHub()
 					this.ReducedMotionOpenTween = TweenService:Create(this.CanvasGroup, tweenInfo, tweenProps)
 					this.ReducedMotionOpenTween:Play()
 
-					this.ReducedMotionOpenTween.Completed:Connect(function()
-						this.Shield.Parent = this.ClippingShield
+					this.ReducedMotionOpenTween.Completed:Connect(function(playbackState)
+						if FFlagFixReducedMotionStuckIGM then
+							if playbackState == Enum.PlaybackState.Completed then
+								this.Shield.Parent = this.ClippingShield
+								this.ReducedMotionOpenTween = nil
+							end
+						else
+							this.Shield.Parent = this.ClippingShield
+						end
 					end)
 
 					if FFlagEnableInGameMenuDurationLogger then
@@ -2963,11 +3165,7 @@ local function CreateSettingsHub()
 				removeBottomBarBindings()
 				this:SwitchToPage(customStartPage, nil, 1, true)
 			else
-				if GetFFlagShouldInitWithFirstPageWithTabHeader() then
-					this:SwitchToPage(this:GetFirstPageWithTabHeader(), nil, 1, true)
-				else
-					this:SwitchToPage(this.PlayersPage, nil, 1, true)
-				end
+				this:SwitchToPage(this:GetFirstPageWithTabHeader(), nil, 1, true)
 			end
 
 			playerList:HideTemp('SettingsMenu', true)
@@ -2988,7 +3186,7 @@ local function CreateSettingsHub()
 				this.TakingScreenshot = takingScreenshot or false
 			end
 
-			if ChromeEnabled then
+			if ChromeEnabled or FFlagSettingsHubCurrentPageSignal then
 				this.CurrentPageSignal:fire("")
 			end
 
@@ -3057,12 +3255,21 @@ local function CreateSettingsHub()
 					}
 					this.ReducedMotionCloseTween = TweenService:Create(this.CanvasGroup, tweenInfo, tweenProps)
 					this.ReducedMotionCloseTween:Play()
-					this.ReducedMotionCloseTween.Completed:Connect(function()
+					this.ReducedMotionCloseTween.Completed:Connect(function(playbackState)
+						if FFlagFixReducedMotionStuckIGM then
+							if playbackState == Enum.PlaybackState.Completed then
+								this.Shield.Position = SETTINGS_SHIELD_INACTIVE_POSITION
 
-						this.Shield.Position = SETTINGS_SHIELD_INACTIVE_POSITION
+								this.Shield.Visible = this.Visible
+								this.Shield.Parent = this.ClippingShield
+								this.ReducedMotionCloseTween = nil
+							end
+						else
+							this.Shield.Position = SETTINGS_SHIELD_INACTIVE_POSITION
 
-						this.Shield.Visible = this.Visible
-						this.Shield.Parent = this.ClippingShield
+							this.Shield.Visible = this.Visible
+							this.Shield.Parent = this.ClippingShield
+						end
 					end)
 
 					handleShieldClose()
@@ -3157,6 +3364,9 @@ local function CreateSettingsHub()
 				AnalyticsService:SetRBXEventStream(Constants.AnalyticsTargetName, Constants.AnalyticsMenuOpenName, Constants.AnalyticsMenuActionName, {
 					source = analyticsContext,
 				})
+				if GetFFlagEnableLeaveGameUpsellEntrypoint() then
+					task.spawn(checkLeaveGameUpsell)
+				end
 			else
 				AnalyticsService:SetRBXEventStream(Constants.AnalyticsTargetName, Constants.AnalyticsMenuCloseName, Constants.AnalyticsMenuActionName, {
 					source = analyticsContext,
@@ -3341,6 +3551,10 @@ local function CreateSettingsHub()
 	end
 
 	-- full page initialization
+	if GetFFlagEnableLeaveGameUpsellEntrypoint() then
+		this.LeaveGameUpsellPage:SetHub(this)
+	end
+
 	this.GameSettingsPage = require(RobloxGui.Modules.Settings.Pages.GameSettings)
 	this.GameSettingsPage:SetHub(this)
 
@@ -3378,6 +3592,11 @@ local function CreateSettingsHub()
 	if isSubjectToDesktopPolicies() and InExperienceCapabilities.canNavigateHome then
 		this.LeaveGameToHomePage = require(RobloxGui.Modules.Settings.Pages.LeaveGameToHome)
 		this.LeaveGameToHomePage:SetHub(this)
+	end
+
+	if GetFFlagEnableAppChatInExperience() then
+		this.AppChatPage = require(RobloxGui.Modules.Settings.Pages.AppChat)
+		this.AppChatPage:SetHub(this)
 	end
 
 	if not isTenFootInterface then
@@ -3422,9 +3641,9 @@ local function CreateSettingsHub()
 
 		this.ScreenshotsApp = ScreenshotsApp
 		if GetFFlagEnableScreenshotUtility() then
-			this.ScreenshotsApp.mountMenuPage(ShotsPageWrapper.Page, closeSettingsMenu, Theme, GetFFlagEnableCapturesInChrome() and ChromeEnabled)
+			this.ScreenshotsApp.mountMenuPage(ShotsPageWrapper.Page, closeSettingsMenu, GetFFlagEnableCapturesInChrome() and ChromeEnabled)
 		else
-			this.ScreenshotsApp.mountMenuPage(ShotsPageWrapper.Page, closeSettingsMenu, Theme)
+			this.ScreenshotsApp.mountMenuPage(ShotsPageWrapper.Page, closeSettingsMenu)
 		end
 
 		this.ShotsPage = ShotsPageWrapper
@@ -3440,6 +3659,10 @@ local function CreateSettingsHub()
 
 	if this.LeaveGamePage then
 		this:AddPage(this.LeaveGamePage)
+	end
+
+	if GetFFlagEnableLeaveGameUpsellEntrypoint() and this.LeaveGameUpsellPage then
+		this:AddPage(this.LeaveGameUpsellPage)
 	end
 
 	this:AddPage(this.GameSettingsPage)
@@ -3470,10 +3693,12 @@ local function CreateSettingsHub()
 		this:AddPage(this.LeaveGameToHomePage)
 	end
 
-	if GetFFlagShouldInitWithFirstPageWithTabHeader() then
-		this:InitInPage(this:GetFirstPageWithTabHeader())
-	else
-		this:InitInPage(this.PlayersPage)
+	this:InitInPage(this:GetFirstPageWithTabHeader())
+
+	if GetFFlagEnableAppChatInExperience() then
+		if this.AppChatPage then
+			this:AddPage(this.AppChatPage)
+		end
 	end
 
 	-- hook up to necessary signals
@@ -3482,11 +3707,7 @@ local function CreateSettingsHub()
 	GuiService.ShowLeaveConfirmation:connect(function()
 		if #this.MenuStack == 0 then
 			this:SetVisibility(true, nil, nil, nil, Constants.AnalyticsMenuOpenTypes.GamepadLeaveGame)
-			if GetFFlagShouldInitWithFirstPageWithTabHeader() then
-				this:SwitchToPage(this:GetFirstPageWithTabHeader(), nil, 1)
-			else
-				this:SwitchToPage(this.PlayersPage, nil, 1)
-			end
+			this:SwitchToPage(this:GetFirstPageWithTabHeader(), nil, 1)
 		else
 			this:PopMenu(false, true)
 		end

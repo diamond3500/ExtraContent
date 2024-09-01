@@ -28,16 +28,13 @@ local FocusNavigationRegistryProvider = FocusNavigableSurfaceRegistry.Provider
 local DeviceTypeEnum = RobloxAppEnums.DeviceType
 local GamepadDisconnectTokenMapper =
 	require(CorePackages.Workspace.Packages.InputUi).Gamepad.GamepadDisconnectTokenMapper
-
 local GetFFlagEnableUISoundAndHaptics =
 	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagEnableUISoundAndHaptics
 local InteractionFeedbackPackage = require(CorePackages.Workspace.Packages.InteractionFeedback)
-local InteractionFeedbackContext = InteractionFeedbackPackage.InteractionFeedbackContext
 local FeedbackManagerInjectionContextProvider = InteractionFeedbackPackage.FeedbackManagerInjectionContextProvider
-local InteractionFeedbackAppConfig =
-	require(CorePackages.Workspace.Packages.RobloxAppInteractionFeedbackConfig).InteractionFeedbackAppConfig
+local AppInteractionFeedbackProvider =
+	require(CorePackages.Workspace.Packages.RobloxAppInteractionFeedbackConfig).AppInteractionFeedbackProvider
 
-local FFlagCoreScriptsDynamicDefaultDeviceType = game:DefineFastFlag("CoreScriptsDynamicDefaultDeviceType", false)
 
 local focusNavigationService =
 	ReactFocusNavigation.FocusNavigationService.new(ReactFocusNavigation.EngineInterface.CoreGui)
@@ -55,21 +52,12 @@ export type Props = {
 	children: React.ReactNode,
 }
 
-local defaultStyle
-if FFlagCoreScriptsDynamicDefaultDeviceType then
-	defaultStyle = {
-		themeName = "dark",
-		fontName = "gotham",
-		-- For now, design tokens only have console vs desktop values
-		deviceType = if GuiService:IsTenFootInterface() then DeviceTypeEnum.Console else DeviceTypeEnum.Desktop,
-	}
-else
-	defaultStyle = {
-		themeName = "dark",
-		fontName = "gotham",
-		deviceType = DeviceTypeEnum.Desktop,
-	}
-end
+local defaultStyle = {
+	themeName = "dark",
+	fontName = "gotham",
+	-- For now, design tokens only have console vs desktop values
+	deviceType = if GuiService:IsTenFootInterface() then DeviceTypeEnum.Console else DeviceTypeEnum.Desktop,
+}
 
 local function CoreScriptsRootProvider(props: Props)
 	local style = Cryo.Dictionary.join(defaultStyle, props.styleOverride or {})
@@ -111,7 +99,7 @@ local function CoreScriptsRootProvider(props: Props)
 	})
 
 	if GetFFlagEnableUISoundAndHaptics() then
-		tree = React.createElement(InteractionFeedbackContext.Provider, { value = InteractionFeedbackAppConfig }, {
+		tree = React.createElement(AppInteractionFeedbackProvider, {}, {
 			tree = React.createElement(FeedbackManagerInjectionContextProvider, nil, {
 				tree = tree,
 			}),

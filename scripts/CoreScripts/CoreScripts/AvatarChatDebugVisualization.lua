@@ -1,6 +1,7 @@
 --!nonstrict
 local CoreGui = game:GetService("CoreGui")
-local RobloxGui = CoreGui:WaitForChild("RobloxGui")
+local CorePackages = game:GetService("CorePackages")
+local RobloxGui = CoreGui.RobloxGui
 local FaceAnimatorService = game:FindService("FaceAnimatorService")
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")

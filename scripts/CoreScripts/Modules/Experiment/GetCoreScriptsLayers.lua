@@ -1,8 +1,10 @@
 local CorePackages = game:GetService("CorePackages")
 local IsExperienceMenuABTestEnabled = require(script.Parent.Parent.IsExperienceMenuABTestEnabled)
 local FFlagEnableCapturesDesktopExperiment = require(CorePackages.Workspace.Packages.SharedFlags).FFlagEnableCapturesDesktopExperiment
+local FFlagEnableSocialCaptureTakenIXPLayer = require(CorePackages.Workspace.Packages.SharedFlags).FFlagEnableSocialCaptureTakenIXPLayer
 local FStringCapturesIXPLayer = require(CorePackages.Workspace.Packages.SharedFlags).FStringCapturesIXPLayer
 local FStringSocialCaptureIXPLayer = require(CorePackages.Workspace.Packages.SharedFlags).FStringSocialCaptureIXPLayer
+local FStringSocialCaptureTakenIXPLayer = require(CorePackages.Workspace.Packages.SharedFlags).FStringSocialCaptureTakenIXPLayer
 local GetFFlagShareInviteLinkContextMenuABTestEnabled = require(script.Parent.Parent.Flags.GetFFlagShareInviteLinkContextMenuABTestEnabled)
 local GetFFlagEnableNewInviteMenuIXP = require(script.Parent.Parent.Flags.GetFFlagEnableNewInviteMenuIXP)
 local GetFStringLargerRobuxUpsellIxpLayer = require(CorePackages.Workspace.Packages.SharedFlags).GetFStringLargerRobuxUpsellIxpLayer
@@ -13,6 +15,7 @@ local GetFFlagEnableTeleportBackButton = require(script.Parent.Parent.Flags.GetF
 local GetFStringTeleportBackButtonIXPCustomLayerName = require(script.Parent.Parent.Flags.GetFStringTeleportBackButtonIXPCustomLayerName)
 local GetFFlagReportAnythingAnnotationIXP = require(script.Parent.Parent.Settings.Flags.GetFFlagReportAnythingAnnotationIXP)
 local GetFStringReportAnythingAnnotationIXPLayerName = require(script.Parent.Parent.Settings.Flags.GetFStringReportAnythingAnnotationIXPLayerName)
+local GetFFlagReportTabShareIXPLayerWithMenu = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagReportTabShareIXPLayerWithMenu
 local GetFStringChatTranslationLayerName = require(script.Parent.Parent.Flags.GetFStringChatTranslationLayerName)
 local GetFFlagChatTranslationSettingEnabled = require(script.Parent.Parent.Flags.GetFFlagChatTranslationSettingEnabled)
 local GetFFlagVoiceUserAgencyEnableIXP = require(script.Parent.Parent.Flags.GetFFlagVoiceUserAgencyEnableIXP)
@@ -39,6 +42,7 @@ return function()
 	if IsExperienceMenuABTestEnabled()
 		or GetFFlagShareInviteLinkContextMenuABTestEnabled()
 		or GetFFlagEnableNewInviteMenuIXP()
+		or GetFFlagReportTabShareIXPLayerWithMenu()
 	then
 		table.insert(layers, GetFStringLuaAppExperienceMenuLayer())
 		table.insert(layers, GetFStringLuaAppConsoleExperienceMenuLayer())
@@ -85,6 +89,10 @@ return function()
 
 	if game:GetEngineFeature("SocialCaptureLayerRegistered") and FStringSocialCaptureIXPLayer then
 		table.insert(layers, FStringSocialCaptureIXPLayer)
+	end
+
+	if FFlagEnableSocialCaptureTakenIXPLayer and FStringSocialCaptureTakenIXPLayer then
+		table.insert(layers, FStringSocialCaptureTakenIXPLayer)
 	end
 
 	if GetFFlagAddVoiceExposureLayer() then

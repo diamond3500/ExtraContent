@@ -12,10 +12,13 @@ local ImagesTypes = require(App.ImageSet.ImagesTypes)
 
 local useStyle = require(UIBlox.Core.Style.useStyle)
 local useCursor = require(UIBlox.App.SelectionCursor.useCursor)
+local UIBloxConfig = require(UIBlox.UIBloxConfig)
 
 type TextFieldProps = {
 	-- Input text value
 	text: string,
+	-- Input type. Note: Only available on CoreGui.
+	textInputType: Enum.TextInputType?,
 	-- Whether the input is in an error state
 	error: boolean?,
 	-- Whether the input is disabled
@@ -38,7 +41,10 @@ type TextFieldProps = {
 	iconButton: ImagesTypes.ImageSetImage?,
 	-- On press of the icon button
 	onButtonPress: (() -> ())?,
+	-- On successful focus of the textbox (doesn't call if focus is attempted while the input is disabled)
+	onFocusGained: (() -> ())?,
 	LayoutOrder: number?,
+	openTypeFeatures: string?,
 }
 
 local defaultProps = {
@@ -71,6 +77,18 @@ local function TextField(props: TextFieldProps)
 
 	local width = if props.width ~= nil then props.width else defaultProps.width
 
+	local function canUseTextInputType(): boolean
+		if not UIBloxConfig.enableTextFieldInputType then
+			return false
+		end
+		local success, value = pcall(function()
+			local CoreGui = game:GetService("CoreGui")
+			local _ = CoreGui.Name
+			return CoreGui
+		end)
+		return success and value ~= nil
+	end
+
 	local function getTextBoxWidthOffset(): number
 		local offset = 0
 		if props.iconLeading then
@@ -97,6 +115,9 @@ local function TextField(props: TextFieldProps)
 			textBox.current:ReleaseFocus()
 		else
 			setFocus(true)
+			if props.onFocusGained then
+				props.onFocusGained()
+			end
 		end
 	end
 
@@ -207,6 +228,7 @@ local function TextField(props: TextFieldProps)
 					TextBox = React.createElement("TextBox", {
 						ref = textBox,
 						Text = props.text,
+						TextInputType = canUseTextInputType() and props.textInputType or nil,
 						ClearTextOnFocus = false,
 						Size = UDim2.new(1, getTextBoxWidthOffset(), 1, 0),
 						TextEditable = not props.disabled,
@@ -214,6 +236,10 @@ local function TextField(props: TextFieldProps)
 						TextXAlignment = Enum.TextXAlignment.Left,
 						TextYAlignment = Enum.TextYAlignment.Center,
 						Font = textFieldStyle.Base.Field.Typography.Font,
+						RichText = if UIBloxConfig.enableOpenTypeSupport and props.openTypeFeatures then true else nil,
+						OpenTypeFeatures = if UIBloxConfig.enableOpenTypeSupport and props.openTypeFeatures
+							then props.openTypeFeatures
+							else nil,
 						TextSize = textFieldStyle.Base.Field.Typography.FontSize,
 						LineHeight = 1,
 						TextColor3 = textFieldStyle.Base.FieldValue.ContentColor.Color3,

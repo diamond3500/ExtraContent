@@ -9,7 +9,7 @@ local Players = game:GetService("Players")
 local CorePackages = game:GetService("CorePackages")
 local RobloxReplicatedStorage = game:GetService("RobloxReplicatedStorage")
 
-local RobloxGui = CoreGui:WaitForChild("RobloxGui")
+local RobloxGui = CoreGui.RobloxGui
 local RobloxTranslator = require(RobloxGui.Modules.RobloxTranslator)
 
 local IXPServiceWrapper = require(RobloxGui.Modules.Common.IXPServiceWrapper)
@@ -33,11 +33,19 @@ local AvatarChatService = if GetFFlagAvatarChatServiceEnabled() then game:GetSer
 local FaceAnimatorService = game:GetService("FaceAnimatorService")
 local FacialAnimationStreamingService = game:GetService("FacialAnimationStreamingServiceV2")
 local FFlagUXForCameraPerformanceEnabled = game:DefineFastFlag("UXForCameraPerformanceEnabled", false)
+local FFlagDisableCameraOnLowspecAndroidCalls = game:DefineFastFlag("DisableCameraOnLowspecAndroidCalls", false)
 
 local FIntUXForCameraPerformanceSessionDelay = game:DefineFastInt("UXForCameraPerformanceSessionDelay", 300) -- in seconds
 local FIntUXForCameraPerformanceDeviceDelay = game:DefineFastInt("UXForCameraPerformanceDeviceDelay", 43200) -- in seconds
 local GetFFlagUXForCameraPerformanceIXPEnabled = require(RobloxGui.Modules.Flags.GetFFlagUXForCameraPerformanceIXPEnabled)
 local GetFStringUXForCameraPerformanceIXPLayerName = require(RobloxGui.Modules.Flags.GetFStringUXForCameraPerformanceIXPLayerName)
+local isCamEnabledForUserAndPlace = function()
+	return true
+end
+
+if FFlagDisableCameraOnLowspecAndroidCalls then
+	isCamEnabledForUserAndPlace = require(RobloxGui.Modules.Settings.isCamEnabledForUserAndPlace)
+end
 
 local heartbeatStats = require(RobloxGui.Modules.FacialAnimationStreaming.FacialAnimationStreamingHeartbeatStats)
 
@@ -280,7 +288,11 @@ local function onAnimatorAdded(player, animator)
 	local setupAnimator = function()
 		local playerAnimation = {}
 		playerAnimation.animation = Instance.new("TrackerStreamAnimation")
-		playerAnimation.animationTrack = animator:LoadStreamAnimation(playerAnimation.animation)
+		if game:GetEngineFeature("UseNewLoadStreamAnimationAPI") then
+			playerAnimation.animationTrack = animator:LoadStreamAnimationV2(playerAnimation.animation, player)
+		else
+			playerAnimation.animationTrack = animator:LoadStreamAnimation(playerAnimation.animation)
+		end
 
 		if FFlagLoadStreamAnimationReplaceErrorsWithTelemetry then
 			if not playerAnimation.animationTrack then
@@ -702,6 +714,11 @@ function InitializeFacialAnimationStreaming(settings)
 			TrackerMenu:showPrompt(TrackerPromptType.NotAvailable)
 		end
 	end)
+
+	if FFlagDisableCameraOnLowspecAndroidCalls and not isCamEnabledForUserAndPlace() then
+		log:trace("Camera is disabled for user and place")
+		return
+	end
 
 	if GetFFlagAvatarChatServiceEnabled() then
 		FaceAnimatorService:Init(

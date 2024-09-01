@@ -13,10 +13,10 @@ export type Message = Package.Message
 export type MessageUser = Package.MessageUser
 export type MessageSystem = Package.MessageSystem
 export type MessageType = Package.MessageType
-export type ModalActionType = Package.ModalActionType
 export type ModerationType = Package.ModerationType
 export type ParticipantMetadata = Package.ParticipantMetadata
 export type UnfilteredThreadsFailureReason = Package.UnfilteredThreadsFailureReason
+export type UnfilteredThreadsConversationBanner = Package.UnfilteredThreadsConversationBanner
 export type UnfilteredThreadsFtux = Package.UnfilteredThreadsFtux
 export type UserPendingStatus = Package.UserPendingStatus
 export type CreateConversationsResponse = Package.CreateConversationsResponse
@@ -26,6 +26,7 @@ export type GetConversationsResponse = Package.GetConversationsResponse
 export type GetConversationsParticipantsMetadataResponse = Package.GetConversationsParticipantsMetadataResponse
 export type GetMetadataResponse = Package.GetMetadataResponse
 export type GetUnfilteredThreadEligibilityResponse = Package.GetUnfilteredThreadEligibilityResponse
+export type GetConversationMetadata = Package.GetConversationMetadata
 
 
 return Package

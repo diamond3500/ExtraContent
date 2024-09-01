@@ -4,36 +4,73 @@ local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 
 local React = require(CorePackages.Packages.React)
 local ReactRoblox = require(CorePackages.Packages.ReactRoblox)
+local RoactRodux = require(CorePackages.Workspace.Packages.RoactRodux)
+local Rodux = require(CorePackages.Workspace.Packages.Rodux)
 
 local ApolloClient = require(CoreGui.RobloxGui.Modules.ApolloClient)
+local SettingsHub = require(RobloxGui.Modules.Settings.SettingsHub)
 
 local AppChat = require(CorePackages.Workspace.Packages.AppChat)
 local InExperienceAppChat = AppChat.App.InExperienceAppChat
+local SettingsHubPageChangedSignalProvider = AppChat.Contexts.SettingsHubPageChangedSignalProvider
+local UnreadMessagesProvider = AppChat.Contexts.UnreadMessagesProvider
+local AppChatReducer = AppChat.App.AppChatReducer
+local InExperienceAppChatProviders = AppChat.App.InExperienceAppChatProviders
 
-local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "AppChat"
-screenGui.Parent = CoreGui
-screenGui.ResetOnSpawn = false
-screenGui.IgnoreGuiInset = true
-screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-screenGui.DisplayOrder = 7 -- above topbar
+local GetFFlagInExperienceAppChatWithProvider = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagInExperienceAppChatWithProvider
 
-local MARGIN_SCALE = 0.15
+local folder = Instance.new("Folder")
+folder.Name = "AppChat"
+folder.Parent = CoreGui
 
-local frame = Instance.new("Frame")
-frame.Size = UDim2.fromScale(1, 1)
-frame.BackgroundTransparency = 1
-frame.BorderSizePixel = 0
-frame.Parent = screenGui
+local root = ReactRoblox.createRoot(folder)
+local store = Rodux.Store.new(AppChatReducer, nil, {
+	Rodux.thunkMiddleware,
+})
 
-local uiPadding = Instance.new("UIPadding")
-uiPadding.PaddingTop = UDim.new(MARGIN_SCALE, 0)
-uiPadding.PaddingBottom = UDim.new(MARGIN_SCALE, 0)
-uiPadding.PaddingLeft = UDim.new(MARGIN_SCALE, 0)
-uiPadding.PaddingRight = UDim.new(MARGIN_SCALE, 0)
-uiPadding.Parent = screenGui
-
-local root = ReactRoblox.createRoot(frame)
-root:render(React.createElement(InExperienceAppChat, {
-	apolloClient = ApolloClient,
-}))
+local tree = if GetFFlagInExperienceAppChatWithProvider() then
+	React.createElement(InExperienceAppChatProviders, {
+		store = store,
+		currentPageSignal = SettingsHub.CurrentPageSignal,
+		updateAppChatUnreadMessagesCount = SettingsHub.Instance.PlayersPage.UpdateAppChatUnreadMessagesCount,
+	}, {
+		appChat = React.createElement(InExperienceAppChat, {
+			apolloClient = ApolloClient,
+			parentContainer = SettingsHub.Instance.MenuContainer,
+			navigateToChat = function()
+				SettingsHub.Instance:SetVisibility(true, false)
+				SettingsHub:SwitchToPage(SettingsHub.Instance.AppChatPage)
+			end,
+			popSettingsHub = function()
+				if SettingsHub:GetVisibility() then
+					SettingsHub.Instance:PopMenu(false, true)
+				end
+			end,
+		})
+	})
+else React.createElement(SettingsHubPageChangedSignalProvider, {
+	signal = SettingsHub.CurrentPageSignal,
+}, {
+	unreadMessagesDispatch = React.createElement(UnreadMessagesProvider, {
+		dispatch = SettingsHub.Instance.PlayersPage.UpdateAppChatUnreadMessagesCount,
+	}, {
+		store = React.createElement(RoactRodux.StoreProvider, {
+			store = store,
+		}, {
+			appChat = React.createElement(InExperienceAppChat, {
+				apolloClient = ApolloClient,
+				parentContainer = SettingsHub.Instance.MenuContainer,
+				navigateToChat = function()
+					SettingsHub.Instance:SetVisibility(true, false)
+					SettingsHub:SwitchToPage(SettingsHub.Instance.AppChatPage)
+				end,
+				popSettingsHub = function()
+					if SettingsHub:GetVisibility() then
+						SettingsHub.Instance:PopMenu(false, true)
+					end
+				end,
+			})
+		})
+	})
+})
+root:render(tree)

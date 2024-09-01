@@ -11,9 +11,10 @@ local CoreGuiService = game:GetService("CoreGui")
 local StarterGuiService = game:GetService("StarterGui")
 local RunService = game:GetService("RunService")
 local GuiService = game:GetService("GuiService")
+local CorePackages = game:GetService("CorePackages")
 
-local RobloxGui = CoreGuiService:WaitForChild("RobloxGui")
-local CoreGuiModules = RobloxGui:WaitForChild("Modules")
+local RobloxGui = CoreGuiService.RobloxGui
+local CoreGuiModules = RobloxGui.Modules
 
 local Player = PlayerService.LocalPlayer
 
@@ -24,7 +25,7 @@ end
 
 -- MODULES
 local NetworkPauseNotification = require(CoreGuiModules.NetworkPauseNotification)
-local create = require(CoreGuiModules.Common.Create)
+local Create = require(CorePackages.Workspace.Packages.AppCommonLib).Create
 
 -- VARIABLES
 local FFlagGameplayPausePausesInteraction = game:DefineFastFlag("GameplayPausePausesInteraction", false)
@@ -33,14 +34,14 @@ local isFirstPauseChange = true -- Skip showing UI on first pause to avoid displ
 local Notification = NetworkPauseNotification.new()
 
 -- container for the notification
-local NetworkPauseContainer = FFlagGameplayPausePausesInteraction and create "Frame" {
+local NetworkPauseContainer = FFlagGameplayPausePausesInteraction and Create "Frame" {
 	Name = "Container",
 	Size = UDim2.new(1, 0, 1, 0),
 	BackgroundTransparency = 1,
 	Active = false
 }
 
-local NetworkPauseGui = create "ScreenGui" {
+local NetworkPauseGui = Create "ScreenGui" {
 
 	Name = "RobloxNetworkPauseNotification",
 	OnTopOfCoreBlur = true,

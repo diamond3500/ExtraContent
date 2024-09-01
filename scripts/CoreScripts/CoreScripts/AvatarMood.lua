@@ -10,8 +10,9 @@ game:DefineFastFlag("AvatarMoodValidateMoodAnimation", false)
 
 local Players = game:GetService("Players")
 local CoreGui = game:GetService("CoreGui")
+local CorePackages = game:GetService("CorePackages")
 local LocalPlayer = Players.LocalPlayer
-local RobloxGui = CoreGui:WaitForChild("RobloxGui")
+local RobloxGui = CoreGui.RobloxGui
 
 local log = require(RobloxGui.Modules.Logger):new(script.Name)
 

@@ -12,20 +12,15 @@ local UIBloxImages = UIBlox.App.ImageSet.Images
 local getIconSize = UIBlox.App.ImageSet.getIconSize
 local IconSize = UIBlox.App.ImageSet.Enum.IconSize
 
-local EnableInGameMenuControls = require(RobloxGui.Modules.Flags.GetFFlagEnableInGameMenuControls)
 local EnableInGameMenuModernization = require(RobloxGui.Modules.Flags.GetFFlagEnableInGameMenuModernization)
 local EnableInGameMenuModernizationBigText = require(RobloxGui.Modules.Flags.GetFFlagEnableInGameMenuModernizationBigText)
 local EnableInGameMenuModernizationStickyBar = require(RobloxGui.Modules.Flags.GetFFlagEnableInGameMenuModernizationStickyBar)
-local GetFFlagAddAnimatedFocusState = require(script.Parent.Flags.GetFFlagAddAnimatedFocusState)
-local ExperienceMenuABTestManager = require(RobloxGui.Modules.ExperienceMenuABTestManager)
 local ChromeEnabled = require(script.Parent.Parent.Chrome.Enabled)
-local GetUIBloxEnableFontNameMapping = require(CorePackages.Workspace.Packages.SharedFlags).UIBlox.GetUIBloxEnableFontNameMapping
-local FFlagIncreasePlayerNameSizeConsole = game:DefineFastFlag("IncreasePlayerNameSizeConsole", false)
 local FFlagIncreaseUtilityRowTextSizeConsole = game:DefineFastFlag("IncreaseUtilityRowTextSizeConsole", false)
 
 local AppFontBaseSize = 16 * 1.2
 
-local ThemeEnabled = EnableInGameMenuControls() or EnableInGameMenuModernization() or ChromeEnabled()
+local ThemeEnabled = EnableInGameMenuModernization() or ChromeEnabled()
 
 local UseBiggerText = EnableInGameMenuModernizationBigText()
 local UseStickyBarEnabled = EnableInGameMenuModernizationStickyBar()
@@ -33,7 +28,7 @@ local UseIconButtons = false
 local UseBottomButtonBarOnMobile = false
 
 -- Roblox -> Nominal scaling factor depending on font
-local nominalSizeFactor = if GetUIBloxEnableFontNameMapping() then 0.794 else 0.833
+local nominalSizeFactor = 0.794
 local topCornerInset, _ = GuiService:GetGuiInset()
 
 -- roughly maps SourceSans font size to Gotham/Builder using nominalSizeFactor, rounding down
@@ -48,7 +43,7 @@ local fontSizeMap = {
 local nullColor = Color3.fromRGB(0, 0, 0);
 local nullFont: any? = AppFonts.default:getDefault()
 local nullFontSize: any? = fontSizeMap[Enum.FontSize.Size24]
-local nullTextSize: any? = if GetUIBloxEnableFontNameMapping() then 19 else 20
+local nullTextSize: any? = 19
 
 local AppTheme = {
 	MenuContainer = {
@@ -102,14 +97,13 @@ local AppFont = {
 	Button_Font = {
 		Font = AppFonts.default:getMedium(),
 		RelativeSize = fontSizeMap[Enum.FontSize.Size24],
-		TextSize = if GetUIBloxEnableFontNameMapping() then 22 * nominalSizeFactor else 18,
+		TextSize = 22 * nominalSizeFactor,
 	},
 	Username = {
-		RelativeSize = if UseBiggerText or (FFlagIncreasePlayerNameSizeConsole and isTenFootInterface) then fontSizeMap[Enum.FontSize.Size24] else fontSizeMap[Enum.FontSize.Size18],
+		RelativeSize = if UseBiggerText or isTenFootInterface then fontSizeMap[Enum.FontSize.Size24] else fontSizeMap[Enum.FontSize.Size18],
 	},
 	DisplayName = {
-		
-		RelativeSize = if FFlagIncreasePlayerNameSizeConsole and isTenFootInterface then Enum.FontSize.Size24 else Enum.FontSize.Size18,
+		RelativeSize = if isTenFootInterface then Enum.FontSize.Size24 else Enum.FontSize.Size18,
 		Font = AppFonts.default:getMedium(),
 	},
 	Settings_Font = {
@@ -141,7 +135,7 @@ local AppFont = {
 	},
 	Utility_Text_Font = {
 		Font = AppFonts.default:getDefault(),
-		TextSize = if GetUIBloxEnableFontNameMapping() then 22 * nominalSizeFactor else 18,
+		TextSize = 22 * nominalSizeFactor,
 	},
 	Utility_Text_Small_Font = {
 		Font = AppFonts.default:getDefault(),
@@ -354,7 +348,7 @@ if ThemeEnabled then
 		end,
 		UIBloxThemeEnabled = true,
 		UseIconButtons = UseIconButtons,
-		ShowHomeButton = ExperienceMenuABTestManager.default:shouldShowHomeButton(),
+		ShowHomeButton = false,
 		EnableVerticalBottomBar = UseBottomButtonBarOnMobile,
 		UseBiggerText = UseBiggerText,
 		UseStickyBar = UseStickyBar,
@@ -443,7 +437,7 @@ if ThemeEnabled then
 		end,
 		platformNameTextSize = 18,
 		platformNameIconSize = UDim2.fromOffset(36, 36),
-		selectionCursor = if GetFFlagAddAnimatedFocusState() then AppTheme.SelectionCursor else nil,
+		selectionCursor = AppTheme.SelectionCursor,
 	}
 else
 	return {

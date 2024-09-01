@@ -23,12 +23,6 @@ return {
 	-- Set zindex on ResponsiveCell
 	setZIndexOnGridCells = false,
 
-	-- Use the new features of ShortcutBar for responding to last input type and fadeout
-	useInputResponsiveShortcutBarChanges = false,
-
-	-- Have StatGroup use vertical AutomaticSize instead of filling its parent
-	useAutomaticSizeYInStatGroup = false,
-
 	-- do not mount the Details Page Header Action Bar when the Sticky ActionBar
 	-- active
 	hideHeaderActionBarWhenStickyBarActive = false,
@@ -44,9 +38,6 @@ return {
 
 	-- Use general design tokens with `scale` parameter to adapt to different platforms
 	useTokensWithScale = false,
-
-	-- Indicate whether mapping for existing Font names are enabled
-	enableFontNameMapping = false,
 
 	-- Add a ref that points to ScrollingFrame in ResponsiveBaseRow
 	responsiveBaseRowScrollingFrameRef = false,
@@ -79,12 +70,94 @@ return {
 
 	-- Use design tokens to set alert title's header font size
 	alertTitleDesignTokenHeader = false,
-	-- Strips RichText tags from string before calculating size of text
-	ignoreRichTextTagsForTextSizeCalculation = false,
 
 	-- Indicate whether the fix for the unexpected TooltipV2 Re-Render issue is enabled
 	enableTooltipV2HoverControllerReRenderFix = false,
 
 	-- Indicate whether the fix for the the TooltipV2 body font is enabled
 	enableTooltipV2BodyFontFix = false,
+
+	-- Allow the user to specify the input type for TextField
+	enableTextFieldInputType = false,
+
+	-- Disable token scaling for console
+	disableTokenScalingForConsole = false,
+
+	-- Use automatic sizing for the text under PlayerTile
+	playerTileAutomaticSizeXY = false,
+
+	-- Combine redundant button backgrounds into base component for TextButton
+	consolidateBackgroundsTextButton = false,
+
+	-- Flag for updating tile and cell to use Interactable
+	useInteractableWithTileAndCell = false,
+
+	-- Add optional max height to getTextHeight
+	getTextHeightOptionalMaxHeight = false,
+
+	-- Add support for large-scaled text in Cell
+	useAutomaticHeightInTableCell = false,
+
+	-- Indicate whether the fix for button loading shimmer panel not covering edges is enabled
+	enableButtonLoadingShimmerPanelFix = false,
+
+	-- Use automatic sizing in stat group
+	useAutomaticSizeInStatGroup = false,
+
+	-- Use GetTextSize and AutomaticSize to add support for larger than default text in Tile and TileName
+	refactorTileTextHeights = false,
+
+	-- Recompute minimum tab size based on text bounds to support larger/longer text
+	recomputeTabSizeSegmentedControl = false,
+
+	-- Bugfix for HeaderBar title flickering
+	fixHeaderBarTitleFlickering = false,
+
+	-- Bugfix for HeaderBar dependencies array
+	fixHeaderBarDependenciesArray = false,
+
+	-- Enable OpenType support
+	enableOpenTypeSupport = false,
+
+	-- Fixes input button to better suppot large text
+	ensureTextWrapsInputButton = false,
+
+	-- Align text on the left of CellHeadDetail
+	leftAlignCellHeadDetailText = false,
+
+	-- Defer loading component’s code until it is rendered for the first time
+	enableCreateLazyComponent = false,
+
+	-- Some components expose calculate functions as member function, move it out as a separate function
+	useSeparatedCalcFunction = false,
+
+	-- Use automatic size Y in header bar s.t text does not get cut off at larger-than-default sizes
+	useAutomaticSizeYHeaderBar = false,
+
+	-- Add the option to pass in callbacks for AccordionView that run on expansion and collapse
+	addCallbacksToAccordionView = false,
+
+	-- Define size and reposition ModalTitle s.t text does not overflow container bounds
+	resizeModalTitle = false,
+
+	-- Use textSizeOffset to better support large text in TileContentPanel
+	useTextSizeOffsetTileContentPanel = false,
+
+	-- Add the option to pass in a visibility property for Experience Details Page components
+	addEdpComponentVisibility = false,
+
+	-- Indicate whether the fix for the additional NavigationBar#onSelectionChanged call is enabled
+	enableNavigationBarSelectionChangeFix = false,
+
+	-- Use colors from Foundation tokens
+	useFoundationColors = false,
+
+	-- Update FullPageModal sizing on mount
+	didMountUpdateFullPageModal = false,
+
+	-- Removes math error absoluteSize setting statement
+	fixLayerCollectorProviderAbsoluteSize = false,
+
+	-- Fix the horizontalAlignment prop on Tile
+	tileHorizontalAlignmentFix = false,
 }

@@ -33,6 +33,9 @@ end
 if game:DefineFastFlag("OpenCloudCoreScriptLuaEnabled", false) then
     ScriptContext:AddCoreScriptLocal("ServerCoreScripts/OpenCloud/OpenCloudV2", script.Parent)
 end
+if game:DefineFastFlag("OpenCloudClientLibraryCoreScriptEnabled", false) then
+    ScriptContext:AddCoreScriptLocal("ServerCoreScripts/OpenCloud/OpenCloudClientLibraryCoreScript", script.Parent)
+end
 
 ScriptContext:AddCoreScriptLocal("ServerCoreScripts/ServerInGameMenu", script.Parent)
 ScriptContext:AddCoreScriptLocal("ServerCoreScripts/ServerSocialScript", script.Parent)
@@ -114,12 +117,15 @@ end
 local TextChatService = game:GetService("TextChatService")
 local chatVersion = TextChatService.ChatVersion
 if chatVersion == Enum.ChatVersion.TextChatService then
-	-- initialize UIBlox here since requiring ExperienceChat will otherwise trigger a UIBlox config error...
-	local UIBlox = require(CorePackages.UIBlox)
-	UIBlox.init()
+	local FFlagUseExpChatServerModule = game:DefineFastFlag("UseExpChatServerModule", false)
+	if not FFlagUseExpChatServerModule then
+		-- initialize UIBlox here since requiring ExperienceChat will otherwise trigger a UIBlox config error...
+		local UIBlox = require(CorePackages.UIBlox)
+		UIBlox.init()
+	end
 
-	local ExperienceChat = require(CorePackages.ExperienceChat)
-	ExperienceChat.mountServerApp({})
+	local ExperienceChatServer = require(CorePackages.Workspace.Packages.ExpChatServer)
+	ExperienceChatServer.mountServerApp({})
 end
 
 

@@ -11,8 +11,6 @@ local JestGlobals = require(CorePackages.JestGlobals)
 local expect = JestGlobals.expect
 
 local LOCAL_STORAGE_KEY_EXPERIENCE_MENU_VERSION = "ExperienceMenuVersion"
-local LOCAL_STORAGE_KEY_EXPERIENCE_MENU_CSAT_QUALIFICATION = "ExperienceMenuCSATQualification"
-
 
 local GetFFlagDisableChromeV3Baseline = require(script.Parent.Parent.Flags.GetFFlagDisableChromeV3Baseline)()
 local GetFFlagDisableChromeV3Captures = require(script.Parent.Parent.Flags.GetFFlagDisableChromeV3Captures)()
@@ -22,7 +20,6 @@ local GetFFlagDisableChromeV3DockedMic = require(script.Parent.Parent.Flags.GetF
 
 local isV2Valid = false
 local isV3Valid = false
-local isControlsValid = false
 local isModernizationValid = false
 local isConsoleModernizationValid = true
 local isReportAbuseV2Valid = false
@@ -32,7 +29,6 @@ return function()
 		beforeEach(function()
 			if IsExperienceMenuABTestEnabled() then
 				AppStorageService:SetItem(LOCAL_STORAGE_KEY_EXPERIENCE_MENU_VERSION, "")
-				AppStorageService:SetItem(LOCAL_STORAGE_KEY_EXPERIENCE_MENU_CSAT_QUALIFICATION, "")
 				AppStorageService:Flush()
 			end
 		end)
@@ -40,7 +36,6 @@ return function()
 		afterEach(function()
 			if IsExperienceMenuABTestEnabled() then
 				AppStorageService:SetItem(LOCAL_STORAGE_KEY_EXPERIENCE_MENU_VERSION, "")
-				AppStorageService:SetItem(LOCAL_STORAGE_KEY_EXPERIENCE_MENU_CSAT_QUALIFICATION, "")
 				AppStorageService:Flush()
 			end
 		end)
@@ -101,96 +96,6 @@ return function()
 			end
 		end)
 
-		it("returns menu controls for user in the baseline controls variant", function()
-			if IsExperienceMenuABTestEnabled() and isControlsValid then
-				local ixpServiceWrapperMock = Mock.MagicMock.new({ name = "IXPServiceWrapper" })
-				ixpServiceWrapperMock.IsEnabled = Mock.MagicMock.new({ returnValue = true })
-				ixpServiceWrapperMock.GetLayerData = Mock.MagicMock.new({
-					returnValue = { menuVersion = ExperienceMenuABTestManager.default.controlsBaselineVersionId() },
-				})
-
-				local manager = ExperienceMenuABTestManager.new(ixpServiceWrapperMock)
-				expect(manager).toMatchObject({ _ixpServiceWrapper = expect.anything() })
-
-				-- when ixp layers are registered, test manager is initialized
-				manager:initialize()
-
-				-- version should now be version controls
-				expect(manager:getVersion()).toBe(ExperienceMenuABTestManager.default.controlsBaselineVersionId())
-
-				-- beginning of second session
-				manager:initialize()
-
-				-- on second session, we will read from the cache which is controls
-				expect(manager:getVersion()).toBe(ExperienceMenuABTestManager.default.controlsBaselineVersionId())
-				expect(manager:areMenuControlsEnabled()).toBe(true)
-				expect(manager:isV2MenuEnabled()).toBe(false)
-
-				expect(manager:shouldShowNewNavigationLayout()).toBe(true)
-				expect(manager:shouldShowHomeButton()).toBe(false)
-			end
-		end)
-
-		it("returns menu controls for user in the old layout controls variant", function()
-			if IsExperienceMenuABTestEnabled() and isControlsValid then
-				local ixpServiceWrapperMock = Mock.MagicMock.new({ name = "IXPServiceWrapper" })
-				ixpServiceWrapperMock.IsEnabled = Mock.MagicMock.new({ returnValue = true })
-				ixpServiceWrapperMock.GetLayerData = Mock.MagicMock.new({
-					returnValue = { menuVersion = ExperienceMenuABTestManager.default.controlsOldLayoutVersionId() },
-				})
-
-				local manager = ExperienceMenuABTestManager.new(ixpServiceWrapperMock)
-				expect(manager).toMatchObject({ _ixpServiceWrapper = expect.anything() })
-
-				-- when ixp layers are registered, test manager is initialized
-				manager:initialize()
-
-				-- version should now be version controls
-				expect(manager:getVersion()).toBe(ExperienceMenuABTestManager.default.controlsOldLayoutVersionId())
-
-				-- beginning of second session
-				manager:initialize()
-
-				-- on second session, we will read from the cache which is controls
-				expect(manager:getVersion()).toBe(ExperienceMenuABTestManager.default.controlsOldLayoutVersionId())
-				expect(manager:areMenuControlsEnabled()).toBe(true)
-				expect(manager:isV2MenuEnabled()).toBe(false)
-
-				expect(manager:shouldShowNewNavigationLayout()).toBe(false)
-				expect(manager:shouldShowHomeButton()).toBe(false)
-			end
-		end)
-
-		it("returns menu controls for user in the home button controls variant", function()
-			if IsExperienceMenuABTestEnabled() and isControlsValid then
-				local ixpServiceWrapperMock = Mock.MagicMock.new({ name = "IXPServiceWrapper" })
-				ixpServiceWrapperMock.IsEnabled = Mock.MagicMock.new({ returnValue = true })
-				ixpServiceWrapperMock.GetLayerData = Mock.MagicMock.new({
-					returnValue = { menuVersion = ExperienceMenuABTestManager.default.controlsHomeButtonVersionId() },
-				})
-
-				local manager = ExperienceMenuABTestManager.new(ixpServiceWrapperMock)
-				expect(manager).toMatchObject({ _ixpServiceWrapper = expect.anything() })
-
-				-- when ixp layers are registered, test manager is initialized
-				manager:initialize()
-
-				-- version should now be version controls
-				expect(manager:getVersion()).toBe(ExperienceMenuABTestManager.default.controlsHomeButtonVersionId())
-
-				-- beginning of second session
-				manager:initialize()
-
-				-- on second session, we will read from the cache which is controls
-				expect(manager:getVersion()).toBe(ExperienceMenuABTestManager.default.controlsHomeButtonVersionId())
-				expect(manager:areMenuControlsEnabled()).toBe(true)
-				expect(manager:isV2MenuEnabled()).toBe(false)
-
-				expect(manager:shouldShowNewNavigationLayout()).toBe(true)
-				expect(manager:shouldShowHomeButton()).toBe(true)
-			end
-		end)
-
 		it("returns menu modernization for user in the modernized variant", function()
 			if IsExperienceMenuABTestEnabled() and isModernizationValid then
 				local ixpServiceWrapperMock = Mock.MagicMock.new({ name = "IXPServiceWrapper" })
@@ -220,7 +125,6 @@ return function()
 				ExperienceMenuABTestManager.default.modernizationModernizedVersionId()
 				)
 				expect(manager:isMenuModernizationEnabled()).toBe(true)
-				expect(manager:areMenuControlsEnabled()).toBe(false)
 				expect(manager:isV2MenuEnabled()).toBe(false)
 				expect(manager:isChromeEnabled()).toBe(false)
 
@@ -256,7 +160,6 @@ return function()
 				ExperienceMenuABTestManager.default.modernizationBigTextVersionId()
 				)
 				expect(manager:isMenuModernizationEnabled()).toBe(true)
-				expect(manager:areMenuControlsEnabled()).toBe(false)
 				expect(manager:isV2MenuEnabled()).toBe(false)
 
 				expect(manager:shouldShowBiggerText()).toBe(true)
@@ -293,7 +196,6 @@ return function()
 				ExperienceMenuABTestManager.default.modernizationStickyBarVersionId()
 				)
 				expect(manager:isMenuModernizationEnabled()).toBe(true)
-				expect(manager:areMenuControlsEnabled()).toBe(false)
 				expect(manager:isV2MenuEnabled()).toBe(false)
 
 				expect(manager:shouldShowBiggerText()).toBe(false)
@@ -637,8 +539,6 @@ return function()
 
 		it("keeps track of CSAT qualification and threshold, starting with junk data", function()
 			if IsExperienceMenuABTestEnabled() and isV3Valid then
-				AppStorageService:SetItem(LOCAL_STORAGE_KEY_EXPERIENCE_MENU_CSAT_QUALIFICATION, tostring(true))
-
 				local ixpServiceWrapperMock = Mock.MagicMock.new({ name = "IXPServiceWrapper" })
 				ixpServiceWrapperMock.IsEnabled = Mock.MagicMock.new({ returnValue = true })
 				ixpServiceWrapperMock.GetLayerData = Mock.MagicMock.new({

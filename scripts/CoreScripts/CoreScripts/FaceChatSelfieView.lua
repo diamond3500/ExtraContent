@@ -36,7 +36,6 @@ local newTrackerStreamAnimation = nil
 local cloneStreamTrack = nil
 
 local EngineFeatureAvatarJointUpgrade = game:GetEngineFeature("AvatarJointUpgradeFeature")
-local EngineFeatureHasFeatureLoadStreamAnimationForSelfieViewApiEnabled = game:GetEngineFeature("LoadStreamAnimationForSelfieViewApiEnabled")
 local EngineFeatureAnimatorAndADFRefactorInternal = game:GetEngineFeature("AnimatorAndADFRefactorInternal")
 local EngineFeaturePlayerViewRemoteEventSupport = game:GetEngineFeature("PlayerViewRemoteEventSupport")
 local FacialAnimationStreamingService = game:GetService("FacialAnimationStreamingServiceV2")
@@ -52,6 +51,9 @@ local FFlagSelfViewUpdatedCamFraming = game:DefineFastFlag("SelfViewUpdatedCamFr
 local FFlagSelfViewGetRidOfFalselyRenderedFaceDecal = game:DefineFastFlag("SelfViewGetRidOfFalselyRenderedFaceDecal", false)
 local FFlagSelfViewRemoveVPFWhenClosed = game:DefineFastFlag("SelfViewRemoveVPFWhenClosed", false)
 local FFlagSelfViewTweaksPass = game:DefineFastFlag("SelfViewTweaksPass", false)
+local FFlagInExperienceUpsellSelfViewFix = game:DefineFastFlag("InExperienceUpsellSelfViewFix", false)
+local FFlagRemoveVoiceJoiceDisconnectFix = game:DefineFastFlag("RemoveVoiceJoiceDisconnectFix", false)
+local FFlagFixUpdateMicIconCallBeforeReady = game:DefineFastFlag("FixUpdateMicIconCallBeforeReady", false)
 
 local CorePackages = game:GetService("CorePackages")
 local CharacterUtility = require(CorePackages.Thumbnailing).CharacterUtility
@@ -59,7 +61,7 @@ local CFrameUtility = require(CorePackages.Thumbnailing).CFrameUtility
 local Promise = require(CorePackages.Promise)
 local CoreGui = game:GetService("CoreGui")
 local StarterGui = game:GetService("StarterGui")
-local RobloxGui = CoreGui:WaitForChild("RobloxGui")
+local RobloxGui = CoreGui.RobloxGui
 local RunService = game:GetService("RunService")
 local MouseIconOverrideService = require(CorePackages.InGameServices.MouseIconOverrideService)
 local Symbol = require(CorePackages.Symbol)
@@ -70,6 +72,7 @@ local AppStorageService = game:GetService("AppStorageService")
 local SocialService = game:GetService("SocialService")
 local UserInputService = game:GetService("UserInputService")
 local VoiceChatServiceManager = require(RobloxGui.Modules.VoiceChat.VoiceChatServiceManager).default
+local VoiceConstants = require(RobloxGui.Modules.VoiceChat.Constants)
 local FaceAnimatorService = game:FindService("FaceAnimatorService")
 local VideoCaptureService = game:FindService("VideoCaptureService")
 local Analytics = require(RobloxGui.Modules.SelfView.Analytics).new()
@@ -141,6 +144,7 @@ local updateCloneCurrentCoolDown = 0
 local GetFFlagVoiceChatUILogging = require(RobloxGui.Modules.Flags.GetFFlagVoiceChatUILogging)
 local GetFFlagShowMicConnectingIconAndToast = require(RobloxGui.Modules.Flags.GetFFlagShowMicConnectingIconAndToast)
 local GetFFlagEnableVoiceMuteAnalytics = require(RobloxGui.Modules.Flags.GetFFlagEnableVoiceMuteAnalytics)
+local GetFFlagEnableShowVoiceUI = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagEnableShowVoiceUI
 
 local voiceAnalytics
 if GetFFlagEnableVoiceMuteAnalytics() then
@@ -158,6 +162,7 @@ local videoCaptureServiceStartedConnection = nil
 local videoCaptureServiceStoppedConnection = nil
 local videoCaptureServiceDevicesChangedConnection = nil
 local playerScreenOrientationConnection = nil
+local voiceJoinProgressChangedConnection = nil
 
 local cloneAnimator = nil
 local cloneAnimationTracks = {}
@@ -202,17 +207,32 @@ local cloneCamUpdatePosEvery = 1
 local hasCameraPermissions = false
 local hasMicPermissions = false
 local voiceChatServiceEnabled = false
+
 local function getShouldShowMicButton()
-	if GetFFlagJoinWithoutMicPermissions() then
-		-- This makes sure that the mic button is still shown when the user is connecting to voice chat, but hidden when the user gets banned
-		return voiceChatServiceEnabled
-			and (not VoiceChatServiceManager:VoiceChatEnded() or isVoiceConnecting)
-	elseif getFFlagEnableAlwaysAvailableCamera() then
-		return hasMicPermissions
+	if GetFFlagEnableShowVoiceUI() then
+		local showVoiceUI = VoiceChatServiceManager.voiceUIVisible
+		if GetFFlagJoinWithoutMicPermissions() then
+			-- This makes sure that the mic button is still shown when the user is connecting to voice chat, but hidden when the user gets banned
+			return showVoiceUI and voiceChatServiceEnabled
+				and (not VoiceChatServiceManager:VoiceChatEnded() or isVoiceConnecting)
+		elseif getFFlagEnableAlwaysAvailableCamera() then
+			return showVoiceUI and hasMicPermissions
+		else
+			return showVoiceUI and hasMicPermissions and not VoiceChatServiceManager:VoiceChatEnded()
+		end
 	else
-		return hasMicPermissions and not VoiceChatServiceManager:VoiceChatEnded()
+		if GetFFlagJoinWithoutMicPermissions() then
+			-- This makes sure that the mic button is still shown when the user is connecting to voice chat, but hidden when the user gets banned
+			return voiceChatServiceEnabled
+				and (not VoiceChatServiceManager:VoiceChatEnded() or isVoiceConnecting)
+		elseif getFFlagEnableAlwaysAvailableCamera() then
+			return hasMicPermissions
+		else
+			return hasMicPermissions and not VoiceChatServiceManager:VoiceChatEnded()
+		end
 	end
 end
+
 local cachedHasCameraPermissions = false
 local cachedHasMicPermissions = false
 local lastReportedCamState = false
@@ -308,7 +328,7 @@ local TYPES_TRIGGERING_DIRTY_ON_ADDREMOVE = {
 	SurfaceAppearance = "SurfaceAppearance",
 }
 
-log:trace("Self View 03-20-2024__1!!")
+log:trace("Self View 08-13-2024__1!!")
 
 local observerInstances = {}
 local Observer = {
@@ -352,6 +372,11 @@ end
 function shouldDisplaySelfViewTooltip(tooltipName)
 	if not getFFlagEnableAlwaysAvailableCamera() or not isCamEnabledForUserAndPlace() then
 		-- If always available camera is not on or user is not a camera user, never render tooltips
+		return false
+	end
+
+	if GetFFlagEnableShowVoiceUI() and not bottomButtonsFrame then
+		-- If there are no buttons being displayed, don't show the tooltip
 		return false
 	end
 
@@ -508,30 +533,60 @@ function initVoiceChatServiceManager()
 			cachedMicState = state
 			cachedLevel = level
 
-			if state == VoiceChatServiceManager.VOICE_STATE.MUTED then
-				micIcon.Size = UDim2.fromOffset(32, 32)
-				micIcon.Image = MIC_OFF_IMAGE.Image
-				if micIcon.ImageRectOffset ~= MIC_OFF_IMAGE.ImageRectOffset then
-					micIcon.ImageRectOffset = MIC_OFF_IMAGE.ImageRectOffset
+			if GetFFlagEnableShowVoiceUI() then
+				if micIcon then
+					if state == VoiceChatServiceManager.VOICE_STATE.MUTED then
+						micIcon.Size = UDim2.fromOffset(32, 32)
+						micIcon.Image = MIC_OFF_IMAGE.Image
+						if micIcon.ImageRectOffset ~= MIC_OFF_IMAGE.ImageRectOffset then
+							micIcon.ImageRectOffset = MIC_OFF_IMAGE.ImageRectOffset
+						end
+						micIcon.ImageRectSize = MIC_OFF_IMAGE.ImageRectSize
+					else
+						local icon = VoiceChatServiceManager:VoiceStateToIcon(state, level, "New")
+						micIcon.Size = UDim2.fromOffset(16, 20)
+						micIcon.Image = icon
+						micIcon.ImageRectOffset = Vector2.new(0, 0)
+						micIcon.ImageRectSize = Vector2.new(0, 0)
+					end
+
+					micIcon.Position = UDim2.new(0.5, 0, 0.5, 0)
+
+					if state == VoiceChatServiceManager.VOICE_STATE.INACTIVE then
+						micIcon.Size = UDim2.fromOffset(19, 19)
+						micIcon.Image = MIC_INACTIVE_IMAGE.Image
+						micIcon.ImageRectOffset = MIC_INACTIVE_IMAGE.ImageRectOffset
+						micIcon.ImageRectSize = MIC_INACTIVE_IMAGE.ImageRectSize
+					elseif state == VoiceChatServiceManager.VOICE_STATE.TALKING then
+						micIcon.Position = UDim2.new(0.5, 0, 0.5, -1)
+					end
 				end
-				micIcon.ImageRectSize = MIC_OFF_IMAGE.ImageRectSize
 			else
-				local icon = VoiceChatServiceManager:VoiceStateToIcon(state, level, "New")
-				micIcon.Size = UDim2.fromOffset(16, 20)
-				micIcon.Image = icon
-				micIcon.ImageRectOffset = Vector2.new(0, 0)
-				micIcon.ImageRectSize = Vector2.new(0, 0)
-			end
+				if state == VoiceChatServiceManager.VOICE_STATE.MUTED then
+					micIcon.Size = UDim2.fromOffset(32, 32)
+					micIcon.Image = MIC_OFF_IMAGE.Image
+					if micIcon.ImageRectOffset ~= MIC_OFF_IMAGE.ImageRectOffset then
+						micIcon.ImageRectOffset = MIC_OFF_IMAGE.ImageRectOffset
+					end
+					micIcon.ImageRectSize = MIC_OFF_IMAGE.ImageRectSize
+				else
+					local icon = VoiceChatServiceManager:VoiceStateToIcon(state, level, "New")
+					micIcon.Size = UDim2.fromOffset(16, 20)
+					micIcon.Image = icon
+					micIcon.ImageRectOffset = Vector2.new(0, 0)
+					micIcon.ImageRectSize = Vector2.new(0, 0)
+				end
 
-			micIcon.Position = UDim2.new(0.5, 0, 0.5, 0)
+				micIcon.Position = UDim2.new(0.5, 0, 0.5, 0)
 
-			if state == VoiceChatServiceManager.VOICE_STATE.INACTIVE then
-				micIcon.Size = UDim2.fromOffset(19, 19)
-				micIcon.Image = MIC_INACTIVE_IMAGE.Image
-				micIcon.ImageRectOffset = MIC_INACTIVE_IMAGE.ImageRectOffset
-				micIcon.ImageRectSize = MIC_INACTIVE_IMAGE.ImageRectSize
-			elseif state == VoiceChatServiceManager.VOICE_STATE.TALKING then
-				micIcon.Position = UDim2.new(0.5, 0, 0.5, -1)
+				if state == VoiceChatServiceManager.VOICE_STATE.INACTIVE then
+					micIcon.Size = UDim2.fromOffset(19, 19)
+					micIcon.Image = MIC_INACTIVE_IMAGE.Image
+					micIcon.ImageRectOffset = MIC_INACTIVE_IMAGE.ImageRectOffset
+					micIcon.ImageRectSize = MIC_INACTIVE_IMAGE.ImageRectSize
+				elseif state == VoiceChatServiceManager.VOICE_STATE.TALKING then
+					micIcon.Position = UDim2.new(0.5, 0, 0.5, -1)
+				end
 			end
 		end
 
@@ -577,6 +632,19 @@ function initVoiceChatServiceManager()
 					end
 					--trigger opening self view here (too) so it shows mic button (, too, if cam also enabled), needed here again to show both buttons on self view showing on place start
 					displaySelfieViewByDefault()
+					if FFlagInExperienceUpsellSelfViewFix then
+						hasMicPermissions = true -- If asyncInit resolves, then we know the user has mic permissions
+						local localMuted = VoiceChatServiceManager.localMuted
+						if localMuted ~= nil then
+							isVoiceConnecting = false
+							updateVoiceIndicatorRenderStepped(localMuted)
+							updateMicIcon(if localMuted
+								then VoiceChatServiceManager.VOICE_STATE.MUTED
+								else VoiceChatServiceManager.VOICE_STATE.INACTIVE,
+							cachedLevel)
+							updateSelfViewButtonVisibility()
+						end
+					end
 				voiceService.StateChanged:Connect(function(_oldState, newState)
 					local voiceManagerState = LOCAL_STATE_MAP[newState]
 					if GetFFlagShowMicConnectingIconAndToast() then
@@ -594,6 +662,20 @@ function initVoiceChatServiceManager()
 						updateSelfViewButtonVisibility()
 					end
 				end)
+				if GetFFlagEnableShowVoiceUI() then
+					VoiceChatServiceManager.showVoiceUI.Event:Connect(function()
+						updateSelfViewButtonVisibility()
+						ReInit(Players.LocalPlayer)
+					end)
+					VoiceChatServiceManager.hideVoiceUI.Event:Connect(function()
+						updateSelfViewButtonVisibility()
+						if bottomButtonsFrame then 
+							bottomButtonsFrame:Destroy() 
+						end
+						bottomButtonsFrame = nil
+						ReInit(Players.LocalPlayer)
+					end)
+				end
 			end
 			end)
 			:catch(function()
@@ -904,7 +986,7 @@ function clearClone()
 	cloneAnimationTracks = {}
 	-- clear objects
 	clearCloneCharacter()
-end	
+end
 
 function clearViewportFrame()
 	if viewportFrame then
@@ -935,6 +1017,11 @@ local function setIsOpen(shouldBeOpen)
 			playerScreenOrientationConnection = nil
 		end
 
+		if not FFlagRemoveVoiceJoiceDisconnectFix and voiceJoinProgressChangedConnection then
+			voiceJoinProgressChangedConnection:Disconnect()
+			voiceJoinProgressChangedConnection = nil
+		end
+
 		prepMicAndCamPropertyChangedSignalHandler()
 
 		indicatorCircle.Visible = debug
@@ -945,9 +1032,32 @@ local function setIsOpen(shouldBeOpen)
 			clearViewportFrame()
 		end
 	end
-end	
+end
 
 function createViewportFrame()
+	local numButtonsShowing = 0
+	local viewportFrameSize = UDim2.new(1, 0, 1, -(DEFAULT_BUTTONS_BAR_HEIGHT - 1))
+	if GetFFlagEnableShowVoiceUI() then
+		if getFFlagDoNotPromptCameraPermissionsOnMount() and FFlagSelfViewCameraDefaultButtonInViewPort then
+			if isCamEnabledForUserAndPlace() then
+				numButtonsShowing += 1
+			end
+		else
+			if hasCameraPermissions then
+				numButtonsShowing += 1
+			end
+		end
+		if getShouldShowMicButton() then
+			numButtonsShowing += 1
+		end
+
+		if numButtonsShowing == 0 then
+			viewportFrameSize = UDim2.new(1, 0, 1, 0)
+		else
+			viewportFrameSize = UDim2.new(1, 0, 1, -(DEFAULT_BUTTONS_BAR_HEIGHT - 1))
+		end
+	end
+
 	selfViewFrame = Instance.new("Frame")
 	selfViewFrame.Name = "SelfViewFrame"
 	selfViewFrame.Position = UDim2.new(0, 0, 0, 0)
@@ -957,7 +1067,7 @@ function createViewportFrame()
 
 	viewportFrame = Instance.new("ViewportFrame")
 	viewportFrame.Position = UDim2.new(0, 0, 0, 0)
-	viewportFrame.Size = UDim2.new(1, 0, 1, -(DEFAULT_BUTTONS_BAR_HEIGHT - 1))
+	viewportFrame.Size = if GetFFlagEnableShowVoiceUI() then viewportFrameSize else UDim2.new(1, 0, 1, -(DEFAULT_BUTTONS_BAR_HEIGHT - 1))
 	viewportFrame.BackgroundColor3 = Color3.new(0, 0, 0)
 	viewportFrame.BorderColor3 = Color3.new(0.6, 0.5, 0.4)
 	viewportFrame.BorderSizePixel = 2
@@ -993,7 +1103,7 @@ function createViewportFrame()
 	viewportFrame.CurrentCamera = viewportCamera
 	viewportCamera.Parent = viewportFrame
 
-	return viewportFrame	
+	return viewportFrame
 end
 
 function getViewportFrame()
@@ -1079,158 +1189,166 @@ local function createViewport()
 	frame.Position = position
 	frame.Position = getRelativePosition(frame)
 
-	bottomButtonsFrame = Instance.new("Frame")
-	bottomButtonsFrame.Name = "BottomButtonsFrame"
-	bottomButtonsFrame.Position = UDim2.new(0, 0, 1, -(DEFAULT_BUTTONS_BAR_HEIGHT - 1))
-	bottomButtonsFrame.Size = UDim2.new(1, 0, 0, DEFAULT_BUTTONS_BAR_HEIGHT)
-	bottomButtonsFrame.BackgroundColor3 = DEFAULT_SELF_VIEW_FRAME_COLOR
-	bottomButtonsFrame.BackgroundTransparency = 0
-	bottomButtonsFrame.BorderSizePixel = 0
-	bottomButtonsFrame.Parent = frame
+	local uiPadding
+	local uiListLayout
+	local micButton
+	local uiCorner
+	local camButton
 
-	local uiPadding = Instance.new("UIPadding")
-	uiPadding.Parent = bottomButtonsFrame
-	uiPadding.PaddingBottom = UDim.new(0, 0)
-	uiPadding.PaddingLeft = UDim.new(0, 0)
-	uiPadding.PaddingRight = UDim.new(0, 0)
-	uiPadding.PaddingTop = UDim.new(0, 3)
+	if not GetFFlagEnableShowVoiceUI() or numButtonsShowing ~= 0 then
+		bottomButtonsFrame = Instance.new("Frame")
+		bottomButtonsFrame.Name = "BottomButtonsFrame"
+		bottomButtonsFrame.Position = UDim2.new(0, 0, 1, -(DEFAULT_BUTTONS_BAR_HEIGHT - 1))
+		bottomButtonsFrame.Size = UDim2.new(1, 0, 0, DEFAULT_BUTTONS_BAR_HEIGHT)
+		bottomButtonsFrame.BackgroundColor3 = DEFAULT_SELF_VIEW_FRAME_COLOR
+		bottomButtonsFrame.BackgroundTransparency = 0
+		bottomButtonsFrame.BorderSizePixel = 0
+		bottomButtonsFrame.Parent = frame
 
-	local uiListLayout = Instance.new("UIListLayout")
-	uiListLayout.Parent = bottomButtonsFrame
-	uiListLayout.Padding = UDim.new(0, 5)
-	uiListLayout.FillDirection = Enum.FillDirection.Horizontal
-	uiListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-	uiListLayout.VerticalAlignment = Enum.VerticalAlignment.Center
-	uiListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+		uiPadding = Instance.new("UIPadding")
+		uiPadding.Parent = bottomButtonsFrame
+		uiPadding.PaddingBottom = UDim.new(0, 0)
+		uiPadding.PaddingLeft = UDim.new(0, 0)
+		uiPadding.PaddingRight = UDim.new(0, 0)
+		uiPadding.PaddingTop = UDim.new(0, 3)
 
-	local sizeXScale = if numButtonsShowing == 2 then 0.5 else 1
-	local micButton = Instance.new("ImageButton")
-	micButton.Name = MIC_NAME
-	micButton.Parent = bottomButtonsFrame
-	micButton.Position = UDim2.new(0, 0, 0, 0)
-	micButton.Size = UDim2.new(sizeXScale, -4, 1, -4)
-	micButton.Image = "rbxasset://textures/SelfView/whiteRect.png"
-	micButton.ImageColor3 = Color3.new(0.294117, 0.294117, 0.294117)
-	micButton.BackgroundTransparency = 1
-	micButton.LayoutOrder = 0
-	micButton.ZIndex = 2
-	micButton.Visible = getShouldShowMicButton()
-	micButton.Activated:Connect(function()
-		local voiceService = VoiceChatServiceManager:getService()
-		debugPrint(
-			"Self View: micButton.Activated(), voiceService:"
-				.. tostring(voiceService)
-				.. ",hasMicPermissions:"
-				.. tostring(hasMicPermissions)
-		)
-		if voiceService and getShouldShowMicButton() then
-			if GetFFlagShowMicConnectingIconAndToast() then
-				if isVoiceConnecting then
-					VoiceChatServiceManager:ShowVoiceChatLoadingMessage()
-					return
-				end
-			end
-			VoiceChatServiceManager:ToggleMic("LegacySelfView")
-			Analytics:setLastCtx("SelfView")
-			if voiceAnalytics then
-				voiceAnalytics:onToggleMuteSelf(not VoiceChatServiceManager.localMuted)
-			end
-		end
-	end)
+		uiListLayout = Instance.new("UIListLayout")
+		uiListLayout.Parent = bottomButtonsFrame
+		uiListLayout.Padding = UDim.new(0, 5)
+		uiListLayout.FillDirection = Enum.FillDirection.Horizontal
+		uiListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+		uiListLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+		uiListLayout.SortOrder = Enum.SortOrder.LayoutOrder
 
-	local uiCorner = Instance.new("UICorner")
-	uiCorner.Parent = micButton
-
-	local camButton = Instance.new("ImageButton")
-	camButton.Name = CAM_NAME
-	camButton.Parent = bottomButtonsFrame
-	camButton.Position = UDim2.new(0, 0, 0, 0)
-	camButton.Size = UDim2.new(sizeXScale, -4, 1, -4)
-	camButton.Image = "rbxasset://textures/SelfView/whiteRect.png"
-	camButton.ImageColor3 = Color3.new(0.294117, 0.294117, 0.294117)
-	camButton.BackgroundTransparency = 1
-	camButton.LayoutOrder = 1
-	camButton.ZIndex = 3
-
-	local isCameraButtonVisible = hasCameraPermissions
-	if getFFlagDoNotPromptCameraPermissionsOnMount() then
-		isCameraButtonVisible = isCamEnabledForUserAndPlace()
-	end
-	camButton.Visible = isCameraButtonVisible
-	camButton.Activated:Connect(function()
-		debugPrint("Self View: camButton.Activated(), hasCameraPermissions:" .. tostring(hasCameraPermissions))
-		local toggleVideo = function()
-			if not FaceAnimatorService or not FaceAnimatorService:IsStarted() then
-				updateVideoButton(false)
-				return
-			end
-			FaceAnimatorService.VideoAnimationEnabled = not FaceAnimatorService.VideoAnimationEnabled
-			Analytics:setLastCtx("SelfView")
-		end
-
-		if getFFlagDoNotPromptCameraPermissionsOnMount() then
-			if hasCameraPermissions then
-				-- User has given camera device permissions
-				toggleVideo()
-			else
-				-- User has not given camera permissions so request them
-				local callback = function(response)
-					hasCameraPermissions = response.hasCameraPermissions
-
-					if response.hasCameraPermissions then
-						-- User authorized in the permission prompt
-						toggleVideo()
-					else
-						-- User denied in the permission prompt
-						displayCameraDeniedToast()
-						updateVideoButton(false)
+		local sizeXScale = if numButtonsShowing == 2 then 0.5 else 1
+		micButton = Instance.new("ImageButton")
+		micButton.Name = MIC_NAME
+		micButton.Parent = bottomButtonsFrame
+		micButton.Position = UDim2.new(0, 0, 0, 0)
+		micButton.Size = UDim2.new(sizeXScale, -4, 1, -4)
+		micButton.Image = "rbxasset://textures/SelfView/whiteRect.png"
+		micButton.ImageColor3 = Color3.new(0.294117, 0.294117, 0.294117)
+		micButton.BackgroundTransparency = 1
+		micButton.LayoutOrder = 0
+		micButton.ZIndex = 2
+		micButton.Visible = getShouldShowMicButton()
+		micButton.Activated:Connect(function()
+			local voiceService = VoiceChatServiceManager:getService()
+			debugPrint(
+				"Self View: micButton.Activated(), voiceService:"
+					.. tostring(voiceService)
+					.. ",hasMicPermissions:"
+					.. tostring(hasMicPermissions)
+			)
+			if voiceService and getShouldShowMicButton() then
+				if GetFFlagShowMicConnectingIconAndToast() then
+					if isVoiceConnecting then
+						VoiceChatServiceManager:ShowVoiceChatLoadingMessage()
+						return
 					end
 				end
+				VoiceChatServiceManager:ToggleMic("LegacySelfView")
+				Analytics:setLastCtx("SelfView")
+				if voiceAnalytics then
+					voiceAnalytics:onToggleMuteSelf(not VoiceChatServiceManager.localMuted)
+				end
+			end
+		end)
 
-				getCamMicPermissions(callback, { PermissionsProtocol.Permissions.CAMERA_ACCESS :: string })
-			end
-		else
-			if hasCameraPermissions then
-				toggleVideo()
-			else
-				updateVideoButton(false)
-			end
+		local uiCorner = Instance.new("UICorner")
+		uiCorner.Parent = micButton
+
+		camButton = Instance.new("ImageButton")
+		camButton.Name = CAM_NAME
+		camButton.Parent = bottomButtonsFrame
+		camButton.Position = UDim2.new(0, 0, 0, 0)
+		camButton.Size = UDim2.new(sizeXScale, -4, 1, -4)
+		camButton.Image = "rbxasset://textures/SelfView/whiteRect.png"
+		camButton.ImageColor3 = Color3.new(0.294117, 0.294117, 0.294117)
+		camButton.BackgroundTransparency = 1
+		camButton.LayoutOrder = 1
+		camButton.ZIndex = 3
+
+		local isCameraButtonVisible = hasCameraPermissions
+		if getFFlagDoNotPromptCameraPermissionsOnMount() then
+			isCameraButtonVisible = isCamEnabledForUserAndPlace()
 		end
-	end)
+		camButton.Visible = isCameraButtonVisible
+		camButton.Activated:Connect(function()
+			debugPrint("Self View: camButton.Activated(), hasCameraPermissions:" .. tostring(hasCameraPermissions))
+			local toggleVideo = function()
+				if not FaceAnimatorService or not FaceAnimatorService:IsStarted() then
+					updateVideoButton(false)
+					return
+				end
+				FaceAnimatorService.VideoAnimationEnabled = not FaceAnimatorService.VideoAnimationEnabled
+				Analytics:setLastCtx("SelfView")
+			end
 
-	uiCorner = Instance.new("UICorner")
-	uiCorner.Parent = camButton
+			if getFFlagDoNotPromptCameraPermissionsOnMount() then
+				if hasCameraPermissions then
+					-- User has given camera device permissions
+					toggleVideo()
+				else
+					-- User has not given camera permissions so request them
+					local callback = function(response)
+						hasCameraPermissions = response.hasCameraPermissions
 
-	micIcon = Instance.new("ImageLabel")
-	micIcon.Name = "MicIcon"
-	micIcon.Parent = micButton
-	micIcon.AnchorPoint = Vector2.new(0.5, 0.5)
-	micIcon.Position = UDim2.new(0.5, 0, 0.5, 0)
-	if GetFFlagShowMicConnectingIconAndToast() and isVoiceConnecting then
-		micIcon.Size = UDim2.fromOffset(16, 20)
-		micIcon.Image = VoiceChatServiceManager:GetIcon("Connecting", "New")
-		micIcon.ImageRectOffset = Vector2.new(0, 0)
-		micIcon.ImageRectSize = Vector2.new(0, 0)
-	else
-		micIcon.Size = UDim2.new(0, 32, 0, 32)
-		micIcon.Image = MIC_OFF_IMAGE.Image
-		micIcon.ImageRectOffset = MIC_OFF_IMAGE.ImageRectOffset
-		micIcon.ImageRectSize = MIC_OFF_IMAGE.ImageRectSize
+						if response.hasCameraPermissions then
+							-- User authorized in the permission prompt
+							toggleVideo()
+						else
+							-- User denied in the permission prompt
+							displayCameraDeniedToast()
+							updateVideoButton(false)
+						end
+					end
+
+					getCamMicPermissions(callback, { PermissionsProtocol.Permissions.CAMERA_ACCESS :: string })
+				end
+			else
+				if hasCameraPermissions then
+					toggleVideo()
+				else
+					updateVideoButton(false)
+				end
+			end
+		end)
+
+		uiCorner = Instance.new("UICorner")
+		uiCorner.Parent = camButton
+
+		micIcon = Instance.new("ImageLabel")
+		micIcon.Name = "MicIcon"
+		micIcon.Parent = micButton
+		micIcon.AnchorPoint = Vector2.new(0.5, 0.5)
+		micIcon.Position = UDim2.new(0.5, 0, 0.5, 0)
+		if GetFFlagShowMicConnectingIconAndToast() and isVoiceConnecting then
+			micIcon.Size = UDim2.fromOffset(16, 20)
+			micIcon.Image = VoiceChatServiceManager:GetIcon("Connecting", "New")
+			micIcon.ImageRectOffset = Vector2.new(0, 0)
+			micIcon.ImageRectSize = Vector2.new(0, 0)
+		else
+			micIcon.Size = UDim2.new(0, 32, 0, 32)
+			micIcon.Image = MIC_OFF_IMAGE.Image
+			micIcon.ImageRectOffset = MIC_OFF_IMAGE.ImageRectOffset
+			micIcon.ImageRectSize = MIC_OFF_IMAGE.ImageRectSize
+		end
+		micIcon.BackgroundTransparency = 1
+		micIcon.ZIndex = 2
+
+		camIcon = Instance.new("ImageLabel")
+		camIcon.Name = "CamIcon"
+		camIcon.Parent = camButton
+		camIcon.AnchorPoint = Vector2.new(0.5, 0.5)
+		camIcon.Position = UDim2.new(0.5, 0, 0.5, 0)
+		camIcon.Size = UDim2.new(0, 32, 0, 32)
+		camIcon.Image = VIDEO_OFF_IMAGE.Image
+		camIcon.ImageRectOffset = VIDEO_OFF_IMAGE.ImageRectOffset
+		camIcon.ImageRectSize = VIDEO_OFF_IMAGE.ImageRectSize
+		camIcon.BackgroundTransparency = 1
+		camIcon.ZIndex = 2
 	end
-	micIcon.BackgroundTransparency = 1
-	micIcon.ZIndex = 2
-
-	camIcon = Instance.new("ImageLabel")
-	camIcon.Name = "CamIcon"
-	camIcon.Parent = camButton
-	camIcon.AnchorPoint = Vector2.new(0.5, 0.5)
-	camIcon.Position = UDim2.new(0.5, 0, 0.5, 0)
-	camIcon.Size = UDim2.new(0, 32, 0, 32)
-	camIcon.Image = VIDEO_OFF_IMAGE.Image
-	camIcon.ImageRectOffset = VIDEO_OFF_IMAGE.ImageRectOffset
-	camIcon.ImageRectSize = VIDEO_OFF_IMAGE.ImageRectSize
-	camIcon.BackgroundTransparency = 1
-	camIcon.ZIndex = 2
 
 	if FFlagSelfViewRemoveVPFWhenClosed then
 		if isOpen then
@@ -1283,21 +1401,28 @@ local function createViewport()
 		faceIcon.Parent = closeButton
 
 		local function setButtonButtonsVisibility()
+			-- Show the mic and cam buttons if the user has given permissions
 			if isOpen then
-				micButton.Visible = true
-				camButton.Visible = true
+				if not GetFFlagEnableShowVoiceUI() or numButtonsShowing  ~= 0 then
+					micButton.Visible = true
+					camButton.Visible = true
+				end
 				closeButton.Visible = true
-		--[[
-			Allow for debugging in studio. This shows the mic option when
-			studio normally does not have this option.
-		]]
+			--[[
+				Allow for debugging in studio. This shows the mic option when
+				studio normally does not have this option.
+			]]
 			elseif IS_STUDIO and debug then
-				micButton.Visible = true
-				camButton.Visible = true
+				if not GetFFlagEnableShowVoiceUI() or numButtonsShowing  ~= 0 then
+					micButton.Visible = true
+					camButton.Visible = true
+				end
 				closeButton.Visible = true
 			else
-				micButton.Visible = false
-				camButton.Visible = false
+				if not GetFFlagEnableShowVoiceUI() or numButtonsShowing ~= 0  then
+					micButton.Visible = false
+					camButton.Visible = false
+				end
 				closeButton.Visible = false
 			end
 		end
@@ -1309,20 +1434,23 @@ local function createViewport()
 			if not FFlagSelfViewRemoveVPFWhenClosed then
 				selfViewFrame.Visible = newState
 			end
-			bottomButtonsFrame.Visible = newState
+			if not GetFFlagEnableShowVoiceUI() or numButtonsShowing  ~= 0 then
+				bottomButtonsFrame.Visible = newState
+			end
 			closeButtonIcon.Visible = newState
 			faceIcon.Visible = not newState
 			closeButton.BackgroundTransparency = newState and 1 or 0.5
 
 			if isOpen then
-				micButton.Position = UDim2.new(0, 0, 0, 0)
-				micButton.Size = UDim2.new(0.5, -4, 1, -4)
-				micButton.ImageTransparency = 0
+				if not GetFFlagEnableShowVoiceUI() or numButtonsShowing ~= 0  then
+					micButton.Position = UDim2.new(0, 0, 0, 0)
+					micButton.Size = UDim2.new(0.5, -4, 1, -4)
+					micButton.ImageTransparency = 0
 
-				camButton.Position = UDim2.new(0, 0, 0, 0)
-				camButton.Size = UDim2.new(0.5, -4, 1, -4)
-				camButton.ImageTransparency = 0
-
+					camButton.Position = UDim2.new(0, 0, 0, 0)
+					camButton.Size = UDim2.new(0.5, -4, 1, -4)
+					camButton.ImageTransparency = 0
+				end
 				indicatorCircle.Position = UDim2.new(1, -25, 0, 4)
 
 				if position ~= nil then
@@ -1353,13 +1481,15 @@ local function createViewport()
 					end)
 				end
 			else
-				micButton.Position = UDim2.new(0, 40, 0, -1)
-				micButton.Size = UDim2.new(0, 34, 0, 34)
-				micButton.ImageTransparency = 0.3
+				if not GetFFlagEnableShowVoiceUI() or numButtonsShowing ~= 0  then
+					micButton.Position = UDim2.new(0, 40, 0, -1)
+					micButton.Size = UDim2.new(0, 34, 0, 34)
+					micButton.ImageTransparency = 0.3
 
-				camButton.Position = UDim2.new(0, 80, 0, -1)
-				camButton.Size = UDim2.new(0, 34, 0, 34)
-				camButton.ImageTransparency = 0.3
+					camButton.Position = UDim2.new(0, 80, 0, -1)
+					camButton.Size = UDim2.new(0, 34, 0, 34)
+					camButton.ImageTransparency = 0.3
+				end
 
 				indicatorCircle.Position = UDim2.new(0, 20, 0, -10)
 				frame.Active = false
@@ -1398,7 +1528,9 @@ local function createViewport()
 				end
 			end
 
-			bottomButtonsFrame.Visible = isOpen
+			if not GetFFlagEnableShowVoiceUI() or numButtonsShowing ~= 0  then
+				bottomButtonsFrame.Visible = isOpen
+			end
 		end
 
 		globalShowSelfViewFunction = showSelfView
@@ -1565,20 +1697,26 @@ local function createViewport()
 
 		local function setButtonButtonsVisibility()
 			if isOpen then
-				micButton.Visible = true
-				camButton.Visible = true
+				if not GetFFlagEnableShowVoiceUI() or numButtonsShowing ~= 0  then
+					micButton.Visible = true
+					camButton.Visible = true
+				end
 				closeButton.Visible = true
-		--[[
-			Allow for debugging in studio. This shows the mic option when
-			studio normally does not have this option.
-		]]
+			--[[
+				Allow for debugging in studio. This shows the mic option when
+				studio normally does not have this option.
+			]]
 			elseif IS_STUDIO and debug then
-				micButton.Visible = true
-				camButton.Visible = true
+				if not GetFFlagEnableShowVoiceUI() or numButtonsShowing ~= 0  then
+					micButton.Visible = true
+					camButton.Visible = true
+				end
 				closeButton.Visible = true
 			else
-				micButton.Visible = false
-				camButton.Visible = false
+				if not GetFFlagEnableShowVoiceUI() or numButtonsShowing ~= 0  then
+					micButton.Visible = false
+					camButton.Visible = false
+				end
 				closeButton.Visible = false
 			end
 		end
@@ -1590,19 +1728,23 @@ local function createViewport()
 			if not FFlagSelfViewRemoveVPFWhenClosed then
 				selfViewFrame.Visible = newState
 			end
-			bottomButtonsFrame.Visible = newState
+			if not GetFFlagEnableShowVoiceUI() or numButtonsShowing ~= 0  then
+				bottomButtonsFrame.Visible = newState
+			end
 			closeButtonIcon.Visible = newState
 			faceIcon.Visible = not newState
 			closeButton.BackgroundTransparency = newState and 1 or 0.5
 
 			if isOpen then
-				micButton.Position = UDim2.new(0, 0, 0, 0)
-				micButton.Size = UDim2.new(0.5, -4, 1, -4)
-				micButton.ImageTransparency = 0
+				if not GetFFlagEnableShowVoiceUI() or numButtonsShowing ~= 0  then
+					micButton.Position = UDim2.new(0, 0, 0, 0)
+					micButton.Size = UDim2.new(0.5, -4, 1, -4)
+					micButton.ImageTransparency = 0
 
-				camButton.Position = UDim2.new(0, 0, 0, 0)
-				camButton.Size = UDim2.new(0.5, -4, 1, -4)
-				camButton.ImageTransparency = 0
+					camButton.Position = UDim2.new(0, 0, 0, 0)
+					camButton.Size = UDim2.new(0.5, -4, 1, -4)
+					camButton.ImageTransparency = 0
+				end
 
 				indicatorCircle.Position = UDim2.new(1, -25, 0, 4)
 
@@ -1634,13 +1776,15 @@ local function createViewport()
 					end)
 				end
 			else
-				micButton.Position = UDim2.new(0, 40, 0, -1)
-				micButton.Size = UDim2.new(0, 34, 0, 34)
-				micButton.ImageTransparency = 0.3
+				if not GetFFlagEnableShowVoiceUI() or numButtonsShowing ~= 0  then
+					micButton.Position = UDim2.new(0, 40, 0, -1)
+					micButton.Size = UDim2.new(0, 34, 0, 34)
+					micButton.ImageTransparency = 0.3
 
-				camButton.Position = UDim2.new(0, 80, 0, -1)
-				camButton.Size = UDim2.new(0, 34, 0, 34)
-				camButton.ImageTransparency = 0.3
+					camButton.Position = UDim2.new(0, 80, 0, -1)
+					camButton.Size = UDim2.new(0, 34, 0, 34)
+					camButton.ImageTransparency = 0.3
+				end
 
 				indicatorCircle.Position = UDim2.new(0, 20, 0, -10)
 				frame.Active = false
@@ -1679,7 +1823,9 @@ local function createViewport()
 				end
 			end
 
-			bottomButtonsFrame.Visible = isOpen
+			if not GetFFlagEnableShowVoiceUI() or numButtonsShowing ~= 0  then
+				bottomButtonsFrame.Visible = isOpen
+			end
 		end
 
 		globalShowSelfViewFunction = showSelfView
@@ -1934,15 +2080,13 @@ local function syncTrack(animator, track)
 	if track.Animation:IsA("Animation") then
 		--regular animation sync handled further below
 	elseif track.Animation:IsA("TrackerStreamAnimation") then
-		if EngineFeatureHasFeatureLoadStreamAnimationForSelfieViewApiEnabled then
-			log:trace("using LoadStreamAnimationForClone!")
-			newTrackerStreamAnimation = Instance.new("TrackerStreamAnimation")
-			cloneStreamTrack = animator:LoadStreamAnimationForSelfieView_deprecated(newTrackerStreamAnimation, Players.LocalPlayer)
-			cloneTrack = cloneStreamTrack
+		newTrackerStreamAnimation = Instance.new("TrackerStreamAnimation")
+		if game:GetEngineFeature("UseNewLoadStreamAnimationAPI") then
+			cloneStreamTrack = animator:LoadStreamAnimationV2(newTrackerStreamAnimation, Players.LocalPlayer, false, false)
 		else
-			log:trace("animator:LoadStreamAnimation, not EngineFeatureHasFeatureLoadStreamAnimationForSelfieViewApiEnabled")
-			cloneTrack = animator:LoadStreamAnimation(track.Animation)
+			cloneStreamTrack = animator:LoadStreamAnimationForSelfieView_deprecated(newTrackerStreamAnimation, Players.LocalPlayer)
 		end
+		cloneTrack = cloneStreamTrack
 		foundStreamTrack = true
 		debugPrint("foundStreamTrack = true")
 	else
@@ -2578,6 +2722,16 @@ local function characterAdded(character)
 	setCloneDirty(true)
 end
 
+function connectToVoiceJoinProgressChanged()
+	if FFlagInExperienceUpsellSelfViewFix and not voiceJoinProgressChangedConnection then
+		voiceJoinProgressChangedConnection = VoiceChatServiceManager.VoiceJoinProgressChanged.Event:Connect(function(state)
+			if state == VoiceConstants.VOICE_JOIN_PROGRESS.Joined then
+				initVoiceChatServiceManager()
+			end
+		end)
+	end
+end
+
 function ReInit(player)
 	debugPrint("Self View: ReInit()")
 	gotUsableClone = false
@@ -2591,6 +2745,7 @@ function ReInit(player)
 	createViewport()
 	playerAdded(player)
 	startRenderStepped(player)
+	connectToVoiceJoinProgressChanged()
 end
 
 local function onCharacterAdded(character)
@@ -3174,6 +3329,10 @@ function Initialize(player)
 		triggerAnalyticsReportUserAccountSettings_deprecated(player.UserId)
 	end
 
+	if FFlagFixUpdateMicIconCallBeforeReady then
+		createViewport()
+	end
+
 	if getFFlagDoNotPromptCameraPermissionsOnMount() then
 		getMicPermission()
 		getCameraPermissionWithoutRequest()
@@ -3181,7 +3340,9 @@ function Initialize(player)
 	else
 		getPermissions()
 	end
-	createViewport()
+	if not FFlagFixUpdateMicIconCallBeforeReady then
+		createViewport()
+	end
 
 	playerAdded(player)
 
@@ -3195,8 +3356,15 @@ function Initialize(player)
 			if serviceStateSingalConnection then
 				serviceStateSingalConnection:Disconnect()
 			end
+
+			if FFlagRemoveVoiceJoiceDisconnectFix and voiceJoinProgressChangedConnection then
+				voiceJoinProgressChangedConnection:Disconnect()
+				voiceJoinProgressChangedConnection = nil
+			end
 		end
 	end)
+
+	connectToVoiceJoinProgressChanged()
 
 	startRenderStepped(player)
 

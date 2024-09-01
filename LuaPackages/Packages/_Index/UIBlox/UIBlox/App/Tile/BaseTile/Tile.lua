@@ -4,6 +4,7 @@ local TileRoot = BaseTile.Parent
 local App = TileRoot.Parent
 local UIBlox = App.Parent
 local Packages = UIBlox.Parent
+local UIBloxConfig = require(UIBlox.UIBloxConfig)
 
 local RoactGamepad = require(Packages.RoactGamepad)
 
@@ -15,6 +16,7 @@ local validateFontInfo = require(UIBlox.Core.Style.Validator.validateFontInfo)
 local validateTypographyInfo = require(UIBlox.Core.Style.Validator.validateTypographyInfo)
 local GetTextSize = require(UIBlox.Core.Text.GetTextSize)
 local GetWrappedTextWithIcon = require(UIBlox.Core.Text.GetWrappedTextWithIcon)
+local withTextSizeOffset = require(UIBlox.Core.Style.withTextSizeOffset)
 
 local CursorKind = require(App.SelectionImage.CursorKind)
 local withSelectionCursorProvider = require(App.SelectionImage.withSelectionCursorProvider)
@@ -25,7 +27,8 @@ local TileThumbnail = require(BaseTile.TileThumbnail)
 local TileBanner = require(BaseTile.TileBanner)
 local StyledTextLabel = require(App.Text.StyledTextLabel)
 local Images = require(UIBlox.App.ImageSet.Images)
-local UIBloxConfig = require(UIBlox.UIBloxConfig)
+local Interactable = require(UIBlox.Core.Control.Interactable)
+local ControlState = require(UIBlox.Core.Control.Enum.ControlState)
 
 local ICON_PADDING = 4
 local THUMBNAIL_CORNER_RADIUS = UDim.new(0, 10)
@@ -75,8 +78,11 @@ local tileInterface = t.strictInterface({
 	-- The item's thumbnail that will show a loading state if nil
 	thumbnail = t.optional(t.union(t.string, t.table)),
 
-	-- The item thumbnail's size if not UDm2.new(1, 0, 1, 0)
+	-- The item thumbnail image's size if not UDim2.new(1, 0, 1, 0)
 	thumbnailSize = t.optional(t.UDim2),
+
+	-- The item thumbnail frame's size if not UDim2.new(1, 0, 1, 0)
+	thumbnailFrameSize = t.optional(t.UDim2),
 
 	-- The item thumbnail's color
 	thumbnailColor = t.optional(t.Color3),
@@ -149,6 +155,17 @@ local tileInterface = t.strictInterface({
 
 	-- Optional selection cursor
 	cursor = t.optional(t.any),
+
+	-- Whether the tile should be circular
+	isCircular = t.optional(t.boolean),
+
+	-- Alignment of the title and subtitle to the tile
+	horizontalAlignment = t.optional(t.EnumItem),
+
+	openTypeFeatures = t.optional(t.string),
+
+	-- Optional callback for when the image is loaded
+	onThumbnailLoaded = t.optional(t.callback),
 })
 
 local function tileBannerUseValidator(props)
@@ -172,6 +189,9 @@ Tile.defaultProps = {
 	isDisabled = false,
 	hasRoundedCorners = true,
 	Selectable = false,
+	isCircular = false,
+	horizontalAlignment = nil,
+	thumbnailFrameSize = UDim2.new(1, 0, 1, 0),
 }
 
 function Tile:init()
@@ -203,6 +223,7 @@ function Tile:render()
 	local onActivated = self.props.onActivated
 	local thumbnail = self.props.thumbnail
 	local thumbnailSize = self.props.thumbnailSize
+	local thumbnailFrameSize = self.props.thumbnailFrameSize
 	local thumbnailColor = self.props.thumbnailColor
 	local thumbnailTransparency = self.props.thumbnailTransparency
 	local bannerText = self.props.bannerText
@@ -215,197 +236,249 @@ function Tile:render()
 	local backgroundImage = self.props.backgroundImage
 	local useMaxTitleHeight = self.props.useMaxTitleHeight
 	local addSubtitleSpace = self.props.addSubtitleSpace
+	local horizontalAlignment = self.props.horizontalAlignment
 
-	return withStyle(function(stylePalette)
-		return withSelectionCursorProvider(function(getSelectionCursor)
-			local font = stylePalette.Font
-			local theme = stylePalette.Theme
+	return withTextSizeOffset(function(textSizeOffset)
+		return withStyle(function(stylePalette)
+			return withSelectionCursorProvider(function(getSelectionCursor)
+				local font = stylePalette.Font
+				local theme = stylePalette.Theme
 
-			local tileHeight = self.state.tileHeight
-			local tileWidth = self.state.tileWidth
+				local tileHeight = self.state.tileHeight
+				local tileWidth = self.state.tileWidth
 
-			local titleFontStyle = self.props.titleFontStyle or font.Header2
-			local subtitleFontStyle = self.props.subtitleFontStyle or font.CaptionHeader
+				local titleFontStyle = self.props.titleFontStyle or font.Header2
+				local subtitleFontStyle = self.props.subtitleFontStyle or font.CaptionHeader
 
-			local titleFontSize = if titleFontStyle.RelativeSize
-				then font.BaseSize * titleFontStyle.RelativeSize
-				else titleFontStyle.FontSize
+				local titleFontSize = if titleFontStyle.RelativeSize
+					then font.BaseSize * titleFontStyle.RelativeSize
+					else titleFontStyle.FontSize
 
-			local subtitleFontSize = if subtitleFontStyle.RelativeSize
-				then font.BaseSize * subtitleFontStyle.RelativeSize
-				else subtitleFontStyle.FontSize
+				local subtitleFontSize = if subtitleFontStyle.RelativeSize
+					then font.BaseSize * subtitleFontStyle.RelativeSize
+					else subtitleFontStyle.FontSize
 
-			local maxTitleTextHeight = math.ceil(titleFontSize * titleTextLineCount)
-			local footerHeight = tileHeight
-				- (tileWidth / (self.props.thumbnailAspectRatio or 1))
-				- innerPadding
-				- maxTitleTextHeight
-				- innerPadding
-				- titleTopPadding
-			local titleTextSize = Vector2.new(0, 0)
-			local subtitleTextHeight = 0
+				local maxTitleTextHeight = math.ceil(titleFontSize * titleTextLineCount)
+				local upscaledTitleFontSize = titleFontSize + textSizeOffset
+				if UIBloxConfig.refactorTileTextHeights then
+					maxTitleTextHeight = math.ceil(upscaledTitleFontSize * titleTextLineCount)
+				end
 
-			-- include subtitle space even if subtitle is empty string
-			if addSubtitleSpace then
-				titleTextSize = Vector2.new(0, maxTitleTextHeight)
-				subtitleTextHeight = math.ceil(subtitleFontSize)
-				footerHeight = footerHeight - subtitleTextHeight
-			else
-				if useMaxTitleHeight then
+				local footerHeight = tileHeight
+					- (tileWidth / (self.props.thumbnailAspectRatio or 1))
+					- innerPadding
+					- maxTitleTextHeight
+					- innerPadding
+					- titleTopPadding
+				local titleTextSize = Vector2.new(0, 0)
+				local subtitleTextHeight = 0
+
+				-- include subtitle space even if subtitle is empty string
+				if addSubtitleSpace then
 					titleTextSize = Vector2.new(0, maxTitleTextHeight)
-				else
-					local textToMeasure = name or ""
-
-					local titleFont = titleFontStyle.Font
-
-					if titleIcon then
-						local iconWidth = titleIcon.ImageRectSize.X / Images.ImagesResolutionScale
-						textToMeasure =
-							GetWrappedTextWithIcon(textToMeasure, titleFontSize, titleFont, iconWidth, ICON_PADDING)
-					end
-					titleTextSize =
-						GetTextSize(textToMeasure, titleFontSize, titleFont, Vector2.new(tileWidth, maxTitleTextHeight))
-				end
-
-				if subtitle ~= nil and subtitle ~= "" then
-					subtitleTextHeight = math.ceil(subtitleFontSize)
+					subtitleTextHeight = if UIBloxConfig.refactorTileTextHeights
+						then math.ceil(subtitleFontSize) + textSizeOffset
+						else math.ceil(subtitleFontSize)
 					footerHeight = footerHeight - subtitleTextHeight
+				else
+					if useMaxTitleHeight then
+						titleTextSize = Vector2.new(0, maxTitleTextHeight)
+					else
+						local textToMeasure = name or ""
+
+						local titleFont = titleFontStyle.Font
+
+						if titleIcon then
+							local iconWidth = titleIcon.ImageRectSize.X / Images.ImagesResolutionScale
+							textToMeasure =
+								GetWrappedTextWithIcon(textToMeasure, titleFontSize, titleFont, iconWidth, ICON_PADDING)
+						end
+						titleTextSize = GetTextSize(
+							textToMeasure,
+							titleFontSize,
+							titleFont,
+							Vector2.new(tileWidth, maxTitleTextHeight)
+						)
+						titleTextSize = if UIBloxConfig.refactorTileTextHeights
+							then Vector2.new(titleTextSize.X, math.min(titleTextSize.Y, maxTitleTextHeight))
+							else titleTextSize -- title should not exceed max title height
+					end
+
+					if subtitle ~= nil and subtitle ~= "" then
+						subtitleTextHeight = if UIBloxConfig.refactorTileTextHeights
+							then math.ceil(subtitleFontSize) + textSizeOffset
+							else math.ceil(subtitleFontSize)
+						footerHeight = footerHeight - subtitleTextHeight
+					end
 				end
-			end
 
-			footerHeight = math.max(0, footerHeight)
+				footerHeight = math.max(0, footerHeight)
 
-			local hasFooter = footer ~= nil or bannerText ~= nil
+				local hasFooter = footer ~= nil or bannerText ~= nil
 
-			local renderTileInset = self.props.renderTileInset
+				local renderTileInset = self.props.renderTileInset
 
-			local titleAreaSize = UDim2.new(1, 0, 0, titleTextSize.Y + subtitleTextHeight + titleTopPadding)
-			local titleTextPadding = nil
-			if self.props.nameOverThumbnail then
-				local padding = 10
-				titleAreaSize = UDim2.new(0, (tileWidth - padding), 0, -(titleTextSize.Y + (2 * padding)))
-				titleTextPadding = React.createElement("UIPadding", {
-					PaddingLeft = UDim.new(0, padding),
-				})
-			end
+				local titleAreaSize = UDim2.new(1, 0, 0, titleTextSize.Y + subtitleTextHeight + titleTopPadding)
+				local titleTextPadding = nil
+				if self.props.nameOverThumbnail then
+					local padding = 10
+					titleAreaSize = UDim2.new(0, (tileWidth - padding), 0, -(titleTextSize.Y + (2 * padding)))
+					titleTextPadding = React.createElement("UIPadding", {
+						PaddingLeft = UDim.new(0, padding),
+					})
+				end
 
-			local inputBindings = self.props.inputBindings
-			if not inputBindings then
-				inputBindings = (not isDisabled and onActivated)
-						and {
-							Activate = RoactGamepad.Input.onBegin(Enum.KeyCode.ButtonA, onActivated),
-						}
-					or nil
-			end
+				local inputBindings = self.props.inputBindings
+				if not inputBindings then
+					inputBindings = (not isDisabled and onActivated)
+							and {
+								Activate = RoactGamepad.Input.onBegin(Enum.KeyCode.ButtonA, onActivated),
+							}
+						or nil
+				end
 
-			-- TODO: use generic/state button from UIBlox
-			return React.createElement("TextButton", {
-				Text = "",
-				Size = UDim2.new(1, 0, 1, 0),
-				BackgroundTransparency = 1,
-				Selectable = self.props.Selectable,
-				[React.Event.Activated] = not isDisabled and onActivated or nil,
-				[React.Change.AbsoluteSize] = self.onAbsoluteSizeChange,
-				ref = self.props.textButtonRef,
-				SelectionImageObject = if self.props.cursor
-					then self.props.cursor
-					else getSelectionCursor(CursorKind.RoundedRect),
-			}, {
-				UIListLayout = React.createElement("UIListLayout", {
-					FillDirection = Enum.FillDirection.Vertical,
-					SortOrder = Enum.SortOrder.LayoutOrder,
-					Padding = UDim.new(0, innerPadding),
-				}),
-				Thumbnail = React.createElement(RoactGamepad.Focusable.Frame, {
-					Size = UDim2.new(1, 0, 1, 0),
-					SizeConstraint = Enum.SizeConstraint.RelativeXX,
-					BackgroundTransparency = 1,
-					LayoutOrder = 1,
+				return React.createElement(
+					if UIBloxConfig.useInteractableWithTileAndCell then Interactable else "TextButton",
+					{
+						Text = if UIBloxConfig.useInteractableWithTileAndCell then nil else "",
+						onStateChanged = if UIBloxConfig.useInteractableWithTileAndCell
+							then function(oldState, newState)
+								if not isDisabled then
+									if oldState == ControlState.Pressed or oldState == ControlState.SelectedPressed then
+										if onActivated then
+											onActivated()
+										end
+									end
+								end
+							end
+							else nil,
+						Size = UDim2.new(1, 0, 1, 0),
+						BackgroundTransparency = 1,
+						Selectable = self.props.Selectable,
+						[React.Event.Activated] = if not UIBloxConfig.useInteractableWithTileAndCell
+								and not isDisabled
+							then onActivated
+							else nil,
+						[React.Change.AbsoluteSize] = self.onAbsoluteSizeChange,
+						ref = self.props.textButtonRef,
+						SelectionImageObject = if self.props.cursor
+							then self.props.cursor
+							else getSelectionCursor(CursorKind.RoundedRect),
+					},
+					{
+						UIListLayout = React.createElement("UIListLayout", {
+							FillDirection = Enum.FillDirection.Vertical,
+							SortOrder = Enum.SortOrder.LayoutOrder,
+							Padding = UDim.new(0, innerPadding),
+							HorizontalAlignment = if (
+									UIBloxConfig.tileHorizontalAlignmentFix and not self.props.nameOverThumbnail
+								)
+								then horizontalAlignment
+								else nil,
+						}),
+						Thumbnail = React.createElement(RoactGamepad.Focusable.Frame, {
+							Size = thumbnailFrameSize,
+							SizeConstraint = Enum.SizeConstraint.RelativeXX,
+							BackgroundTransparency = 1,
+							LayoutOrder = 1,
 
-					NextSelectionLeft = self.props.NextSelectionLeft,
-					NextSelectionRight = self.props.NextSelectionRight,
-					NextSelectionUp = self.props.NextSelectionUp,
-					NextSelectionDown = self.props.NextSelectionDown,
-					ref = self.props.thumbnailRef,
-					[React.Tag] = self.props[React.Tag],
-					SelectionImageObject = if self.props.cursor
-						then self.props.cursor
-						else getSelectionCursor(CursorKind.RoundedRectNoInset),
-					inputBindings = inputBindings,
-				}, {
-					Image = React.createElement(TileThumbnail, {
-						Image = thumbnail,
-						hasRoundedCorners = hasRoundedCorners,
-						cornerRadius = if UIBloxConfig.useNewSelectionCursor then THUMBNAIL_CORNER_RADIUS else nil,
-						isSelected = isSelected,
-						multiSelect = multiSelect,
-						overlayComponents = thumbnailOverlayComponents,
-						imageSize = thumbnailSize,
-						imageColor = thumbnailColor,
-						imageTransparency = thumbnailTransparency,
-						backgroundImage = backgroundImage,
-						scaleType = self.props.thumbnailScaleType,
-					}),
-					TileInset = renderTileInset and renderTileInset() or nil,
-					UIAspectRatioConstraint = if self.props.thumbnailAspectRatio ~= nil
-						then React.createElement("UIAspectRatioConstraint", {
-							AspectRatio = self.props.thumbnailAspectRatio,
-							AspectType = Enum.AspectType.ScaleWithParentSize,
-						})
-						else nil,
-				}),
-				TitleArea = React.createElement("Frame", {
-					Size = titleAreaSize,
-					BackgroundTransparency = 1,
-					LayoutOrder = 2,
-				}, {
-					TitleTopPadding = React.createElement("UIPadding", {
-						PaddingTop = UDim.new(0, titleTopPadding),
-					}),
-					UIListLayout = React.createElement("UIListLayout", {
-						FillDirection = Enum.FillDirection.Vertical,
-						SortOrder = Enum.SortOrder.LayoutOrder,
-						Padding = UDim.new(0, subtitleTopPadding),
-					}),
-					NameOverThumbnailPadding = titleTextPadding,
-					Name = (titleTextLineCount > 0 and tileWidth > 0) and React.createElement(TileName, {
-						titleIcon = titleIcon,
-						name = name,
-						nameTextColor = self.props.nameTextColor,
-						nameTextTransparency = self.props.nameTextTransparency,
-						hasVerifiedBadge = hasVerifiedBadge,
-						maxHeight = maxTitleTextHeight,
-						maxWidth = tileWidth,
-						LayoutOrder = 1,
-						useMaxHeight = useMaxTitleHeight,
-						titleFontStyle = titleFontStyle,
-					}),
-					Subtitle = (subtitle ~= "" and subtitle ~= nil) and React.createElement(StyledTextLabel, {
-						size = UDim2.new(1, 0, 0, subtitleTextHeight),
-						text = subtitle,
-						colorStyle = theme.TextDefault,
-						fontStyle = subtitleFontStyle,
-						layoutOrder = 2,
-						fluidSizing = false,
-						textTruncate = Enum.TextTruncate.AtEnd,
-						richText = false,
-						lineHeight = 1,
-					}),
-				}),
-				FooterContainer = hasFooter and React.createElement("Frame", {
-					Size = UDim2.new(1, 0, 0, footerHeight),
-					BackgroundTransparency = 1,
-					LayoutOrder = 3,
-				}, {
-					FooterTopPadding = React.createElement("UIPadding", {
-						PaddingTop = UDim.new(0, footerTopPadding),
-					}),
-					Banner = bannerText and React.createElement(TileBanner, {
-						bannerText = bannerText,
-					}),
-					Footer = not bannerText and footer,
-				}),
-			})
+							NextSelectionLeft = self.props.NextSelectionLeft,
+							NextSelectionRight = self.props.NextSelectionRight,
+							NextSelectionUp = self.props.NextSelectionUp,
+							NextSelectionDown = self.props.NextSelectionDown,
+							ref = self.props.thumbnailRef,
+							[React.Tag] = self.props[React.Tag],
+							SelectionImageObject = if self.props.cursor
+								then self.props.cursor
+								else getSelectionCursor(CursorKind.RoundedRectNoInset),
+							inputBindings = inputBindings,
+						}, {
+							Image = React.createElement(TileThumbnail, {
+								Image = thumbnail,
+								hasRoundedCorners = hasRoundedCorners,
+								cornerRadius = if self.props.isCircular
+									then UDim.new(0.5, 0)
+									elseif UIBloxConfig.useNewSelectionCursor then THUMBNAIL_CORNER_RADIUS
+									else nil,
+								isSelected = isSelected,
+								multiSelect = multiSelect,
+								overlayComponents = thumbnailOverlayComponents,
+								imageSize = thumbnailSize,
+								imageColor = thumbnailColor,
+								imageTransparency = thumbnailTransparency,
+								backgroundImage = backgroundImage,
+								scaleType = self.props.thumbnailScaleType,
+								onThumbnailLoaded = self.props.onThumbnailLoaded,
+							}),
+							TileInset = renderTileInset and renderTileInset() or nil,
+							UIAspectRatioConstraint = if self.props.thumbnailAspectRatio ~= nil
+								then React.createElement("UIAspectRatioConstraint", {
+									AspectRatio = self.props.thumbnailAspectRatio,
+									AspectType = Enum.AspectType.ScaleWithParentSize,
+								})
+								else nil,
+						}),
+						TitleArea = React.createElement("Frame", {
+							Size = titleAreaSize,
+							BackgroundTransparency = 1,
+							LayoutOrder = 2,
+						}, {
+							TitleTopPadding = React.createElement("UIPadding", {
+								PaddingTop = UDim.new(0, titleTopPadding),
+							}),
+							UIListLayout = React.createElement("UIListLayout", {
+								FillDirection = Enum.FillDirection.Vertical,
+								SortOrder = Enum.SortOrder.LayoutOrder,
+								Padding = UDim.new(0, subtitleTopPadding),
+								HorizontalAlignment = horizontalAlignment,
+							}),
+							NameOverThumbnailPadding = titleTextPadding,
+							Name = (titleTextLineCount > 0 and tileWidth > 0) and React.createElement(TileName, {
+								titleIcon = titleIcon,
+								name = name,
+								nameTextColor = self.props.nameTextColor,
+								nameTextTransparency = self.props.nameTextTransparency,
+								hasVerifiedBadge = hasVerifiedBadge,
+								maxHeight = maxTitleTextHeight,
+								maxWidth = tileWidth,
+								LayoutOrder = 1,
+								useMaxHeight = useMaxTitleHeight,
+								titleFontStyle = titleFontStyle,
+							}),
+							Subtitle = (subtitle ~= "" and subtitle ~= nil) and React.createElement(StyledTextLabel, {
+								size = if UIBloxConfig.playerTileAutomaticSizeXY
+									then UDim2.new(0, 0, 0, subtitleTextHeight)
+									else UDim2.new(1, 0, 0, subtitleTextHeight),
+								automaticSize = if UIBloxConfig.playerTileAutomaticSizeXY
+									then Enum.AutomaticSize.X
+									else nil,
+								text = subtitle,
+								colorStyle = theme.TextDefault,
+								fontStyle = subtitleFontStyle,
+								openTypeFeatures = self.props.openTypeFeatures,
+								layoutOrder = 2,
+								fluidSizing = false,
+								textTruncate = Enum.TextTruncate.AtEnd,
+								richText = false,
+								lineHeight = 1,
+							}),
+						}),
+						FooterContainer = hasFooter and React.createElement("Frame", {
+							Size = UDim2.new(1, 0, 0, footerHeight),
+							BackgroundTransparency = 1,
+							LayoutOrder = 3,
+						}, {
+							FooterTopPadding = React.createElement("UIPadding", {
+								PaddingTop = UDim.new(0, footerTopPadding),
+							}),
+							Banner = bannerText and React.createElement(TileBanner, {
+								bannerText = bannerText,
+							}),
+							Footer = not bannerText and footer,
+						}),
+					}
+				)
+			end)
 		end)
 	end)
 end

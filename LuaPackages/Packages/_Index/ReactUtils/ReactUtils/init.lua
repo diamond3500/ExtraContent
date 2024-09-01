@@ -7,8 +7,14 @@ return {
 	useSelection = require(script.useSelection),
 
 	-- Testing
+
+	-- DEPRECATED: Use ReactTestingUtils.waitForEvents instead
 	waitForEvents = require(script.waitForEvents),
 
+	createNextOrder = require(script.createNextOrder),
+	useAsync = require(script.useAsync),
+	useClock = require(script.useClock),
+	useComposedRef = require(script.useComposedRef),
 	useDebounce = require(script.useDebounce),
 	useDebouncedState = require(script.useDebouncedState),
 	useDelayedActionHandler = require(script.useDelayedActionHandler),
@@ -19,6 +25,7 @@ return {
 	usePrevious = require(script.usePrevious),
 	useProperties = require(script.useProperties),
 	usePropertiesDeferred = require(script.usePropertiesDeferred),
+	useRefToState = require(script.useRefToState),
 	useStackState = require(script.useStackState),
 	useToggleState = require(script.useToggleState),
 

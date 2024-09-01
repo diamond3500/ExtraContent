@@ -2,7 +2,6 @@
 local Root = script.Parent.Parent.Parent
 local GuiService = game:GetService("GuiService")
 local ContextActionService = game:GetService("ContextActionService")
-local ExperienceAuthService = game:GetService("ExperienceAuthService")
 local AssetService = game:GetService("AssetService")
 
 local CorePackages = game:GetService("CorePackages")
@@ -13,6 +12,7 @@ local CoreGui = game:GetService("CoreGui")
 local Players = game:GetService("Players")
 local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 local PolicyService = require(RobloxGui.Modules.Common:WaitForChild("PolicyService"))
+local RobloxTranslator = require(RobloxGui.Modules.RobloxTranslator)
 
 local UIBlox = PurchasePromptDeps.UIBlox
 local InteractiveAlert = UIBlox.App.Dialog.Alert.InteractiveAlert
@@ -52,10 +52,10 @@ local Animator = require(script.Parent.Animator)
 
 local ProductPurchaseContainer = Roact.Component:extend(script.Name)
 
-local AVATAR_NAME_KEY = "avatarName"
 local CONFIRM_BUTTON_BIND = "ProductPurchaseConfirmButtonBind"
 local CANCEL_BUTTON_BIND = "ProductPurchaseCancelButtonBind"
 
+-- ProductPurchaseContainer localization keys
 local PURCHASE_MESSAGE_KEY = "CoreScripts.PurchasePrompt.PurchaseMessage.%s"
 
 local BUY_ITEM_LOCALE_KEY = "CoreScripts.PurchasePrompt.Title.BuyItem"
@@ -64,12 +64,21 @@ local OK_LOCALE_KEY = "CoreScripts.PurchasePrompt.Button.OK"
 local CANCEL_LOCALE_KEY = "CoreScripts.PurchasePrompt.CancelPurchase.Cancel"
 local ERROR_LOCALE_KEY = "CoreScripts.PremiumModal.Title.Error"
 
+-- RobloxTranslator localization keys
+local PURCHASE_COMPLETE_HEADER_KEY = "CoreScripts.BulkPurchasePrompt.CompletedPrompt.SuccessHeading"
+local PURCHASE_COMPLETE_DESC_KEY = "CoreScripts.PublishAvatarPrompt.PurchaseCompleteDescription"
+local OK_BUTTON_KEY = "CoreScripts.PublishAssetPrompt.ResultModalOk"
+
 local ERROR_ICON = "icons/status/error_large"
 
 local DELAYED_INPUT_SEC = 2.5
 
 local FFlagPPTwoFactorLogOutMessage = game:DefineFastFlag("PPTwoFactorLogOutMessage", false)
-local FFlagFixOpenWithMenuConsole = game:DefineFastFlag("FixOpenWithMenuConsole", false)
+
+local GetFFlagOpenVngTosForVngRobuxUpsell =
+	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagOpenVngTosForVngRobuxUpsell
+local UniversalAppPolicy = require(CorePackages.Workspace.Packages.UniversalAppPolicy)
+local getAppFeaturePolicies = UniversalAppPolicy.getAppFeaturePolicies
 
 local function isRelevantRequestType(requestType, purchaseFlow)
 	if purchaseFlow == PurchaseFlow.RobuxUpsellV2 or purchaseFlow == PurchaseFlow.LargeRobuxUpsell then
@@ -123,7 +132,7 @@ function ProductPurchaseContainer:init()
 	end
 
 	self.canConfirmInput = function()
-		if Players.LocalPlayer.GameplayPaused or (GuiService.MenuIsOpen and FFlagFixOpenWithMenuConsole) then
+		if Players.LocalPlayer.GameplayPaused then
 			return false
 		end
 		-- check == false because isAnimating == nil is used for when its not even shown
@@ -148,35 +157,9 @@ function ProductPurchaseContainer:init()
 
 		return isDoneAnimating
 	end
-
-	self.onAvatarCreationFeePurchase = function()
-		-- Avatar Creation Purchase is handled by
-		-- AvatarCreationService:PromptCreateAvatarAsync
-		-- We use ExperienceAuthService to continue the API call
-		-- as the user has confirmed their purchase here
-		local metadata = {}
-		metadata[AVATAR_NAME_KEY] = self.props.productInfo.name
-
-		local scopes = {}
-		scopes[1] = Enum.ExperienceAuthScope.CreatorAssetsCreate
-
-		ExperienceAuthService:ScopeCheckUIComplete(
-			self.props.productInfo.productId,
-			scopes,
-			Enum.ScopeCheckResult.ConsentAccepted,
-			metadata
-		)
-
-		-- TODO: AVBURST-13509 Handle underlying avatar creation prompt
-		-- being opened upon payment prompting and completion
-		self.props.completePurchase()
-	end
-
 	self.getConfirmButtonAction = function(promptState, requestType, purchaseError)
 		if promptState == PromptState.None or not isRelevantRequestType(requestType) then
 			return nil
-		elseif GetFFlagEnableAvatarCreationFeePurchase() and requestType == RequestType.AvatarCreationFee then
-			return self.onAvatarCreationFeePurchase
 		elseif promptState == PromptState.PromptPurchase
 				or promptState == PromptState.PurchaseInProgress then
 			return self.props.onBuy
@@ -274,8 +257,7 @@ function ProductPurchaseContainer:didUpdate(prevProps, prevState)
 	-- Game unpause and purchase workflow could be triggered at the same time by doing some hack.
 	-- The fix is to check the game pause status in didUpdate(), and close ourchase prompt if in game pause.
 	-- More details in https://jira.rbx.com/browse/CLI-59903.
-	-- Similar issue happens with gamepad/console: https://roblox.atlassian.net/browse/CLIPS-1195
-	if Players.LocalPlayer.GameplayPaused or (GuiService.MenuIsOpen and FFlagFixOpenWithMenuConsole) then
+	if Players.LocalPlayer.GameplayPaused then
 		self.props.onAnalyticEvent("PurchasePromptGamePausedDetected", { place_id = game.PlaceId })
 		self.props.hideWindow()
 	end
@@ -436,6 +418,7 @@ function ProductPurchaseContainer:render()
 			cancelPurchaseActivated = self.cancelButtonPressed,
 
 			isLuobu = self.state.isLuobu,
+			isVng = GetFFlagOpenVngTosForVngRobuxUpsell() and getAppFeaturePolicies().getShowVNGTosForRobuxUpsell()
 		})
 	elseif promptState == PromptState.LeaveRobloxWarning then
 		prompt = Roact.createElement(LeaveRobloxAlert, {
@@ -444,6 +427,28 @@ function ProductPurchaseContainer:render()
 				cancelActivated = self.cancelButtonPressed,
 				continueActivated = self.confirmButtonPressed,
 			})
+	elseif
+		GetFFlagEnableAvatarCreationFeePurchase()
+		and promptState == PromptState.PurchaseComplete
+		and requestType == RequestType.AvatarCreationFee
+	then
+		prompt = Roact.createElement(InteractiveAlert, {
+			bodyText = RobloxTranslator:FormatByKey(PURCHASE_COMPLETE_DESC_KEY),
+			buttonStackInfo = {
+				buttons = {
+					{
+						buttonType = ButtonType.PrimarySystem,
+						props = {
+							onActivated = self.confirmButtonPressed,
+							text = RobloxTranslator:FormatByKey(OK_BUTTON_KEY),
+							inputIcon = self.props.isGamepadEnabled and BUTTON_A_ICON or nil,
+						},
+					},
+				},
+			},
+			screenSize = self.state.screenSize,
+			title = RobloxTranslator:FormatByKey(PURCHASE_COMPLETE_HEADER_KEY),
+		})
 	elseif (promptState == PromptState.Error
 			and purchaseError == PurchaseError.TwoFactorNeededSettings) or
 			isGenericChallengeResponse(purchaseError) then

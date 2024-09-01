@@ -23,6 +23,8 @@ local MAX_WIDTH = 400
 local MARGIN = 24
 local MIDDLE_CONTENT_PADDING = 12
 local TITLE_ICON_SIZE = 48
+local DEFAULT_BODY_HEIGHT = 200
+local DEFAULT_FOOTER_HEIGHT = 100
 
 local UIBloxConfig = require(UIBlox.UIBloxConfig)
 local GenericTextLabel = require(UIBlox.Core.Text.GenericTextLabel.GenericTextLabel)
@@ -62,15 +64,16 @@ InteractiveAlert.validateProps = t.strictInterface({
 	footerText = t.optional(t.string),
 	-- Function that returns a Roact element to render
 	footerContent = t.optional(t.callback),
+	onCloseClicked = t.optional(t.callback),
 
-	--Gamepad props
+	-- RoactGamepad props. These take effect when isRoactGamepadEnabled is true
 	defaultChildRef = t.optional(t.union(t.table, t.callback)),
 	-- Boolean to determine if the middle content is focusable with a gamepad
 	isMiddleContentFocusable = t.optional(t.boolean),
 	-- Boolean to determine if the footer content is focusable with a gamepad
 	isFooterContentFocusable = t.optional(t.boolean),
-	-- A function that is called when the X button in the Title has been clicked
-	onCloseClicked = t.optional(t.callback),
+	-- Boolean to determine if the component will use RoactGamepad for focus navigation
+	isRoactGamepadEnabled = t.optional(t.boolean),
 })
 
 function InteractiveAlert:render()
@@ -120,7 +123,8 @@ function InteractiveAlert:render()
 						self.props.footerText,
 						font.Footer.Font,
 						font.BaseSize * font.Footer.RelativeSize,
-						innerWidth
+						innerWidth,
+						if UIBloxConfig.getTextHeightOptionalMaxHeight then DEFAULT_FOOTER_HEIGHT else nil
 					)
 				or 0
 
@@ -139,7 +143,13 @@ function InteractiveAlert:render()
 		end
 
 		local fullTextHeight = self.props.bodyText
-				and GetTextHeight(self.props.bodyText, textFont, fontSize, innerWidth)
+				and GetTextHeight(
+					self.props.bodyText,
+					textFont,
+					fontSize,
+					innerWidth,
+					if UIBloxConfig.getTextHeightOptionalMaxHeight then DEFAULT_BODY_HEIGHT else nil
+				)
 			or 0
 
 		local middleContent = self.props.middleContent
@@ -196,8 +206,8 @@ function InteractiveAlert:render()
 			footerContent = footerContent,
 			isFooterContentFocusable = self.props.isFooterContentFocusable,
 			onCloseClicked = self.props.onCloseClicked,
-
 			defaultChildRef = self.props.defaultChildRef,
+			isRoactGamepadEnabled = self.props.isRoactGamepadEnabled,
 		})
 	end)
 end

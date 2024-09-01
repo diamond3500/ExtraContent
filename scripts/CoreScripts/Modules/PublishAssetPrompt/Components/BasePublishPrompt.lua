@@ -1,17 +1,16 @@
 --[[
 	The base prompt for other prompts like PublishAvatarPrompt or PublishAssetPrompt.
-    Other prompts can pass in body components that will be parented under a frame between
-    the NameTextBox and PromptRows below. For example, they can pass in the Viewport and
-    description text box.
+    Other prompts can pass in body components that will be parented under a frame under
+    the NameTextBox. For example, they can pass in the Viewport, description text box,
+	and item description rows.
 ]]
 local CorePackages = game:GetService("CorePackages")
 local CoreGui = game:GetService("CoreGui")
 local ExperienceAuthService = game:GetService("ExperienceAuthService")
-local Players = game:GetService("Players")
-local HttpRbxApiService = game:GetService("HttpRbxApiService")
 local ContextActionService = game:GetService("ContextActionService")
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
+local GuiService = game:GetService("GuiService")
 
 local Roact = require(CorePackages.Roact)
 local RoactRodux = require(CorePackages.RoactRodux)
@@ -25,17 +24,10 @@ local Overlay = UIBlox.App.Dialog.Overlay
 local ButtonType = UIBlox.App.Button.Enum.ButtonType
 local GamepadUtils = require(CorePackages.Workspace.Packages.AppCommonLib).Utils.GamepadUtils
 
-local httpRequest: any = require(RobloxGui.Modules.Common.httpRequest)
-
-local httpImpl = httpRequest(HttpRbxApiService :: any)
-local GetGameNameAndDescription = require(CorePackages.Workspace.Packages.GameDetailRodux).GetGameNameAndDescription
-
-local LocalPlayer = Players.LocalPlayer
-
 local Components = script.Parent
-local NameTextBox = require(Components.Common.NameTextBox)
+local LabeledTextBox = require(Components.Common.LabeledTextBox)
 local CloseOpenPrompt = require(script.Parent.Parent.Actions.CloseOpenPrompt)
-local ItemInfoList = require(CorePackages.Workspace.Packages.ItemDetails).ItemInfoList
+local SetPromptVisibility = require(script.Parent.Parent.Actions.SetPromptVisibility)
 local LeaveCreationAlert = require(script.Parent.LeaveCreationAlert)
 local Constants = require(script.Parent.Parent.Constants)
 local PreviewViewport = require(Components.Common.PreviewViewport)
@@ -43,16 +35,14 @@ local ValidationErrorModal = require(Components.ValidationErrorModal)
 
 local NAME_HEIGHT_PIXELS = 30
 local DISCLAIMER_HEIGHT_PIXELS = 50
-local LABEL_HEIGHT = 15
 local LABEL_PADDING = 24
 local BOTTOM_GRADIENT_HEIGHT = 5
 local DISTANCE_FROM_TOP = 37
 
 local DISCLAIMER_TEXT = "disclaimer"
 local SUBMIT_TEXT = "submit"
-local CREATOR_TEXT = "creator"
-local ATTRIBUTION_TEXT = "madeIn"
-local TYPE_TEXT = "type"
+
+local ROBUX_EMOJI_STRING = "\u{E002}"
 
 local BasePublishPrompt = Roact.PureComponent:extend("BasePublishPrompt")
 local STICK_MAX_SPEED = 1000
@@ -64,33 +54,42 @@ BasePublishPrompt.validateProps = t.strictInterface({
 	nameLabel = t.string,
 	defaultName = t.string,
 	promptBody = t.any,
-	typeData = t.string,
 	titleText = t.string,
 	showingPreviewView = t.boolean,
 	closePreviewView = t.callback,
-	asset = t.union(t.instanceOf("Model"), t.instanceIsA("AnimationClip")),
+	-- If we need to fetch the model, the asset may temporarily be nil
+	asset = t.optional(t.union(t.instanceOf("Model"), t.instanceIsA("AnimationClip"))),
 	onNameUpdated = t.callback,
 	canSubmit = t.callback,
 	onSubmit = t.callback,
 	enableInputDelayed = t.optional(t.boolean),
 	isDelayedInput = t.optional(t.boolean),
 	delayInputSeconds = t.optional(t.number),
+	-- priceInRobux should only be nil while fetching price;
+	-- if the item is free, it should be 0
+	priceInRobux = t.optional(t.number),
+	-- If an additional contrast overlay should be shown on top of the prompt
+	showTopScrim = t.optional(t.boolean),
 
 	-- Mapped state
 	guid = t.any,
 	scopes = t.any,
 	errorMessage = t.optional(t.string),
+	promptVisible = t.optional(t.boolean),
 
 	-- Mapped dispatch functions
 	closePrompt = t.callback,
+	SetPromptVisibility = t.callback,
 })
 
 function BasePublishPrompt:init()
-	self.isMounted = false
 	self.swipeScrollingFrameRef = Roact.createRef()
 	self.inputState = nil
 	self.inputObject = nil
 	self.connection = nil
+
+	-- Prompt should be visible when this component is mounted
+	self.props.SetPromptVisibility(true)
 
 	self.storeInput = function(actionName, inputState, inputObject)
 		self.inputState = inputState
@@ -107,6 +106,7 @@ function BasePublishPrompt:init()
 	-- TODO: AVBURST-13016 Add back checking name for spaces or special characters after investigating
 	self.closePrompt = function()
 		self.props.closePrompt()
+		self.props.SetPromptVisibility(false)
 	end
 
 	self.showUnsavedDataWarning = function()
@@ -135,7 +135,6 @@ function BasePublishPrompt:init()
 	self.confirmAndUpload = function()
 		if self.props.canSubmit() then
 			self.props.onSubmit()
-			self.closePrompt()
 		end
 	end
 end
@@ -173,29 +172,29 @@ function BasePublishPrompt:cleanupGamepad()
 end
 
 function BasePublishPrompt:didMount()
-	self.isMounted = true
 	self:setUpGamepad()
-	GetGameNameAndDescription(httpImpl :: any, game.GameId):andThen(function(result)
-		if self.isMounted and result.Name then
-			self:setState({
-				gameName = result.Name,
-			})
-		end
-	end)
+end
+
+function BasePublishPrompt:didUpdate(prevProps)
+	--[[
+		When the purchase is confirmed via the economy prompt, the promptVisible
+		prop will change to false, so we close the prompt here.
+	]]
+	if prevProps.promptVisible ~= self.props.promptVisible and self.props.promptVisible == false then
+		self.closePrompt()
+	end
 end
 
 function BasePublishPrompt:renderMiddle(localized)
 	return withStyle(function(style)
 		local font = style.Font
 		local baseSize: number = font.BaseSize
-		local relativeSize: number = font.CaptionHeader.RelativeSize
-		local textSize: number = baseSize * relativeSize
 		local theme = style.Theme
 
-		assert(LocalPlayer, "Assert LocalPlayer not nil to silence type checker")
-		local localPlayerName = LocalPlayer.Name
-		local gameName = self.state.gameName
-		local typeData = self.props.typeData
+		-- Disclaimer Style
+		local disclaimerStyle = font.Footer
+		local disclaimerColor = theme.TextDefault.Color
+
 		return Roact.createFragment({
 			ScrollingFrame = Roact.createElement("ScrollingFrame", {
 				BackgroundTransparency = 1,
@@ -216,58 +215,21 @@ function BasePublishPrompt:renderMiddle(localized)
 					PaddingLeft = UDim.new(0, Constants.PromptSidePadding),
 					PaddingRight = UDim.new(0, Constants.PromptSidePadding),
 				}),
-
-				NameLabel = Roact.createElement("TextLabel", {
-					Size = UDim2.new(1, 0, 0, LABEL_HEIGHT + LABEL_PADDING),
-					Font = font.Body.Font,
-					Text = self.props.nameLabel,
-					TextSize = textSize,
-					TextColor3 = theme.TextDefault.Color,
-					BackgroundTransparency = 1,
-					TextXAlignment = Enum.TextXAlignment.Left,
+				NameInput = Roact.createElement(LabeledTextBox, {
 					LayoutOrder = 1,
-				}, {
-					Padding = Roact.createElement("UIPadding", {
-						PaddingTop = UDim.new(0, LABEL_PADDING),
-					}),
-				}),
-				NameInput = Roact.createElement(NameTextBox, {
-					Size = UDim2.new(1, 0, 0, NAME_HEIGHT_PIXELS),
+					labelText = self.props.nameLabel,
+					topPadding = LABEL_PADDING,
+					defaultText = self.props.defaultName,
 					-- TODO: Investigate previous name updated AVBURST-13016 and name moderation AVBURST-12725, for now use placeholder
-					onNameUpdated = self.props.onNameUpdated,
-					defaultName = self.props.defaultName,
-					LayoutOrder = 2,
+					onTextUpdated = self.props.onNameUpdated,
+					textBoxHeight = NAME_HEIGHT_PIXELS,
 				}),
 				PromptBody = Roact.createElement("Frame", {
 					Size = UDim2.fromScale(1, 0),
 					AutomaticSize = Enum.AutomaticSize.Y,
 					BackgroundTransparency = 1,
-					LayoutOrder = 3,
+					LayoutOrder = 2,
 				}, self.props.promptBody),
-				PromptRows = Roact.createElement(ItemInfoList, {
-					rowData = {
-						{
-							infoName = localized[CREATOR_TEXT],
-							infoData = localPlayerName,
-							hasVerifiedBadge = LocalPlayer.HasVerifiedBadge,
-							isLoading = localPlayerName == nil,
-							Selectable = false,
-						},
-						{
-							infoName = localized[ATTRIBUTION_TEXT],
-							infoData = gameName,
-							isLoading = gameName == nil,
-							Selectable = false,
-						},
-						{
-							infoName = localized[TYPE_TEXT],
-							infoData = typeData,
-							isLoading = typeData == nil,
-							Selectable = false,
-						},
-					},
-					LayoutOrder = 4,
-				}),
 			}),
 			BottomGradient = Roact.createElement("Frame", {
 				Size = UDim2.new(1, 0, 0, BOTTOM_GRADIENT_HEIGHT),
@@ -304,9 +266,9 @@ function BasePublishPrompt:renderMiddle(localized)
 				Disclaimer = Roact.createElement("TextLabel", {
 					Size = UDim2.fromScale(1, 1),
 					Text = localized[DISCLAIMER_TEXT],
-					Font = font.Body.Font,
-					TextSize = textSize,
-					TextColor3 = theme.TextEmphasis.Color,
+					Font = disclaimerStyle.Font,
+					TextSize = baseSize * disclaimerStyle.RelativeSize,
+					TextColor3 = disclaimerColor,
 					BackgroundTransparency = 1,
 					TextWrapped = true,
 				}),
@@ -316,13 +278,33 @@ function BasePublishPrompt:renderMiddle(localized)
 end
 
 function BasePublishPrompt:renderAlertLocalized(localized)
+	local topCornerInset, _ = GuiService:GetGuiInset()
+	local overlayPosition = UDim2.new(0, 0, 0, -topCornerInset.Y)
+	local overlaySize = UDim2.new(1, 0, 1, topCornerInset.Y)
+
 	return withStyle(function(style)
 		local theme = style.Theme
+
+		local submitText = if self.props.priceInRobux and self.props.priceInRobux > 0
+			then string.format("%s %i", ROBUX_EMOJI_STRING, self.props.priceInRobux)
+			else localized[SUBMIT_TEXT]
+
 		return Roact.createFragment({
 			-- Render transparent black frame over the whole screen to de-focus anything in the background.
-			Overlay = Roact.createElement(Overlay, {
-				showGradient = false,
+			BottomScrim = Roact.createElement("Frame", {
+				Position = overlayPosition,
+				Size = overlaySize,
 				ZIndex = -1,
+				BackgroundTransparency = 1,
+			}, {
+				Overlay = Roact.createElement(Overlay, {
+					showGradient = false,
+				}),
+				InputSink = Roact.createElement("TextButton", {
+					Size = UDim2.fromScale(1, 1),
+					BackgroundTransparency = 1,
+					Text = "",
+				}),
 			}),
 
 			PublishPrompt = Roact.createElement("Frame", {
@@ -346,7 +328,8 @@ function BasePublishPrompt:renderAlertLocalized(localized)
 									enableInputDelayed = self.props.enableInputDelayed,
 									delayInputSeconds = self.props.delayInputSeconds,
 									onActivated = self.confirmAndUpload,
-									text = localized[SUBMIT_TEXT],
+									text = submitText,
+									isLoading = not self.props.priceInRobux,
 								},
 							},
 						},
@@ -381,6 +364,24 @@ function BasePublishPrompt:renderAlertLocalized(localized)
 					closePreviewView = self.props.closePreviewView,
 				}),
 			}) or nil,
+
+			-- Render when opening economy prompt
+			TopScrim = Roact.createElement("Frame", {
+				Position = overlayPosition,
+				Size = overlaySize,
+				ZIndex = 2,
+				BackgroundTransparency = 1,
+				Visible = self.props.showTopScrim,
+			}, {
+				Overlay = Roact.createElement(Overlay, {
+					showGradient = false,
+				}),
+				InputSink = Roact.createElement("TextButton", {
+					Size = UDim2.fromScale(1, 1),
+					BackgroundTransparency = 1,
+					Text = "",
+				}),
+			}),
 		})
 	end)
 end
@@ -388,11 +389,6 @@ end
 local function GetLocalizedStrings()
 	local strings = {}
 	strings[SUBMIT_TEXT] = RobloxTranslator:FormatByKey("CoreScripts.PublishAssetPrompt.Submit")
-
-	strings[CREATOR_TEXT] = RobloxTranslator:FormatByKey("Feature.Catalog.Label.Filter.Creator")
-	strings[TYPE_TEXT] = RobloxTranslator:FormatByKey("Feature.Catalog.Label.CategoryType")
-	strings[ATTRIBUTION_TEXT] = RobloxTranslator:FormatByKey("Feature.Catalog.Label.Attribution")
-
 	strings[DISCLAIMER_TEXT] = RobloxTranslator:FormatByKey("CoreScripts.PublishCommon.Disclaimer")
 
 	return strings
@@ -405,7 +401,6 @@ end
 
 function BasePublishPrompt:willUnmount()
 	self:cleanupGamepad()
-	self.isMounted = false
 end
 
 local function mapStateToProps(state)
@@ -413,6 +408,7 @@ local function mapStateToProps(state)
 		guid = state.promptRequest.promptInfo.guid,
 		scopes = state.promptRequest.promptInfo.scopes,
 		errorMessage = state.promptRequest.promptInfo.errorMessage,
+		promptVisible = state.promptRequest.promptInfo.promptVisible,
 	}
 end
 
@@ -420,6 +416,9 @@ local function mapDispatchToProps(dispatch)
 	return {
 		closePrompt = function()
 			return dispatch(CloseOpenPrompt())
+		end,
+		SetPromptVisibility = function(promptVisible)
+			return dispatch(SetPromptVisibility(promptVisible))
 		end,
 	}
 end

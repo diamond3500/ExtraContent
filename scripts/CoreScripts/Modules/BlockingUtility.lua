@@ -10,8 +10,12 @@ local CorePackages = game:GetService("CorePackages")
 local Url = require(RobloxGui.Modules.Common.Url)
 local rolloutByApplicationId = require(CorePackages.Workspace.Packages.AppCommonLib).rolloutByApplicationId
 
-local newBlockingUtilityRollout  = function()
-	return game:DefineFastInt("NewBlockingUtilityRollout_v1", 0)
+local FIntBlockUtilityBlockedUsersRequestMaxSize = game:DefineFastInt("BlockUtilityBlockedUsersRequestMaxSize", 50)
+local FFlagUseGetBlockedUsersBlockingUtility = game:DefineFastFlag("UseGetBlockedUsersBlockingUtility", false)
+local FFlagFetchBlockListFromServer = require(RobloxGui.Modules.Common.Flags.FFlagFetchBlockListFromServer)
+
+local newBlockingUtilityRollout = function()
+	return game:DefineFastInt("NewBlockingUtilityRollout_v3", 0)
 end
 local shouldUseNewBlockingUtility = rolloutByApplicationId(newBlockingUtilityRollout)
 
@@ -44,41 +48,67 @@ local MutedList = {}
 
 local batchIsBlockedApi = Url.APIS_URL.."user-blocking-api/v1/users/batch-is-blocked"
 
+local function getBlockedUsersApi(cursor, count)
+	return Url.APIS_URL.."user-blocking-api/v1/users/get-blocked-users?cursor="..cursor.."&count="..count
+end
+
 local function GetBlockedPlayersAsync(): { [string]: boolean }
 	if shouldUseNewBlockingUtility() then
-		if not game:IsLoaded() then
-			game.Loaded:Wait()
-		end
-		local players = PlayersService:GetPlayers()
-	
-		local playerIds = {}
-		for _, player in players do
-			table.insert(playerIds, player.UserId)
-		end
-	
-		local success, blockList
-		success, blockList  = pcall(function()
-			local request = HttpService:JSONEncode(
-				{
-					userIds = playerIds
-				}
-			)
-			local result = HttpRbxApiService:PostAsyncFullUrl(batchIsBlockedApi, request, Enum.ThrottlingPriority.Default, Enum.HttpContentType.ApplicationJson, Enum.HttpRequestType.Players)
-	
-			if result then
-				result = HttpService:JSONDecode(result)
-				return result
-			end
-		end)
-		local blockedUserSet = {}
-		if success and blockList then
-			for _, user in blockList.users do
-				if user.isBlocked then
-					blockedUserSet[user.userId] = true
+		if FFlagUseGetBlockedUsersBlockingUtility then
+			local blockList = {}
+			local cursor = ""
+			while cursor do
+				local result
+				local success = pcall(function()
+					local request = HttpRbxApiService:GetAsyncFullUrl(getBlockedUsersApi(cursor, FIntBlockUtilityBlockedUsersRequestMaxSize),
+					Enum.ThrottlingPriority.Default, Enum.HttpRequestType.Players)
+					result = request and HttpService:JSONDecode(request)
+				end)
+
+				if success and result.data and result.data["blockedUserIds"] then
+					for _, v in result.data.blockedUserIds do
+						blockList[v] = true
+					end
+					cursor = result.data.cursor
+				else
+					cursor = nil
 				end
 			end
+
+			return blockList
+		else
+			repeat task.wait() until #PlayersService:GetPlayers() > 1 or game:IsLoaded()
+			local players = PlayersService:GetPlayers()
+		
+			local playerIds = {}
+			for _, player in players do
+				table.insert(playerIds, player.UserId)
+			end
+		
+			local success, blockList
+			success, blockList  = pcall(function()
+				local request = HttpService:JSONEncode(
+					{
+						userIds = playerIds
+					}
+				)
+				local result = HttpRbxApiService:PostAsyncFullUrl(batchIsBlockedApi, request, Enum.ThrottlingPriority.Default, Enum.HttpContentType.ApplicationJson, Enum.HttpRequestType.Players)
+		
+				if result then
+					result = HttpService:JSONDecode(result)
+					return result
+				end
+			end)
+			local blockedUserSet = {}
+			if success and blockList then
+				for _, user in blockList.users do
+					if user.isBlocked then
+						blockedUserSet[user.userId] = true
+					end
+				end
+			end
+			return blockedUserSet
 		end
-		return blockedUserSet
 	else
 		local apiPath = Url.ACCOUNT_SETTINGS_URL.."v1/users/get-blocked-users"
 
@@ -126,24 +156,26 @@ local function getBlockedUserIds(): { number }
 end
 
 local function initializeBlockList()
-	if GetBlockedPlayersCompleted then
-		return
+	if not FFlagFetchBlockListFromServer then
+		if GetBlockedPlayersCompleted then
+			return
+		end
+	
+		if GetBlockedPlayersStarted then
+			GetBlockedPlayersFinished.Event:Wait()
+			return
+		end
+		GetBlockedPlayersStarted = true
+	
+		BlockedList = GetBlockedPlayersAsync()
+		GetBlockedPlayersCompleted = true
+	
+		GetBlockedPlayersFinished:Fire()
+	
+		local RemoteEvent_SetPlayerBlockList = RobloxReplicatedStorage:WaitForChild("SetPlayerBlockList", math.huge)
+		local blockedUserIds = getBlockedUserIds()
+		RemoteEvent_SetPlayerBlockList:FireServer(blockedUserIds)
 	end
-
-	if GetBlockedPlayersStarted then
-		GetBlockedPlayersFinished.Event:Wait()
-		return
-	end
-	GetBlockedPlayersStarted = true
-
-	BlockedList = GetBlockedPlayersAsync()
-	GetBlockedPlayersCompleted = true
-
-	GetBlockedPlayersFinished:Fire()
-
-	local RemoteEvent_SetPlayerBlockList = RobloxReplicatedStorage:WaitForChild("SetPlayerBlockList", math.huge)
-	local blockedUserIds = getBlockedUserIds()
-	RemoteEvent_SetPlayerBlockList:FireServer(blockedUserIds)
 end
 
 local function isBlocked(userId): boolean
@@ -174,12 +206,12 @@ local function BlockPlayerAsync(playerToBlock): boolean
 
 				local success, wasBlocked
 				success, wasBlocked = pcall(function()
-					local fullUrl = if shouldUseNewBlockingUtility() then Url.APIS_URL .. "user-blocking-api/v1/users/" .. tostring(playerToBlock.UserId) .. "/block-user" else Url.ACCOUNT_SETTINGS_URL.."v1/users/"..tostring(playerToBlock.UserId).."/block"
+					local fullUrl = if shouldUseNewBlockingUtility() or FFlagFetchBlockListFromServer then Url.APIS_URL .. "user-blocking-api/v1/users/" .. tostring(playerToBlock.UserId) .. "/block-user" else Url.ACCOUNT_SETTINGS_URL.."v1/users/"..tostring(playerToBlock.UserId).."/block"
 					local result = HttpRbxApiService:PostAsyncFullUrl(fullUrl, "")
 
 					if result then
 						result = HttpService:JSONDecode(result)
-						if shouldUseNewBlockingUtility() then
+						if shouldUseNewBlockingUtility() or FFlagFetchBlockListFromServer then
 							return result
 						end
 						return result and not result.errors
@@ -213,7 +245,7 @@ local function UnblockPlayerAsync(playerToUnblock): boolean
 
 			local success, wasUnBlocked
 			success, wasUnBlocked = pcall(function()
-				local fullUrl = if shouldUseNewBlockingUtility() then Url.APIS_URL .. "user-blocking-api/v1/users/" .. tostring(playerToUnblock.UserId) .. "/unblock-user" else Url.ACCOUNT_SETTINGS_URL.."v1/users/"..tostring(playerToUnblock.UserId).."/unblock"
+				local fullUrl = if shouldUseNewBlockingUtility() or FFlagFetchBlockListFromServer then Url.APIS_URL .. "user-blocking-api/v1/users/" .. tostring(playerToUnblock.UserId) .. "/unblock-user" else Url.ACCOUNT_SETTINGS_URL.."v1/users/"..tostring(playerToUnblock.UserId).."/unblock"
 				local result = HttpRbxApiService:PostAsyncFullUrl(fullUrl, "")
 
 				if result then
@@ -291,6 +323,40 @@ StarterGui:RegisterGetCore("PlayerBlockedEvent", function() return PlayerBlocked
 StarterGui:RegisterGetCore("PlayerUnblockedEvent", function() return PlayerUnblockedEvent end)
 StarterGui:RegisterGetCore("PlayerMutedEvent", function() return PlayerMutedEvent end)
 StarterGui:RegisterGetCore("PlayerUnmutedEvent", function() return PlayerUnMutedEvent end)
+
+if FFlagFetchBlockListFromServer then
+	task.spawn(function()
+		local RobloxReplicatedStorage = game:GetService("RobloxReplicatedStorage")
+		local RemoveEvent_SendPlayerBlockList = RobloxReplicatedStorage:WaitForChild(
+			"SendPlayerBlockList",
+			math.huge
+		)
+		RemoveEvent_SendPlayerBlockList.OnClientEvent:Connect(function(blockList)
+			-- Need to convert table indices back to numbers
+			local newBlockList = {}
+			for id, _ in blockList do
+				newBlockList[tonumber(id)] = true
+			end
+			BlockedList = newBlockList
+
+			GetBlockedPlayersCompleted = true
+
+			GetBlockedPlayersFinished:Fire()
+		end)
+	end)
+
+	task.spawn(function()
+		local RobloxReplicatedStorage = game:GetService("RobloxReplicatedStorage")
+		local RemoveEvent_UpdateLocalPlayerBlockList = RobloxReplicatedStorage:WaitForChild(
+			"UpdateLocalPlayerBlockList",
+			math.huge
+		)
+		RemoveEvent_UpdateLocalPlayerBlockList.OnClientEvent:Connect(function(blockUserId, blockValue)
+			BlockedList[blockUserId] = blockValue
+			BlockStatusChanged:Fire(blockUserId, blockValue)
+		end)
+	end)
+end
 
 function BlockingUtility:InitBlockListAsync()
 	initializeBlockList()

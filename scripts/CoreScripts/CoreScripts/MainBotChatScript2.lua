@@ -34,7 +34,7 @@ local YPOS_OFFSET = -math.floor(STYLE_PADDING / 2)
 local usingGamepad = false
 
 local FFlagFixDialogInstanceGamepadImages = game:DefineFastFlag("FixDialogInstanceGamepadImages", false)
-local FFlagFixDialogTouchNotWorking = game:DefineFastFlag("FixDialogTouchNotWorking", false)
+local FFlagFixDialogTouchNotWorking = game:DefineFastFlag("FixDialogTouchNotWorking2", false)
 
 local FlagHasReportedPlace = false
 local localPlayer = playerService.LocalPlayer
@@ -49,6 +49,10 @@ if FFlagFixDialogTouchNotWorking then
 	if not character or character.Parent == nil then
 		character = localPlayer.CharacterAdded:Wait()
 	end
+
+	localPlayer.CharacterAdded:Connect(function(updatedCharacter)
+		character = updatedCharacter
+	end)
 end
 
 function setUsingGamepad(input, processed)
@@ -95,7 +99,8 @@ local conversationTimedOut =        "Chat ended because you didn't reply"
 local conversationTimedOutSize = 350
 
 local CoreGui = game:GetService("CoreGui")
-local RobloxGui = CoreGui:WaitForChild("RobloxGui")
+local CorePackages = game:GetService("CorePackages")
+local RobloxGui = CoreGui.RobloxGui
 local RobloxReplicatedStorage = game:GetService('RobloxReplicatedStorage')
 local setDialogInUseEvent = RobloxReplicatedStorage:WaitForChild("SetDialogInUse", math.huge)
 
@@ -107,7 +112,7 @@ local touchControlGui = nil
 
 local gui = nil
 
-local isTenFootInterface = require(RobloxGui:WaitForChild("Modules"):WaitForChild("TenFootInterface")):IsEnabled()
+local isTenFootInterface = require(RobloxGui.Modules.TenFootInterface):IsEnabled()
 local utility = require(RobloxGui.Modules.Settings.Utility)
 local GameTranslator = require(RobloxGui.Modules.GameTranslator)
 local isSmallTouchScreen = utility:IsSmallTouchScreen()
@@ -687,7 +692,8 @@ function onLoad()
 	frame.Size = UDim2.new(0, 0, 0, 0)
 	frame.BackgroundTransparency = 1
 	frame.RobloxLocked = true
-	game:GetService("GuiService"):AddSelectionParent("RBXDialogGroup", frame)
+	-- AddSelectionParent is deprecated
+	(game:GetService("GuiService") :: any):AddSelectionParent("RBXDialogGroup", frame)
 
 	if (touchEnabled and not isSmallTouchScreen) then
 		frame.Position = UDim2.new(0, 20, 0.5, 0)

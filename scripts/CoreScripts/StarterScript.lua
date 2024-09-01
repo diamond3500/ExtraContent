@@ -71,6 +71,9 @@ local FFlagEnableExperienceNotificationPrompts = game:DefineFastFlag("EnableExpe
 local FFlagEnableBulkPurchaseApp = game:DefineFastFlag("EnableBulkPurchaseApp3", false)
 local FFlagEnablePremiumSponsoredExperienceReporting = game:DefineFastFlag("EnablePremiumSponsoredExperienceReporting", false)
 local FFlagMoveUGCValidationFunction = require(RobloxGui.Modules.Common.Flags.FFlagMoveUGCValidationFunctionFeature)
+local FFlagEnableCancelSubscriptionApp = game:GetEngineFeature("EnableCancelSubscriptionApp")
+local FFlagEnableCancelSubscriptionAppLua = game:DefineFastFlag("EnableCancelSubscriptionAppLua", false)
+local AudioFocusManagementEnabled = game:GetEngineFeature("EnableAudioFocusManagement")
 
 local UIBlox = require(CorePackages.UIBlox)
 local uiBloxConfig = require(CoreGuiModules.UIBloxInGameConfig)
@@ -123,6 +126,13 @@ if getFFlagRenderVoiceBubbleAfterAsyncInit() then
 	local ExperienceChat = require(CorePackages.ExperienceChat)
 	local GlobalFlags = (ExperienceChat.GlobalFlags :: any)
 	GlobalFlags.RenderVoiceBubbleAfterAsyncInit = true
+end
+
+local GetFFlagShowLikelySpeakingBubbles = require(RobloxGui.Modules.Flags.GetFFlagShowLikelySpeakingBubbles)
+if GetFFlagShowLikelySpeakingBubbles() then
+	local ExperienceChat = require(CorePackages.ExperienceChat)
+	local GlobalFlags = (ExperienceChat.GlobalFlags :: any)
+	GlobalFlags.ShowLikelySpeakingBubbles = true
 end
 
 -- Since prop validation can be expensive in certain scenarios, you can enable
@@ -336,13 +346,6 @@ if GetFFlagRtMessaging() then
 	game:GetService("RtMessagingService")
 end
 
-if GetFFlagLuaAppEnableSquadPage() then
-	coroutine.wrap(function()
-		local squad = safeRequire(CorePackages.Workspace.Packages.Squads).renderCoreScriptSquad
-		squad.new()
-	end)()
-end
-
 if game:GetEngineFeature("FacialAnimationStreaming2") then
 	ScriptContext:AddCoreScriptLocal("CoreScripts/FacialAnimationStreaming", script.Parent)
 end
@@ -461,4 +464,13 @@ end
 
 if GetFFlagEnableAppChatInExperience() then
 	ScriptContext:AddCoreScriptLocal("CoreScripts/AppChatMain", RobloxGui)
+end
+
+
+if AudioFocusManagementEnabled then
+	ScriptContext:AddCoreScriptLocal("CoreScripts/ExperienceAudioFocusBinder", RobloxGui)
+end
+
+if FFlagEnableCancelSubscriptionApp and FFlagEnableCancelSubscriptionAppLua then
+	ScriptContext:AddCoreScriptLocal("CoreScripts/CancelSubscriptionApp", RobloxGui)
 end
