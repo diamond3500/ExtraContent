@@ -74,6 +74,9 @@ local FIntSeamlessVoiceSTUXDisplayCount =
 local GetFFlagShowLikelySpeakingBubbles = require(RobloxGui.Modules.Flags.GetFFlagShowLikelySpeakingBubbles)
 local GetFFlagEnableInExpPhoneVoiceUpsellEntrypoints = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagEnableInExpPhoneVoiceUpsellEntrypoints
 local GetFFlagShowDevicePermissionsModal = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagShowDevicePermissionsModal
+local FFlagEnableRetryForLinkingProtocolFetch = game:DefineFastFlag("EnableRetryForLinkingProtocolFetch", false)
+local FIntLinkingProtocolFetchRetries = game:DefineFastInt("LinkingProtocolFetchRetries", 1)
+local FIntLinkingProtocolFetchTimeoutMS = game:DefineFastInt("LinkingProtocolFetchTimeoutMS", 1)
 local VoiceChat = require(CorePackages.Workspace.Packages.VoiceChat)
 local Constants = VoiceChat.Constants
 local PostRecordUserSeenGeneralModal = VoiceChat.AgeVerificationOverlay.PostRecordUserSeenGeneralModal
@@ -218,6 +221,7 @@ local VoiceChatServiceManager = {
 	seamlessVoiceStatus = nil,
 	isShowingFTUX = false,
 	hideFTUXSignal = Instance.new("BindableEvent"),
+	settingsAppAvailable = nil,
 }
 
 -- Getting/Setting these properties on VoiceChatServiceManager passes through to CoreVoiceManager instance.
@@ -501,6 +505,7 @@ function VoiceChatServiceManager.new(
 	self.coreVoiceManager:subscribe('OnVoiceJoin', function ()
 		if GetFFlagEnableSeamlessVoiceConnectDisconnectButton() and self:IsSeamlessVoice() then
 			self:showPrompt(VoiceChatPromptType.JoinVoice)
+			self:SetVoiceConnectCookieValue(true)
 		else
 			self:showPrompt(VoiceChatPromptType.VoiceConsentAcceptedToast)
 		end
@@ -685,6 +690,9 @@ function VoiceChatServiceManager:_VoiceChatFirstTimeUX(appStorageService: AppSto
 			self.muteAllChanged.Event:Once(function()
 				self:HideFTUX(appStorageService)
 			end)
+			self.talkingChanged.Event:Once(function()
+				self:HideFTUX(appStorageService)
+			end)
 		end
 	elseif STUXCount < FIntSeamlessVoiceSTUXDisplayCount then
 		log:debug("Showing STUX")
@@ -710,9 +718,6 @@ function VoiceChatServiceManager:VoiceChatFirstTimeUX(appStorageService: AppStor
 	local function startFTUX()
 		log:debug("Starting FTUX")
 		self:_VoiceChatFirstTimeUX(appStorageService)
-		self.talkingChanged.Event:Once(function()
-			self:HideFTUX(appStorageService)
-		end)
 	end
 	self:asyncInit():andThen(function()
 		local stateChangedConnection: RBXScriptConnection
@@ -1030,9 +1035,34 @@ function VoiceChatServiceManager:createPromptInstance(onReadyForSignal, promptTy
 			)
 
 		local success = false
-		local settingsAppAvailable = false
+		local canSwitchToSettings = nil
 		if GetFFlagShowDevicePermissionsModal() and promptType == VoiceChatPromptType.DevicePermissionsModal then
-			success, settingsAppAvailable = LinkingProtocol:supportsSwitchToSettingsApp(SettingsRoute.Microphone):await()
+			-- There is a known issue where calling LinkingProtocol:supportsSwitchToSettingsApp for the first time 
+			-- stalls forever and never resolves, but when it's called any time after that it succeeds. To work around
+			-- this before a fix goes out, we run the code in a separate thread and wait briefly for it determine
+			-- if the device supports deeplinking. We cancel the task and check if we were able to determine this.
+			-- If not, we retry so that we get the success the second time.
+			-- Once the actual fix is implemented, we can flip the flag off and clean up the logic
+			if self.settingsAppAvailable == nil then
+				if FFlagEnableRetryForLinkingProtocolFetch then
+					for i = 0, FIntLinkingProtocolFetchRetries do
+						local supportsSwitchToSettingsTask = task.spawn(function()
+							success, canSwitchToSettings = LinkingProtocol:supportsSwitchToSettingsApp(SettingsRoute.Microphone):await()
+						end)
+						task.wait(FIntLinkingProtocolFetchTimeoutMS / 1000)
+						task.cancel(supportsSwitchToSettingsTask)
+	
+						if canSwitchToSettings ~= nil then
+							break
+						end
+					end
+				else
+					success, canSwitchToSettings = LinkingProtocol:supportsSwitchToSettingsApp(SettingsRoute.Microphone):await()
+				end
+
+				-- We cache the result of checking if the device supports deeplinking so that we don't call logic above again
+				self.settingsAppAvailable = success and canSwitchToSettings
+			end
 		end
 
 		self.voiceChatPromptInstance = Roact.mount(
@@ -1044,7 +1074,7 @@ function VoiceChatServiceManager:createPromptInstance(onReadyForSignal, promptTy
 				errorText = errorText,
 				onReadyForSignal = onReadyForSignal,
 				VoiceChatServiceManager = self,
-				settingsAppAvailable = success and settingsAppAvailable,
+				settingsAppAvailable = if self.settingsAppAvailable == nil then false else self.settingsAppAvailable,
 				onContinueFunc = if promptType == VoiceChatPromptType.VoiceChatSuspendedTemporary
 						or isUpdatedBanModalB
 					then function()
@@ -1066,46 +1096,43 @@ function VoiceChatServiceManager:createPromptInstance(onReadyForSignal, promptTy
 					then function()
 						self.Analytics:reportAcknowledgedNudge(self:GetNudgeAnalyticsData())
 					end
-					elseif
-						GetFFlagJoinWithoutMicPermissions()
-					then function()
-						if promptType == VoiceChatPromptType.Permission then
-							local settingsAppAvailable = LinkingProtocol:supportsSwitchToSettingsApp():await()
-							log:debug("Settings app available: {}", settingsAppAvailable)
-							if settingsAppAvailable then
-								log:debug("Switching to settings app")
-								LinkingProtocol:switchToSettingsApp()
-									:andThen(function()
-										log:debug("Successfully switched to settings app")
-									end)
-									:catch(function()
-										log:error("Error switching to settings app")
-									end)
-							else
-								log:debug("Current platform does not support switching to settings app")
-							end
-						elseif GetFFlagShowDevicePermissionsModal() and promptType == VoiceChatPromptType.DevicePermissionsModal then
-							log:debug("Settings app available: {}", settingsAppAvailable)
-							if GetFFlagSendDevicePermissionsModalAnalytics() then
-								self.Analytics:reportDevicePermissionsModalEvent(
-									if success and settingsAppAvailable then "OpenedSettings" else "Acknowledged",
-									self:GetSessionId(),
-									self:GetInExpUpsellAnalyticsData()
-								)
-							end
+					elseif GetFFlagJoinWithoutMicPermissions() and promptType == VoiceChatPromptType.Permission then function()
+						local settingsAppAvailable = LinkingProtocol:supportsSwitchToSettingsApp():await()
+						log:debug("Settings app available: {}", settingsAppAvailable)
+						if settingsAppAvailable then
+							log:debug("Switching to settings app")
+							LinkingProtocol:switchToSettingsApp()
+								:andThen(function()
+									log:debug("Successfully switched to settings app")
+								end)
+								:catch(function()
+									log:error("Error switching to settings app")
+								end)
+						else
+							log:debug("Current platform does not support switching to settings app")
+						end
+					end
+					elseif GetFFlagJoinWithoutMicPermissions() and GetFFlagShowDevicePermissionsModal() and promptType == VoiceChatPromptType.DevicePermissionsModal then function()
+						log:debug("Settings app available: {}", self.settingsAppAvailable)
+						if GetFFlagSendDevicePermissionsModalAnalytics() then
+							self.Analytics:reportDevicePermissionsModalEvent(
+								if self.settingsAppAvailable then "OpenedSettings" else "Acknowledged",
+								self:GetSessionId(),
+								self:GetInExpUpsellAnalyticsData()
+							)
+						end
 
-							if success and settingsAppAvailable then
-								log:debug("Switching to settings app")
-								LinkingProtocol:switchToSettingsApp(SettingsRoute.Microphone)
-									:andThen(function()
-										log:debug("Successfully switched to settings app")
-									end)
-									:catch(function()
-										log:error("Error switching to settings app")
-									end)
-							else
-								log:debug("Current platform does not support switching to settings app")
-							end
+						if self.settingsAppAvailable then
+							log:debug("Switching to settings app")
+							LinkingProtocol:switchToSettingsApp(SettingsRoute.Microphone)
+								:andThen(function()
+									log:debug("Successfully switched to settings app")
+								end)
+								:catch(function()
+									log:error("Error switching to settings app")
+								end)
+						else
+							log:debug("Current platform does not support switching to settings app")
 						end
 					end
 					elseif isUpdatedBanModalB then function()
@@ -1559,7 +1586,7 @@ function VoiceChatServiceManager:GetConnectDisconnectButtonAnalyticsData(addVoic
 		sessionId = AnalyticsService:GetPlaySessionId()
 	end
 	local analytics = {game.GameId, game.PlaceId, sessionId}
-	if addVoiceSessionId then
+	if addVoiceSessionId and self:getService() then
 		table.insert(analytics, self:GetSessionId())
 	end
 	return unpack(analytics)

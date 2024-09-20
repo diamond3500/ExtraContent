@@ -122,16 +122,9 @@ function PermissionsButtons:init()
 		then true
 		else false
 
-	local showSelfView = nil
-	if GetFFlagEnableShowVoiceUI() then
-		showSelfView = FFlagAvatarChatCoreScriptSupport
-			and StarterGui:GetCoreGuiEnabled(Enum.CoreGuiType.SelfView)
-			and (isCamEnabledForUserAndPlace() or (self.state.hasMicPermissions and VoiceChatServiceManager.voiceUIVisible) or self.state.hasCameraPermissions)
-	else
-		showSelfView = FFlagAvatarChatCoreScriptSupport
-			and StarterGui:GetCoreGuiEnabled(Enum.CoreGuiType.SelfView)
-			and (isCamEnabledForUserAndPlace() or self.state.hasMicPermissions or self.state.hasCameraPermissions)
-	end		
+	local showSelfView = FFlagAvatarChatCoreScriptSupport
+		and StarterGui:GetCoreGuiEnabled(Enum.CoreGuiType.SelfView)
+		and (isCamEnabledForUserAndPlace() or self.state.hasMicPermissions or self.state.hasCameraPermissions)
 
 	self:setState({
 		allPlayersMuted = false,
@@ -299,24 +292,13 @@ function PermissionsButtons:init()
 	self.onCoreGuiChanged = function()
 		local coreGuiState = StarterGui:GetCoreGuiEnabled(Enum.CoreGuiType.SelfView)
 		if self.state.showSelfView ~= coreGuiState then
-			local showSelfView = nil
-			if GetFFlagEnableShowVoiceUI() then
-				showSelfView = FFlagAvatarChatCoreScriptSupport
-					and StarterGui:GetCoreGuiEnabled(Enum.CoreGuiType.SelfView)
-					and (
-						isCamEnabledForUserAndPlace()
-						or (self.state.hasMicPermissions and self.state.isVoiceUIVisible)
-						or self.state.hasCameraPermissions
-					)
-			else
-				showSelfView = FFlagAvatarChatCoreScriptSupport
-					and StarterGui:GetCoreGuiEnabled(Enum.CoreGuiType.SelfView)
-					and (
-						isCamEnabledForUserAndPlace()
-						or self.state.hasMicPermissions
-						or self.state.hasCameraPermissions
-					)
-			end
+			local showSelfView = FFlagAvatarChatCoreScriptSupport
+				and StarterGui:GetCoreGuiEnabled(Enum.CoreGuiType.SelfView)
+				and (
+					isCamEnabledForUserAndPlace()
+					or self.state.hasMicPermissions
+					or self.state.hasCameraPermissions
+				)
 			self:setState({
 				showSelfView = showSelfView,
 			})
@@ -352,18 +334,12 @@ function PermissionsButtons:init()
 				self:GetInExpJoinVoiceAnalyticsData()
 			)
 		end
-		if GetFFlagEnableSeamlessVoiceConnectDisconnectButton() then
-			VoiceChatServiceManager:SetVoiceConnectCookieValue(true)
-		end
 
 		if GetFFlagEnableSeamlessVoiceConnectDisconnectButton() and VoiceChatServiceManager.previousGroupId then
 			-- previously joined voice and left in the same session
 			VoiceChatServiceManager:RejoinPreviousChannel()
 			VoiceChatServiceManager:showPrompt(VoiceChatPromptType.JoinVoice)
 			VoiceChatServiceManager:ShowVoiceUI()
-		elseif  GetFFlagEnableSeamlessVoiceConnectDisconnectButton() and VoiceChatServiceManager:UserVoiceEnabled() and not self.state.hasMicPermissions then
-			-- Users without mic permissions
-			VoiceChatServiceManager:showPrompt(VoiceChatPromptType.Permission)
 		elseif GetFFlagEnableSeamlessVoiceConnectDisconnectButton() and VoiceChatServiceManager.isShowingFTUX then
 			-- NewUsers seeing FTUX
 			VoiceChatServiceManager.hideFTUXSignal:Fire()
@@ -374,6 +350,10 @@ function PermissionsButtons:init()
 		elseif VoiceChatServiceManager:UserOnlyEligibleForVoice() then
 			-- Opted out users
 			VoiceChatServiceManager:SetInExpUpsellEntrypoint(VoiceConstants.IN_EXP_UPSELL_ENTRYPOINTS.JOIN_VOICE)
+			if voiceInExpUpsellVariant == nil then
+				-- Default to variant 1 for QA testing.
+				voiceInExpUpsellVariant = VoiceConstants.IN_EXP_UPSELL_VARIANT.VARIANT1
+			end
 			local promptToShow = VoiceChatServiceManager:GetInExpUpsellPromptFromEnum(voiceInExpUpsellVariant)
 			VoiceChatServiceManager:showPrompt(promptToShow)
 		elseif not GetFFlagEnableSeamlessVoiceConnectDisconnectButton() and VoiceChatServiceManager:UserVoiceEnabled() and not self.state.hasMicPermissions then
@@ -387,17 +367,24 @@ function PermissionsButtons:init()
 			VoiceChatServiceManager:ShowInExperiencePhoneVoiceUpsell(VoiceConstants.IN_EXP_UPSELL_ENTRYPOINTS.JOIN_VOICE, VoiceConstants.IN_EXP_PHONE_UPSELL_IXP_LAYER)
 		end
 
-		if GetFFlagEnableConnectDisconnectButtonAnalytics() then
-			local stateChangedConnection: RBXScriptConnection
-			stateChangedConnection = VoiceChatServiceManager:getService().StateChanged:Connect(function(_oldState, newState)
-				if _oldState ~= newState then
-					VoiceChatServiceManager.Analytics:reportJoinVoiceButtonEventWithVoiceSessionId(
-						"clicked",
-						VoiceChatServiceManager:GetConnectDisconnectButtonAnalyticsData(true)
-					)
-					stateChangedConnection:Disconnect()
-				end
-			end)
+		if GetFFlagEnableConnectDisconnectButtonAnalytics() and GetFFlagEnableSeamlessVoiceConnectDisconnectButton() then
+			if VoiceChatServiceManager:getService() then
+				local stateChangedConnection: RBXScriptConnection
+				stateChangedConnection = VoiceChatServiceManager:getService().StateChanged:Connect(function(_oldState, newState)
+					if _oldState ~= newState then
+						VoiceChatServiceManager.Analytics:reportJoinVoiceButtonEventWithVoiceSessionId(
+							"clicked",
+							VoiceChatServiceManager:GetConnectDisconnectButtonAnalyticsData(true)
+						)
+						stateChangedConnection:Disconnect()
+					end
+				end)
+			else
+				VoiceChatServiceManager.Analytics:reportJoinVoiceButtonEventWithVoiceSessionId(
+					"clicked",
+					VoiceChatServiceManager:GetConnectDisconnectButtonAnalyticsData(false)
+				)
+			end
 		end
 	end
 
@@ -531,16 +518,9 @@ function PermissionsButtons:didUpdate(prevProps, prevState)
 		or self.state.hasMicPermissions ~= prevState.hasMicPermissions
 		or (GetFFlagEnableShowVoiceUI() and self.state.isVoiceUIVisible ~= prevState.isVoiceUIVisible)
 	then
-		local showSelfView = nil
-		if GetFFlagEnableShowVoiceUI() then
-			showSelfView = FFlagAvatarChatCoreScriptSupport
-				and StarterGui:GetCoreGuiEnabled(Enum.CoreGuiType.SelfView)
-				and (isCamEnabledForUserAndPlace() or (self.state.hasMicPermissions and self.state.isVoiceUIVisible) or self.state.hasCameraPermissions)
-		else
-			showSelfView = FFlagAvatarChatCoreScriptSupport
-				and StarterGui:GetCoreGuiEnabled(Enum.CoreGuiType.SelfView)
-				and (isCamEnabledForUserAndPlace() or self.state.hasMicPermissions or self.state.hasCameraPermissions)
-		end
+		local showSelfView = FFlagAvatarChatCoreScriptSupport
+			and StarterGui:GetCoreGuiEnabled(Enum.CoreGuiType.SelfView)
+			and (isCamEnabledForUserAndPlace() or self.state.hasMicPermissions or self.state.hasCameraPermissions)
 		self:setState({
 			showSelfView = showSelfView,
 		})
@@ -548,7 +528,7 @@ function PermissionsButtons:didUpdate(prevProps, prevState)
 end
 
 function PermissionsButtons:didMount()
-	self:getMicPermission()
+	self:getMicPermission(if GetFFlagJoinWithoutMicPermissions() then not VoiceChatServiceManager:IsSeamlessVoice() else nil)
 	self:getCameraPermissionWithoutRequest()
 end
 
@@ -582,7 +562,7 @@ function PermissionsButtons:render()
 		shouldShowMicButtons = self.state.hasMicPermissions and not VoiceChatServiceManager:VoiceChatEnded()
 	end
 	if GetFFlagJoinWithoutMicPermissions() then
-		shouldShowMicButtons = self.state.voiceServiceInitialized and not VoiceChatServiceManager:VoiceChatEnded()
+		shouldShowMicButtons = self.state.voiceServiceInitialized
 	end
 
 	if GetFFlagEnableShowVoiceUI() then

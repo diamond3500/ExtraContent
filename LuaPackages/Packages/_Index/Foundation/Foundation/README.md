@@ -46,7 +46,7 @@ git clone https://github.com/Roblox/foundation.git
 
 ### Developer Storybook
 [Developer Storybook]((https://roblox.atlassian.net/wiki/spaces/HOW/pages/1556186059/1005+-+Using+Developer+Storybooks)) is Roblox Studio's built in storybook viewer solution. You will need to be logged in with an internal account.
-* Open `uiblox/default.rbxp` in Roblox Studio
+* Open `foundation/projects/storybook.rbxp` in Roblox Studio
 * Click on the Storybook button under the Plugins tab!
 
 #### Working with Storybook

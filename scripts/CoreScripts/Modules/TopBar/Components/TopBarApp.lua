@@ -18,6 +18,7 @@ local Images = UIBlox.App.ImageSet.Images
 local SelectionCursorProvider = UIBlox.App.SelectionImage.SelectionCursorProvider
 
 local GetFFlagFixChromeReferences = require(RobloxGui.Modules.Flags.GetFFlagFixChromeReferences)
+local GetFFlagChromePeekArchitecture = require(RobloxGui.Modules.Flags.GetFFlagChromePeekArchitecture)
 
 local Presentation = script.Parent.Presentation
 local MenuIcon = require(Presentation.MenuIcon)
@@ -45,10 +46,15 @@ local UnibarConstants = require(Chrome.Unibar.Constants)
 local FFlagEnableChromeAnalytics = require(Chrome.Flags.GetFFlagEnableChromeAnalytics)()
 
 local Unibar
+local Peek
 local KeepOutAreasHandler
 local ChromeAnalytics
 if ChromeEnabled() then
 	Unibar = require(Chrome.Unibar)
+
+	if GetFFlagChromePeekArchitecture() then
+		Peek = require(Chrome.Peek)
+	end
 end
 if game:GetEngineFeature("InGameChromeSignalAPI") then
 	KeepOutAreasHandler = require(Chrome.Service.KeepOutAreasHandler)
@@ -334,6 +340,8 @@ function TopBarApp:renderWithStyle(style)
 				end,
 			}) or nil,
 		}),
+
+		Peek = GetFFlagChromePeekArchitecture() and Roact.createElement(Peek),
 
 		UnibarOnboarding = if GetFFlagEnableChromeFTUX()
 				and (not GetFFlagFixChromeReferences() or ChromeEnabled())

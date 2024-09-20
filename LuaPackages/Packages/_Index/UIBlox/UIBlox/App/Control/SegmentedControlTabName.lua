@@ -153,12 +153,8 @@ function SegmentedControlTabName:render()
 						LayoutOrder = 1,
 					}) or nil,
 					Text = text and Roact.createElement(GenericTextLabel, {
-						AutomaticSize = if UIBloxConfig.recomputeTabSizeSegmentedControl
-							then Enum.AutomaticSize.X
-							else Enum.AutomaticSize.None,
-						TextTruncate = if UIBloxConfig.recomputeTabSizeSegmentedControl
-							then Enum.TextTruncate.AtEnd
-							else Enum.TextTruncate.None,
+						AutomaticSize = Enum.AutomaticSize.X,
+						TextTruncate = Enum.TextTruncate.AtEnd,
 						BackgroundTransparency = 1,
 						Text = text,
 						fontStyle = fontStyle,

@@ -21,7 +21,8 @@ AvatarExperienceDeps = { git = "https://github.com/Roblox/avatar-experience-deps
 PurchasePromptDeps = { git = "https://github.com/Roblox/purchase-prompt-deps" }
 IAPExperience = { git = "https://github.com/Roblox/IAPExperience", rev = "master" }
 UIBlox = { git = "https://github.com/Roblox/uiblox", rev = "master" }
-Foundation = "1.2.0"
+Foundation = "1.2.3"
+FoundationImages = "1.2.0"
 Thumbnailing = { git = "https://github.com/Roblox/Thumbnailing", rev = "main" }
 Otter = "1.2.1"
 ReactOtter = "1.2.1"

@@ -372,15 +372,13 @@ if game:GetEngineFeature("PortalAdPrompt") then
 	end
 end
 
-if game:GetEngineFeature("EnableAdsEudsaStaticDisclosure") then
-	coroutine.wrap(function()
-		local AdsEudsaInit = safeRequire(CorePackages.Workspace.Packages.AdsEudsa)
+coroutine.wrap(function()
+	local AdsEudsaInit = safeRequire(CorePackages.Workspace.Packages.AdsEudsa)
 
-		if AdsEudsaInit and AdsEudsaInit.starterScript then
-			AdsEudsaInit.starterScript()
-		end
-	end)()
-end
+	if AdsEudsaInit and AdsEudsaInit.starterScript then
+		AdsEudsaInit.starterScript()
+	end
+end)()
 
 -- premium sponsored experience reporting
 if FFlagEnablePremiumSponsoredExperienceReporting then

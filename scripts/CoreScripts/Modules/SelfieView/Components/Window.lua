@@ -432,7 +432,7 @@ local function Window(props: WindowProps): React.ReactNode
 						BackgroundTransparency = 1,
 						Size = UDim2.fromOffset(ICON_SIZE, ICON_SIZE),
 						Position = UDim2.new(0.5, 0, 0.5, 0),
-						Image = EXPAND_ICON,
+						Image = if GetFFlagSelfieViewV4() and large then CLOSE_ICON else EXPAND_ICON,
 						ImageColor3 = theme.TextEmphasis.Color,
 						ImageTransparency = theme.TextEmphasis.Transparency,
 					}),

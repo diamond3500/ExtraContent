@@ -415,6 +415,8 @@ local WindowHost = function(props: WindowHostProps)
 		end
 	end, {})
 
+	local windowDisplayOrder = if GetFFlagSelfieViewV4() then FIntChromeWindowLayoutOrder else 100
+
 	return ReactRoblox.createPortal({
 		Name = React.createElement("ScreenGui", {
 			Name = Constants.WINDOW_HOST_GUI_NAME .. ":" .. props.integration.id,
@@ -422,11 +424,7 @@ local WindowHost = function(props: WindowHostProps)
 			[React.Change.AbsoluteSize] = debounce(function()
 				repositionWindowWithinScreenBounds()
 			end, RESIZE_DEBOUNCE_TIME),
-			DisplayOrder = if GetFFlagSelfieViewV4()
-				then FIntChromeWindowLayoutOrder
-				elseif not FFlagSelfViewFixes then 100
-				elseif isMenuOpen then -1
-				else 100,
+			DisplayOrder = if not FFlagSelfViewFixes then 100 elseif isMenuOpen then -1 else windowDisplayOrder,
 			ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
 		}, {
 			WindowFrame = React.createElement("Frame", {

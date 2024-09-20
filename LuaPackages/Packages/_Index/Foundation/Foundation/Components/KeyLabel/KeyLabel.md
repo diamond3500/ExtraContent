@@ -12,7 +12,7 @@ if `holdBehavior` is provided then KeyLabel will call `onBeginHold` and display 
 
 ## How to Use
 
-Here is an example of how to create a `KeyLabel component with a `holdTime` of 1 second.
+Here is an example of how to create a `KeyLabel` component with a `holdTime` of 1 second.
 
 ```lua
 local Foundation = require(Packages.Foundation)

@@ -8,4 +8,5 @@ local SafeFlags = require(Packages.SafeFlags)
 -- 	MyFastFlag = SafeFlags.createGetFFlag("MyFastFlag")(), <-- Make sure to call the function to get the value
 return {
 	FoundationStylingPolyfill = SafeFlags.createGetFFlag("FoundationStylingPolyfill")(),
+	FoundationStateLayerTransparencyLerp = SafeFlags.createGetFFlag("FoundationStateLayerTransparencyLerp")(),
 }
