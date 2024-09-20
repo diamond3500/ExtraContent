@@ -420,6 +420,7 @@ local function initializeLibrary(configs)
 			}),
 			Enum = strict({
 				AlertType = require(script.App.Dialog.Alert.Enum.AlertType),
+				CloseButtonIcon = require(script.App.Dialog.Modal.Enum.CloseButtonIcon),
 				TooltipOrientation = require(script.App.Dialog.Tooltip.Enum.TooltipOrientation),
 			}),
 			Toast = lazify(function()

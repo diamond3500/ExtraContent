@@ -14,8 +14,6 @@ local RunService = game:GetService("RunService")
 local RobloxGui = game:GetService("CoreGui"):WaitForChild("RobloxGui")
 local CoreGuiModules = RobloxGui:WaitForChild("Modules")
 
-local loadErrorHandlerFromEngine = game:GetEngineFeature("LoadErrorHandlerFromEngine")
-
 -- Load the error reporter as early as possible, even before we finish requiring,
 -- so that it can report any errors that come after this point.
 ScriptContext:AddCoreScriptLocal("CoreScripts/CoreScriptErrorReporter", RobloxGui)
@@ -23,11 +21,7 @@ ScriptContext:AddCoreScriptLocal("CoreScripts/CoreScriptErrorReporter", RobloxGu
 local Roact = require(CorePackages.Roact)
 local PolicyService = require(CoreGuiModules:WaitForChild("Common"):WaitForChild("PolicyService"))
 
--- remove this when removing FFlagConnectErrorHandlerInLoadingScript
-local FFlagConnectionScriptEnabled = settings():GetFFlag("ConnectionScriptEnabled")
-
 local FFlagUseRoactGlobalConfigInCoreScripts = require(RobloxGui.Modules.Flags.FFlagUseRoactGlobalConfigInCoreScripts)
-local FFlagConnectErrorHandlerInLoadingScript = require(RobloxGui.Modules.Flags.FFlagConnectErrorHandlerInLoadingScript)
 
 local FFlagDebugAvatarChatVisualization = game:DefineFastFlag("DebugAvatarChatVisualization", false)
 
@@ -76,7 +70,7 @@ local FFlagEnableCancelSubscriptionAppLua = game:DefineFastFlag("EnableCancelSub
 local AudioFocusManagementEnabled = game:GetEngineFeature("EnableAudioFocusManagement")
 
 local UIBlox = require(CorePackages.UIBlox)
-local uiBloxConfig = require(CoreGuiModules.UIBloxInGameConfig)
+local uiBloxConfig = require(CorePackages.Workspace.Packages.CoreScriptsInitializer).UIBloxInGameConfig
 UIBlox.init(uiBloxConfig)
 
 local localPlayer = Players.LocalPlayer
@@ -135,6 +129,8 @@ if GetFFlagShowLikelySpeakingBubbles() then
 	GlobalFlags.ShowLikelySpeakingBubbles = true
 end
 
+local FFlagInExperienceInterventionApp = game:DefineFastFlag("InExperienceInterventionApp", false)
+
 -- Since prop validation can be expensive in certain scenarios, you can enable
 -- this flag locally to validate props to Roact components.
 if FFlagUseRoactGlobalConfigInCoreScripts and RunService:IsStudio() then
@@ -164,12 +160,6 @@ local function safeRequire(moduleScript)
 	end
 end
 
-if not FFlagConnectErrorHandlerInLoadingScript and not loadErrorHandlerFromEngine then
-	if FFlagConnectionScriptEnabled and not GuiService:IsTenFootInterface() then
-		ScriptContext:AddCoreScriptLocal("Connection", RobloxGui)
-	end
-end
-
 -- In-game notifications script
 ScriptContext:AddCoreScriptLocal("CoreScripts/NotificationScript2", RobloxGui)
 
@@ -183,6 +173,11 @@ if game:GetEngineFeature("LuobuModerationStatus") then
 	coroutine.wrap(function()
 		safeRequire(CoreGuiModules.Watermark)
 	end)()
+end
+
+-- InExperienceIntervention
+if FFlagInExperienceInterventionApp then
+	coroutine.wrap(safeRequire)(CorePackages.Workspace.Packages.InExperienceIntervention)
 end
 
 -- MainBotChatScript (the Lua part of Dialogs)
@@ -313,7 +308,6 @@ end
 if game:GetEngineFeature("VoiceChatSupported") and GetFFlagEnableVoiceDefaultChannel() then
 	ScriptContext:AddCoreScriptLocal("CoreScripts/VoiceDefaultChannel", RobloxGui)
 end
-
 coroutine.wrap(function()
 	local IXPServiceWrapper = require(CoreGuiModules.Common.IXPServiceWrapper)
 	IXPServiceWrapper:InitializeAsync(localPlayer.UserId, GetCoreScriptsLayers())
@@ -331,6 +325,10 @@ coroutine.wrap(function()
 
 	if GetFFlagReportAnythingAnnotationIXP() then
 		TrustAndSafetyIXPManager.default:initialize()
+	end
+	if GetFFlagEnableAppChatInExperience() then
+		local InExperienceAppChatExperimentation = require(CorePackages.Workspace.Packages.AppChat).App.InExperienceAppChatExperimentation
+		InExperienceAppChatExperimentation.default:initialize()
 	end
 end)()
 

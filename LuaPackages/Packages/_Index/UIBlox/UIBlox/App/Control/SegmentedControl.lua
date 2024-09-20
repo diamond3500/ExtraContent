@@ -40,7 +40,7 @@ local DIVIDER_COLOR_STATE_MAP = {
 	[ControlState.Default] = "Divider",
 }
 local SELECTED_BACKGROUND_COLOR_STATE_MAP = {
-	[ControlState.Default] = "UIDefault",
+	[ControlState.Default] = if UIBloxConfig.useFoundationColors then "UIEmphasis" else "UIDefault",
 }
 local DROPSHADOW_COLOR_STATE_MAP = {
 	[ControlState.Default] = "DropShadow",
@@ -334,19 +334,21 @@ function SegmentedControl:render()
 					ZIndex = 4,
 				}),
 				-- the shadow for selected tab background
-				SelectedBackgroundShadow = not isDisabled and Roact.createElement(ImageSetComponent.Label, {
-					Size = UDim2.fromOffset(tabWidth + 6 * 2, TAB_HEIGHT + 6 * 2),
-					Position = self.selectedBackgroundPositionX:map(function(value)
-						return UDim2.fromOffset(value - 6, (INTERACTION_HEIGHT - TAB_HEIGHT) / 2 - 6 + 2)
-					end),
-					BackgroundTransparency = 1,
-					Image = SHADOW_IMAGE,
-					ImageColor3 = dropshadowStyle.Color,
-					ImageTransparency = 0.3,
-					ScaleType = Enum.ScaleType.Slice,
-					SliceCenter = Rect.new(27, 27, 29, 29),
-					ZIndex = 3,
-				}),
+				SelectedBackgroundShadow = if UIBloxConfig.useFoundationColors
+					then nil
+					else (not isDisabled and Roact.createElement(ImageSetComponent.Label, {
+						Size = UDim2.fromOffset(tabWidth + 6 * 2, TAB_HEIGHT + 6 * 2),
+						Position = self.selectedBackgroundPositionX:map(function(value)
+							return UDim2.fromOffset(value - 6, (INTERACTION_HEIGHT - TAB_HEIGHT) / 2 - 6 + 2)
+						end),
+						BackgroundTransparency = 1,
+						Image = SHADOW_IMAGE,
+						ImageColor3 = dropshadowStyle.Color,
+						ImageTransparency = 0.3,
+						ScaleType = Enum.ScaleType.Slice,
+						SliceCenter = Rect.new(27, 27, 29, 29),
+						ZIndex = 3,
+					})),
 				-- container for tabs
 				TabContainer = Roact.createElement(RoactGamepad.Focusable.Frame, {
 					Size = UDim2.fromScale(1, 1),

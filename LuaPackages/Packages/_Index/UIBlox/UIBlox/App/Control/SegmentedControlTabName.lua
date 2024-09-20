@@ -90,8 +90,8 @@ SegmentedControlTabName.defaultProps = {
 	isSelectedStyle = false,
 	SliceCenter = Rect.new(8, 8, 9, 9),
 	textStateColorMap = {
-		[ControlState.Default] = "SecondaryContent",
-		[ControlState.Hover] = "SecondaryOnHover",
+		[ControlState.Default] = if UIBloxConfig.useFoundationColors then "TextDefault" else "SecondaryContent",
+		[ControlState.Hover] = if UIBloxConfig.useFoundationColors then "TextEmphasis" else "SecondaryOnHover",
 	},
 	buttonStateColorMap = {
 		[ControlState.Default] = "SecondaryContent",

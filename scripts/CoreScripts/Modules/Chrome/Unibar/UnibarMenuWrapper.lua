@@ -1,5 +1,3 @@
-local Chrome = script:FindFirstAncestor("Chrome")
-
 local CorePackages = game:GetService("CorePackages")
 local CoreGui = game:GetService("CoreGui")
 local RobloxGui = CoreGui:WaitForChild("RobloxGui")
@@ -13,9 +11,12 @@ local VoiceStateContext = require(RobloxGui.Modules.VoiceChat.VoiceStateContext)
 
 local SelectionCursorProvider = UIBlox.App.SelectionImage.SelectionCursorProvider
 
-local GetFFlagUnibarSceneAnalysisContext = require(Chrome.Flags.GetFFlagUnibarSceneAnalysisContext)
-local GetFIntUnibarSceneAnalysisMaxScreenDivisions = require(Chrome.Flags.GetFIntUnibarSceneAnalysisMaxScreenDivisions)
-local GetFIntUnibarSceneAnalysisMaxDistance = require(Chrome.Flags.GetFIntUnibarSceneAnalysisMaxScreenDivisions)
+local GetFFlagUnibarSceneAnalysisContext =
+	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagUnibarSceneAnalysisContext
+local GetFIntUnibarSceneAnalysisMaxScreenDivisions =
+	require(CorePackages.Workspace.Packages.SharedFlags).GetFIntUnibarSceneAnalysisMaxScreenDivisions
+local GetFIntUnibarSceneAnalysisMaxDistance =
+	require(CorePackages.Workspace.Packages.SharedFlags).GetFIntUnibarSceneAnalysisMaxScreenDivisions
 
 local function UnibarMenuWrapper(props: UnibarMenu.UnibarMenuProp)
 	return React.createElement(ReactUtils.ContextStack, {

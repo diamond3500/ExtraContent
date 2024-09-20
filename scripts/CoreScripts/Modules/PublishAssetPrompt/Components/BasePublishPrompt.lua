@@ -30,6 +30,7 @@ local CloseOpenPrompt = require(script.Parent.Parent.Actions.CloseOpenPrompt)
 local SetPromptVisibility = require(script.Parent.Parent.Actions.SetPromptVisibility)
 local LeaveCreationAlert = require(script.Parent.LeaveCreationAlert)
 local Constants = require(script.Parent.Parent.Constants)
+local TopBarConstants = require(RobloxGui.Modules.TopBar.Constants)
 local PreviewViewport = require(Components.Common.PreviewViewport)
 local ValidationErrorModal = require(Components.ValidationErrorModal)
 
@@ -37,7 +38,13 @@ local NAME_HEIGHT_PIXELS = 30
 local DISCLAIMER_HEIGHT_PIXELS = 50
 local LABEL_PADDING = 24
 local BOTTOM_GRADIENT_HEIGHT = 5
-local DISTANCE_FROM_TOP = 37
+local TOP_BAR_HEIGHT = TopBarConstants.TopBarHeight
+--[[
+	Distance between the bottom of the top bar and the top of the prompt in
+	portrait mode. In landscape mode, the prompt is centered vertically, with
+	DISTANCE_FROM_TOP / 2 padding on the top and bottom.
+]]
+local DISTANCE_FROM_TOP = 4
 
 local DISCLAIMER_TEXT = "disclaimer"
 local SUBMIT_TEXT = "submit"
@@ -87,9 +94,6 @@ function BasePublishPrompt:init()
 	self.inputState = nil
 	self.inputObject = nil
 	self.connection = nil
-
-	-- Prompt should be visible when this component is mounted
-	self.props.SetPromptVisibility(true)
 
 	self.storeInput = function(actionName, inputState, inputObject)
 		self.inputState = inputState
@@ -173,6 +177,9 @@ end
 
 function BasePublishPrompt:didMount()
 	self:setUpGamepad()
+
+	-- Prompt should be visible when this component is mounted
+	self.props.SetPromptVisibility(true)
 end
 
 function BasePublishPrompt:didUpdate(prevProps)
@@ -309,7 +316,8 @@ function BasePublishPrompt:renderAlertLocalized(localized)
 
 			PublishPrompt = Roact.createElement("Frame", {
 				BackgroundTransparency = 1,
-				Size = UDim2.fromScale(1, 1),
+				Size = UDim2.new(1, 0, 1, -TOP_BAR_HEIGHT),
+				Position = UDim2.fromOffset(0, TOP_BAR_HEIGHT),
 				Visible = not self.state.showUnsavedDataWarning and not self.props.showingPreviewView,
 			}, {
 				FullPageModal = Roact.createElement(FullPageModal, {
@@ -401,6 +409,9 @@ end
 
 function BasePublishPrompt:willUnmount()
 	self:cleanupGamepad()
+
+	-- Make sure state reflects that the prompt is no longer visible
+	self.props.SetPromptVisibility(false)
 end
 
 local function mapStateToProps(state)

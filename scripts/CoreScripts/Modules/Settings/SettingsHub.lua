@@ -97,6 +97,7 @@ local GetFFlagEnableScreenshotUtility = require(SharedFlags).GetFFlagEnableScree
 local FFlagIGMThemeResizeFix = game:DefineFastFlag("IGMThemeResizeFix", false)
 local FFlagFixReducedMotionStuckIGM = game:DefineFastFlag("FixReducedMotionStuckIGM2", false)
 local GetFFlagEnableInExpJoinVoiceAnalytics = require(RobloxGui.Modules.Flags.GetFFlagEnableInExpJoinVoiceAnalytics)
+local GetFFlagEnableConnectDisconnectButtonAnalytics = require(RobloxGui.Modules.Flags.GetFFlagEnableConnectDisconnectButtonAnalytics)
 local GetFFlagEnableShowVoiceUI = require(SharedFlags).GetFFlagEnableShowVoiceUI
 local GetFFlagUseMicPermForEnrollment = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagUseMicPermForEnrollment
 local GetFFlagEnableAppChatInExperience = require(SharedFlags).GetFFlagEnableAppChatInExperience
@@ -178,6 +179,7 @@ local NotchSupportExperiment = require(RobloxGui.Modules.Settings.Experiments.No
 local GetFFlagInGameMenuV1FadeBackgroundAnimation = require(RobloxGui.Modules.Settings.Flags.GetFFlagInGameMenuV1FadeBackgroundAnimation)
 local GetFFlagSwitchInExpTranslationsPackage = require(RobloxGui.Modules.Flags.GetFFlagSwitchInExpTranslationsPackage)
 local FFlagSettingsHubRaceConditionFix = game:DefineFastFlag("SettingsHubRaceConditionFix", false)
+local FFlagFixReportButtonCutOff = game:DefineFastFlag("FixReportButtonCutOff", false)
 
 local MuteStatusIcons = VoiceChatServiceManager.MuteStatusIcons
 local PlayerMuteStatusIcons = VoiceChatServiceManager.PlayerMuteStatusIcons
@@ -1553,6 +1555,12 @@ local function CreateSettingsHub()
 			this.SettingsShowSignal:connect(function(isOpen)
 				if GetFFlagUseMicPermForEnrollment() then
 					if isOpen then
+						if GetFFlagEnableConnectDisconnectButtonAnalytics() and VoiceChatServiceManager:IsSeamlessVoice() and not VoiceChatServiceManager.voiceUIVisible then
+							VoiceChatServiceManager.Analytics:reportJoinVoiceButtonEventWithVoiceSessionId("shown", VoiceChatServiceManager:GetConnectDisconnectButtonAnalyticsData(true))
+						elseif GetFFlagEnableConnectDisconnectButtonAnalytics() and VoiceChatServiceManager:IsSeamlessVoice() and VoiceChatServiceManager.voiceUIVisible then
+							VoiceChatServiceManager.Analytics:reportLeaveVoiceButtonEvent("shown", VoiceChatServiceManager:GetConnectDisconnectButtonAnalyticsData(true))
+						end
+
 						if VoiceChatServiceManager:UserVoiceEnabled() then
 							-- We may still be waiting for user to accept or deny mic permissions. If we are still waiting, don't fire the analytic event
 							if this.isFetchingMicPermissions then
@@ -1568,20 +1576,26 @@ local function CreateSettingsHub()
 							return
 						end
 
-						local userInInExperienceUpsellTreatment = VoiceChatServiceManager:UserInInExperienceUpsellTreatment()
-						if userInInExperienceUpsellTreatment then
-							local sessionId = ""
-							if EngineFeatureRbxAnalyticsServiceExposePlaySessionId then
-								sessionId = AnalyticsService:GetPlaySessionId()
+						if not GetFFlagEnableConnectDisconnectButtonAnalytics() then
+							local userInInExperienceUpsellTreatment = VoiceChatServiceManager:UserInInExperienceUpsellTreatment()
+							if userInInExperienceUpsellTreatment then
+								local sessionId = ""
+								if EngineFeatureRbxAnalyticsServiceExposePlaySessionId then
+									sessionId = AnalyticsService:GetPlaySessionId()
+								end
+								VoiceChatServiceManager.Analytics:reportJoinVoiceButtonEvent("shown", game.GameId, game.PlaceId, sessionId)
 							end
-							VoiceChatServiceManager.Analytics:reportJoinVoiceButtonEvent("shown", game.GameId, game.PlaceId, sessionId)
 						end
 					end
 				else
 					local userInInExperienceUpsellTreatment = VoiceChatServiceManager:UserInInExperienceUpsellTreatment()
 					local userVoiceUpsellEligible = VoiceChatServiceManager:UserOnlyEligibleForVoice()
 						or (VoiceChatServiceManager:UserVoiceEnabled() and not this.hasMicPermissions)
-					if isOpen and userInInExperienceUpsellTreatment and userVoiceUpsellEligible then
+					if isOpen and GetFFlagEnableConnectDisconnectButtonAnalytics() and VoiceChatServiceManager:IsSeamlessVoice() and not VoiceChatServiceManager.voiceUIVisible then
+						VoiceChatServiceManager.Analytics:reportJoinVoiceButtonEventWithVoiceSessionId("shown", VoiceChatServiceManager:GetConnectDisconnectButtonAnalyticsData(true))
+					elseif isOpen and GetFFlagEnableConnectDisconnectButtonAnalytics() and VoiceChatServiceManager:IsSeamlessVoice() and VoiceChatServiceManager.voiceUIVisible then
+						VoiceChatServiceManager.Analytics:reportLeaveVoiceButtonEvent("shown", VoiceChatServiceManager:GetConnectDisconnectButtonAnalyticsData(true))
+					elseif isOpen and userInInExperienceUpsellTreatment and userVoiceUpsellEligible then
 						local sessionId = ""
 						if EngineFeatureRbxAnalyticsServiceExposePlaySessionId then
 							sessionId = AnalyticsService:GetPlaySessionId()
@@ -2780,6 +2794,14 @@ local function CreateSettingsHub()
 			return
 		end
 
+		if FFlagFixReportButtonCutOff then
+			if pageToSwitchTo.Page.Name == "ReportAbuseMenuNewContainerPage" then
+				this.PageViewInnerFrame.UIPadding.PaddingTop = UDim.new(0, 0)
+			else
+				this.PageViewInnerFrame.UIPadding.PaddingTop = UDim.new(0, 5)
+			end
+		end
+
 		if Theme.UIBloxThemeEnabled then
 			local topExtra = UDim.new(0, 0)
 			local bottomExtra = UDim.new(0, 0)
@@ -3471,7 +3493,7 @@ local function CreateSettingsHub()
 	local vrMenuOpened, vrMenuClosed = nil, nil
 	local function enableVR()
 		local VRHub = require(RobloxGui.Modules.VR.VRHub)
-		local Panel3D = require(RobloxGui.Modules.VR.Panel3D)
+		local Panel3D = require(CorePackages.Workspace.Packages.VrCommon).Panel3D
 		local panel = Panel3D.Get(thisModuleName)
 		panel:ResizeStuds(4, 4, 250)
 		panel:SetType(Panel3D.Type.Standard)
@@ -3516,7 +3538,7 @@ local function CreateSettingsHub()
 			vrMenuClosed = nil
 		end
 
-		local Panel3D = require(RobloxGui.Modules.VR.Panel3D)
+		local Panel3D = require(CorePackages.Workspace.Packages.VrCommon).Panel3D
 		local panel = Panel3D.Get(thisModuleName)
 		panel:SetVisible(false)
 	end

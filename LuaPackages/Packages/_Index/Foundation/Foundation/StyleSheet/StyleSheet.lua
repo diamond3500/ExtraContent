@@ -4,6 +4,7 @@ local Packages = Foundation.Parent
 local React = require(Packages.React)
 local StyleRule = require(StyleSheetRoot.StyleRule)
 local generateRules = require(StyleSheetRoot.generateRules)
+local useGeneratedRules = require(Foundation.Utility.useGeneratedRules)
 
 local Theme = require(Foundation.Enums.Theme)
 local Device = require(Foundation.Enums.Device)
@@ -11,11 +12,31 @@ type Theme = Theme.Theme
 type Device = Device.Device
 type StyleRule = generateRules.StyleRule
 
-type StyleRuleNoTag = {
+export type StyleRuleNoTag = {
 	modifier: string?,
 	properties: { [string]: any },
 	pseudo: string?,
+	children: { StyleRule }?,
 }
+
+local function insertRule(ruleNodes: { React.ReactNode }, rule: StyleRuleNoTag, tag: string)
+	local properties = rule.properties
+
+	local tagSelector = "." .. tag
+	local modifier = if rule.modifier ~= nil then ":" .. rule.modifier else ""
+	local pseudo = if rule.pseudo ~= nil then " ::" .. rule.pseudo else ""
+	local selector = tagSelector .. modifier .. pseudo
+
+	table.insert(
+		ruleNodes,
+		if tag == "gui-object-defaults" or tag == "text-defaults" then 1 else #ruleNodes + 1,
+		React.createElement(StyleRule, {
+			key = selector, -- Improves readability and improves performance during reconciliaton
+			Selector = selector,
+			properties = properties,
+		})
+	)
+end
 
 local function createRules(rules: { [string]: StyleRuleNoTag }, tags: { [string]: boolean }): React.ReactNode
 	local ruleNodes = {}
@@ -27,22 +48,13 @@ local function createRules(rules: { [string]: StyleRuleNoTag }, tags: { [string]
 			continue
 		end
 
-		local properties = rule.properties
+		insertRule(ruleNodes, rule, tag)
 
-		local tagSelector = "." .. tag
-		local modifier = if rule.modifier ~= nil then ":" .. rule.modifier else ""
-		local pseudo = if rule.pseudo ~= nil then " ::" .. rule.pseudo else ""
-		local selector = tagSelector .. modifier .. pseudo
-
-		table.insert(
-			ruleNodes,
-			if tag == "gui-object-defaults" or tag == "text-defaults" then 1 else #ruleNodes + 1,
-			React.createElement(StyleRule, {
-				key = selector, -- Improves readability and improves performance during reconciliaton
-				Selector = selector,
-				properties = properties,
-			})
-		)
+		if rule.children then
+			for _, child in rule.children do
+				insertRule(ruleNodes, child, child.tag)
+			end
+		end
 	end
 
 	return ruleNodes
@@ -53,29 +65,15 @@ type StyleSheetProps = {
 	device: Device,
 	tags: { [string]: boolean },
 	derives: { StyleSheet }?,
+	DONOTUSE_colorUpdate: boolean?,
 }
 
 local function StyleSheet(props: StyleSheetProps)
 	local sheet = React.useRef(nil)
 
-	local rules = React.useMemo(function(): any
-		if props.theme == Theme.Dark then
-			if props.device == Device.Console then
-				return require(Foundation.Generated.StyleRules["Console-Dark"])
-			else
-				return require(Foundation.Generated.StyleRules["Desktop-Dark"])
-			end
-		elseif props.theme == Theme.Light then
-			if props.device == Device.Console then
-				return require(Foundation.Generated.StyleRules["Console-Light"])
-			else
-				return require(Foundation.Generated.StyleRules["Desktop-Light"])
-			end
-		end
-		return {}
-	end, { props.theme :: any, props.device })
+	local rules = useGeneratedRules(props.theme, props.device, props.DONOTUSE_colorUpdate == true)
 
-	React.useEffect(function()
+	React.useLayoutEffect(function()
 		if sheet.current then
 			sheet.current:SetDerives(props.derives or {})
 		end

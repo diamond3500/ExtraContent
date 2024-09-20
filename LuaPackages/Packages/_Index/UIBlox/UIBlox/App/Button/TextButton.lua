@@ -97,8 +97,8 @@ TextButton.defaultProps = {
 	showBackground = false,
 
 	fontStyle = "Header2",
-	colorStyleDefault = "SystemPrimaryDefault",
-	colorStyleHover = "SystemPrimaryDefault",
+	colorStyleDefault = if UIBloxConfig.useFoundationColors then "TextEmphasis" else "SystemPrimaryDefault",
+	colorStyleHover = if UIBloxConfig.useFoundationColors then "TextEmphasis" else "SystemPrimaryDefault",
 	hoverBackgroundEnabled = true,
 	richText = false,
 

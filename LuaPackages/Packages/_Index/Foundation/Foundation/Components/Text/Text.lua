@@ -1,5 +1,6 @@
 local Foundation = script:FindFirstAncestor("Foundation")
 local Packages = Foundation.Parent
+local Flags = require(Foundation.Utility.Flags)
 
 local React = require(Packages.React)
 local ReactIs = require(Packages.ReactIs)
@@ -14,6 +15,7 @@ local withDefaults = require(Foundation.Utility.withDefaults)
 local useDefaultTags = require(Foundation.Utility.useDefaultTags)
 local StateLayerAffordance = require(Foundation.Enums.StateLayerAffordance)
 local withGuiObjectProps = require(Foundation.Utility.withGuiObjectProps)
+local useStyledDefaults = require(Foundation.Utility.useStyledDefaults)
 local indexBindable = require(Foundation.Utility.indexBindable)
 type ColorStyle = Types.ColorStyle
 type FontFaceTable = Types.FontFaceTable
@@ -23,6 +25,8 @@ local useStyleTags = require(Foundation.Providers.Style.useStyleTags)
 
 type StateChangedCallback = Types.StateChangedCallback
 type Bindable<T> = Types.Bindable<T>
+
+local FontScales = require(script.Parent.FontScales)
 
 type TextProps = {
 	textStyle: ColorStyle?,
@@ -48,7 +52,13 @@ local defaultProps = {
 local defaultTags = "gui-object-defaults text-defaults"
 
 local function Text(textProps: TextProps, ref: React.Ref<GuiObject>?)
-	local props = withDefaults(textProps, defaultProps)
+	local defaultPropsWithStyles = if Flags.FoundationStylingPolyfill
+		then useStyledDefaults("Text", textProps.tag, defaultTags, defaultProps)
+		else nil
+	local props = withDefaults(
+		textProps,
+		(if Flags.FoundationStylingPolyfill then defaultPropsWithStyles else defaultProps) :: typeof(defaultProps)
+	)
 
 	local isInteractable = props.onStateChanged ~= nil or props.onActivated ~= nil
 
@@ -68,6 +78,38 @@ local function Text(textProps: TextProps, ref: React.Ref<GuiObject>?)
 			end
 		end
 	end, { props.fontStyle })
+
+	local lineHeightPaddingOffset = React.useMemo(function()
+		if
+			props.fontStyle == nil
+			or props.fontStyle.LineHeight == nil
+			or props.fontStyle.FontSize == nil
+			or fontFace == nil
+		then
+			return 0
+		end
+
+		local fontFamily = nil
+
+		if ReactIs.isBinding(fontFace) then
+			local fontFaceBinding = fontFace :: React.Binding<Font>
+			fontFamily = fontFaceBinding:getValue().Family
+		else
+			fontFamily = (fontFace :: Font).Family
+		end
+
+		local nominalScale = FontScales[fontFamily]
+
+		if nominalScale == nil then
+			return 0
+		end
+
+		local rawTextSize = props.fontStyle.FontSize / nominalScale
+		local rawLineHeight = props.fontStyle.LineHeight * nominalScale
+		local heightOffset = rawTextSize * rawLineHeight - props.fontStyle.FontSize
+		local paddingOffset = heightOffset / 2
+		return paddingOffset
+	end, { fontFace :: any, props.fontStyle })
 
 	local engineComponent = if isInteractable then "TextButton" else "TextLabel"
 
@@ -121,10 +163,29 @@ local function Text(textProps: TextProps, ref: React.Ref<GuiObject>?)
 				ItemLineAlignment = props.flexItem.ItemLineAlignment,
 			})
 			else nil,
+		ListLayout = if props.layout ~= nil and props.layout.FillDirection ~= nil
+			then React.createElement("UIListLayout", {
+				FillDirection = props.layout.FillDirection,
+				ItemLineAlignment = props.layout.ItemLineAlignment,
+				HorizontalAlignment = props.layout.HorizontalAlignment,
+				HorizontalFlex = props.layout.HorizontalFlex,
+				VerticalAlignment = props.layout.VerticalAlignment,
+				VerticalFlex = props.layout.VerticalFlex,
+				Padding = props.layout.Padding,
+				SortOrder = props.layout.SortOrder,
+				Wraps = props.layout.Wraps,
+			})
+			else nil,
 		SizeConstraint = if props.sizeConstraint ~= nil
 			then React.createElement("UISizeConstraint", props.sizeConstraint)
 			else nil,
-		Padding = if props.padding ~= nil then React.createElement(Padding, { value = props.padding }) else nil,
+		Padding = if props.padding ~= nil or lineHeightPaddingOffset ~= 0
+			then React.createElement(Padding, {
+				value = if props.padding
+					then props.padding
+					else if lineHeightPaddingOffset then Vector2.new(0, lineHeightPaddingOffset) else nil,
+			})
+			else nil,
 		Scale = if props.scale ~= nil
 			then React.createElement("UIScale", {
 				Scale = props.scale,

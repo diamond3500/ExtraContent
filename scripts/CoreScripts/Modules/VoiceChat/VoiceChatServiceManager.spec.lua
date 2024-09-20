@@ -17,6 +17,7 @@ return function()
 	local log = require(RobloxGui.Modules.Logger)
 	local VoiceChatPromptType = require(RobloxGui.Modules.VoiceChatPrompt.PromptType)
 	local MockAvatarChatService = require(RobloxGui.Modules.VoiceChat.Mocks.MockAvatarChatService)
+	local MockAppStorageService = require(RobloxGui.Modules.VoiceChat.Mocks.MockAppStorageService)
 	local act = require(CorePackages.Roact).act
 	local VCSS = require(script.Parent.VoiceChatServiceStub)
 	local VoiceChatServiceStub = VCSS.VoiceChatServiceStub
@@ -83,6 +84,7 @@ return function()
 	})
 
 	local VoiceChatServiceManagerKlass = require(script.Parent.VoiceChatServiceManager)
+	local VoiceChatConstants = require(script.Parent.Constants)
 	local PermissionsProtocol = require(CorePackages.Workspace.Packages.PermissionsProtocol).PermissionsProtocol
 	local BlockMock = Instance.new("BindableEvent")
 	local VoiceChatServiceManager
@@ -128,8 +130,8 @@ return function()
 		return isStudio
 	end
 
-	local createCoreVoiceManager = function(voiceChatServiceStub, httpServiceStub, permissionsService, permissionFn, block, notificationMock, avatarChatServiceStub)
-		return CoreVoiceManagerKlass.new(
+	local createCoreVoiceManager = function(voiceChatServiceStub, httpServiceStub, permissionsService, permissionFn, block, notificationMock, avatarChatServiceStub, voiceOverlayOverride)
+		local coreManager = CoreVoiceManagerKlass.new(
 			block,
 			permissionsService,
 			httpServiceStub,
@@ -138,6 +140,43 @@ return function()
 			notificationMock,
 			avatarChatServiceStub or AvatarChatServiceStub
 		)
+
+		coreManager._getShowAgeVerificationOverlayResult = Cryo.Dictionary.join({
+			showAgeVerificationOverlay = false,
+			elegibleToSeeVoiceUpsell = false,
+			showVoiceOptInOverlay = false,
+			showVoiceInExperienceUpsell = false,
+			showVoiceInExperienceUpsellVariant = nil,
+			showAvatarVideoOptInOverlay = false,
+			universePlaceVoiceEnabledSettings = {
+				isUniverseEnabledForVoice = true,
+				isUniverseEnabledForAvatarVideo = true
+			},
+			voiceSettings = {
+				isVoiceEnabled = true,
+				isUserOptIn = true,
+				isUserEligible = true,
+				isBanned = false,
+				banReason = 0,
+				bannedUntil = nil,
+				canVerifyAgeForVoice = true,
+				isVerifiedForVoice = true,
+				denialReason = 0,
+				isOptInDisabled = false,
+				hasEverOpted = true,
+				isAvatarVideoEnabled = true,
+				isAvatarVideoOptIn = true,
+				isAvatarVideoOptInDisabled = false,
+				isAvatarVideoEligible = true,
+				hasEverOptedAvatarVideo = true,
+				userHasAvatarCameraAlwaysAvailable = false,
+				canVerifyPhoneForVoice = false,
+				seamlessVoiceStatus = 1,
+				allowVoiceDataUsage = false
+			}
+		}, voiceOverlayOverride or {})
+
+		return coreManager
 	end
 
 	beforeEach(function(context)
@@ -330,8 +369,13 @@ return function()
 			it("requestMicPermission still resolves when a malformed response is given", function()
 				PermissionServiceStub.hasPermissionsCB = stubPromise({ status = PermissionsProtocol.Status.DENIED }, Promise.reject)
 				local permFn = getPermissionsFunction()
+				local coreVoiceManager = createCoreVoiceManager(VoiceChatServiceStub, HTTPServiceStub, PermissionServiceStub, permFn, nil, nil, nil, {
+					voiceSettings = {
+						seamlessVoiceStatus = 2,
+					}
+				})
 				VoiceChatServiceManager = VoiceChatServiceManagerKlass.new(
-					createCoreVoiceManager(VoiceChatServiceStub, HTTPServiceStub, PermissionServiceStub, permFn),
+					coreVoiceManager,
 					VoiceChatServiceStub,
 					HTTPServiceStub,
 					PermissionServiceStub,
@@ -349,8 +393,13 @@ return function()
 				local permFn = if GetFFlagRawMicrophonePermissions()
 					then getPermissionsFunction(PermissionsProtocol.Status.DENIED)
 					else stub({ status = PermissionsProtocol.Status.DENIED })
+				local coreVoiceManager = createCoreVoiceManager(VoiceChatServiceStub, HTTPServiceStub, PermissionServiceStub, permFn, nil, nil, nil, {
+					voiceSettings = {
+						seamlessVoiceStatus = 2,
+					}
+				})
 				VoiceChatServiceManager = VoiceChatServiceManagerKlass.new(
-					createCoreVoiceManager(VoiceChatServiceStub, HTTPServiceStub, PermissionServiceStub, permFn),
+					coreVoiceManager,
 					VoiceChatServiceStub,
 					HTTPServiceStub,
 					PermissionServiceStub,
@@ -398,8 +447,13 @@ return function()
 			it("requestMicPermission resolves when permissions protocol response is approved for join without voice permission", function()
 				PermissionServiceStub.hasPermissionsCB = stubPromise({ status = PermissionsProtocol.Status.AUTHORIZED })
 				local permFn = getPermissionsFunction(PermissionsProtocol.Status.AUTHORIZED)
+				local coreVoiceManager = createCoreVoiceManager(VoiceChatServiceStub, HTTPServiceStub, PermissionServiceStub, permFn, nil, nil, nil, {
+					voiceSettings = {
+						seamlessVoiceStatus = 2,
+					}
+				})
 				VoiceChatServiceManager = VoiceChatServiceManagerKlass.new(
-					createCoreVoiceManager(VoiceChatServiceStub, HTTPServiceStub, PermissionServiceStub, permFn),
+					coreVoiceManager,
 					VoiceChatServiceStub,
 					HTTPServiceStub,
 					PermissionServiceStub,
@@ -968,6 +1022,53 @@ return function()
 			VoiceChatServiceManager:RejoinCurrentChannel()
 			expect(deepEqual(VoiceChatServiceManager.participants, {})).toBe(true)
 			game:SetFastFlagForTesting("ClearVoiceStateOnRejoin", ClearStateOnRejoinOld)
+		end)
+	end)
+
+	describe("Voice FTUX and STUX", function()
+		local appStorageService
+		local appStorageServiceDefaults = {
+			[VoiceChatConstants.SEAMLESS_VOICE_FTUX_KEY] = "false",
+			[VoiceChatConstants.SEAMLESS_VOICE_STUX_KEY] = "0",
+		}
+		beforeEach(function()
+			appStorageService = MockAppStorageService.new(appStorageServiceDefaults)
+		end)
+		it("Shows FTUX when cookie is set", function()
+			expect(VoiceChatServiceManager.isShowingFTUX).toBe(false)
+			VoiceChatServiceManager:_VoiceChatFirstTimeUX(appStorageService)
+			expect(VoiceChatServiceManager.isShowingFTUX).toBe(true)
+		end)
+		it("Shows STUX when cookie is set", function()
+			appStorageService = MockAppStorageService.new({
+				[VoiceChatConstants.SEAMLESS_VOICE_FTUX_KEY] = "true",
+				[VoiceChatConstants.SEAMLESS_VOICE_STUX_KEY] = "0",
+			})
+			VoiceChatServiceManager:_VoiceChatFirstTimeUX(appStorageService)
+			expect(appStorageService:_DeepEquals({
+				[VoiceChatConstants.SEAMLESS_VOICE_FTUX_KEY] = "true",
+				[VoiceChatConstants.SEAMLESS_VOICE_STUX_KEY] = "1",
+			})).toBe(true)
+		end)
+		it("Doesn't show STUX after set threshold", function()
+			local displayCount = game:GetFastInt("SeamlessVoiceSTUXDisplayCount")
+			appStorageService = MockAppStorageService.new({
+				[VoiceChatConstants.SEAMLESS_VOICE_FTUX_KEY] = "true",
+				[VoiceChatConstants.SEAMLESS_VOICE_STUX_KEY] = tostring(displayCount),
+			})
+			VoiceChatServiceManager:_VoiceChatFirstTimeUX(appStorageService)
+			expect(appStorageService:_DeepEquals({
+				[VoiceChatConstants.SEAMLESS_VOICE_FTUX_KEY] = "true",
+				[VoiceChatConstants.SEAMLESS_VOICE_STUX_KEY] = tostring(displayCount),
+			})).toBe(true)
+		end)
+	end)
+
+	describe("Voice ConnectCookie", function()
+		it("VoiceConnectCookie Get/Set Work Correctly", function()
+			VoiceChatServiceManager:SetVoiceConnectCookieValue(false)
+			local cookie = VoiceChatServiceManager:GetVoiceConnectCookieValue()
+			expect(cookie).toBe(false)
 		end)
 	end)
 

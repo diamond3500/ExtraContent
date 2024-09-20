@@ -22,6 +22,7 @@ local Foundation = strict({
 	Icon = require(script.Components.Icon),
 	IconButton = require(script.Components.IconButton),
 	Image = require(script.Components.Image),
+	InputLabel = require(script.Components.InputLabel),
 	Loading = require(script.Components.Loading),
 	Pill = require(script.Components.Pill),
 	RadioGroup = require(script.Components.RadioGroup),
@@ -32,6 +33,7 @@ local Foundation = strict({
 	TextInput = require(script.Components.TextInput),
 	Toast = require(script.Components.Toast),
 	View = require(script.Components.View),
+	KeyLabel = require(script.Components.KeyLabel),
 
 	-- Providers
 	FoundationProvider = require(script.Providers.Foundation),
@@ -58,6 +60,7 @@ local Foundation = strict({
 		FillBehavior = require(script.Enums.FillBehavior),
 		IconPosition = require(script.Enums.IconPosition),
 		IconSize = require(script.Enums.IconSize),
+		InputLabelSize = require(script.Enums.InputLabelSize),
 		Radius = require(script.Enums.Radius),
 		ScrollBarVisibility = require(script.Enums.ScrollBarVisibility),
 		StateLayerAffordance = require(script.Enums.StateLayerAffordance),
