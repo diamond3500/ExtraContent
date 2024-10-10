@@ -3,6 +3,6 @@
 ]]
 local PackageIndex = script.Parent.Parent.Parent.Parent._Workspace
 
-local Package = require(PackageIndex["SharedFlags"]["SharedFlags"])
+local Package = require(PackageIndex["DiscoveryTestHelpers"]["DiscoveryTestHelpers"])
 
 return Package
