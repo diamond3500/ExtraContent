@@ -4,11 +4,18 @@ local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 
 local React = require(CorePackages.Packages.React)
 local ReactRoblox = require(CorePackages.Packages.ReactRoblox)
-local Rodux = require(CorePackages.Workspace.Packages.Rodux)
+local Rodux = require(CorePackages.Packages.Rodux)
 local SocialCommon = require(CorePackages.Workspace.Packages.SocialCommon)
 local ChatEntryPointNames = SocialCommon.Enums.ChatEntryPointNames
 
 local ApolloClient = require(CoreGui.RobloxGui.Modules.ApolloClient)
+
+local GetFFlagFixSettingshubImportOrder = require(RobloxGui.Modules.Flags.GetFFlagFixSettingshubImportOrder)
+if GetFFlagFixSettingshubImportOrder() then
+	-- We need to ensure we don't require SettingsHub before TopBar has finished
+	-- This is due to ordering of SetGlobalGuiInset defined in TopBar
+	CoreGui:WaitForChild("TopBarApp")
+end
 local SettingsHub = require(RobloxGui.Modules.Settings.SettingsHub)
 
 local AppChat = require(CorePackages.Workspace.Packages.AppChat)
@@ -19,7 +26,10 @@ local InExperienceAppChatProviders = AppChat.App.InExperienceAppChatProviders
 local InExperienceAppChatExperimentation = AppChat.App.InExperienceAppChatExperimentation
 local InExperienceAppChatModal = AppChat.App.InExperienceAppChatModal
 local ParentContainerContext = AppChat.Contexts.ParentContainer.ParentContainerContext
+local ViewportUtil = require(RobloxGui.Modules.Chrome.Service.ViewportUtil)
 
+local GetFFlagAppChatInExpConnectIconEnableSquadIndicator =
+	require(RobloxGui.Modules.Chrome.Flags.GetFFlagAppChatInExpConnectIconEnableSquadIndicator)
 local TopBarTopMargin = require(RobloxGui.Modules.TopBar.Constants).TopBarTopMargin
 
 local folder = Instance.new("Folder")
@@ -51,11 +61,14 @@ local parentContainerContext: AppChat.ParentContainerContextType = {
 	showParentContainer = function()
 		SettingsHub.Instance:SetVisibility(true, false)
 		SettingsHub:SwitchToPage(SettingsHub.Instance.AppChatPage)
+	end,
+	updateCurrentSquadId = function(squadId)
+		-- Unsupported for the old flow.
 	end
 }
 
 if shouldUseIndependentAppChatContainer then
-	InExperienceAppChatModal.default:initialize(TopBarTopMargin, SettingsHub)
+	InExperienceAppChatModal.default:initialize(TopBarTopMargin, SettingsHub, ViewportUtil)
 
 	updateAppChatUnreadMessagesCount = function(newCount)
 		InExperienceAppChatModal:setUnreadCount(newCount)
@@ -78,6 +91,11 @@ if shouldUseIndependentAppChatContainer then
 		end,
 		showParentContainer = function()
 			InExperienceAppChatModal.default:setVisible(true)
+		end,
+		updateCurrentSquadId = function(squadId)
+			if GetFFlagAppChatInExpConnectIconEnableSquadIndicator() then
+				InExperienceAppChatModal:setCurrentSquadId(squadId)
+			end
 		end
 	}
 end

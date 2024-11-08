@@ -1,3 +1,5 @@
+local Chrome = script:FindFirstAncestor("Chrome")
+
 local CorePackages = game:GetService("CorePackages")
 local CoreGui = game:GetService("CoreGui")
 local RobloxGui = CoreGui:WaitForChild("RobloxGui")
@@ -7,17 +9,17 @@ local useStyle = UIBlox.Core.Style.useStyle
 local ImageSetLabel = UIBlox.Core.ImageSet.ImageSetLabel
 local Images = UIBlox.App.ImageSet.Images
 
-local SelfieViewModule = script.Parent.Parent.Parent.SelfieView
+local SelfieViewModule = Chrome.Parent.SelfieView
 local SelfieView = require(SelfieViewModule)
 local VoiceChatServiceManager = require(RobloxGui.Modules.VoiceChat.VoiceChatServiceManager).default
-local ChromeService = require(script.Parent.Parent.Service)
-local RedVoiceDot = require(script.Parent.RedVoiceDot)
-local Constants = require(script.Parent.Parent.Unibar.Constants)
+local ChromeService = require(Chrome.Service)
+local RedVoiceDot = require(Chrome.Integrations.RedVoiceDot)
+local Constants = require(Chrome.Unibar.Constants)
 local GetFFlagSupportCompactUtility = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagSupportCompactUtility
-local GetFFlagTweakedMicPinning = require(script.Parent.Parent.Flags.GetFFlagTweakedMicPinning)
-local GetFFlagUseNewUnibarIcon = require(script.Parent.Parent.Flags.GetFFlagUseNewUnibarIcon)
-local GetFFlagUsePolishedAnimations = require(script.Parent.Parent.Flags.GetFFlagUsePolishedAnimations)
-local GetFFlagUseSelfieViewFlatIcon = require(script.Parent.Parent.Flags.GetFFlagUseSelfieViewFlatIcon)
+local GetFFlagTweakedMicPinning = require(Chrome.Flags.GetFFlagTweakedMicPinning)
+local GetFFlagUseNewUnibarIcon = require(Chrome.Flags.GetFFlagUseNewUnibarIcon)
+local GetFFlagUsePolishedAnimations = require(Chrome.Flags.GetFFlagUsePolishedAnimations)
+local GetFFlagUseSelfieViewFlatIcon = require(Chrome.Flags.GetFFlagUseSelfieViewFlatIcon)
 local GetFFlagSelfieViewRedStatusDot = require(SelfieViewModule.Flags.GetFFlagSelfieViewRedStatusDot)
 
 local UNIBAR_ICON = Images["icons/actions/overflow"]

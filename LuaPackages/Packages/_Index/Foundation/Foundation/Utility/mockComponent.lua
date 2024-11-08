@@ -8,9 +8,6 @@ local FoundationProvider = require(Foundation.Providers.Foundation)
 local PreferencesProvider = require(Foundation.Providers.Preferences.PreferencesProvider)
 type Preferences = PreferencesProvider.PreferencesProps
 
--- pre-load the default style rules to remove load time from benchmarks
-require(Foundation.Generated.StyleRules["Desktop-Dark-UIBlox"])
-
 return function(elements, preferences: Preferences?)
 	return React.createElement(FoundationProvider, {
 		theme = Theme.Dark,

@@ -4,7 +4,6 @@ local CoreGui = game:GetService("CoreGui")
 local CorePackages = game:GetService("CorePackages")
 local NotificationService = game:GetService("NotificationService")
 local Players = game:GetService("Players")
-local ExperienceService = game:GetService("ExperienceService")
 local HttpService = game:GetService("HttpService")
 local Promise = require(CorePackages.Promise)
 
@@ -18,15 +17,13 @@ local createPersistenceMiddleware = CrossExperience.Middlewares.createPersistenc
 local CoreGuiModules = RobloxGui.Modules
 local BlockingUtility = require(CoreGuiModules.BlockingUtility)
 
-local FFlagDebugDefaultChannelStartMuted = game:DefineFastFlag("DebugDefaultChannelStartMuted", true)
 local FFlagUseNotificationServiceIsConnected = game:DefineFastFlag("UseNotificationServiceIsConnected", false)
 local FFlagDefaultChannelEnableDefaultVoice = game:DefineFastFlag("DefaultChannelEnableDefaultVoice", true)
 local FFlagAlwaysJoinWhenUsingAudioAPI = game:DefineFastFlag("AlwaysJoinWhenUsingAudioAPI", false)
 local FFlagDefaultChannelDontWaitOnCharacterWithAudioApi = game:DefineFastFlag("DefaultChannelDontWaitOnCharacterWithAudioApi", false)
 local FFlagEnableCrossExpVoiceDebug = game:DefineFastFlag("EnableCrossExpVoiceDebug", false)
-local GetFFlagEnableLuaVoiceChatAnalytics = require(RobloxGui.Modules.Flags.GetFFlagEnableLuaVoiceChatAnalytics)
+local GetFFlagEnableLuaVoiceChatAnalytics = require(VoiceChatCore.Flags.GetFFlagEnableLuaVoiceChatAnalytics)
 
-local GenerateDefaultChannelAvailable = game:GetEngineFeature("VoiceServiceGenerateDefaultChannelAvailable")
 local EnableDefaultVoiceAvailable = game:GetEngineFeature("VoiceServiceEnableDefaultVoiceAvailable")
 local NotificationServiceIsConnectedAvailable = game:GetEngineFeature("NotificationServiceIsConnectedAvailable")
 local AudioFocusManagementEnabled = game:GetEngineFeature("AudioFocusManagement")
@@ -38,6 +35,7 @@ local VoiceChatService = game:GetService("VoiceChatService")
 
 type VoiceStatus = CrossExperience.VoiceStatus
 local Constants = CrossExperience.Constants
+local VOICE_STATUS = Constants.VOICE_STATUS
 
 local PersistenceMiddleware = createPersistenceMiddleware({
 	storeKey = CrossExperience.Constants.STORAGE_CEV_STORE_KEY,
@@ -54,8 +52,14 @@ local createReducers = function()
 	})
 end
 
+local coreVoiceManagerState = {
+	previousGroupId = nil,
+	previousMutedState = false,
+}
+local cevEventManager = CrossExperience.EventManager.new(CrossExperience.Constants.EXPERIENCE_TYPE_VOICE, true)
+
 local function notifyVoiceStatusChange(status: VoiceStatus, detail: string?)
-	CrossExperience.Communication.notify(CrossExperience.Constants.EVENTS.PARTY_VOICE_STATUS_CHANGED, {
+	cevEventManager:notify(CrossExperience.Constants.EVENTS.PARTY_VOICE_STATUS_CHANGED, {
 		status = status,
 		detail = detail,
 	})
@@ -66,20 +70,17 @@ local store = Rodux.Store.new(createReducers(), nil, {
 	PersistenceMiddleware.getMiddleware(),
 })
 
-local experienceType = CrossExperience.Constants.EXPERIENCE_TYPE_VOICE
-local cevEventListener = CrossExperience.EventListener.new(experienceType)
-
 -- For debugging purposes can pass "log" as a second parameter
-cevEventListener:subscribe(store)
+cevEventManager:subscribe(store)
 
 -- Await completely the DM readiness for CrossExperience communication and RCC replication
 if not game:IsLoaded() then
 	game.Loaded:Wait()
 end
 
-notifyVoiceStatusChange(Constants.VOICE_STATUS.CONNECTED_RCC)
+notifyVoiceStatusChange(Constants.VOICE_STATUS.RCC_CONNECTED)
 
-CrossExperience.Communication.notify(CrossExperience.Constants.EVENTS.PARTY_VOICE_EXPERIENCE_JOINED, {
+cevEventManager:notify(CrossExperience.Constants.EVENTS.PARTY_VOICE_EXPERIENCE_JOINED, {
 	jobId = game.JobId,
 	placeId = game.PlaceId,
 	gameId = game.GameId,
@@ -88,7 +89,7 @@ CrossExperience.Communication.notify(CrossExperience.Constants.EVENTS.PARTY_VOIC
 local localUserId = (Players.LocalPlayer and Players.LocalPlayer.UserId) or -1
 
 local onPlayerAdded = function(player)
-	CrossExperience.Communication.notify(CrossExperience.Constants.EVENTS.PARTY_VOICE_PARTICIPANT_ADDED, {
+	cevEventManager:notify(CrossExperience.Constants.EVENTS.PARTY_VOICE_PARTICIPANT_ADDED, {
 		userId = player.UserId,
 		isLocalUser = player.UserId == localUserId,
 		username = player.Name,
@@ -97,7 +98,7 @@ local onPlayerAdded = function(player)
 end
 
 local onPlayerRemoved = function(player)
-	CrossExperience.Communication.notify(CrossExperience.Constants.EVENTS.PARTY_VOICE_PARTICIPANT_REMOVED, {
+	cevEventManager:notify(CrossExperience.Constants.EVENTS.PARTY_VOICE_PARTICIPANT_REMOVED, {
 		userId = player.UserId,
 		isLocalUser = player.UserId == localUserId,
 	})
@@ -106,15 +107,16 @@ end
 
 local onLocalPlayerActiveChanged = function(result)
 	local eventName = if result.isActive then CrossExperience.Constants.EVENTS.PARTY_VOICE_PARTICIPANT_IS_ACTIVE else CrossExperience.Constants.EVENTS.PARTY_VOICE_PARTICIPANT_IS_INACTIVE
-	CrossExperience.Communication.notify(eventName, {
+	cevEventManager:notify(eventName, {
 		userId = localUserId,
 		isLocalUser = true,
 	})
 end
 
 local onLocalPlayerMuteChanged = function (isMuted)
+	coreVoiceManagerState.previousMutedState = isMuted
 	local eventName = if isMuted then CrossExperience.Constants.EVENTS.PARTY_VOICE_PARTICIPANT_WAS_MUTED else CrossExperience.Constants.EVENTS.PARTY_VOICE_PARTICIPANT_WAS_UNMUTED
-	CrossExperience.Communication.notify(eventName, {
+	cevEventManager:notify(eventName, {
 		userId = localUserId,
 		isLocalUser = true,
 	})
@@ -133,8 +135,8 @@ local onParticipantsUpdated = function (participants)
 			isLocalUser = userId == localUserId,
 		}
 
-		CrossExperience.Communication.notify(mutedEventName, eventPayload)
-		CrossExperience.Communication.notify(activeEventName, eventPayload)
+		cevEventManager:notify(mutedEventName, eventPayload)
+		cevEventManager:notify(activeEventName, eventPayload)
 	end
 end
 
@@ -167,21 +169,13 @@ end
 
 function handleMicrophone()
 	CoreVoiceManager.muteChanged.Event:Connect(onLocalPlayerMuteChanged)
-
-	CrossExperience.Communication.addObserver(experienceType, CrossExperience.Constants.EVENTS.MUTE_PARTY_VOICE_PARTICIPANT, function (params)
-		toggleMutePlayer(params)
-	end)
-
-	CrossExperience.Communication.addObserver(experienceType, CrossExperience.Constants.EVENTS.UNMUTE_PARTY_VOICE_PARTICIPANT, function (params)
-		toggleMutePlayer(params)
-	end)
+	cevEventManager:addObserver(CrossExperience.Constants.EVENTS.MUTE_PARTY_VOICE_PARTICIPANT, toggleMutePlayer)
+	cevEventManager:addObserver(CrossExperience.Constants.EVENTS.UNMUTE_PARTY_VOICE_PARTICIPANT, toggleMutePlayer)
 end
 
 function onCoreVoiceManagerInitialized()
 	CoreVoiceManager:getService().PlayerMicActivitySignalChange:Connect(onLocalPlayerActiveChanged)
 	CoreVoiceManager.participantsUpdate.Event:Connect(onParticipantsUpdated)
-
-	notifyVoiceStatusChange(Constants.VOICE_STATUS.CONNECTED_VOICE)
 end
 
 -- This function is used to unmute the microphone once when the player joins the default channel
@@ -221,118 +215,134 @@ local function initializeDefaultChannel(defaultMuted)
 	return success
 end
 
-if NotificationServiceIsConnectedAvailable and FFlagUseNotificationServiceIsConnected then
-	if not NotificationService.IsConnected then
-		log:debug("NotificationService is not yet connected")
-		NotificationService:GetPropertyChangedSignal("IsConnected"):Wait()
+local function validateSetup()
+	if NotificationServiceIsConnectedAvailable and FFlagUseNotificationServiceIsConnected then
+		if not NotificationService.IsConnected then
+			log:debug("NotificationService is not yet connected")
+			NotificationService:GetPropertyChangedSignal("IsConnected"):Wait()
+		end
+		log:debug("NotificationService connected")
 	end
-	log:debug("NotificationService connected")
-end
 
-if not FFlagDefaultChannelDontWaitOnCharacterWithAudioApi or not VoiceChatService.UseNewAudioApi then
-	if not Players.LocalPlayer.Character then
-		Players.LocalPlayer.CharacterAdded:Wait()
-		log:debug("Player character loaded")
-	else
-		log:debug("Player character already loaded")
+	if not FFlagDefaultChannelDontWaitOnCharacterWithAudioApi or not VoiceChatService.UseNewAudioApi then
+		if not Players.LocalPlayer.Character then
+			Players.LocalPlayer.CharacterAdded:Wait()
+			log:debug("Player character loaded")
+		else
+			log:debug("Player character already loaded")
+		end
 	end
-end
 
-if EnableDefaultVoiceAvailable and FFlagDefaultChannelEnableDefaultVoice then
-	local VoiceChatService = game:FindService("VoiceChatService")
-	if FFlagAlwaysJoinWhenUsingAudioAPI then
-		if not VoiceChatService then
-			log:info("VoiceChatService not found. Assuming default values.")
-			-- We only don't want to early out when the new audio API is enabled
-		elseif not VoiceChatService.EnableDefaultVoice and not VoiceChatService.UseNewAudioApi then
-			log:debug("Default channel is disabled.")
-			if GetFFlagEnableLuaVoiceChatAnalytics() then
-				Analytics:reportVoiceChatJoinResult(false, "defaultDisabled")
-				notifyVoiceStatusChange(Constants.VOICE_STATUS.ERROR_SETUP, "Default channel disabled")
+	if EnableDefaultVoiceAvailable and FFlagDefaultChannelEnableDefaultVoice then
+		local VoiceChatService = game:FindService("VoiceChatService")
+		if FFlagAlwaysJoinWhenUsingAudioAPI then
+			if not VoiceChatService then
+				log:info("VoiceChatService not found. Assuming default values.")
+				-- We only don't want to early out when the new audio API is enabled
+			elseif not VoiceChatService.EnableDefaultVoice and not VoiceChatService.UseNewAudioApi then
+				log:debug("Default channel is disabled.")
+				if GetFFlagEnableLuaVoiceChatAnalytics() then
+					Analytics:reportVoiceChatJoinResult(false, "defaultDisabled")
+					notifyVoiceStatusChange(Constants.VOICE_STATUS.ERROR_VOICE_SETUP, "Default channel disabled")
+				end
+				return false
 			end
-			return
-		end
-	else
-		if not VoiceChatService then
-			log:info("VoiceChatService not found. Assuming default values.")
-		elseif not VoiceChatService.EnableDefaultVoice then
-			log:debug("Default channel is disabled.")
-			if GetFFlagEnableLuaVoiceChatAnalytics() then
-				Analytics:reportVoiceChatJoinResult(false, "defaultDisabled")
-				notifyVoiceStatusChange(Constants.VOICE_STATUS.ERROR_SETUP, "Default channel disabled")
+		else
+			if not VoiceChatService then
+				log:info("VoiceChatService not found. Assuming default values.")
+			elseif not VoiceChatService.EnableDefaultVoice then
+				log:debug("Default channel is disabled.")
+				if GetFFlagEnableLuaVoiceChatAnalytics() then
+					Analytics:reportVoiceChatJoinResult(false, "defaultDisabled")
+					notifyVoiceStatusChange(Constants.VOICE_STATUS.ERROR_VOICE_SETUP, "Default channel disabled")
+				end
+				return false
 			end
-			return
 		end
 	end
+	return true
 end
 
+local function setupListeners()
+	CoreVoiceManager:subscribe('GetPermissions', function (callback, permissions)
+		-- At this point we assume that you were able to join Background DM and the required permissions were resolved prior to that
+		callback({
+			hasMicPermissions = true
+		})
+	end)
 
-CoreVoiceManager:subscribe('GetPermissions', function (callback, permissions)
-	-- At this point we assume that you were able to join Background DM and the required permissions were resolved prior to that
-	callback({
-		hasMicPermissions = true
-	})
-end)
+	-- setup listeners
+	handleParticipants()
+	handleMicrophone()
 
--- setup listeners
-handleParticipants()
-handleMicrophone()
+	-- unmute mic at the start once muted state is initialized
+	unmuteMicrophoneOnce()
 
--- unmute mic at the start once muted state is initialized
-unmuteMicrophoneOnce()
+	if FFlagEnableCrossExpVoiceDebug then
+		cevEventManager:addObserver(CrossExperience.Constants.EVENTS.DEBUG_COMMAND, function(params)
+			if params.name == "dump_session" then
+				print('----------- CEV BACKGROUND -----------')
+				print('Store State', HttpService:JSONEncode(store:getState()))
+				print('--------------------------------------')
+				print('CoreVoiceManager State:')
+				print('Participants', HttpService:JSONEncode(CoreVoiceManager.participants))
+				print('Local Muted', HttpService:JSONEncode({ value = CoreVoiceManager.localMuted }))
+				print('Mute All', HttpService:JSONEncode({ value = CoreVoiceManager.muteAll }))
+				print('Muted Anyone', HttpService:JSONEncode({ value = CoreVoiceManager._mutedAnyone }))
+				print('Is Talking', HttpService:JSONEncode({ value = CoreVoiceManager.isTalking }))
+				print('Muted Players', HttpService:JSONEncode(CoreVoiceManager.mutedPlayers))
+				print('Audio Devices', HttpService:JSONEncode(CoreVoiceManager.audioDevices))
+				print('Voice Enabled', HttpService:JSONEncode({ value = CoreVoiceManager.voiceEnabled }))
+				print('Permissions Result', HttpService:JSONEncode(CoreVoiceManager.communicationPermissionsResult))
+				print('Voice Join Progress', HttpService:JSONEncode({ value = CoreVoiceManager.VoiceJoinProgress }))
+				print('-----------------------------')
+			end
+		end)
+	end
 
-if FFlagEnableCrossExpVoiceDebug then
-	CrossExperience.Communication.addObserver(experienceType, CrossExperience.Constants.EVENTS.DEBUG_COMMAND, function(params)
-		if params.name == "dump_session" then
-			print('----------- CEV BACKGROUND -----------')
-			print('Store State', HttpService:JSONEncode(store:getState()))
-			print('--------------------------------------')
-			print('CoreVoiceManager State:')
-			print('Participants', HttpService:JSONEncode(CoreVoiceManager.participants))
-			print('Local Muted', HttpService:JSONEncode({ value = CoreVoiceManager.localMuted }))
-			print('Mute All', HttpService:JSONEncode({ value = CoreVoiceManager.muteAll }))
-			print('Muted Anyone', HttpService:JSONEncode({ value = CoreVoiceManager._mutedAnyone }))
-			print('Is Talking', HttpService:JSONEncode({ value = CoreVoiceManager.isTalking }))
-			print('Muted Players', HttpService:JSONEncode(CoreVoiceManager.mutedPlayers))
-			print('Audio Devices', HttpService:JSONEncode(CoreVoiceManager.audioDevices))
-			print('Voice Enabled', HttpService:JSONEncode({ value = CoreVoiceManager.voiceEnabled }))
-			print('Permissions Result', HttpService:JSONEncode(CoreVoiceManager.communicationPermissionsResult))
-			print('Voice Join Progress', HttpService:JSONEncode({ value = CoreVoiceManager.VoiceJoinProgress }))
-			print('-----------------------------')
+	CoreVoiceManager:subscribe("OnRequestMicPermissionRejected", function()
+		notifyVoiceStatusChange(Constants.VOICE_STATUS.ERROR_VOICE_MIC_REJECTED)
+	end)
+
+	CoreVoiceManager:subscribe("OnPlayerModerated", function()
+		notifyVoiceStatusChange(Constants.VOICE_STATUS.ERROR_VOICE_MODERATED, "On Player Moderated")
+	end)
+
+	CoreVoiceManager:subscribe("OnInitialJoinFailed", function()
+		notifyVoiceStatusChange(Constants.VOICE_STATUS.ERROR_VOICE_JOIN, "Initial Join failed")
+	end)
+
+	CoreVoiceManager:subscribe("OnRetryRequested", function()
+		notifyVoiceStatusChange(Constants.VOICE_STATUS.VOICE_CONNECTING, "Retry requested")
+	end)
+
+	CoreVoiceManager:subscribe("OnStateChanged", function(oldState, newState)
+		if newState == Enum.VoiceChatState.Joined then
+			local voiceChannelId = CoreVoiceManager:GetChannelId()
+			local voiceSessionId = CoreVoiceManager:GetSessionId()
+			cevEventManager:notify(CrossExperience.Constants.EVENTS.PARTY_VOICE_STATUS_CHANGED, {
+				status = Constants.VOICE_STATUS.VOICE_CONNECTED,
+				voiceChannelId = voiceChannelId,
+				voiceSessionId = voiceSessionId,
+			})
+			coreVoiceManagerState.previousGroupId = CoreVoiceManager.service:GetGroupId()
+		elseif newState == Enum.VoiceChatState.Failed then
+			notifyVoiceStatusChange(Constants.VOICE_STATUS.ERROR_VOICE_FAILED)
+		elseif newState == Enum.VoiceChatState.Ended then
+			-- Considering catching this state as an error state even though leaving voice only would trigger this as well.
+			-- Reason being is that currently leaving voice by user interaction is done by leaving RCC/destroying DM, which shutdowns scripts.
+			-- So if we actually capture the end state it means the DM/RCC is still active and voice is not. Most likely voice inactivity
+			-- timeout but currently there is no value to check to ensure that's what happened.
+			notifyVoiceStatusChange(Constants.VOICE_STATUS.ERROR_VOICE_DISCONNECTED)
 		end
+	end)
+
+	CoreVoiceManager:subscribe("OnReportJoinFailed", function(result)
+		log:error("CEV OnReportJoinFailed " .. result)
 	end)
 end
 
-notifyVoiceStatusChange(Constants.VOICE_STATUS.CONNECTING_VOICE)
-
-CoreVoiceManager:subscribe("OnRequestMicPermissionRejected", function()
-	notifyVoiceStatusChange(Constants.VOICE_STATUS.ERROR_MIC_REJECTED)
-end)
-
-CoreVoiceManager:subscribe("OnPlayerModerated", function()
-	notifyVoiceStatusChange(Constants.VOICE_STATUS.ERROR_MODERATED, "On Player Moderated")
-end)
-
-CoreVoiceManager:subscribe("OnInitialJoinFailed", function()
-	notifyVoiceStatusChange(Constants.VOICE_STATUS.ERROR_VOICE_JOIN, "Initial Join failed")
-end)
-
-CoreVoiceManager:subscribe("OnRetryRequested", function()
-	notifyVoiceStatusChange(Constants.VOICE_STATUS.CONNECTING_VOICE, "Retry requested")
-end)
-
-CoreVoiceManager:subscribe("OnReportJoinFailed", function(result)
-	log:error("CEV OnReportJoinFailed " .. result)
-end)
-
-CoreVoiceManager:asyncInit():andThen(function()
-	local joinInProgress = initializeDefaultChannel(false)
-	if joinInProgress == false then
-		notifyVoiceStatusChange(Constants.VOICE_STATUS.ERROR_VOICE_JOIN, "Initial Join failed")
-	else
-		onCoreVoiceManagerInitialized()
-	end
-
+function initializeAFM()
 	if AudioFocusManagementEnabled then
 		local success, AudioFocusService = pcall(function()
 			return game:GetService("AudioFocusService")
@@ -407,10 +417,59 @@ CoreVoiceManager:asyncInit():andThen(function()
 			log:info("AudioFocusService did not initialize")
 		end
 	end
-end):catch(function(err)
-	-- If voice chat doesn't initialize, silently halt rather than throwing
-	-- a unresolved promise error. Don't report an event since the manager
-	-- will handle that.
-	log:info("CoreVoiceManager did not initialize {}", err)
-	notifyVoiceStatusChange(Constants.VOICE_STATUS.ERROR_INIT, err)
+end
+
+function initializeVoice()
+	notifyVoiceStatusChange(Constants.VOICE_STATUS.VOICE_CONNECTING)
+	CoreVoiceManager:asyncInit():andThen(function()
+		local joinInProgress = initializeDefaultChannel(false)
+		if joinInProgress == false then
+			notifyVoiceStatusChange(Constants.VOICE_STATUS.ERROR_VOICE_JOIN, "Initial Join failed")
+		else
+			onCoreVoiceManagerInitialized()
+		end
+		initializeAFM()
+	end):catch(function(err)
+		-- If voice chat doesn't initialize, silently halt rather than throwing
+		-- a unresolved promise error. Don't report an event since the manager
+		-- will handle that.
+		log:info("CoreVoiceManager did not initialize {}", err)
+		notifyVoiceStatusChange(Constants.VOICE_STATUS.ERROR_VOICE_INIT, err)
+	end)
+end
+
+function rejoinVoice()
+	notifyVoiceStatusChange(Constants.VOICE_STATUS.VOICE_CONNECTING)
+	CoreVoiceManager:RejoinChannel(coreVoiceManagerState.previousGroupId, coreVoiceManagerState.previousMutedState)
+	coreVoiceManagerState = {
+		previousGroupId = nil,
+		previousMutedState = nil,
+	}
+end
+
+function startVoice()
+	if validateSetup() then
+		setupListeners()
+		initializeVoice()
+	end
+end
+
+cevEventManager:addObserver(CrossExperience.Constants.EVENTS.PARTY_VOICE_RECONNECT_REQUESTED, function()
+	local voiceStatus = store:getState().Squad.CrossExperienceVoice.Experience.voiceStatus
+	if voiceStatus == VOICE_STATUS.ERROR_VOICE_SETUP then
+		-- Voice have not managed to confirm basic assumptions, restart the process completely
+		startVoice()
+	elseif voiceStatus == VOICE_STATUS.ERROR_VOICE_INIT then
+		-- Voice has correctly set up but failed to succeed in asyncInit due to some generic issue so never connected. Attempt to reinitialize.
+		initializeVoice()
+	elseif voiceStatus == VOICE_STATUS.ERROR_VOICE_JOIN
+		or voiceStatus == VOICE_STATUS.ERROR_VOICE_MIC_REJECTED
+		or voiceStatus == VOICE_STATUS.ERROR_VOICE_MODERATED
+		or voiceStatus == VOICE_STATUS.ERROR_VOICE_FAILED
+		or voiceStatus == VOICE_STATUS.ERROR_VOICE_DISCONNECTED then
+		-- Voice has failed after a successful initialization
+		rejoinVoice()
+	end
 end)
+
+startVoice()

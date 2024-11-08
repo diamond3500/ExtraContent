@@ -30,14 +30,8 @@ return {
 	-- Use SurfaceGuiWithAdornee for Panel3D
 	refactorPanel3D = false,
 
-	-- Use general design tokens with `scale` parameter to adapt to different platforms
-	useTokensWithScale = false,
-
 	-- Add a ref that points to ScrollingFrame in ResponsiveBaseRow
 	responsiveBaseRowScrollingFrameRef = false,
-
-	-- Use GetTextBoundsAsync instead of GetTextSize to guarantee a correct result
-	useGetTextBoundsAsync = false,
 
 	-- use new refactored interactable
 	refactorInteractable = false,
@@ -74,14 +68,8 @@ return {
 	-- Add optional max height to getTextHeight
 	getTextHeightOptionalMaxHeight = false,
 
-	-- Add support for large-scaled text in Cell
-	useAutomaticHeightInTableCell = false,
-
 	-- Indicate whether the fix for button loading shimmer panel not covering edges is enabled
 	enableButtonLoadingShimmerPanelFix = false,
-
-	-- Use automatic sizing in stat group
-	useAutomaticSizeInStatGroup = false,
 
 	-- Use GetTextSize and AutomaticSize to add support for larger than default text in Tile and TileName
 	refactorTileTextHeights = false,
@@ -95,20 +83,11 @@ return {
 	-- Enable OpenType support
 	enableOpenTypeSupport = false,
 
-	-- Fixes input button to better suppot large text
-	ensureTextWrapsInputButton = false,
-
-	-- Align text on the left of CellHeadDetail
-	leftAlignCellHeadDetailText = false,
-
 	-- Defer loading component’s code until it is rendered for the first time
 	enableCreateLazyComponent = false,
 
 	-- Some components expose calculate functions as member function, move it out as a separate function
 	useSeparatedCalcFunction = false,
-
-	-- Use automatic size Y in header bar s.t text does not get cut off at larger-than-default sizes
-	useAutomaticSizeYHeaderBar = false,
 
 	-- Add the option to pass in callbacks for AccordionView that run on expansion and collapse
 	addCallbacksToAccordionView = false,
@@ -134,9 +113,6 @@ return {
 	-- Removes math error absoluteSize setting statement
 	fixLayerCollectorProviderAbsoluteSize = false,
 
-	-- Fix the horizontalAlignment prop on Tile
-	tileHorizontalAlignmentFix = false,
-
 	-- Set name text in playertile to richtext
 	enableRichTextPlayerTileName = false,
 
@@ -148,4 +124,34 @@ return {
 
 	-- Fix gradient issue in ExpandableTextArea in color update
 	enableExpandableTextAreaGradientFix = false,
+
+	-- Fix incorrect padding in ItemTile overlay icons, switch to use design tokens
+	itemTileOverlayPaddingUseTokens = false,
+
+	-- Fix incorrect disabling of LaserPointer in PointerOverlay
+	fixLaserPointerDisable = false,
+
+	-- Enable the update of AppNav components
+	enableAppNavUpdate = false,
+
+	-- Enable Panel managed anchoring for Panel3D
+	enablePanelManagedAnchoring = false,
+
+	-- Fix press state for modal bottom sheet
+	fixModalBottomSheetPressState = false,
+
+	-- Fix padding on GenericButton Hover background with standard sizes
+	fixGenericButtonHoverBackgroundPadding = false,
+
+	-- Enable custom hover image support
+	enableGenericButtonHoverImage = false,
+
+	-- Disable the default icon used in ExperienceActionRow
+	disableExperienceActionRowDefaultIcon = false,
+
+	-- Enable ComboButton support in ActionBar
+	enableComboButtonInActionBar = false,
+
+	-- Pass TextXAlignment property to ImageTextLabel
+	imageTextLabelTextXAlignment = false,
 }

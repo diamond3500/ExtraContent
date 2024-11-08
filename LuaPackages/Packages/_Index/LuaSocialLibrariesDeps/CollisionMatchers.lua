@@ -3,6 +3,6 @@
 ]]
 local PackageIndex = script.Parent.Parent.Parent._Index
 
-local Package = require(PackageIndex["2D-Collision-Matchers"]["2D-Collision-Matchers"])
+local Package = require(PackageIndex["CollisionMatchers2D"]["CollisionMatchers2D"])
 
 return Package

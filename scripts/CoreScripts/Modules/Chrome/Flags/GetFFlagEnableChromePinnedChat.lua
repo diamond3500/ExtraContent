@@ -1,9 +1,10 @@
 --!nonstrict
+local Chrome = script:FindFirstAncestor("Chrome")
 
 local Players = game:GetService("Players")
 
-local IsExperienceMenuABTestEnabled = require(script.Parent.Parent.Parent.IsExperienceMenuABTestEnabled)
-local ExperienceMenuABTestManager = require(script.Parent.Parent.Parent.ExperienceMenuABTestManager)
+local IsExperienceMenuABTestEnabled = require(Chrome.Parent.IsExperienceMenuABTestEnabled)
+local ExperienceMenuABTestManager = require(Chrome.Parent.ExperienceMenuABTestManager)
 
 game:DefineFastFlag("EnableChromePinnedChat", false)
 game:DefineFastString("EnableChromePinnedChatForcedUserIds", "")

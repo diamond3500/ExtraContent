@@ -1,3 +1,5 @@
+local Chrome = script:FindFirstAncestor("Chrome")
+
 local CorePackages = game:GetService("CorePackages")
 local CoreGui = game:GetService("CoreGui")
 local RobloxGui = CoreGui:WaitForChild("RobloxGui")
@@ -10,17 +12,17 @@ local VoiceIndicator = require(RobloxGui.Modules.VoiceChat.Components.VoiceIndic
 local VoiceAnalytics = require(RobloxGui.Modules.Settings.Analytics.VoiceAnalytics)
 local GetFFlagEnableVoiceMuteAnalytics = require(RobloxGui.Modules.Flags.GetFFlagEnableVoiceMuteAnalytics)
 
-local GetFFlagEnableChromeFTUX = require(script.Parent.Parent.Flags.GetFFlagEnableChromeFTUX)
-local GetFFlagFixMicSelection = require(script.Parent.Parent.Flags.GetFFlagFixMicSelection)
-local GetFFlagTweakedMicPinning = require(script.Parent.Parent.Flags.GetFFlagTweakedMicPinning)
+local GetFFlagEnableChromeFTUX = require(Chrome.Flags.GetFFlagEnableChromeFTUX)
+local GetFFlagFixMicSelection = require(Chrome.Flags.GetFFlagFixMicSelection)
+local GetFFlagTweakedMicPinning = require(Chrome.Flags.GetFFlagTweakedMicPinning)
 local AudioFocusManagementEnabled = game:GetEngineFeature("AudioFocusManagement")
 local FFlagEnableChromeAudioFocusManagement = game:DefineFastFlag("EnableChromeAudioFocusManagement", false)
 local EnableChromeAudioFocusManagement = AudioFocusManagementEnabled and FFlagEnableChromeAudioFocusManagement
 
-local ChromeService = require(script.Parent.Parent.Service)
-local RedVoiceDot = require(script.Parent.RedVoiceDot)
+local ChromeService = require(Chrome.Service)
+local RedVoiceDot = require(Chrome.Integrations.RedVoiceDot)
 
-local Constants = require(script.Parent.Parent.Unibar.Constants)
+local Constants = require(Chrome.Unibar.Constants)
 local ICON_SIZE = UDim2.new(0, Constants.ICON_SIZE, 0, Constants.ICON_SIZE)
 
 local Analytics = require(RobloxGui.Modules.SelfView.Analytics).new()

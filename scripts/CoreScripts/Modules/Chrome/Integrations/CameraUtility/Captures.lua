@@ -1,13 +1,15 @@
+local Chrome = script:FindFirstAncestor("Chrome")
+
 local CoreGui = game:GetService("CoreGui")
 local CorePackages = game:GetService("CorePackages")
 local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 
-local ChromeService = require(script.Parent.Parent.Parent.Service)
-local CommonIcon = require(script.Parent.Parent.CommonIcon)
+local ChromeService = require(Chrome.Service)
+local CommonIcon = require(Chrome.Integrations.CommonIcon)
 local SignalLib = require(CorePackages.Workspace.Packages.AppCommonLib)
 local Signal = SignalLib.Signal
 
-local ChromeUtils = require(script.Parent.Parent.Parent.Service.ChromeUtils)
+local ChromeUtils = require(Chrome.Service.ChromeUtils)
 local MappedSignal = ChromeUtils.MappedSignal
 
 local GetFFlagEnableScreenshotUtility =

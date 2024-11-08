@@ -7,17 +7,21 @@ local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 local CharacterUtility = require(CorePackages.Thumbnailing).CharacterUtility
 local CFrameUtility = require(CorePackages.Thumbnailing).CFrameUtility
 
+local EngineFeatureAnimatorAndADFRefactorInternal = game:GetEngineFeature("AnimatorAndADFRefactorInternal")
+
 local newTrackerStreamAnimation: TrackerStreamAnimation? = nil
 local cloneStreamTrack: AnimationStreamTrack? = nil
 
 local FFlagSelfViewLookUpHumanoidByType = game:DefineFastFlag("SelfViewLookUpHumanoidByType", false)
 local FFlagDebugSelfViewPerfBenchmark = game:DefineFastFlag("DebugSelfViewPerfBenchmark", false)
+local GetFFlagSelfieViewMoreFixMigration = require(RobloxGui.Modules.Flags.GetFFlagSelfieViewMoreFixMigration)
 
 local SelfieViewModule = script.Parent.Parent.Parent.SelfieView
 local GetFFlagSelfieViewDontWaitForCharacter = require(SelfieViewModule.Flags.GetFFlagSelfieViewDontWaitForCharacter)
 local GetFFlagSelfViewAssertFix = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagSelfViewAssertFix
 local GetFFlagSelfViewVisibilityFix = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagSelfViewVisibilityFix
 local GetFFlagSelfieViewV4 = require(RobloxGui.Modules.Flags.GetFFlagSelfieViewV4)
+local FFlagFixSelfieViewErrorLoop = game:DefineFastFlag("FixSelfieViewErrorLoop", false)
 
 local RunService = game:GetService("RunService")
 
@@ -245,8 +249,10 @@ local function updateClone(player: Player?)
 	end
 	assert(clone ~= nil)
 
-	--remove tags in Self View clone of avatar as it may otherwise cause gameplay issues
-	ModelUtils.removeTags(clone)
+	if not GetFFlagSelfieViewMoreFixMigration() then
+		--remove tags in Self View clone of avatar as it may otherwise cause gameplay issues
+		ModelUtils.removeTags(clone)
+	end
 
 	--resetting the joints orientations in the clone since it can happen that body/head IK like code was applied on the player avatar
 	--and we want to start with default pose setup in clone, else issues with clone avatar (parts) orientation etc
@@ -256,6 +262,11 @@ local function updateClone(player: Player?)
 	--we still want to show the self view avatar's head in that case (also because sometimes exiting vehicles would not cause a refresh of the self view and the head would stay transparent then)
 	--but we also want to respect it if the head was transparent to begin with on first usage like for a headless head look
 	ModelUtils.updateTransparency(clone, partsOrgTransparency)
+
+	if GetFFlagSelfieViewMoreFixMigration() then
+		--remove tags in Self View clone of avatar as it may otherwise cause gameplay issues
+		ModelUtils.removeTags(clone)
+	end
 
 	clone.Name = cloneCharacterName
 
@@ -285,43 +296,47 @@ local function updateClone(player: Player?)
 			--and hence is then too small for some heads (like Piggy)
 
 			local head = ModelUtils.getHead(clone)
-			assert(head ~= nil)
+			if not GetFFlagSelfieViewMoreFixMigration() or head then
+				assert(head ~= nil)
 
-			local headTargetCFrame = CFrameUtility.CalculateTargetCFrame(head.CFrame)
-			local minHeadExtent, maxHeadExtent = CharacterUtility.CalculateHeadExtents(clone, headTargetCFrame)
-			local oMin, oMax =
-				Vector3.new(minHeadExtent.X, minHeadExtent.Y, minHeadExtent.Z),
-				Vector3.new(maxHeadExtent.X, maxHeadExtent.Y, maxHeadExtent.Z)
-			boundsSize = (oMax - oMin)
+				local headTargetCFrame = CFrameUtility.CalculateTargetCFrame(head.CFrame)
+				local minHeadExtent, maxHeadExtent = CharacterUtility.CalculateHeadExtents(clone, headTargetCFrame)
+				local oMin, oMax =
+					Vector3.new(minHeadExtent.X, minHeadExtent.Y, minHeadExtent.Z),
+					Vector3.new(maxHeadExtent.X, maxHeadExtent.Y, maxHeadExtent.Z)
+				boundsSize = (oMax - oMin)
 
-			assert(boundsSize ~= nil)
+				assert(boundsSize ~= nil)
 
-			headHeight = head.Size.Y
-			local width = math.min(boundsSize.X, boundsSize.Y)
-			width = math.min(boundsSize.X, boundsSize.Z)
+				headHeight = head.Size.Y
+				local width = math.min(boundsSize.X, boundsSize.Y)
+				width = math.min(boundsSize.X, boundsSize.Z)
 
-			local dummyModel = Instance.new("Model")
-			dummyModel.Parent = clone
-			head = ModelUtils.getHead(clone)
-			character.Archivable = true
-			headClone = head:Clone()
+				local dummyModel = Instance.new("Model")
+				dummyModel.Parent = clone
+				head = ModelUtils.getHead(clone)
+				character.Archivable = true
+				headClone = head:Clone()
 
-			assert(headClone ~= nil)
-			headClone.CanCollide = false
-			headClone.Parent = dummyModel
+				assert(headClone ~= nil)
+				headClone.CanCollide = false
+				headClone.Parent = dummyModel
 
-			headCloneNeck = ModelUtils.getNeck(clone, headClone)
-			local rootPart = headClone
-			headCloneRootFrame = rootPart.CFrame
-			headClone:Destroy()
-			assert(headCloneRootFrame ~= nil)
+				headCloneNeck = ModelUtils.getNeck(clone, headClone)
+				local rootPart = headClone
+				headCloneRootFrame = rootPart.CFrame
+				headClone:Destroy()
+				assert(headCloneRootFrame ~= nil)
 
-			local center = headCloneRootFrame.Position + headCloneRootFrame.LookVector * (width * DEFAULT_CAM_DISTANCE)
-			viewportCamera.CFrame = CFrame.lookAt(center + DEFAULT_SELF_VIEW_CAM_OFFSET, headCloneRootFrame.Position)
-			viewportCamera.Focus = headCloneRootFrame
+				local center = headCloneRootFrame.Position
+					+ headCloneRootFrame.LookVector * (width * DEFAULT_CAM_DISTANCE)
+				viewportCamera.CFrame =
+					CFrame.lookAt(center + DEFAULT_SELF_VIEW_CAM_OFFSET, headCloneRootFrame.Position)
+				viewportCamera.Focus = headCloneRootFrame
 
-			character.Archivable = previousArchivableValue
-			dummyModel:Destroy()
+				character.Archivable = previousArchivableValue
+				dummyModel:Destroy()
+			end
 		else
 			--when no head was found which is a Part or MeshPart:
 			--basic fallback to focus the avatar in the viewportframe
@@ -352,40 +367,46 @@ local function updateClone(player: Player?)
 
 	--prep sync streaming tracks
 	if cloneAnimator then
-		-- clear cloned tracks
-		local clonedTracks = cloneAnimator:GetPlayingAnimationTracks()
-		local coreScriptTracks = cloneAnimator:GetPlayingAnimationTracksCoreScript()
+		if not GetFFlagSelfieViewMoreFixMigration() or not EngineFeatureAnimatorAndADFRefactorInternal then
+			-- clear cloned tracks
+			local clonedTracks = cloneAnimator:GetPlayingAnimationTracks()
+			local coreScriptTracks = cloneAnimator:GetPlayingAnimationTracksCoreScript()
 
-		for _, track in ipairs(clonedTracks) do
-			if track ~= nil then
-				track:Stop(0)
-				track:Destroy()
+			for _, track in ipairs(clonedTracks) do
+				if track ~= nil then
+					track:Stop(0)
+					track:Destroy()
+				end
 			end
-		end
 
-		for _, track in ipairs(coreScriptTracks) do
-			if track ~= nil then
-				track:Stop(0)
-				track:Destroy()
+			for _, track in ipairs(coreScriptTracks) do
+				if track ~= nil then
+					track:Stop(0)
+					track:Destroy()
+				end
 			end
-		end
 
-		if newTrackerStreamAnimation then
-			newTrackerStreamAnimation:Destroy()
-			newTrackerStreamAnimation = nil
+			if newTrackerStreamAnimation then
+				newTrackerStreamAnimation:Destroy()
+				newTrackerStreamAnimation = nil
+			end
 		end
 
 		if animator then
-			-- clone tracks manually
-			for _, track: AnimationTrack in ipairs(animator:GetPlayingAnimationTracksCoreScript()) do
-				syncTrack(cloneAnimator, track)
-			end
-
-			observerInstances[Observer.AnimationPlayedCoreScript] = animator.AnimationPlayedCoreScript:Connect(
-				function(track)
+			if GetFFlagSelfieViewMoreFixMigration() and EngineFeatureAnimatorAndADFRefactorInternal then
+				cloneAnimator:SynchronizeWith(animator)
+			else
+				-- clone tracks manually
+				for _, track: AnimationTrack in ipairs(animator:GetPlayingAnimationTracksCoreScript()) do
 					syncTrack(cloneAnimator, track)
 				end
-			)
+
+				observerInstances[Observer.AnimationPlayedCoreScript] = animator.AnimationPlayedCoreScript:Connect(
+					function(track)
+						syncTrack(cloneAnimator, track)
+					end
+				)
+			end
 
 			--usable clone was set up, cancel potential additional refresh
 			setCloneDirty(false)
@@ -446,6 +467,11 @@ local function addHumanoidStateChangedObserver(humanoid: any)
 end
 
 local function characterAdded(character)
+	if FFlagFixSelfieViewErrorLoop then
+		if viewportFrame == nil or wrapperFrame == nil then
+			return
+		end
+	end
 	if GetFFlagSelfieViewDontWaitForCharacter() then
 		if not character then
 			return
@@ -474,6 +500,11 @@ local function characterAdded(character)
 
 	-- listen for updates on the original character's structure
 	observerInstances[Observer.DescendantAdded] = character.DescendantAdded:Connect(function(descendant)
+		if FFlagFixSelfieViewErrorLoop then
+			if viewportFrame == nil or wrapperFrame == nil then
+				return
+			end
+		end
 		if descendant.Name == "Head" then
 			headRef = ModelUtils.getHead(character)
 
@@ -497,6 +528,11 @@ local function characterAdded(character)
 		end
 	end)
 	observerInstances[Observer.DescendantRemoving] = character.DescendantRemoving:Connect(function(descendant)
+		if FFlagFixSelfieViewErrorLoop then
+			if viewportFrame == nil or wrapperFrame == nil then
+				return
+			end
+		end
 		--these checks are to avoid unnecessary additional refreshes
 		if descendant and (descendant:IsA("MeshPart") or descendant:IsA("Accessory")) then
 			if descendant:IsA("MeshPart") then
@@ -536,6 +572,10 @@ local function createViewport(): ()
 	uiCorner.Parent = viewportFrame
 
 	createCloneAnchor()
+
+	if GetFFlagSelfieViewMoreFixMigration() and wrapperFrame then
+		wrapperFrame.Destroying:Connect(clearViewportFrame)
+	end
 
 	viewportCamera = Instance.new("Camera")
 	assert(viewportCamera ~= nil)
@@ -607,9 +647,13 @@ local function FindInParents(name: string?): Instance?
 	return wrapperFrame:FindFirstAncestor(name)
 end
 
-function _clearViewportFrame()
+function clearViewportFrame()
 	if viewportFrame then
 		viewportFrame:Destroy()
+	end
+	if GetFFlagSelfieViewMoreFixMigration() then
+		wrapperFrame = nil
+		stopRenderStepped()
 	end
 end
 

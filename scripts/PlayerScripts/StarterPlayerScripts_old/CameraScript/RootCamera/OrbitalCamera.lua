@@ -103,7 +103,7 @@ end
 local function LoadOrCreateNumberValueParameter(name, valueType, updateFunction)
 	local valueObj = script:FindFirstChild(name)
 
-	if valueObj and valueObj:isA(valueType) then
+	if valueObj and valueObj:IsA(valueType) then
 		-- Value object exists and is the correct type, use its value
 		externalProperties[name] = valueObj.Value
 	elseif externalProperties[name] ~= nil then

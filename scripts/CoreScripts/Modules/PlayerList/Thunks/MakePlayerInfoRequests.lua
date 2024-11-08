@@ -46,19 +46,28 @@ local function dispatchIfPlayerExists(store, player, action)
 	end
 end
 
+local function isInExperienceNameEnabled(player)
+	if FFlagInExperienceUserProfileSettingsEnabled then
+		if PlayerPermissionsModule.IsPlayerInExperienceNameEnabledAsync(player) then
+			return true
+		end
+	end
+	return false
+end
+
 local function getGroupsPermissionsInfo(store, player)
 	if PlayerPermissionsModule.IsPlayerAdminAsync(player) then
-		dispatchIfPlayerExists(store, player, SetPlayerSpecialGroupIcon(player, SPECIAL_PLAYER_ICONS.Admin))
+		if not isInExperienceNameEnabled(player) then
+			dispatchIfPlayerExists(store, player, SetPlayerSpecialGroupIcon(player, SPECIAL_PLAYER_ICONS.Admin))
+		end
 	elseif PlayerPermissionsModule.IsPlayerStarAsync(player) then
-		if FFlagInExperienceUserProfileSettingsEnabled then
-			if not PlayerPermissionsModule.IsPlayerInExperienceNameEnabledAsync(player) then
-				dispatchIfPlayerExists(store, player, SetPlayerSpecialGroupIcon(player, SPECIAL_PLAYER_ICONS.Star))
-			end
-		else
+		if not isInExperienceNameEnabled(player) then
 			dispatchIfPlayerExists(store, player, SetPlayerSpecialGroupIcon(player, SPECIAL_PLAYER_ICONS.Star))
 		end
 	elseif PlayerPermissionsModule.IsPlayerInternAsync(player) then
-		dispatchIfPlayerExists(store, player, SetPlayerSpecialGroupIcon(player, SPECIAL_PLAYER_ICONS.Intern))
+		if not isInExperienceNameEnabled(player) then
+			dispatchIfPlayerExists(store, player, SetPlayerSpecialGroupIcon(player, SPECIAL_PLAYER_ICONS.Intern))
+		end
 	end
 end
 
@@ -68,7 +77,9 @@ local function getGameCreator(store, player)
 	end
 
 	if PlayerPermissionsModule.CanPlayerManagePlaceAsync(player) then
-		dispatchIfPlayerExists(store, player, SetPlayerIsCreator(player, true))
+		if not isInExperienceNameEnabled(player) then
+			dispatchIfPlayerExists(store, player, SetPlayerIsCreator(player, true))
+		end
 	end
 end
 

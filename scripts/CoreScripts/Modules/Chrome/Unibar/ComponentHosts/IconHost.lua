@@ -1,3 +1,5 @@
+local Chrome = script:FindFirstAncestor("Chrome")
+
 local CorePackages = game:GetService("CorePackages")
 local CoreGui = game:GetService("CoreGui")
 local UserInputService = game:GetService("UserInputService")
@@ -12,7 +14,6 @@ local withTooltip = UIBlox.App.Dialog.TooltipV2.withTooltip
 local useSelectionCursor = UIBlox.App.SelectionImage.useSelectionCursor
 local CursorKind = UIBlox.App.SelectionImage.CursorKind
 
-local Chrome = script.Parent.Parent.Parent
 local Constants = require(Chrome.Unibar.Constants)
 
 local ChromeService = require(Chrome.Service)
@@ -30,7 +31,7 @@ local useTimeHysteresis = require(Chrome.Hooks.useTimeHysteresis)
 
 local shouldRejectMultiTouch = require(Chrome.Utility.shouldRejectMultiTouch)
 
-local GetFFlagTooltipUseZIndex = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagTooltipUseZIndex
+local GetFFlagFixUnibarVirtualCursor = require(Chrome.Parent.Flags.GetFFlagFixUnibarVirtualCursor)
 local FFlagEnableUnibarFtuxTooltips = require(Chrome.Parent.Flags.FFlagEnableUnibarFtuxTooltips)
 
 local BADGE_OFFSET_X = 20
@@ -193,9 +194,16 @@ function TooltipButton(props: TooltipButtonProps)
 	-- this is reset on the next hover
 	local clickLatched, setClicked = useTimeHysteresis(0, 1.0)
 	local hoverHandler = React.useCallback(function(oldState, newState)
-		if newState == ControlState.Selected and oldState == ControlState.Default then
+		if
+			GetFFlagFixUnibarVirtualCursor()
+			and newState == ControlState.Selected
+			and (oldState == ControlState.Default or oldState == ControlState.Hover)
+		then
+			ChromeService:setSelected(props.integration.id)
+		elseif newState == ControlState.Selected and oldState == ControlState.Default then
 			ChromeService:setSelected(props.integration.id)
 		end
+
 		local active = newState ~= ControlState.Default
 		props.setHovered(active)
 		local hovered = newState == ControlState.Hover
@@ -297,7 +305,6 @@ function TooltipButton(props: TooltipButtonProps)
 					then Enum.SelectionBehavior.Escape
 					else Enum.SelectionBehavior.Stop
 			end),
-			ZIndex = if GetFFlagTooltipUseZIndex() then 0 else nil,
 
 			[React.Change.AbsolutePosition] = triggerPointChanged,
 			[React.Change.AbsoluteSize] = triggerPointChanged,

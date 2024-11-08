@@ -1,7 +1,9 @@
+local Chrome = script:FindFirstAncestor("Chrome")
+
 game:DefineFastFlag("DisableSelfViewDefaultOpen", false)
 
-local IsExperienceMenuABTestEnabled = require(script.Parent.Parent.Parent.IsExperienceMenuABTestEnabled)
-local ExperienceMenuABTestManager = require(script.Parent.Parent.Parent.ExperienceMenuABTestManager)
+local IsExperienceMenuABTestEnabled = require(Chrome.Parent.IsExperienceMenuABTestEnabled)
+local ExperienceMenuABTestManager = require(Chrome.Parent.ExperienceMenuABTestManager)
 
 return function()
 	if IsExperienceMenuABTestEnabled() and ExperienceMenuABTestManager.default:shouldCloseSelfViewAtStartup() then

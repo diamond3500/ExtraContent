@@ -3,6 +3,9 @@ local HttpService = game:GetService("HttpService")
 local HttpRbxApiService = game:GetService("HttpRbxApiService")
 local StarterGui = game:GetService("StarterGui")
 local Players = game:GetService("Players")
+local CoreGui = game:GetService("CoreGui")
+local RobloxGui = CoreGui:WaitForChild("RobloxGui")
+local FFlagRemoveHardCodedFriendLimitPrompt = require(RobloxGui.Modules.Flags.FFlagRemoveHardCodedFriendLimitPrompt)
 
 local LocalPlayer = Players.LocalPlayer
 while not LocalPlayer do
@@ -20,6 +23,7 @@ BaseUrl = string.gsub(BaseUrl, "http:", "https:")
 local FriendCountUrl = string.gsub(BaseUrl, "www", "friends") .. "v1/users/{userId}/friends/count"
 
 function FriendingUtility:GetFriendCountAsync(userId)
+	assert(not FFlagRemoveHardCodedFriendLimitPrompt, "Should not call GetFriendCountAsync when FFlagRemoveHardCodedFriendLimitPrompt is enabled")
 	local friendCount = nil
 
 	local wasSuccess, result = pcall(function()
@@ -41,6 +45,7 @@ function FriendingUtility:GetFriendCountAsync(userId)
 end
 
 function FriendingUtility:MaxFriendCount()
+	assert(not FFlagRemoveHardCodedFriendLimitPrompt, "Should not call MaxFriendCount when FFlagRemoveHardCodedFriendLimitPrompt is enabled")
 	return MAX_FRIEND_COUNT
 end
 

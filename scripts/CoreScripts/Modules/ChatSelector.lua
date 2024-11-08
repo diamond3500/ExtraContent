@@ -8,6 +8,7 @@
 local FORCE_IS_CONSOLE = false
 
 local CoreGuiService = game:GetService("CoreGui")
+local CorePackages = game:GetService("CorePackages")
 local RobloxGui = CoreGuiService:WaitForChild("RobloxGui")
 local Modules = RobloxGui:WaitForChild("Modules")
 
@@ -23,6 +24,9 @@ local ClassicChatEnabled = Players.ClassicChat
 local BubbleChatEnabled = Players.BubbleChat
 
 local VRService = game:GetService("VRService")
+
+local SharedFlags = require(CorePackages.Workspace.Packages.SharedFlags)
+local GetFFlagReenableTextChatForTenFootInterfaces = SharedFlags.GetFFlagReenableTextChatForTenFootInterfaces
 
 local useModule = nil
 
@@ -152,7 +156,7 @@ end
 
 local isConsole = GuiService:IsTenFootInterface() or FORCE_IS_CONSOLE
 
-if (not isConsole) then
+if GetFFlagReenableTextChatForTenFootInterfaces() or (not isConsole) then
 	coroutine.wrap(function()
 		useModule = require(RobloxGui.Modules.NewChat)
 

@@ -4,6 +4,8 @@ calculateBounds:
 	Uses the given minMaxBounds to determine the minMaxBounds after adding a new part (including its attachments)
 traverseHierarchy:
 	actually traverses through the hierarchy of each subpart of an asset type (or the full body if given) in order to determine the bounds
+getAssetRigChild:
+	get the name of a part's child part in the asset hierarchy (returns nil if the part is the last part in the hierarchy)
 assetHierarchy:
 	defines the hierarchy of assets from top to bottom for each Asset Enum Type i.e. Left Arm == LeftUpperArm -> LeftLowerArm -> LeftHand
 ]]
@@ -13,6 +15,7 @@ local Types = require(root.util.Types)
 local calculateMinMax = require(root.util.calculateMinMax)
 local getExpectedPartSize = require(root.util.getExpectedPartSize)
 local ConstantsInterface = require(root.ConstantsInterface)
+local getPartNamesInHierarchyOrder = require(root.util.getPartNamesInHierarchyOrder)
 
 local getEngineFeatureUGCValidateEditableMeshAndImage =
 	require(root.flags.getEngineFeatureUGCValidateEditableMeshAndImage)
@@ -150,6 +153,30 @@ function AssetTraversalUtils.traverseHierarchy(
 			)
 		end
 	end
+end
+
+local rigParentToChild = nil
+local function initRigParentToChild()
+	if rigParentToChild then
+		return
+	end
+	rigParentToChild = {}
+	for _, assetType in
+		{ Enum.AssetType.LeftArm, Enum.AssetType.RightArm, Enum.AssetType.LeftLeg, Enum.AssetType.RightLeg }
+	do
+		local partNames = getPartNamesInHierarchyOrder(assetType)
+		rigParentToChild[assetType] = {}
+		for i = 1, #partNames - 1 do -- no entry for the last part that has no child in the rig
+			rigParentToChild[assetType][partNames[i]] = partNames[i + 1]
+		end
+	end
+end
+
+function AssetTraversalUtils.getAssetRigChild(assetType: Enum.AssetType, partName: string): string?
+	initRigParentToChild()
+
+	local info = assert(rigParentToChild[assetType], "Invalid asset type")
+	return info[partName] -- will be nil for the last part in the rig asset hierarchy
 end
 
 AssetTraversalUtils.assetHierarchy = {

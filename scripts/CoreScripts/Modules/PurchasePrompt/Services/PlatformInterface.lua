@@ -14,6 +14,8 @@ end)
 
 local GetFStringVNGWebshopUrl =
 	require(CorePackages.Workspace.Packages.SharedFlags).GetFStringVNGWebshopUrl
+local FFlagEnablePreSignedVngShopRedirectUrl =
+	require(CorePackages.Workspace.Packages.SharedFlags).FFlagEnablePreSignedVngShopRedirectUrl
 
 local PurchasePromptDeps = require(CorePackages.PurchasePromptDeps)
 local UrlBuilder = PurchasePromptDeps.UrlBuilder.UrlBuilder
@@ -84,8 +86,15 @@ function PlatformInterface.new()
 		return PlatformService:BeginPlatformStorePurchase(xboxProductId)
 	end
 
-	function service.openVngStore()
-		GuiService:OpenBrowserWindow(GetFStringVNGWebshopUrl())
+	function service.openVngStore(vngShopRedirectUrl: string)
+		if FFlagEnablePreSignedVngShopRedirectUrl then
+			if not vngShopRedirectUrl or vngShopRedirectUrl == "" then 
+				vngShopRedirectUrl = GetFStringVNGWebshopUrl() 
+			end
+			GuiService:OpenBrowserWindow(vngShopRedirectUrl)
+		else
+			GuiService:OpenBrowserWindow(GetFStringVNGWebshopUrl())
+		end
 	end
 
 	return service

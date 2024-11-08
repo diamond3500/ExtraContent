@@ -1,17 +1,21 @@
+local Chrome = script:FindFirstAncestor("Chrome")
+
 local CoreGui = game:GetService("CoreGui")
 local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 local CorePackages = game:GetService("CorePackages")
 
 local VoiceChatServiceManager = require(RobloxGui.Modules.VoiceChat.VoiceChatServiceManager).default
 local VoiceConstants = require(RobloxGui.Modules.VoiceChat.Constants)
-local CommonIcon = require(script.Parent.CommonIcon)
+local CommonIcon = require(Chrome.Integrations.CommonIcon)
 local VOICE_JOIN_PROGRESS = VoiceConstants.VOICE_JOIN_PROGRESS
 local VoiceChatPromptType = require(RobloxGui.Modules.VoiceChatPrompt.PromptType)
-local GetFFlagEnableJoinVoiceOnUnibar = require(script.Parent.Parent.Flags.GetFFlagEnableJoinVoiceOnUnibar)
+local GetFFlagEnableJoinVoiceOnUnibar = require(Chrome.Flags.GetFFlagEnableJoinVoiceOnUnibar)
+local GetFFlagEnableConnectDisconnectInSettingsAndChrome =
+	require(RobloxGui.Modules.Flags.GetFFlagEnableConnectDisconnectInSettingsAndChrome)
 local GetFFlagIntegratePhoneUpsellJoinVoice =
 	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagIntegratePhoneUpsellJoinVoice
 
-local ChromeService = require(script.Parent.Parent.Service)
+local ChromeService = require(Chrome.Service)
 
 local joinVoice
 joinVoice = ChromeService:register({
@@ -60,6 +64,16 @@ if GetFFlagEnableJoinVoiceOnUnibar() and game:GetEngineFeature("VoiceChatSupport
 			-- Pin if we're already in suspended state
 			joinVoice.availability:available()
 		end
+		VoiceChatServiceManager.VoiceJoinProgressChanged.Event:Connect(HideOrShowJoinVoiceButton)
+	end
+	if GetFFlagEnableConnectDisconnectInSettingsAndChrome() then
+		VoiceChatServiceManager.showVoiceUI.Event:Connect(function()
+			joinVoice.availability:unavailable()
+		end)
+		VoiceChatServiceManager.hideVoiceUI.Event:Connect(function()
+			joinVoice.availability:available()
+		end)
+	else
 		VoiceChatServiceManager.VoiceJoinProgressChanged.Event:Connect(HideOrShowJoinVoiceButton)
 	end
 end

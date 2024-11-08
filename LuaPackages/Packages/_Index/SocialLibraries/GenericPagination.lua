@@ -3,6 +3,6 @@
 ]]
 local PackageIndex = script.Parent.Parent.Parent._Index
 
-local Package = require(PackageIndex["roblox_genericpagination"]["genericpagination"])
+local Package = require(PackageIndex["GenericPagination"]["GenericPagination"])
 
 return Package

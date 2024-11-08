@@ -1,3 +1,5 @@
+local Chrome = script:FindFirstAncestor("Chrome")
+
 local CorePackages = game:GetService("CorePackages")
 local GuiService = game:GetService("GuiService")
 local ContextActionService = game:GetService("ContextActionService")
@@ -5,16 +7,15 @@ local React = require(CorePackages.Packages.React)
 
 local UIBlox = require(CorePackages.UIBlox)
 local useStyle = UIBlox.Core.Style.useStyle
-local Chrome = script.Parent.Parent
 local ChromeService = require(Chrome.Service)
 local ChromeUtils = require(Chrome.Service.ChromeUtils)
 local ChromeAnalytics = require(Chrome.Analytics.ChromeAnalytics)
 
 local _integrations = require(Chrome.Integrations)
-local SubMenu = require(script.Parent.SubMenu)
-local WindowManager = require(script.Parent.WindowManager)
-local Constants = require(script.Parent.Constants)
-local HealthBar = require(script.Parent.HealthBar)
+local SubMenu = require(Chrome.Unibar.SubMenu)
+local WindowManager = require(Chrome.Unibar.WindowManager)
+local Constants = require(Chrome.Unibar.Constants)
+local HealthBar = require(Chrome.Unibar.HealthBar)
 
 local useChromeMenuItems = require(Chrome.Hooks.useChromeMenuItems)
 local useChromeMenuStatus = require(Chrome.Hooks.useChromeMenuStatus)
@@ -25,8 +26,8 @@ local CoreGui = game:GetService("CoreGui")
 local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 local PlayerListInitialVisibleState = require(RobloxGui.Modules.PlayerList.PlayerListInitialVisibleState)
 
-local IconHost = require(script.Parent.ComponentHosts.IconHost)
-local ContainerHost = require(script.Parent.ComponentHosts.ContainerHost)
+local IconHost = require(Chrome.Unibar.ComponentHosts.IconHost)
+local ContainerHost = require(Chrome.Unibar.ComponentHosts.ContainerHost)
 
 local ReactOtter = require(CorePackages.Packages.ReactOtter)
 
@@ -41,8 +42,8 @@ local GetFFlagEnableChromePinIntegrations = require(Chrome.Flags.GetFFlagEnableC
 local GetFFlagOpenControlsOnMenuOpen = require(Chrome.Flags.GetFFlagOpenControlsOnMenuOpen)
 local GetFFlagEnableSubmenuTruncationFix = require(Chrome.Flags.GetFFlagEnableSubmenuTruncationFix)
 local GetFFlagSupportCompactUtility = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagSupportCompactUtility
-local GetFFlagEnablePartyIconInChrome =
-	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagEnablePartyIconInChrome
+local GetFFlagEnablePartyMicIconInChrome =
+	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagEnablePartyMicIconInChrome
 local GetFFlagUsePolishedAnimations = require(Chrome.Flags.GetFFlagUsePolishedAnimations)
 local GetFFlagEnableScreenshotUtility =
 	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagEnableScreenshotUtility
@@ -50,21 +51,18 @@ local GetFFlagAnimateSubMenu = require(Chrome.Flags.GetFFlagAnimateSubMenu)
 local GetFIntIconSelectionTimeout = require(Chrome.Flags.GetFIntIconSelectionTimeout)
 local GetFFlagEnableCapturesInChrome = require(Chrome.Flags.GetFFlagEnableCapturesInChrome)
 local GetFFlagEnableSongbirdInChrome = require(Chrome.Flags.GetFFlagEnableSongbirdInChrome)
-local GetFStringChromeMusicIntegrationId =
-	require(CorePackages.Workspace.Packages.SharedFlags).GetFStringChromeMusicIntegrationId
-local GetFFlagSupportChromeContainerSizing = require(Chrome.Flags.GetFFlagSupportChromeContainerSizing)
 local GetFFlagEnableJoinVoiceOnUnibar = require(Chrome.Flags.GetFFlagEnableJoinVoiceOnUnibar)
 local GetFFlagEnableHamburgerIcon = require(Chrome.Flags.GetFFlagEnableHamburgerIcon)
 local GetFFlagEnableAlwaysOpenUnibar = require(RobloxGui.Modules.Flags.GetFFlagEnableAlwaysOpenUnibar)
 local GetFFlagChromeUsePreferredTransparency =
 	require(CoreGui.RobloxGui.Modules.Flags.GetFFlagChromeUsePreferredTransparency)
-local GetFFlagSongbirdTranslationStrings =
-	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagSongbirdTranslationStrings
+local GetFFlagPostLaunchUnibarDesignTweaks = require(RobloxGui.Modules.Flags.GetFFlagPostLaunchUnibarDesignTweaks)
 
 local GetFFlagEnableAppChatInExperience =
 	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagEnableAppChatInExperience
 local AppChat = require(CorePackages.Workspace.Packages.AppChat)
 local InExperienceAppChatExperimentation = AppChat.App.InExperienceAppChatExperimentation
+local GetShouldShowPlatformChatBasedOnPolicy = require(Chrome.Flags.GetShouldShowPlatformChatBasedOnPolicy)
 
 local PartyConstants = require(Chrome.Integrations.Party.Constants)
 
@@ -76,9 +74,7 @@ function configureUnibar()
 	-- Integration availability signals will ultimately filter items out so no need for granular filtering here.
 	-- ie. Voice Mute integration will only be shown is voice is enabled/active
 	local nineDot = { "leaderboard", "emotes", "backpack" }
-	local partyMenu = if GetFFlagEnablePartyIconInChrome()
-		then { PartyConstants.TOGGLE_MIC_INTEGRATION_ID, PartyConstants.INTEGRATION_ID }
-		else {}
+	local partyMenu = if GetFFlagEnablePartyMicIconInChrome() then { PartyConstants.TOGGLE_MIC_INTEGRATION_ID } else {}
 	if GetFFlagUnibarRespawn() then
 		-- append to end of nine-dot
 		table.insert(nineDot, "respawn")
@@ -89,6 +85,7 @@ function configureUnibar()
 	if
 		GetFFlagEnableAppChatInExperience()
 		and InExperienceAppChatExperimentation.default.variant.ShowPlatformChatChromeDropdownEntryPoint
+		and GetShouldShowPlatformChatBasedOnPolicy()
 	then
 		table.insert(nineDot, 1, "connect")
 	end
@@ -130,15 +127,14 @@ function configureUnibar()
 		if GetFFlagDebugEnableUnibarDummyIntegrations() then
 			table.insert(v4Ordering, 1, "dummy_window")
 			table.insert(v4Ordering, 1, "dummy_window_2")
-			if GetFFlagSupportChromeContainerSizing() then
-				table.insert(v4Ordering, 1, "dummy_container")
-			end
+			table.insert(v4Ordering, 1, "dummy_container")
 		end
 
 		if
 			GetFFlagEnableAppChatInExperience()
 			and InExperienceAppChatExperimentation.default.variant.ShowPlatformChatChromeUnibarEntryPoint
 			and not InExperienceAppChatExperimentation.default.variant.ShowPlatformChatChromeDropdownEntryPoint
+			and GetShouldShowPlatformChatBasedOnPolicy()
 		then
 			-- TODO: this integration will replace logic related to `partyMenu`
 			local experienceChatIndex = table.find(v4Ordering, "chat")
@@ -152,38 +148,28 @@ function configureUnibar()
 			v4Ordering,
 		})
 	elseif GetFFlagEnableChromePinIntegrations() then
-		if GetFFlagSupportChromeContainerSizing() then
-			ChromeService:configureMenu({
-				partyMenu,
-				if GetFFlagEnableJoinVoiceOnUnibar()
-					then {
-						"selfie_view",
-						"toggle_mic_mute",
-						"join_voice",
-						"chat",
-						"dummy_window",
-						"dummy_window_2",
-						"dummy_container",
-					}
-					else {
-						"selfie_view",
-						"toggle_mic_mute",
-						"chat",
-						"dummy_window",
-						"dummy_window_2",
-						"dummy_container",
-					},
-				{ ChromeService.Key.UserPinned, ChromeService.Key.MostRecentlyUsed, "nine_dot", "chrome_toggle" },
-			})
-		else
-			ChromeService:configureMenu({
-				partyMenu,
-				if GetFFlagEnableJoinVoiceOnUnibar()
-					then { "selfie_view", "toggle_mic_mute", "join_voice", "chat", "dummy_window", "dummy_window_2" }
-					else { "selfie_view", "toggle_mic_mute", "chat", "dummy_window", "dummy_window_2" },
-				{ ChromeService.Key.UserPinned, ChromeService.Key.MostRecentlyUsed, "nine_dot", "chrome_toggle" },
-			})
-		end
+		ChromeService:configureMenu({
+			partyMenu,
+			if GetFFlagEnableJoinVoiceOnUnibar()
+				then {
+					"selfie_view",
+					"toggle_mic_mute",
+					"join_voice",
+					"chat",
+					"dummy_window",
+					"dummy_window_2",
+					"dummy_container",
+				}
+				else {
+					"selfie_view",
+					"toggle_mic_mute",
+					"chat",
+					"dummy_window",
+					"dummy_window_2",
+					"dummy_container",
+				},
+			{ ChromeService.Key.UserPinned, ChromeService.Key.MostRecentlyUsed, "nine_dot", "chrome_toggle" },
+		})
 	else
 		ChromeService:configureMenu({
 			partyMenu,
@@ -215,14 +201,11 @@ function configureUnibar()
 	end
 
 	if GetFFlagEnableSongbirdInChrome() then
-		table.insert(nineDot, "music_entrypoint")
-		-- MUS-1214 TODO: Determine placement order in menu
+		table.insert(nineDot, 4, "music_entrypoint")
 		if not GetFFlagDisableCompactUtilityCore() then
 			ChromeService:configureCompactUtility("music_utility", {
 				{
-					if GetFFlagSongbirdTranslationStrings()
-						then "now_playing"
-						else GetFStringChromeMusicIntegrationId(),
+					"now_playing",
 					"compact_utility_back",
 				},
 			})
@@ -481,7 +464,14 @@ function IconPositionBinding(
 			end
 			local openDelta = open - closedPos
 
-			return UDim2.new(0, closedPos + openDelta * val[1], 0, 0)
+			return UDim2.new(
+				0,
+				(if GetFFlagPostLaunchUnibarDesignTweaks() then Constants.UNIBAR_END_PADDING else 0)
+					+ closedPos
+					+ openDelta * val[1],
+				0,
+				0
+			)
 		end) :: any
 end
 
@@ -646,7 +636,7 @@ function Unibar(props: UnibarProp)
 				end)
 			end
 
-			if GetFFlagSupportChromeContainerSizing() and item.integration.components.Container then
+			if item.integration.components.Container then
 				local containerWidthSlots = if item.integration.containerWidthSlots
 					then item.integration.containerWidthSlots:get()
 					else 0
@@ -683,7 +673,11 @@ function Unibar(props: UnibarProp)
 	if props.onMinWidthChanged then
 		props.onMinWidthChanged(minSize)
 	end
-	expandSize = xOffset
+	if GetFFlagPostLaunchUnibarDesignTweaks() then
+		expandSize = Constants.UNIBAR_END_PADDING * 2 + xOffset
+	else
+		expandSize = xOffset
+	end
 
 	React.useEffect(function()
 		local lastUnibarWidth = unibarWidth:getValue()

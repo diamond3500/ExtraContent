@@ -75,7 +75,8 @@ Once the the next version of Foudnation is released, it will be updated in [LuaA
 
 - Create a branch for your upgrade PR for [LuaApps](https://github.com/Roblox/lua-apps) repo
 - Navigate to `content/LuaPackages` in your [LuaApps](https://github.com/Roblox/lua-apps) repo
-- Run `rotrieve upgrade --packages Foundation` to pull in the latest changes
+- Bump the version to the desired version number (e.g. 1.5.0 -> 1.6.0) in the [rotriever.toml](https://github.com/Roblox/lua-apps/blob/master/content/LuaPackages/rotriever.toml) file
+- Run `rotrieve install` to pull in the latest changes
 - Commit everything to your upgrade branch and create a PR for review
 - Squash and merge once approved
 

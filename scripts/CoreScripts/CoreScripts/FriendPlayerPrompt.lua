@@ -28,6 +28,7 @@ local FriendingUtility = require(CoreGuiModules.FriendingUtility)
 local RobloxTranslator = require(CoreGuiModules.RobloxTranslator)
 
 local LegacyThumbnailUrls = require(CoreGuiModules.Common.LegacyThumbnailUrls)
+local FFlagRemoveHardCodedFriendLimitPrompt = require(CoreGuiModules.Flags.FFlagRemoveHardCodedFriendLimitPrompt)
 
 local THUMBNAIL_SIZE = 200
 local BUST_THUMBNAIL_SIZE = 420
@@ -74,6 +75,7 @@ function SendFriendRequest(playerToFriend)
 end
 
 function AtFriendLimit(player)
+	assert(not FFlagRemoveHardCodedFriendLimitPrompt, "Should not call AtFriendLimit when FFlagRemoveHardCodedFriendLimitPrompt is enabled")
 	local friendCount = FriendingUtility:GetFriendCountAsync(player.UserId)
 	if friendCount == nil then
 		return false
@@ -94,7 +96,7 @@ function DoPromptRequestFriendPlayer(playerToFriend)
 
 	local function promptCompletedCallback(clickedConfirm)
 		if clickedConfirm then
-			if AtFriendLimit(LocalPlayer) then
+			if not FFlagRemoveHardCodedFriendLimitPrompt and AtFriendLimit(LocalPlayer) then
 				while PromptCreator:IsCurrentlyPrompting() do
 					wait()
 				end
@@ -111,7 +113,7 @@ function DoPromptRequestFriendPlayer(playerToFriend)
 					StripeColor = Color3.fromRGB(183, 34, 54),
 				})
 			else
-				if AtFriendLimit(playerToFriend) then
+				if not FFlagRemoveHardCodedFriendLimitPrompt and AtFriendLimit(playerToFriend) then
 
 					local mainText = string.format("You can not send a friend request to %s because they are at the max friend limit.",  playerToFriend.Name)
 

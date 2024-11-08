@@ -32,8 +32,15 @@ local ExperienceStateCaptureService = nil
 if game:GetEngineFeature("CaptureModeEnabled") then
 	ExperienceStateCaptureService = game:GetService("ExperienceStateCaptureService")
 end
+local GetFFlagEnableConnectDisconnectInSettingsAndChrome = require(RobloxGui.Modules.Flags.GetFFlagEnableConnectDisconnectInSettingsAndChrome)
+local locales = nil
+if GetFFlagEnableConnectDisconnectInSettingsAndChrome() then
+	local LocalizationService = game:GetService("LocalizationService")
+	local Localization = require(CorePackages.Workspace.Packages.InExperienceLocales).Localization
 
-local FFlagAvatarChatCoreScriptSupport = require(RobloxGui.Modules.Flags.FFlagAvatarChatCoreScriptSupport)
+	locales = Localization.new(LocalizationService.RobloxLocaleId)
+end
+
 local getCamMicPermissions = require(RobloxGui.Modules.Settings.getCamMicPermissions)
 local isCamEnabledForUserAndPlace = require(RobloxGui.Modules.Settings.isCamEnabledForUserAndPlace)
 
@@ -41,12 +48,19 @@ local PermissionsProtocol = require(CorePackages.Workspace.Packages.PermissionsP
 local cameraDevicePermissionGrantedSignal = require(CoreGui.RobloxGui.Modules.Settings.cameraDevicePermissionGrantedSignal)
 local getFFlagDoNotPromptCameraPermissionsOnMount = require(RobloxGui.Modules.Flags.getFFlagDoNotPromptCameraPermissionsOnMount)
 local SharedFlags = require(CorePackages.Workspace.Packages.SharedFlags)
+local FFlagAvatarChatCoreScriptSupport = SharedFlags.GetFFlagAvatarChatCoreScriptSupport()
 local GetFFlagSelfViewCameraSettings = SharedFlags.GetFFlagSelfViewCameraSettings
 local GetFFlagAlwaysShowVRToggle = require(RobloxGui.Modules.Flags.GetFFlagAlwaysShowVRToggle)
 local FFlagInExperienceSettingsRefactorAnalytics = require(RobloxGui.Modules.Flags.FFlagInExperienceSettingsRefactorAnalytics)
 local GetFFlagAddHapticsToggle = SharedFlags.GetFFlagAddHapticsToggle
 local GetFFlagEnablePreferredTextSizeSettingInMenus = SharedFlags.GetFFlagEnablePreferredTextSizeSettingInMenus
 local FFlagCameraSensitivityPadding = game:DefineFastFlag("CameraSensitivityPadding2", false)
+local GetFFlagDebounceConnectDisconnectButton = require(RobloxGui.Modules.Flags.GetFFlagDebounceConnectDisconnectButton)
+local GetFIntDebounceDisconnectButtonDelay = require(RobloxGui.Modules.Flags.GetFIntDebounceDisconnectButtonDelay)
+local FFlagInExperienceMenuReorderVariant1 = require(RobloxGui.Modules.Settings.Flags.FFlagInExperienceMenuReorderVariant1)
+local FFlagOverrideInExperienceMenuReorderVariant1 = require(RobloxGui.Modules.Settings.Flags.FFlagOverrideInExperienceMenuReorderVariant1)
+
+local GameSettingsConstants
 
 local PartyVoiceVolumeFeatureAvailable = game:GetEngineFeature("PartyVoiceVolume")
 
@@ -99,58 +113,72 @@ local CAMERA_DEVICE_SELECTOR_KEY = "CameraDeviceSelector"
 local CAMERA_DEVICE_FRAME_KEY = "CameraDeviceFrame"
 local CAMERA_DEVICE_INFO_KEY = "CameraDeviceInfo"
 
------------ LAYOUT ORDER ------------
--- Recall that layout order values are relative
-local SETTINGS_MENU_LAYOUT_ORDER = {
-	-- Overscan Entry point, console only
-	["OverscanAdjustButton"] = 1,
-	-- Movement and Camera Mode
-	["ShiftLockFrame"] = 10,
-	["CameraModeFrame"] = 11,
-	["MovementModeFrame"] = 12,
-	["GamepadSensitivityFrame"] = 13,
-	-- Experience Language
-	["LanguageSelectorFrame"] = 20,
-	-- Feedback Mode
-	["FeedbackModeButton"] = 30,
-	-- Chat Translation
-	["ChatTranslationFrame"] = 40,
-	["ChatLanguageSelectorFrame"] = 41,
-	["ChatTranslationToggleFrame"] = 42,
-	-- Camera Sensitivity
-	["MouseAdvancedFrame"] = 50,
-	-- Input/Output and Volume
-	["DeviceFrameInput"] = 60,
-	["DeviceFrameOutput"] = 61,
-	["VolumeFrame"] = 62,
-	["HapticsFrame"] = if PartyVoiceVolumeFeatureAvailable then 64 else 63,
-	-- Graphics
-	["FullScreenFrame"] = 70,
-	["GraphicsEnablerFrame"] = 71,
-	["GraphicsQualityFrame"] = 72,
-	["ReducedMotionFrame"] = 73,
-	["PreferredTransparencyFrame"] = 74,
-	["PreferredTextSizeFrame"] = 75,
-	["UiNavigationKeyBindEnabledFrame"] = 76,
-	-- Performance
-	["PerformanceStatsFrame"] = 80,
-	["MicroProfilerFrame"] = 81,
-	-- More camera
-	["CameraInvertedFrame"] = 90,
-	[CAMERA_DEVICE_FRAME_KEY] = 91,
-	-- VR, Dev Console, Special
-	["VREnabledFrame"] = 100,
-	["DeveloperConsoleButton"] = 101,
-	["UiToggleRow"] = 200,
-	["UiToggleRowCustom"] = 200, -- Replaces "UiToggleRow" when FFlagUserShowGuiHideToggles == true
-	["UiToggleRowBillboards"] = 201,
-	["UiToggleRowNameplates"] = 202,
-	["FreecamToggleRow"] = 203,
-	["InformationFrame"] = 999, -- Reserved to be last
-}
+------ VOICE CONNECT/DISCONNECT ------
 
-if PartyVoiceVolumeFeatureAvailable then
-	SETTINGS_MENU_LAYOUT_ORDER["PartyVoiceVolumeFrame"] = 63
+local VOICE_CONNECT_FRAME_KEY = "VoiceConnectFrame"
+local VOICE_DISCONNECT_FRAME_KEY = "VoiceDisconnectFrame"
+
+----------- LAYOUT ORDER ------------
+local SETTINGS_MENU_LAYOUT_ORDER
+if FFlagInExperienceMenuReorderVariant1 or FFlagOverrideInExperienceMenuReorderVariant1 then
+	GameSettingsConstants = require(RobloxGui.Modules.Settings.Resources.GameSettingsConstants) 
+	SETTINGS_MENU_LAYOUT_ORDER = GameSettingsConstants.SETTINGS_MENU_LAYOUT_ORDER
+else
+	-- Recall that layout order values are relative
+	SETTINGS_MENU_LAYOUT_ORDER = {
+		-- Overscan Entry point, console only
+		["OverscanAdjustButton"] = 1,
+		-- Movement and Camera Mode
+		["ShiftLockFrame"] = 10,
+		["CameraModeFrame"] = 11,
+		["MovementModeFrame"] = 12,
+		["GamepadSensitivityFrame"] = 13,
+		-- Voice Connect Disconnect
+		[VOICE_CONNECT_FRAME_KEY] = 18,
+		[VOICE_DISCONNECT_FRAME_KEY] = 19,
+		-- Experience Language
+		["LanguageSelectorFrame"] = 20,
+		-- Feedback Mode
+		["FeedbackModeButton"] = 30,
+		-- Chat Translation
+		["ChatTranslationFrame"] = 40,
+		["ChatLanguageSelectorFrame"] = 41,
+		["ChatTranslationToggleFrame"] = 42,
+		-- Camera Sensitivity
+		["MouseAdvancedFrame"] = 50,
+		-- Input/Output and Volume
+		["DeviceFrameInput"] = 60,
+		["DeviceFrameOutput"] = 61,
+		["VolumeFrame"] = 62,
+		["HapticsFrame"] = if PartyVoiceVolumeFeatureAvailable then 64 else 63,
+		-- Graphics
+		["FullScreenFrame"] = 70,
+		["GraphicsEnablerFrame"] = 71,
+		["GraphicsQualityFrame"] = 72,
+		["ReducedMotionFrame"] = 73,
+		["PreferredTransparencyFrame"] = 74,
+		["PreferredTextSizeFrame"] = 75,
+		["UiNavigationKeyBindEnabledFrame"] = 76,
+		-- Performance
+		["PerformanceStatsFrame"] = 80,
+		["MicroProfilerFrame"] = 81,
+		-- More camera
+		["CameraInvertedFrame"] = 90,
+		[CAMERA_DEVICE_FRAME_KEY] = 91,
+		-- VR, Dev Console, Special
+		["VREnabledFrame"] = 100,
+		["DeveloperConsoleButton"] = 101,
+		["UiToggleRow"] = 200,
+		["UiToggleRowCustom"] = 200, -- Replaces "UiToggleRow" when FFlagUserShowGuiHideToggles == true
+		["UiToggleRowBillboards"] = 201,
+		["UiToggleRowNameplates"] = 202,
+		["FreecamToggleRow"] = 203,
+		["InformationFrame"] = 999, -- Reserved to be last
+	}
+
+	if PartyVoiceVolumeFeatureAvailable then
+		SETTINGS_MENU_LAYOUT_ORDER["PartyVoiceVolumeFrame"] = 63
+	end
 end
 
 -------- CHAT TRANSLATION ----------
@@ -181,6 +209,7 @@ local Theme = require(RobloxGui.Modules.Settings.Theme)
 local Cryo = require(CorePackages.Cryo)
 local GfxReset = require(script.Parent.Parent.GfxReset)
 local Create = require(CorePackages.Workspace.Packages.AppCommonLib).Create
+local throttle = require(CoreGui.RobloxGui.Modules.Settings.Pages.ShareGame.ThrottleFunctionCall)
 
 ------------ Variables -------------------
 RobloxGui:WaitForChild("Modules"):WaitForChild("TenFootInterface")
@@ -458,7 +487,11 @@ local function Initialize()
 							nil,
 							RobloxTranslator:FormatByKey("Feature.SettingsHub.GameSettings.MaximumFramerate.Description")
 						)
-					this.FramerateCapFrame.LayoutOrder = 12
+					if FFlagInExperienceMenuReorderVariant1 or FFlagOverrideInExperienceMenuReorderVariant1 then
+						this.FramerateCapFrame.LayoutOrder = SETTINGS_MENU_LAYOUT_ORDER.FramerateCap
+					else
+						this.FramerateCapFrame.LayoutOrder = 12
+					end
 
 					this.FramerateCapMode.IndexChanged:Connect(function(newIndex)
 						local oldValue = GameSettings.FramerateCap
@@ -3183,28 +3216,142 @@ local function Initialize()
 		end
 	end
 
+	local function createVoiceConnectDisconnect()
+		if VoiceChatServiceManager:IsSeamlessVoice() and not VoiceChatServiceManager.isShowingFTUX then
+			local voiceConnectButton, voiceConnectText = nil, nil
+			local voiceDisconnectButton, voiceDisconnectText = nil, nil
+			local frameText = locales:Format("Feature.GameDetails.Label.VoiceChat")
+			local connectButtonText = locales:Format("Feature.SettingsHub.Label.Connect")
+			local disconnectButtonText = locales:Format("Feature.SettingsHub.Label.Disconnect")
+			local debounceDelay = GetFIntDebounceDisconnectButtonDelay()
+			local useDebounce = GetFFlagDebounceConnectDisconnectButton() and debounceDelay > 0
+
+			local onJoinVoicePressed = function()
+				if VoiceChatServiceManager:getService() then
+					local stateChangedConnection: RBXScriptConnection
+					stateChangedConnection = VoiceChatServiceManager:getService().StateChanged:Connect(function(oldState, newState)
+						if newState == (Enum :: any).VoiceChatState.Joined then
+							VoiceChatServiceManager.Analytics:reportJoinVoiceButtonEventWithVoiceSessionId(
+								"clicked",
+								VoiceChatServiceManager:GetConnectDisconnectButtonAnalyticsData(true)
+							)
+							stateChangedConnection:Disconnect()
+						end
+					end)
+				else
+					VoiceChatServiceManager.Analytics:reportJoinVoiceButtonEventWithVoiceSessionId(
+						"clicked",
+						VoiceChatServiceManager:GetConnectDisconnectButtonAnalyticsData(false)
+					)
+				end
+				VoiceChatServiceManager:JoinVoice()
+			end
+
+			local onLeaveVoicePressed = function()
+				VoiceChatServiceManager.Analytics:reportLeaveVoiceButtonEvent(
+					"clicked",
+					VoiceChatServiceManager:GetConnectDisconnectButtonAnalyticsData(true)
+				)
+				VoiceChatServiceManager:Leave()
+			end
+
+			voiceConnectButton, voiceConnectText, voiceConnectSetRowRef = utility:MakeStyledButton(
+				"VoiceConnectButton",
+				connectButtonText,
+				UDim2.new(1, 0, 1, -20),
+				if useDebounce then throttle(debounceDelay, onJoinVoicePressed) else onJoinVoicePressed,
+				this
+			)
+			voiceDisconnectButton, voiceDisconnectText, voiceDisconnectSetRowRef = utility:MakeStyledButton(
+				"VoiceDisconnectButton",
+				disconnectButtonText,
+				UDim2.new(1, 0, 1, -20),
+				if useDebounce then throttle(debounceDelay, onLeaveVoicePressed) else onLeaveVoicePressed,
+				this
+			)
+			voiceConnectButton.Size = UDim2.new(0.6, 0, 0, 40)
+			voiceConnectButton.Position = UDim2.new(0.4, 0, 0.5, 0)
+			voiceConnectButton.AnchorPoint = Vector2.new(0, 0.5)
+			
+			voiceConnectButton.ZIndex = 2
+			voiceConnectButton.Selectable = true
+			voiceConnectText.ZIndex = 2
+
+			voiceDisconnectButton.Size = UDim2.new(0.6, 0, 0, 40)
+			voiceDisconnectButton.Position = UDim2.new(0.4, 0, 0.5, 0)
+			voiceDisconnectButton.AnchorPoint = Vector2.new(0, 0.5)
+			
+			voiceDisconnectButton.ZIndex = 2
+			voiceDisconnectButton.Selectable = true
+			voiceDisconnectText.ZIndex = 2
+
+
+			local voiceConnectRow = utility:AddNewRowObject(this, frameText, voiceConnectButton, nil, true)
+			local voiceDisconnectRow = utility:AddNewRowObject(this, frameText, voiceDisconnectButton, nil, true)
+
+			this[VOICE_CONNECT_FRAME_KEY] = voiceConnectRow
+			this[VOICE_DISCONNECT_FRAME_KEY] = voiceDisconnectRow
+
+			voiceConnectRow.LayoutOrder = SETTINGS_MENU_LAYOUT_ORDER[VOICE_CONNECT_FRAME_KEY]
+			voiceDisconnectRow.LayoutOrder = SETTINGS_MENU_LAYOUT_ORDER[VOICE_DISCONNECT_FRAME_KEY]
+			voiceConnectSetRowRef(voiceConnectRow)
+			voiceDisconnectSetRowRef(voiceDisconnectRow)
+
+			if VoiceChatServiceManager:ShouldShowJoinVoice() then
+				voiceConnectRow.Visible = true
+				voiceDisconnectRow.Visible = false
+			else
+				voiceConnectRow.Visible = false
+				voiceDisconnectRow.Visible = true
+			end
+		end
+	end
+
 	this.VoiceChatOptionsEnabled = false
 	if game:GetEngineFeature("VoiceChatSupported") then
 		spawn(function()
 			VoiceChatServiceManager:asyncInit():andThen(function()
 				VoiceChatService = VoiceChatServiceManager:getService()
 				checkVoiceChatOptions()
+				if GetFFlagEnableConnectDisconnectInSettingsAndChrome() then
+					createVoiceConnectDisconnect()
+				end
 
 				-- Check volume settings. Show prompt if volume is 0
 				if not GetFFlagEnableUniveralVoiceToasts() then
 					VoiceChatServiceManager:CheckAndShowNotAudiblePrompt()
 				end
+
+				if GetFFlagEnableConnectDisconnectInSettingsAndChrome() and this[VOICE_CONNECT_FRAME_KEY] then
+					this[VOICE_CONNECT_FRAME_KEY].Visible = false
+				end
+				if GetFFlagEnableConnectDisconnectInSettingsAndChrome() and this[VOICE_DISCONNECT_FRAME_KEY] then
+					this[VOICE_DISCONNECT_FRAME_KEY].Visible = true
+				end
+
 				if GetFFlagEnableShowVoiceUI() then
 					VoiceChatServiceManager.showVoiceUI.Event:Connect(function()
 						this.VoiceChatOptionsEnabled = true
 						if this[VOICE_CHAT_DEVICE_TYPE.Input.."DeviceFrame"] then
 							this[VOICE_CHAT_DEVICE_TYPE.Input.."DeviceFrame"].Visible = true
 						end
+						if GetFFlagEnableConnectDisconnectInSettingsAndChrome() and this[VOICE_CONNECT_FRAME_KEY] then
+							this[VOICE_CONNECT_FRAME_KEY].Visible = false
+						end
+						if GetFFlagEnableConnectDisconnectInSettingsAndChrome() and this[VOICE_DISCONNECT_FRAME_KEY] then
+							this[VOICE_DISCONNECT_FRAME_KEY].Visible = true
+						end
 					end)
 					VoiceChatServiceManager.hideVoiceUI.Event:Connect(function()
 						this.VoiceChatOptionsEnabled = false
 						if this[VOICE_CHAT_DEVICE_TYPE.Input.."DeviceFrame"] then
 							this[VOICE_CHAT_DEVICE_TYPE.Input.."DeviceFrame"].Visible = false
+						end
+						if GetFFlagEnableConnectDisconnectInSettingsAndChrome() and this[VOICE_CONNECT_FRAME_KEY] then
+							this[VOICE_CONNECT_FRAME_KEY].Visible = true
+						end
+						if GetFFlagEnableConnectDisconnectInSettingsAndChrome() and this[VOICE_DISCONNECT_FRAME_KEY] then
+							this[VOICE_DISCONNECT_FRAME_KEY].Visible = false
 						end
 					end)
 				end

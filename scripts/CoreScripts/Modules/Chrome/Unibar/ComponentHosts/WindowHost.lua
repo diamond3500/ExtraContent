@@ -1,3 +1,5 @@
+local Chrome = script:FindFirstAncestor("Chrome")
+
 local CorePackages = game:GetService("CorePackages")
 local React = require(CorePackages.Packages.React)
 local ReactRoblox = require(CorePackages.Packages.ReactRoblox)
@@ -5,13 +7,17 @@ local CoreGui = game:GetService("CoreGui")
 local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
+local VRService = game:GetService("VRService")
 
 local ReactOtter = require(CorePackages.Packages.ReactOtter)
 
 local UIBlox = require(CorePackages.UIBlox)
 local Interactable = UIBlox.Core.Control.Interactable
 
-local Chrome = script.Parent.Parent.Parent
+local MouseIconOverrideService = require(CorePackages.InGameServices.MouseIconOverrideService)
+local Symbol = require(CorePackages.Symbol)
+local INGAME_SELFVIEW_CURSOR_OVERRIDE_KEY = Symbol.named("SelfieViewCursorOverride")
+
 local debounce = require(Chrome.Utility.debounce)
 local ChromeService = require(Chrome.Service)
 local Constants = require(Chrome.Unibar.Constants)
@@ -25,11 +31,12 @@ local shouldRejectMultiTouch = require(Chrome.Utility.shouldRejectMultiTouch)
 local useSelector = require(CorePackages.Workspace.Packages.RoactUtils).Hooks.RoactRodux.useSelector
 local GetFFlagSelfViewAssertFix = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagSelfViewAssertFix
 local GetFFlagSelfieViewV4 = require(RobloxGui.Modules.Flags.GetFFlagSelfieViewV4)
+local GetFFlagSelfieViewMoreFixMigration = require(RobloxGui.Modules.Flags.GetFFlagSelfieViewMoreFixMigration)
 local FIntChromeWindowLayoutOrder = game:DefineFastInt("ChromeWindowLayoutOrder", 2)
 local FFlagWindowDragDetection = game:DefineFastFlag("WindowDragDetection", false)
 local FIntWindowMinDragDistance = game:DefineFastInt("WindowMinDragDistance", 25)
 
-local useWindowSize = require(script.Parent.Parent.Parent.Hooks.useWindowSize)
+local useWindowSize = require(Chrome.Hooks.useWindowSize)
 
 export type WindowHostProps = {
 	integration: ChromeTypes.IntegrationComponentProps,
@@ -48,6 +55,8 @@ local COMPONENT_ZINDEX = {
 	INPUT_SHIELD = 3,
 	INPUT_WRAPPER = 4,
 }
+
+local didOverrideMouse = false
 
 local WindowHost = function(props: WindowHostProps)
 	local windowSize = useWindowSize(props.integration.integration)
@@ -166,6 +175,27 @@ local WindowHost = function(props: WindowHostProps)
 			ChromeService:updateWindowPosition(props.integration.id, position)
 		end
 	end, { props.integration })
+
+	local mouseEntered = if GetFFlagSelfieViewMoreFixMigration()
+		then React.useCallback(function()
+			if not VRService.VREnabled then
+				didOverrideMouse = true
+				MouseIconOverrideService.push(
+					INGAME_SELFVIEW_CURSOR_OVERRIDE_KEY,
+					Enum.OverrideMouseIconBehavior.ForceShow
+				)
+			end
+		end)
+		else nil
+
+	local mouseLeft = if GetFFlagSelfieViewMoreFixMigration()
+		then React.useCallback(function()
+			if didOverrideMouse then
+				didOverrideMouse = false
+				MouseIconOverrideService.pop(INGAME_SELFVIEW_CURSOR_OVERRIDE_KEY)
+			end
+		end)
+		else nil
 
 	local touchBegan = React.useCallback(function(_: Frame, inputObj: InputObject)
 		assert(windowRef.current ~= nil)
@@ -462,6 +492,15 @@ local WindowHost = function(props: WindowHostProps)
 						BackgroundTransparency = 1,
 						[React.Event.InputBegan] = touchBegan,
 						[React.Event.InputEnded] = touchEnded,
+						[React.Event.MouseEnter] = if GetFFlagSelfieViewMoreFixMigration()
+							then mouseEntered
+							else nil :: any,
+						[React.Event.MouseLeave] = if GetFFlagSelfieViewMoreFixMigration()
+							then mouseLeft
+							else nil :: any,
+						[React.Event.Destroying] = if GetFFlagSelfieViewMoreFixMigration()
+							then mouseLeft
+							else nil :: any,
 					}),
 				}),
 			}),

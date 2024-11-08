@@ -1,3 +1,5 @@
+local Chrome = script:FindFirstAncestor("Chrome")
+
 local CorePackages = game:GetService("CorePackages")
 local CoreGui = game:GetService("CoreGui")
 local React = require(CorePackages.Packages.React)
@@ -14,7 +16,7 @@ local GetFFlagRemoveInGameChatBubbleChatReferences =
 if GetFFlagRemoveInGameChatBubbleChatReferences() then
 	VoiceConstants = require(RobloxGui.Modules.VoiceChat.Constants) :: any
 end
-local SelfieViewModule = script.Parent.Parent.Parent.SelfieView
+local SelfieViewModule = Chrome.Parent.SelfieView
 local GetFFlagSelfieViewRedStatusDot = require(SelfieViewModule.Flags.GetFFlagSelfieViewRedStatusDot)
 
 local RED_DOT_COLOR = Color3.new(0.918, 0.2, 0.137)

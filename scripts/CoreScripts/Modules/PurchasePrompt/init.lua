@@ -5,6 +5,8 @@ local PurchasePromptDeps = require(CorePackages.PurchasePromptDeps)
 local CoreGui = game:GetService("CoreGui")
 local RunService = game:GetService("RunService")
 
+local RobloxGui = CoreGui:WaitForChild("RobloxGui")
+
 local Roact = PurchasePromptDeps.Roact
 local Rodux = PurchasePromptDeps.Rodux
 
@@ -17,9 +19,11 @@ local PlatformInterface = require(Root.Services.PlatformInterface)
 local ExternalSettings = require(Root.Services.ExternalSettings)
 local Thunk = require(Root.Thunk)
 local initiateAvatarCreationFeePurchaseThunk = require(Root.Thunks.initiateAvatarCreationFeePurchase)
-local GetFFlagEnableAvatarCreationFeePurchase = require(Root.Flags.GetFFlagEnableAvatarCreationFeePurchase)
+local FFlagPublishAvatarPromptEnabled = require(RobloxGui.Modules.PublishAssetPrompt.FFlagPublishAvatarPromptEnabled)
+
 local WindowState = require(Root.Enums.WindowState)
 local PromptState = require(Root.Enums.PromptState)
+local PublishAssetAnalytics = require(Root.Utils.PublishAssetAnalytics)
 
 local handle
 local store
@@ -65,7 +69,7 @@ end
 
 local mountPurchasePrompt
 
-if GetFFlagEnableAvatarCreationFeePurchase() then
+if FFlagPublishAvatarPromptEnabled then
 	mountPurchasePrompt = function()
 		if RunService:IsStudio() and RunService:IsEdit() or handle then
 			return nil
@@ -95,20 +99,22 @@ end
 -- API for other modules to be able to initiate the purchase
 -- of an avatar creation fee. Currently utilized by the
 -- AvatarCreationService:PromptCreateAvatarAsync API flow
-local function initiateAvatarCreationFeePurchase(avatarPublishMetadata, guid, serializedModel, priceInRobux)
+local function initiateAvatarCreationFeePurchase(avatarPublishMetadata, guid, humanoidModel, priceInRobux)
 	if not store then
 		error("initiateAvatarCreationFeePurchase cannot be called when the PurchasePrompt has not been mounted")
 	end
 
-	store:dispatch(initiateAvatarCreationFeePurchaseThunk(avatarPublishMetadata, guid, serializedModel, priceInRobux))
+	store:dispatch(initiateAvatarCreationFeePurchaseThunk(avatarPublishMetadata, guid, humanoidModel, priceInRobux))
 end
 
 return {
 	mountPurchasePrompt = mountPurchasePrompt,
-	initiateAvatarCreationFeePurchase = if GetFFlagEnableAvatarCreationFeePurchase() then initiateAvatarCreationFeePurchase else nil,
+	initiateAvatarCreationFeePurchase = if FFlagPublishAvatarPromptEnabled then initiateAvatarCreationFeePurchase else nil,
 	-- This event fires when the window state is changed, i.e. prompt opens or closes.
 	-- It returns isShown if the window is shown, and hasCompletedPurchase if the purchase was completed.
-	windowStateChangedEvent = if GetFFlagEnableAvatarCreationFeePurchase() then windowStateChangedBindable.Event else nil,
+	windowStateChangedEvent = if FFlagPublishAvatarPromptEnabled then windowStateChangedBindable.Event else nil,
 	-- This event fires when the prompt state is set to PromptState.None
-	promptStateSetToNoneEvent = if GetFFlagEnableAvatarCreationFeePurchase() then promptStateSetToNoneBindable.Event else nil,
+	promptStateSetToNoneEvent = if FFlagPublishAvatarPromptEnabled then promptStateSetToNoneBindable.Event else nil,
+
+	PublishAssetAnalytics = PublishAssetAnalytics,
 }

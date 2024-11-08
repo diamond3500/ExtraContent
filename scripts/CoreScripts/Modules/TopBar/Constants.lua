@@ -4,6 +4,7 @@ local TenFootInterface = require(Modules.TenFootInterface)
 local ChromeEnabled = require(Modules.Chrome.Enabled)
 local isNewTiltIconEnabled = require(Modules.isNewTiltIconEnabled)
 local GetFFlagChangeTopbarHeightCalculation = require(script.Parent.Flags.GetFFlagChangeTopbarHeightCalculation)
+local GetFFlagPostLaunchUnibarDesignTweaks = require(Modules.Flags.GetFFlagPostLaunchUnibarDesignTweaks)
 
 local DEFAULT_TOPBAR_HEIGHT = 36
 local DEFAULT_TOPBAR_BUTTON_HEIGHT = DEFAULT_TOPBAR_HEIGHT - 4
@@ -30,7 +31,11 @@ local function getTopbarHeight()
 	end
 
 	if ChromeEnabled() then
-		return getChromeTopbarHeight()
+		if GetFFlagPostLaunchUnibarDesignTweaks() then
+			return DEFAULT_CHROME_TOPBAR_HEIGHT
+		else
+			return getChromeTopbarHeight()
+		end
 	end
 
 	return DEFAULT_TOPBAR_HEIGHT
@@ -55,6 +60,7 @@ return {
 	HealthBarKeepOutAreaId = "health-bar",
 	MoreMenuKeepOutAreaId = "more-menu",
 	ChatIconKeepOutAreaId = "chat-icon",
+	ConnectIconKeepOutAreaId = "connect-icon",
 	BackIconKeepOutAreaId = "back-icon",
 	BadgeOver13KeepOutAreaId = "badge-13",
 	VoiceBetaBadgeKeepOutAreaId = "badge-voice-beta",
@@ -62,7 +68,7 @@ return {
 	ScreenSideOffset = 16,
 	ScreenSideOffsetTenFoot = 48,
 
-	Padding = 12,
+	Padding = if GetFFlagPostLaunchUnibarDesignTweaks() and ChromeEnabled() then 8 else 12,
 
 	HealthPercentForOverlay = 5 / 100,
 	HealthRedColor = Color3.fromRGB(255, 28, 0),

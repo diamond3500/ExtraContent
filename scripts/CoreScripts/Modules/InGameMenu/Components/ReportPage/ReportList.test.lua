@@ -11,7 +11,7 @@ local describe = JestGlobals.describe
 local it = JestGlobals.it
 local beforeEach = JestGlobals.beforeEach
 local jest = JestGlobals.jest
-local ReactTestingLibrary = require(CorePackages.Workspace.Packages.ReactTestingLibrary)
+local ReactTestingLibrary = require(CorePackages.Packages.Dev.ReactTestingLibrary)
 local render = ReactTestingLibrary.render
 local fireEvent = ReactTestingLibrary.fireEvent
 

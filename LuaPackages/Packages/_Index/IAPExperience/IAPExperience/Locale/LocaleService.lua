@@ -2,6 +2,9 @@ local Root = script.Parent.Parent
 
 local Symbol = require(Root.Symbols.Symbol)
 
+local FFlagAppLocalesLogCandidateKeyUsedIAP = game:DefineFastFlag("AppLocalesLogCandidateKeyUsedIAP", false)
+local CandidateUnusedKeys = require(script.Parent.CandidateUnusedKeys)
+
 local DEBUG_LOCALIZATION = false
 
 --[[
@@ -58,6 +61,12 @@ end
 	given key and performs parameter substitutions
 ]]
 function LocaleService.getString(localeContext, key, params)
+	if FFlagAppLocalesLogCandidateKeyUsedIAP and CandidateUnusedKeys[key] then
+		local CorePackages = game:GetService("CorePackages")
+		-- Referencing the workspace like this is pretty nasty, but this code is temporary so it's fine for now
+		local logKeyUsed = require(CorePackages.Workspace.Packages.Localization).logKeyUsed
+		logKeyUsed("IAPExperience_10.22.24", key)
+	end
 	assert(localeContext ~= nil, "Must provide valid localization context")
 	local localizedString = getLocalizedString(localeContext, key)
 	assert(localizedString ~= nil, "Unable to find localization with key: " .. key)

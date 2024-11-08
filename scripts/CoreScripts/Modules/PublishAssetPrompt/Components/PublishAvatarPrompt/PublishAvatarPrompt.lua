@@ -1,7 +1,6 @@
 --[[
 	The prompt UI opened for Avatar body part outfit publishing.
 ]]
-local AssetService = game:GetService("AssetService")
 local CorePackages = game:GetService("CorePackages")
 local CoreGui = game:GetService("CoreGui")
 local Players = game:GetService("Players")
@@ -22,9 +21,12 @@ local ObjectViewport = require(Components.Common.ObjectViewport)
 local LabeledTextBox = require(Components.Common.LabeledTextBox)
 local PublishInfoList = require(Components.Common.PublishInfoList)
 local PurchasePrompt = require(RobloxGui.Modules.PurchasePrompt)
+local Analytics = PurchasePrompt.PublishAssetAnalytics
 
 local Actions = script.Parent.Parent.Parent.Actions
 local SetPromptVisibility = require(Actions.SetPromptVisibility)
+
+local FFlagCoreScriptPublishAssetAnalytics = require(RobloxGui.Modules.Flags.FFlagCoreScriptPublishAssetAnalytics)
 
 local PADDING = UDim.new(0, 20)
 local CAMERA_FOV = 30
@@ -32,14 +34,12 @@ local DELAYED_INPUT_ANIM_SEC = 3
 local DESC_TEXTBOX_HEIGHT = 104
 local DESC_TEXTBOX_MAXLENGTH = 1000
 
-local DESC_LABEL_KEY = "CoreScripts.PublishAvatarPrompt.Description"
-local DESC_TEXT_KEY = "CoreScripts.PublishAvatarPrompt.DescriptionTitle"
+local DESC_LABEL_KEY = "CoreScripts.PublishAssetPrompt.Description"
 
 local PublishAvatarPrompt = Roact.PureComponent:extend("PublishAvatarPrompt")
 
 PublishAvatarPrompt.validateProps = t.strictInterface({
 	screenSize = t.Vector2,
-	serializedModel = t.optional(t.string),
 	humanoidModel = t.optional(t.instanceOf("Model")),
 
 	-- Mapped state
@@ -60,12 +60,15 @@ function PublishAvatarPrompt:init()
 		-- UGC body creation does not localize similar text, so we don't localize here
 		name = LocalPlayer.Name .. "'s Body",
 		isNameValid = true,
-		description = "",
+		description = LocalPlayer.Name .. "'s Body",
 		isDescValid = true,
 		showTopScrim = false,
 		purchasePromptReady = true,
 	})
 	self.openPreviewView = function()
+		if FFlagCoreScriptPublishAssetAnalytics then
+			Analytics.sendButtonClicked(Analytics.Section.BuyCreationPage, Analytics.Element.Expand)
+		end
 		self:setState({
 			showingPreviewView = true,
 		})
@@ -85,6 +88,10 @@ function PublishAvatarPrompt:init()
 	end
 
 	self.onSubmit = function()
+		if FFlagCoreScriptPublishAssetAnalytics then
+			Analytics.sendButtonClicked(Analytics.Section.BuyCreationPage, Analytics.Element.Buy)
+		end
+
 		local avatarPublishMetadata = {}
 		avatarPublishMetadata.name = self.state.name
 		avatarPublishMetadata.description = self.state.description
@@ -93,7 +100,7 @@ function PublishAvatarPrompt:init()
 			PurchasePrompt.initiateAvatarCreationFeePurchase(
 				avatarPublishMetadata,
 				self.props.guid,
-				self.props.serializedModel,
+				self.props.humanoidModel,
 				self.props.priceInRobux
 			)
 		else
@@ -106,6 +113,11 @@ function PublishAvatarPrompt:init()
 			name = newName,
 			isNameValid = isNameValid,
 		})
+
+		if FFlagCoreScriptPublishAssetAnalytics and not self.sentNameFieldTouched then
+			self.sentNameFieldTouched = true
+			Analytics.sendFieldTouched(Analytics.Section.BuyCreationPage, Analytics.Element.Name)
+		end
 	end
 
 	self.onDescriptionUpdated = function(newDesc, isDescValid)
@@ -113,6 +125,11 @@ function PublishAvatarPrompt:init()
 			description = newDesc,
 			isDescValid = isDescValid,
 		})
+
+		if FFlagCoreScriptPublishAssetAnalytics and not self.sentDescriptionFieldTouched then
+			self.sentDescriptionFieldTouched = true
+			Analytics.sendFieldTouched(Analytics.Section.BuyCreationPage, Analytics.Element.Description)
+		end
 	end
 
 	self.onWindowStateChanged = function(promptTable)
@@ -148,6 +165,11 @@ function PublishAvatarPrompt:init()
 end
 
 function PublishAvatarPrompt:didMount()
+	if FFlagCoreScriptPublishAssetAnalytics then
+		self.sentNameFieldTouched = false
+		self.sentDescriptionFieldTouched = false
+	end
+
 	local windowStateChangedEvent = PurchasePrompt.windowStateChangedEvent
 	local promptStateSetToNoneEvent = PurchasePrompt.promptStateSetToNoneEvent
 
@@ -158,6 +180,10 @@ function PublishAvatarPrompt:didMount()
 		mutedError(
 			"PurchasePrompt.windowStateChangedEvent or PurchasePrompt.promptStateSetToNoneEvent is not available"
 		)
+	end
+
+	if FFlagCoreScriptPublishAssetAnalytics then
+		Analytics.sendPageLoad(Analytics.Section.BuyCreationPage)
 	end
 end
 
@@ -201,7 +227,7 @@ function PublishAvatarPrompt:renderPromptBody()
 				LayoutOrder = 2,
 				labelText = RobloxTranslator:FormatByKey(DESC_LABEL_KEY),
 				centerText = false,
-				defaultText = RobloxTranslator:FormatByKey(DESC_TEXT_KEY),
+				defaultText = self.state.description,
 				maxLength = DESC_TEXTBOX_MAXLENGTH,
 				onTextUpdated = self.onDescriptionUpdated,
 				textBoxHeight = DESC_TEXTBOX_HEIGHT,
@@ -242,11 +268,8 @@ function PublishAvatarPrompt:render()
 end
 
 local function mapStateToProps(state)
-	local serializedModel = state.promptRequest.promptInfo.serializedModel
-	local humanoidModel = if serializedModel then AssetService:DeserializeInstance(serializedModel) else nil
 	return {
-		serializedModel = serializedModel,
-		humanoidModel = humanoidModel,
+		humanoidModel = state.promptRequest.promptInfo.humanoidModel,
 		guid = state.promptRequest.promptInfo.guid,
 		scopes = state.promptRequest.promptInfo.scopes,
 		priceInRobux = state.promptRequest.promptInfo.priceInRobux,

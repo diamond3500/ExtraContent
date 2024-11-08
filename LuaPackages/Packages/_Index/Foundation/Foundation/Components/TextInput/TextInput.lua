@@ -18,6 +18,7 @@ local useStyleTags = require(Foundation.Providers.Style.useStyleTags)
 local useCursor = require(Foundation.Providers.Cursor.useCursor)
 local withDefaults = require(Foundation.Utility.withDefaults)
 local withCommonProps = require(Foundation.Utility.withCommonProps)
+local isCoreGui = require(Foundation.Utility.isCoreGui)
 
 local InputLabelSize = require(Foundation.Enums.InputLabelSize)
 type InputLabelSize = InputLabelSize.InputLabelSize
@@ -26,9 +27,13 @@ local StateLayerAffordance = require(Foundation.Enums.StateLayerAffordance)
 local ControlState = require(Foundation.Enums.ControlState)
 type ControlState = ControlState.ControlState
 
+type TextInputRef = Types.TextInputRef
+
 type TextInputProps = {
 	-- Input text value
 	text: string,
+	-- Type of text input. Only available for use in descendants of `CoreGui`.
+	textInputType: Enum.TextInputType?,
 	-- Whether the input is in an error state
 	hasError: boolean?,
 	-- Whether the input is disabled
@@ -52,12 +57,15 @@ type TextInputProps = {
 		name: string,
 		onActivated: () -> (),
 	}?,
+	-- Partial TextBox ref exposed via imperative handle
+	textBoxRef: React.Ref<TextInputRef>?,
 } & Types.CommonProps
 
 local defaultProps = {
 	width = UDim.new(0, 400),
 }
 
+-- Is replaced with CompositeTextInput under FoundationCompositeTextInput FF
 local function TextInput(TextInputProps: TextInputProps, ref: React.Ref<GuiObject>?)
 	local props = withDefaults(TextInputProps, defaultProps)
 
@@ -74,8 +82,6 @@ local function TextInput(TextInputProps: TextInputProps, ref: React.Ref<GuiObjec
 	local outerBorderOffset = math.ceil(outerBorderThickness) * 2
 	local innerBorderThickness = tokens.Stroke.Thick
 	local innerBorderOffset = math.ceil(innerBorderThickness) * 2
-
-	local width = if props.width ~= nil then props.width else defaultProps.width
 
 	local textBoxWidthOffset = React.useMemo(function()
 		local offset = 0
@@ -114,6 +120,13 @@ local function TextInput(TextInputProps: TextInputProps, ref: React.Ref<GuiObjec
 		end
 	end, {})
 
+	local getIsFocused = React.useCallback(function()
+		if textBox.current then
+			return textBox.current:IsFocused() :: boolean
+		end
+		return false
+	end, {})
+
 	local onInputStateChanged = React.useCallback(function(newState: ControlState)
 		setHover(newState == ControlState.Hover)
 	end, {})
@@ -139,10 +152,17 @@ local function TextInput(TextInputProps: TextInputProps, ref: React.Ref<GuiObjec
 		})
 		else nil
 
+	React.useImperativeHandle(props.textBoxRef, function()
+		return {
+			getIsFocused = getIsFocused,
+			focus = focusTextBox,
+		}
+	end, { focusTextBox, getIsFocused })
+
 	return React.createElement(
 		View,
 		withCommonProps(props, {
-			Size = UDim2.new(width, UDim.new(0, 0)),
+			Size = UDim2.new(props.width, UDim.new(0, 0)),
 
 			tag = "col gap-xsmall auto-y",
 			ref = ref,
@@ -223,6 +243,7 @@ local function TextInput(TextInputProps: TextInputProps, ref: React.Ref<GuiObjec
 							PlaceholderText = props.placeholder,
 							Selectable = false,
 							LayoutOrder = 2,
+							TextInputType = if isCoreGui then props.textInputType else nil,
 
 							-- BEGIN: Remove when Flags.FoundationStylingPolyfill is removed
 							BackgroundTransparency = 1,

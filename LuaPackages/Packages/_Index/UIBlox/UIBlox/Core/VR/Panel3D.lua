@@ -38,13 +38,39 @@ local defaultProps: Props = {
 	hidden = false,
 	curvature = 1, -- On by default to obtain anti-aliasing, disable with 0
 	zOffset = 0,
+	connectPanelManagerFunction = nil,
 }
 
 local function Panel3D(providedProps: Props)
 	local props = Object.assign({}, defaultProps, providedProps)
 
 	if UIBloxConfig.refactorPanel3D then
+		local surfaceGui: Constants.Ref<SurfaceGui?> = React.useRef(nil)
+
 		local adorneeSize, adorneeCFrame = usePanel3DRenderStep(props, nil :: any) -- Remove "nil :: any" with refactorPanel3D
+
+		if UIBloxConfig.enablePanelManagedAnchoring then
+			React.useEffect(function()
+				if props.anchoring :: Constants.Anchoring ~= Constants.AnchoringTypes.PanelManaged then
+					return function() end
+				end
+
+				if props.connectPanelManagerFunction == nil then
+					return function() end
+				end
+
+				if surfaceGui ~= nil and props.connectPanelManagerFunction then
+					local connectPanelManagerFunction = props.connectPanelManagerFunction :: (arg: any) -> ()
+					connectPanelManagerFunction(surfaceGui)
+					return function()
+						local connectPanelManagerFunction = props.connectPanelManagerFunction :: (arg: any) -> ()
+						connectPanelManagerFunction(nil)
+					end
+				else
+					return function() end
+				end
+			end, { surfaceGui, props.anchoring, props.connectPanelManagerFunction })
+		end
 
 		return React.createElement(SurfaceGuiWithAdornee, {
 			name = props.panelName,
@@ -54,6 +80,7 @@ local function Panel3D(providedProps: Props)
 				CFrame = adorneeCFrame,
 				Parent = props.parent,
 			},
+			ref = surfaceGui,
 			surfaceGuiProps = {
 				Enabled = not props.hidden,
 				CanvasSize = props.virtualScreenSize,
@@ -70,6 +97,29 @@ local function Panel3D(providedProps: Props)
 		local folder: Constants.Ref<Folder?> = React.useRef(nil)
 
 		usePanel3DRenderStep(props, basePart)
+
+		if UIBloxConfig.enablePanelManagedAnchoring then
+			React.useEffect(function()
+				if props.anchoring :: Constants.Anchoring ~= Constants.AnchoringTypes.PanelManaged then
+					return function() end
+				end
+
+				if props.connectPanelManagerFunction == nil then
+					return function() end
+				end
+
+				if surfaceGui ~= nil and props.connectPanelManagerFunction then
+					local connectPanelManagerFunction = props.connectPanelManagerFunction :: (arg: any) -> ()
+					connectPanelManagerFunction(surfaceGui)
+					return function()
+						local connectPanelManagerFunction = props.connectPanelManagerFunction :: (arg: any) -> ()
+						connectPanelManagerFunction(nil)
+					end
+				else
+					return function() end
+				end
+			end, { surfaceGui, props.anchoring, props.connectPanelManagerFunction })
+		end
 
 		return React.createElement("Folder", {
 			ref = folder,

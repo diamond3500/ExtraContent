@@ -15,7 +15,7 @@ local InGameMenu = script.Parent.InGameMenu
 local IXPServiceWrapper = require(RobloxGui.Modules.Common.IXPServiceWrapper)
 local IsExperienceMenuABTestEnabled = require(script.Parent.IsExperienceMenuABTestEnabled)
 
-local GetFStringLuaAppExperienceMenuLayer = require(script.Parent.Flags.GetFStringLuaAppExperienceMenuLayer)
+local GetFStringLuaAppExperienceMenuLayer = require(CorePackages.Workspace.Packages.SharedFlags).GetFStringLuaAppExperienceMenuLayer
 local GetFStringLuaAppConsoleExperienceMenuLayer = require(script.Parent.Flags.GetFStringLuaAppConsoleExperienceMenuLayer)
 
 local GetFFlagDisableChromeUnibar = require(script.Parent.Flags.GetFFlagDisableChromeUnibar)()
@@ -35,7 +35,7 @@ local GetFFlagDisableChromeV3DockedMic = require(script.Parent.Flags.GetFFlagDis
 local GetFFlagDisableChromeV4Baseline = require(script.Parent.Flags.GetFFlagDisableChromeV4Baseline)()
 local GetFFlagDisableChromeV4ClosedSelfView = require(script.Parent.Flags.GetFFlagDisableChromeV4ClosedSelfView)()
 
-local GetFFlagSongbirdIXPVariants = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagSongbirdIXPVariants
+local GetFFlagSetupSongbirdWindowExperiment = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagSetupSongbirdWindowExperiment
 
 local LOCAL_STORAGE_KEY_EXPERIENCE_MENU_VERSION = "ExperienceMenuVersion"
 local ACTION_TRIGGER_THRESHOLD = game:DefineFastInt("CSATV3MenuActionThreshold", 7)
@@ -43,20 +43,12 @@ local ACTION_TRIGGER_LATCHED = 10000
 
 local TEST_VERSION = "t10" -- bump on new A/B campaigns
 local REPORT_ABUSE_MENU_TEST_VERSION = "art2"
-local CONSOLE_MODERNIZATION_TEST_VERSION = "m2"
-local SONGBIRD_TEST_VERSION = "s1"
+local SONGBIRD_TEST_VERSION = if GetFFlagSetupSongbirdWindowExperiment() then "s2" else "s1"
 
 local DEFAULT_MENU_VERSION = "v1"..TEST_VERSION
 local MENU_VERSION_V2 = "v2"..TEST_VERSION
 local MENU_VERSION_V3 = "v3"..TEST_VERSION
 local REPORT_ABUSE_MENU_VERSION_V2 = "ARv2"..REPORT_ABUSE_MENU_TEST_VERSION
-
-local MENU_VERSION_MODERNIZATION_ENUM = {
-	MODERNIZED = "v5.1"..TEST_VERSION,
-	BIG_TEXT = "v5.2"..TEST_VERSION,
-	STICKY_BAR = "v5.3"..TEST_VERSION,
-	CONSOLE = "v5.4"..CONSOLE_MODERNIZATION_TEST_VERSION
-}
 
 local MENU_VERSION_CHROME_ENUM = {
 	UNIBAR = "v6.1"..TEST_VERSION,
@@ -78,7 +70,7 @@ local MENU_VERSION_CHROME_V3_ENUM = {
 	DOCKED_MIC = "v8.5"..TEST_VERSION,
 }
 
-local MENU_VERSION_SONGBIRD_ENUM =  {
+local MENU_VERSION_SONGBIRD_ENUM = {
 	SONGBIRD = "v9.1" .. SONGBIRD_TEST_VERSION,
 	SONGBIRD_UNIBAR = "v9.2" .. SONGBIRD_TEST_VERSION,
 	SONGBIRD_PEEK = "v9.3" .. SONGBIRD_TEST_VERSION,
@@ -96,10 +88,6 @@ local validVersion = {
 	[DEFAULT_MENU_VERSION] = true,
 	[MENU_VERSION_V2] = false,
 	[MENU_VERSION_V3] = false,
-	[MENU_VERSION_MODERNIZATION_ENUM.MODERNIZED] = true,
-	[MENU_VERSION_MODERNIZATION_ENUM.BIG_TEXT] = false,
-	[MENU_VERSION_MODERNIZATION_ENUM.STICKY_BAR] = false,
-	[MENU_VERSION_MODERNIZATION_ENUM.CONSOLE] = true,
 	[MENU_VERSION_CHROME_ENUM.UNIBAR] = not GetFFlagDisableChromeUnibar,
 	[MENU_VERSION_CHROME_ENUM.PINNED_CHAT] = not GetFFlagDisableChromePinnedChat,
 	[MENU_VERSION_CHROME_ENUM.DEFAULT_OPEN] = not GetFFlagDisableChromeDefaultOpen,
@@ -110,7 +98,7 @@ local validVersion = {
 	[MENU_VERSION_SONGBIRD_ENUM.SONGBIRD] = true,
 	[MENU_VERSION_SONGBIRD_ENUM.SONGBIRD_UNIBAR] = true,
 	[MENU_VERSION_SONGBIRD_ENUM.SONGBIRD_PEEK] = true,
-	[MENU_VERSION_SONGBIRD_ENUM.SONGBIRD_SCENE_ANALYSIS] = true,
+	[MENU_VERSION_SONGBIRD_ENUM.SONGBIRD_SCENE_ANALYSIS] = if GetFFlagSetupSongbirdWindowExperiment() then false else true,
 
 	-- Invalidate Unibar test variants if the respective disable flag is turned on
 	[MENU_VERSION_CHROME_V3_ENUM.BASELINE] = not GetFFlagDisableChromeV3Baseline,
@@ -159,22 +147,6 @@ end
 
 function ExperienceMenuABTestManager.reportAbuseMenuV2VersionId()
 	return REPORT_ABUSE_MENU_VERSION_V2
-end
-
-function ExperienceMenuABTestManager.modernizationModernizedVersionId()
-	return MENU_VERSION_MODERNIZATION_ENUM.MODERNIZED
-end
-
-function ExperienceMenuABTestManager.modernizationBigTextVersionId()
-	return MENU_VERSION_MODERNIZATION_ENUM.BIG_TEXT
-end
-
-function ExperienceMenuABTestManager.modernizationStickyBarVersionId()
-	return MENU_VERSION_MODERNIZATION_ENUM.STICKY_BAR
-end
-
-function ExperienceMenuABTestManager.consoleModernizationVersionId()
-	return MENU_VERSION_MODERNIZATION_ENUM.CONSOLE
 end
 
 function ExperienceMenuABTestManager.chromeVersionId()
@@ -233,19 +205,19 @@ function ExperienceMenuABTestManager.chromeV4ClosedSelfViewVersionId()
 	return MENU_VERSION_CHROME_V4_ENUM.CLOSED_SELF_VIEW
 end
 
-if GetFFlagSongbirdIXPVariants() then
-	function ExperienceMenuABTestManager.chromeSongbirdVersionId()
-		return MENU_VERSION_SONGBIRD_ENUM.SONGBIRD
-	end
+function ExperienceMenuABTestManager.chromeSongbirdVersionId()
+	return MENU_VERSION_SONGBIRD_ENUM.SONGBIRD
+end
 
-	function ExperienceMenuABTestManager.chromeSongbirdUnibarVersionId()
-		return MENU_VERSION_SONGBIRD_ENUM.SONGBIRD_UNIBAR
-	end
+function ExperienceMenuABTestManager.chromeSongbirdUnibarVersionId()
+	return MENU_VERSION_SONGBIRD_ENUM.SONGBIRD_UNIBAR
+end
 
-	function ExperienceMenuABTestManager.chromeSongbirdPeekVersionId()
-		return MENU_VERSION_SONGBIRD_ENUM.SONGBIRD_PEEK
-	end
+function ExperienceMenuABTestManager.chromeSongbirdPeekVersionId()
+	return MENU_VERSION_SONGBIRD_ENUM.SONGBIRD_PEEK
+end
 
+if not GetFFlagSetupSongbirdWindowExperiment() then
 	function ExperienceMenuABTestManager.sceneAnalysisVersionId()
 		return MENU_VERSION_SONGBIRD_ENUM.SONGBIRD_SCENE_ANALYSIS
 	end
@@ -301,24 +273,6 @@ function ExperienceMenuABTestManager:isReportAbuseMenuV2Enabled()
 	return self:getVersion() == REPORT_ABUSE_MENU_VERSION_V2
 end
 
-function ExperienceMenuABTestManager:isMenuModernizationEnabled()
-	for _, version in pairs(MENU_VERSION_MODERNIZATION_ENUM) do
-		if(self:getVersion() == version) then
-			return true
-		end
-	end
-
-	return false
-end
-
-function ExperienceMenuABTestManager:shouldShowBiggerText()
-	return self:getVersion() == MENU_VERSION_MODERNIZATION_ENUM.BIG_TEXT
-end
-
-function ExperienceMenuABTestManager:shouldShowStickyBar()
-	return self:getVersion() == MENU_VERSION_MODERNIZATION_ENUM.STICKY_BAR
-end
-
 function ExperienceMenuABTestManager:isChromeEnabled()
 	-- Chrome should never be enabled for someone in the v4 control as it is being used for a holdout
 	if self:getVersion() == MENU_VERSION_LEGACY_CONTROLS then
@@ -326,7 +280,7 @@ function ExperienceMenuABTestManager:isChromeEnabled()
 	end
 
 	-- Chrome should always be enabled for someone in v4 treatment to respect the clean treatment holdout
-	for _, version in MENU_VERSION_CHROME_V4_ENUM do 
+	for _, version in MENU_VERSION_CHROME_V4_ENUM do
 		if self:getVersion() == version then
 			return true
 		end
@@ -350,15 +304,16 @@ function ExperienceMenuABTestManager:isChromeEnabled()
 		end
 	end
 
-	if GetFFlagSongbirdIXPVariants() then
-		for _, version in MENU_VERSION_SONGBIRD_ENUM do
+
+	for _, version in MENU_VERSION_SONGBIRD_ENUM do
+		if not GetFFlagSetupSongbirdWindowExperiment() then
 			if version == self.sceneAnalysisVersionId() then
 				continue
 			end
+		end
 
-			if self:getVersion() == version then
-				return true
-			end
+		if self:getVersion() == version then
+			return true
 		end
 	end
 
@@ -425,7 +380,7 @@ function ExperienceMenuABTestManager:shouldCloseSelfViewAtStartup()
 	return self:getVersion() == MENU_VERSION_CHROME_V4_ENUM.CLOSED_SELF_VIEW
 end
 
-if GetFFlagSongbirdIXPVariants() then
+if not GetFFlagSetupSongbirdWindowExperiment() then
 	function ExperienceMenuABTestManager:shouldEnableSceneAnalysis()
 		local version = self:getVersion()
 		return version == MENU_VERSION_SONGBIRD_ENUM.SONGBIRD
@@ -433,16 +388,16 @@ if GetFFlagSongbirdIXPVariants() then
 			or version == MENU_VERSION_SONGBIRD_ENUM.SONGBIRD_UNIBAR
 			or version == MENU_VERSION_SONGBIRD_ENUM.SONGBIRD_PEEK
 	end
+end
 
-	function ExperienceMenuABTestManager:shouldShowSongbirdUnibar()
-		local version = self:getVersion()
-		return version == MENU_VERSION_SONGBIRD_ENUM.SONGBIRD or version == MENU_VERSION_SONGBIRD_ENUM.SONGBIRD_UNIBAR
-	end
+function ExperienceMenuABTestManager:shouldShowSongbirdUnibar()
+	local version = self:getVersion()
+	return version == MENU_VERSION_SONGBIRD_ENUM.SONGBIRD or version == MENU_VERSION_SONGBIRD_ENUM.SONGBIRD_UNIBAR
+end
 
-	function ExperienceMenuABTestManager:shouldShowSongbirdPeek()
-		local version = self:getVersion()
-		return version == MENU_VERSION_SONGBIRD_ENUM.SONGBIRD or version == MENU_VERSION_SONGBIRD_ENUM.SONGBIRD_PEEK
-	end
+function ExperienceMenuABTestManager:shouldShowSongbirdPeek()
+	local version = self:getVersion()
+	return version == MENU_VERSION_SONGBIRD_ENUM.SONGBIRD or version == MENU_VERSION_SONGBIRD_ENUM.SONGBIRD_PEEK
 end
 
 -- this is called on the assumption that IXP layers are initialized

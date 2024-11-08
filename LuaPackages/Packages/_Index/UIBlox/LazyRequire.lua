@@ -3,6 +3,6 @@
 ]]
 local PackageIndex = script.Parent.Parent.Parent._Index
 
-local Package = require(PackageIndex["LazyRequire-31ab8d40-0.1.4"]["LazyRequire"])
+local Package = require(PackageIndex["LazyRequire"]["LazyRequire"])
 
 return Package

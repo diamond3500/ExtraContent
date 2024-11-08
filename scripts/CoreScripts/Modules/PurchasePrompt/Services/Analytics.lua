@@ -22,10 +22,6 @@ function Analytics.new()
 		__tostring = function()
 			return "Service(Analytics)"
 		end,
-		-- MockAnalytics needs to see the functions for automated spy creation
-		__index = function(table, key)
-			return table[key]
-		end,
 	})
 
 	local function GetPlatformString()
@@ -273,6 +269,14 @@ function Analytics.new()
 	function service.signalAvatarCreationPurchaseSubmit()
 		AnalyticsService:SetRBXEvent("client", "InGamePrompt", "AvatarCreationPurchaseSubmit", { gameID = game.GameId })
 		ReportPlatformCounter("AvatarCreationPurchaseSubmit")
+	end
+
+	function service.signalUserSettingEligibilityModal(requestType)
+		ReportEvent("UserSettingEligibilityModalShown", {
+			gameID = game.GameId,
+			requestType = requestType,
+		})
+		ReportPlatformCounter("UserSettingEligibilityModalShown" .. requestType)
 	end
 
 	return service

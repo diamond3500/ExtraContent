@@ -112,7 +112,7 @@ function FeedbackReportDialog:init()
 
 	self.setInstanceRelatedReportDialogState = function(instance)
 		-- When updated engine selection is finished, this will extend to other types of instances.
-		if instance:isA("TextBox") then
+		if instance:IsA("TextBox") then
 			self:setState({
 				feedbackText = instance.PlaceholderText, -- Textbox text will always be input by the user, so we only care about placeholder text
 				feedbackOriginalText = instance.LocalizationMatchedSourceText,
@@ -124,7 +124,7 @@ function FeedbackReportDialog:init()
 					isGenericSelection = false,
 				})
 			end
-		elseif instance:isA("TextLabel") or instance:isA("TextButton") then
+		elseif instance:IsA("TextLabel") or instance:IsA("TextButton") then
 			self:setState({
 				feedbackText = instance.Text,
 				feedbackOriginalText = instance.LocalizationMatchedSourceText,

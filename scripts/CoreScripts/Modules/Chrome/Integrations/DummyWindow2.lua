@@ -1,12 +1,13 @@
+local Chrome = script:FindFirstAncestor("Chrome")
+
 local CorePackages = game:GetService("CorePackages")
 local React = require(CorePackages.Packages.React)
 
-local ChromeService = require(script.Parent.Parent.Service)
-local CommonIcon = require(script.Parent.CommonIcon)
-local Constants = require(script.Parent.Parent.Unibar.Constants)
+local ChromeService = require(Chrome.Service)
+local CommonIcon = require(Chrome.Integrations.CommonIcon)
+local Constants = require(Chrome.Unibar.Constants)
 
-local GetFFlagDebugEnableUnibarDummyIntegrations =
-	require(script.Parent.Parent.Flags.GetFFlagDebugEnableUnibarDummyIntegrations)
+local GetFFlagDebugEnableUnibarDummyIntegrations = require(Chrome.Flags.GetFFlagDebugEnableUnibarDummyIntegrations)
 
 return ChromeService:register({
 	initialAvailability = if GetFFlagDebugEnableUnibarDummyIntegrations()

@@ -3,10 +3,15 @@ local Chrome = script:FindFirstAncestor("Chrome")
 local CorePackages = game:GetService("CorePackages")
 
 local AppCommonLib = require(CorePackages.Workspace.Packages.AppCommonLib)
-local Cryo = require(CorePackages.Workspace.Packages.Cryo)
+local Cryo = require(CorePackages.Packages.Cryo)
 
 local Types = require(Chrome.Service.Types)
 
+local Songbird = require(CorePackages.Workspace.Packages.Songbird)
+local analyticActions = Songbird.AnalyticActions
+local sendAnalytics = Songbird.sendAnalytics
+
+local GetFFlagSongbirdSendAnalytics = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagSongbirdSendAnalytics
 local GetFIntChromeDefaultPeekDuration = require(Chrome.Flags.GetFIntChromeDefaultPeekDuration)
 local GetFIntChromePeekCooldownSeconds = require(Chrome.Flags.GetFIntChromePeekCooldownSeconds)
 
@@ -125,6 +130,12 @@ function PeekService:tryShowPeek(peekId)
 
 	self:_showPeek(peekId)
 
+	if GetFFlagSongbirdSendAnalytics() then
+		sendAnalytics({
+			action = analyticActions.Appear,
+		})
+	end
+
 	local lifetime = self:_getLifetimeConfig(peekId)
 
 	self._thread = task.delay(lifetime.duration, function()
@@ -137,6 +148,12 @@ function PeekService:tryShowPeek(peekId)
 		-- processing
 		if self._currentPeek == peekId then
 			self:_hideCurrentPeek()
+
+			if GetFFlagSongbirdSendAnalytics() then
+				sendAnalytics({
+					action = analyticActions.SelfDismiss,
+				})
+			end
 		end
 	end)
 

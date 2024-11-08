@@ -124,9 +124,9 @@ local FFlagUseNotificationsLocalization = success and result
 local FFlagExtendedExpMenuPortraitLayout = require(RobloxGui.Modules.Flags.FFlagExtendedExpMenuPortraitLayout)
 local GetFFlagVoiceChatUILogging = require(RobloxGui.Modules.Flags.GetFFlagVoiceChatUILogging)
 local GetFFlagPauseMuteFix = require(RobloxGui.Modules.Flags.GetFFlagPauseMuteFix)
-local GetFFlagPlayerListAnimateMic = require(RobloxGui.Modules.Flags.GetFFlagPlayerListAnimateMic)
+local GetFFlagPlayerListAnimateMic = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagPlayerListAnimateMic
 local GetFFlagOldMenuUseSpeakerIcons = require(RobloxGui.Modules.Flags.GetFFlagOldMenuUseSpeakerIcons)
-local FFlagAvatarChatCoreScriptSupport = require(RobloxGui.Modules.Flags.FFlagAvatarChatCoreScriptSupport)
+local FFlagAvatarChatCoreScriptSupport = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagAvatarChatCoreScriptSupport()
 local GetFFlagVoiceRecordingIndicatorsEnabled = require(RobloxGui.Modules.Flags.GetFFlagVoiceRecordingIndicatorsEnabled)
 local GetFFlagShowMuteToggles = require(RobloxGui.Modules.Settings.Flags.GetFFlagShowMuteToggles)
 local GetFFlagWrapBlockModalScreenInProvider = require(RobloxGui.Modules.Flags.GetFFlagWrapBlockModalScreenInProvider)
@@ -136,6 +136,8 @@ local GetFFlagUseFriendsPropsInMuteToggles = require(RobloxGui.Modules.Settings.
 local GetFFlagDefaultFriendingLabelTextNonEmpty = require(RobloxGui.Modules.Settings.Flags.GetFFlagDefaultFriendingLabelTextNonEmpty)
 local GetFFlagEnableLeaveGameUpsellEntrypoint = require(RobloxGui.Modules.Settings.Flags.GetFFlagEnableLeaveGameUpsellEntrypoint)
 local GetFFlagEnableShowVoiceUI = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagEnableShowVoiceUI
+local FFlagInExperienceMenuResetButtonTextToRespawn = require(RobloxGui.Modules.Settings.Flags.FFlagInExperienceMenuResetButtonTextToRespawn)
+local GetFFlagDisableMuteAllCheckForIsMuted = require(RobloxGui.Modules.Settings.Flags.GetFFlagDisableMuteAllCheckForIsMuted)
 
 local isEngineTruncationEnabledForIngameSettings = require(RobloxGui.Modules.Flags.isEngineTruncationEnabledForIngameSettings)
 local EngineFeatureVoiceChatMultistreamSubscriptionsEnabled = game:GetEngineFeature("VoiceChatMultistreamSubscriptionsEnabled")
@@ -144,6 +146,7 @@ local FFlagPlayerListRefactorUsernameFormatting = game:DefineFastFlag("PlayerLis
 local FFlagCorrectlyPositionMuteButton = game:DefineFastFlag("CorrectlyPositionMuteButton", false)
 local GetFFlagEnableAppChatInExperience = SharedFlags.GetFFlagEnableAppChatInExperience
 local FIntSettingsHubPlayersButtonsResponsiveThreshold = game:DefineFastInt("SettingsHubPlayersButtonsResponsiveThreshold", 200)
+local FFlagAppChatTiltMenuConnectIcon = game:DefineFastFlag("AppChatTiltMenuConnectIcon", false)
 local BUTTON_ROW_HORIZONTAL_PADDING = 20
 local BUTTON_ROW_VERTICAL_PADDING = 16
 
@@ -164,6 +167,17 @@ local function Initialize()
 		this.PageListLayout.Padding = UDim.new(0, 16)
 	else
 		this.PageListLayout.Padding = UDim.new(0, PLAYER_ROW_SPACING - PLAYER_ROW_HEIGHT)
+	end
+
+	--[[ Localization Package Initialization ]]
+	local LocalizationStrings
+	local localeId
+	if FFlagInExperienceMenuResetButtonTextToRespawn then
+		LocalizationStrings = {}
+		localeId = LocalizationService.RobloxLocaleId
+		if not LocalizationStrings[localeId] then
+			LocalizationStrings[localeId] = Localization.new(localeId)
+		end
 	end
 
 	------ TAB CUSTOMIZATION -------
@@ -757,7 +771,10 @@ local function Initialize()
 	local resetFunc = function()
 		this.HubRef:SwitchToPage(this.HubRef.ResetCharacterPage, false, 1)
 	end
-	local resetButton, resetLabel = utility:MakeStyledButton("ResetButton", "Reset Character", UDim2.new(1 / 3, -buttonPadding, 1, 0), resetFunc)
+
+	-- Adds to mobile
+	local RESET_TEXT = if FFlagInExperienceMenuResetButtonTextToRespawn then LocalizationStrings[localeId]:Format(Constants.RespawnLocalizedKey) else "Reset Character"
+	local resetButton, resetLabel = utility:MakeStyledButton("ResetButton", RESET_TEXT, UDim2.new(1 / 3, -buttonPadding, 1, 0), resetFunc)
 	resetButton.AnchorPoint = Vector2.new(0.5, 0)
 	resetButton.Position = UDim2.new(0.5, 0, 0, 0)
 
@@ -1207,7 +1224,8 @@ local function Initialize()
 				icon.AnchorPoint = Vector2.new(0, 0.5)
 				icon.Position = UDim2.new(0, 18, 0.5, 0)
 
-				local iconImg = Theme.Images["icons/menu/chat_off"]
+				local iconImg = if FFlagAppChatTiltMenuConnectIcon then Theme.Images["icons/menu/platformChatOff"] else Theme.Images["icons/menu/chat_off"]
+
 				icon.Image = iconImg.Image
 				icon.ImageRectOffset = iconImg.ImageRectOffset
 				icon.ImageRectSize = iconImg.ImageRectSize
@@ -1655,15 +1673,23 @@ local function Initialize()
 			if player and frame then
 				local status = VoiceChatServiceManager.participants[tostring(player.UserId)]
 				-- Check if a player is not muted to update the Mute All button.
-				if FFlagAvatarChatCoreScriptSupport and status and (not status.isMutedLocally and not status.isMuted) then
-					allMuted = false
+				if (FFlagAvatarChatCoreScriptSupport or GetFFlagEnableShowVoiceUI()) and status then
+					if GetFFlagDisableMuteAllCheckForIsMuted() then
+						if not status.isMutedLocally then
+							allMuted = false
+						end
+					else
+						if (not status.isMutedLocally and not status.isMuted) then
+							allMuted = false
+						end
+					end
 				end
 				muteButtonUpdate(frame, status)
 			end
 		end
 
 		-- See if the Mute All button needs to update.
-		if FFlagAvatarChatCoreScriptSupport and not shouldShowMuteToggles then
+		if (FFlagAvatarChatCoreScriptSupport or GetFFlagEnableShowVoiceUI()) and not shouldShowMuteToggles then
 			if allMuted then
 				muteAllState = true
 			else
@@ -1672,7 +1698,7 @@ local function Initialize()
 			local text = muteAllState and RobloxTranslator:FormatByKey("Feature.SettingsHub.Action.UnmuteAll") or RobloxTranslator:FormatByKey("Feature.SettingsHub.Action.MuteAll")
 
 			-- This button may not exist when cleaning up the settings menu after exiting a game.
-			if FFlagAvatarChatCoreScriptSupport and not (muteAllButton and muteAllButton:FindFirstChild("TextLabel")) then
+			if (FFlagAvatarChatCoreScriptSupport or GetFFlagEnableShowVoiceUI()) and not (muteAllButton and muteAllButton:FindFirstChild("TextLabel")) then
 				return
 			end
 			muteAllButton.TextLabel.Text = text
@@ -2189,6 +2215,9 @@ local function Initialize()
 					destroyAllUserMuteButtons()
 					rebuildPlayerList()
 					resetButtonRow()
+				end)
+				VoiceChatServiceManager.muteAllChanged.Event:Connect(function()
+					updateAllMuteButtons()
 				end)
 			end
 		end):catch(function(err)

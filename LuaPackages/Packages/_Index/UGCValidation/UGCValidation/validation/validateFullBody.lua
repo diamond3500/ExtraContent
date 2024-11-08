@@ -6,6 +6,9 @@
 
 local root = script.Parent.Parent
 
+local getEngineFeatureUGCValidationRequiredFolderContext =
+	require(root.flags.getEngineFeatureUGCValidationRequiredFolderContext)
+
 local Analytics = require(root.Analytics)
 local Constants = require(root.Constants)
 local ConstantsInterface = require(root.ConstantsInterface)
@@ -45,7 +48,8 @@ local function validateAllAssetsWithSchema(
 			end
 			local validationResult = validateWithSchema(
 				createDynamicHeadMeshPartSchema(validationContext),
-				instancesAndType.allSelectedInstances[1]
+				instancesAndType.allSelectedInstances[1],
+				validationContext
 			)
 			if not validationResult.success then
 				return false
@@ -58,7 +62,8 @@ local function validateAllAssetsWithSchema(
 				end
 				local validationResult = validateWithSchema(
 					createLimbsAndTorsoSchema(instancesAndType.assetTypeEnum, folderName, validationContext),
-					folderInst
+					folderInst,
+					validationContext
 				)
 				if not validationResult.success then
 					return false
@@ -102,7 +107,10 @@ local function createAllBodyPartsTable(folderName: string, fullBodyData: Types.F
 	return results
 end
 
-local function validateMeshIds(fullBodyData: Types.FullBodyData): (boolean, { string }?)
+local function validateMeshIds(
+	fullBodyData: Types.FullBodyData,
+	validationContext: Types.ValidationContext
+): (boolean, { string }?)
 	local fieldsToCheckFor = {
 		MeshPart = { "MeshId" },
 	}
@@ -121,7 +129,8 @@ local function validateMeshIds(fullBodyData: Types.FullBodyData): (boolean, { st
 				contentIdMap,
 				instance,
 				fieldsToCheckFor,
-				requiredFields
+				requiredFields,
+				validationContext
 			)
 			if not parseSuccess then
 				Analytics.reportFailure(Analytics.ErrorType.validateFullBody_MeshIdsMissing)
@@ -161,7 +170,7 @@ local function validateInstanceHierarchy(
 			}
 	end
 
-	local success, errorMessage = validateMeshIds(fullBodyData)
+	local success, errorMessage = validateMeshIds(fullBodyData, validationContext)
 	if not success then
 		return false, errorMessage
 	end
@@ -185,14 +194,22 @@ end
 local function validateFullBody(validationContext: Types.ValidationContext): (boolean, { string }?)
 	assert(validationContext.fullBodyData ~= nil, "fullBodyData required in validationContext for validateFullBody")
 	local fullBodyData = validationContext.fullBodyData :: Types.FullBodyData
+	local requireAllFolders = validationContext.requireAllFolders
 	local isServer = validationContext.isServer
 
 	local requiredTopLevelFolders: { string } = {
 		Constants.FOLDER_NAMES.R15ArtistIntent,
 	}
-	if isServer then
-		-- in Studio these folders are automatically added just before upload
-		table.insert(requiredTopLevelFolders, Constants.FOLDER_NAMES.R15Fixed)
+	if getEngineFeatureUGCValidationRequiredFolderContext() then
+		if requireAllFolders then
+			-- in Studio these folders are automatically added just before upload
+			table.insert(requiredTopLevelFolders, Constants.FOLDER_NAMES.R15Fixed)
+		end
+	else
+		if isServer then
+			-- in Studio these folders are automatically added just before upload
+			table.insert(requiredTopLevelFolders, Constants.FOLDER_NAMES.R15Fixed)
+		end
 	end
 
 	local success, reasons = validateInstanceHierarchy(fullBodyData, requiredTopLevelFolders, validationContext)

@@ -1,5 +1,7 @@
-local IsExperienceMenuABTestEnabled = require(script.Parent.Parent.IsExperienceMenuABTestEnabled)
-local ExperienceMenuABTestManager = require(script.Parent.Parent.ExperienceMenuABTestManager)
+local Chrome = script:FindFirstAncestor("Chrome")
+
+local IsExperienceMenuABTestEnabled = require(Chrome.Parent.IsExperienceMenuABTestEnabled)
+local ExperienceMenuABTestManager = require(Chrome.Parent.ExperienceMenuABTestManager)
 
 game:DefineFastFlag("EnableInGameMenuChrome", false)
 

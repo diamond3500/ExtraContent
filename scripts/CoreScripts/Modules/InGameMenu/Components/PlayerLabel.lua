@@ -19,6 +19,7 @@ local ThemedTextLabel = require(InGameMenu.Components.ThemedTextLabel)
 local ImageSetLabel = UIBlox.Core.ImageSet.ImageSetLabel
 local withSelectionCursorProvider = UIBlox.App.SelectionImage.withSelectionCursorProvider
 local CursorKind = UIBlox.App.SelectionImage.CursorKind
+local OpenTypeSupport = UIBlox.Utility.OpenTypeSupport
 
 local CONTAINER_FRAME_HEIGHT = 70
 local PLAYER_ICON_SIZE = 44
@@ -41,6 +42,10 @@ local iconPos = {
 }
 
 local validatePropsWithForwardRef = require(CorePackages.Workspace.Packages.RoactUtils).validatePropsWithForwardRef
+local GetFFlagLuaAppEnableOpenTypeSupport =
+	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagLuaAppEnableOpenTypeSupport
+local GetFFlagLuaAppEnableOpenTypeIGMFix =
+	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagLuaAppEnableOpenTypeIGMFix
 
 local PlayerLabel = Roact.PureComponent:extend("PlayerLabel")
 
@@ -157,6 +162,11 @@ function PlayerLabel:renderWithSelectionCursor(getSelectionCursor)
 				Text = props.username,
 				TextXAlignment = Enum.TextXAlignment.Left,
 				TextTruncate = Enum.TextTruncate.AtEnd,
+				OpenTypeFeatures = if (
+						GetFFlagLuaAppEnableOpenTypeSupport() and GetFFlagLuaAppEnableOpenTypeIGMFix()
+					)
+					then OpenTypeSupport:getUserNameStylisticAlternative()
+					else nil,
 			}),
 
 			ButtonContainer = Roact.createElement("Frame", {

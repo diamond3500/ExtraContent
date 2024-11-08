@@ -1,7 +1,7 @@
 --!nonstrict
-local Players = game:GetService("Players")
+local EngineFeatureCompositorAnimateScript = game:GetEngineFeature("CompositorAnimateScript")
 
-game:DefineFastFlag("EmoteMenuSupportScriptRunContext", false)
+local Players = game:GetService("Players")
 
 local LocalPlayer = Players.LocalPlayer
 if not LocalPlayer then
@@ -23,10 +23,11 @@ local function getAnimateScript(character)
     if animate and animate:IsA("LocalScript") then
         return animate
     end
-    if game:GetFastFlag("EmoteMenuSupportScriptRunContext") then
-        if animate and animate:IsA("Script") and animate.RunContext == Enum.RunContext.Client then
-            return animate
-        end
+    if animate and animate:IsA("Script") and animate.RunContext == Enum.RunContext.Client then
+        return animate
+    end
+    if EngineFeatureCompositorAnimateScript and animate and animate:IsA("Actor") then
+        return animate
     end
 
     return nil
@@ -91,15 +92,9 @@ local function connectAnimateAddedListener(character)
     end
 
     animateAddedListener = character.ChildAdded:Connect(function(child)
-        if game:GetFastFlag("EmoteMenuSupportScriptRunContext") then
-            local isClientScript = child:IsA("LocalScript") or (child:IsA("Script") and child.RunContext == Enum.RunContext.Client)
-            if isClientScript and child.Name == "Animate" then
-                checkUpdate(character)
-            end
-        else
-            if child:IsA("LocalScript") and child.Name == "Animate" then
-                checkUpdate(character)
-            end
+        local isClientScript = child:IsA("LocalScript") or (child:IsA("Script") and child.RunContext == Enum.RunContext.Client)
+        if (isClientScript or (EngineFeatureCompositorAnimateScript and child:IsA("Actor"))) and child.Name == "Animate" then
+            checkUpdate(character)
         end
     end)
 end

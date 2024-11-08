@@ -1,11 +1,13 @@
+local Chrome = script:FindFirstAncestor("Chrome")
+
 local CorePackages = game:GetService("CorePackages")
 local CoreGui = game:GetService("CoreGui")
 local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 
 local ScreenshotsApp = require(RobloxGui.Modules.Screenshots.ScreenshotsApp)
-local ChromeService = require(script.Parent.Parent.Parent.Service)
-local ChromeAnalytics = require(script.Parent.Parent.Parent.Analytics.ChromeAnalytics)
-local CommonIcon = require(script.Parent.Parent.CommonIcon)
+local ChromeService = require(Chrome.Service)
+local ChromeAnalytics = require(Chrome.Analytics.ChromeAnalytics)
+local CommonIcon = require(Chrome.Integrations.CommonIcon)
 local GetFFlagEnableScreenshotUtility =
 	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagEnableScreenshotUtility
 
@@ -20,7 +22,7 @@ if GetFFlagEnableScreenshotUtility() then
 
 	-- TODO reenable hotkey tooltip: https://roblox.atlassian.net/browse/APPEXP-1549
 	hotkeyCodes = nil
-	--[[ 
+	--[[
 	local isOSX = UserInputService:GetPlatform() == Enum.Platform.OSX
 	hotkeyCodes = if isOSX
 		then { Enum.KeyCode.LeftSuper, Enum.KeyCode.LeftShift, Enum.KeyCode.S }

@@ -13,7 +13,7 @@ local ThemedTextLabel = require(InGameMenu.Components.ThemedTextLabel)
 
 local Assets = require(InGameMenu.Resources.Assets)
 local Controls = require(InGameMenu.Resources.Controls)
-local React = require(CorePackages.Workspace.Packages.React)
+local React = require(CorePackages.Packages.React)
 
 local withLocalization = require(InGameMenu.Localization.withLocalization)
 

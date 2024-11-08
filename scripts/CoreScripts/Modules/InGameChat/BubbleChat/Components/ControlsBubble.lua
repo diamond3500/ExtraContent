@@ -26,8 +26,7 @@ local Constants = require(Modules.InGameChat.BubbleChat.Constants)
 local SelfViewAPI = require(Modules.SelfView.publicApi)
 local toggleSelfViewSignal = require(Modules.SelfView.toggleSelfViewSignal)
 local Analytics = require(Modules.SelfView.Analytics).new()
-local GetFFlagLocalMutedNilFix = require(Modules.Flags.GetFFlagLocalMutedNilFix)
-local GetFFlagMicStatesFix = require(Modules.Flags.GetFFlagMicStatesFix)
+local GetFFlagLocalMutedNilFix = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagLocalMutedNilFix
 local VoiceConstants = require(Modules.VoiceChat.Constants)
 
 local VIDEO_IMAGE = Images["icons/controls/video"]
@@ -184,23 +183,12 @@ function ControlsBubble:getMicIcon()
 		return self.levelIcon, false
 	end
 
-	if GetFFlagMicStatesFix() then
-		-- If the local player has not given mic permissions to their device, we show the muted icon.
-		local noPermissions = not self.props.hasMicPermissions
-		local micMuted = self.props.voiceState == Constants.VOICE_STATE.MUTED
-			or self.props.voiceState == Constants.VOICE_STATE.LOCAL_MUTED
-		if noPermissions or micMuted then
-			return MIC_OFF_IMAGE, true
-		end
-	else
-		-- If the local player has not given mic permissions to their device, we show the muted icon.
-		local noPermissions = not (self.state.microphoneEnabled and self.props.hasMicPermissions)
-		local micMuted = self.props.voiceState == Constants.VOICE_STATE.MUTED
-			or self.props.voiceState == Constants.VOICE_STATE.LOCAL_MUTED
-
-		if noPermissions or micMuted then
-			return MIC_OFF_IMAGE, true
-		end
+	-- If the local player has not given mic permissions to their device, we show the muted icon.
+	local noPermissions = not self.props.hasMicPermissions
+	local micMuted = self.props.voiceState == Constants.VOICE_STATE.MUTED
+		or self.props.voiceState == Constants.VOICE_STATE.LOCAL_MUTED
+	if noPermissions or micMuted then
+		return MIC_OFF_IMAGE, true
 	end
 
 	return self.levelIcon, false

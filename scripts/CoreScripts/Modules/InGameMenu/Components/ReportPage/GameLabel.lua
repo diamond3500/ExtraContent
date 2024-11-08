@@ -13,7 +13,7 @@ local InGameMenu = script.Parent.Parent.Parent
 local ThemedTextLabel = require(InGameMenu.Components.ThemedTextLabel)
 local Assets = require(InGameMenu.Resources.Assets)
 
-local React = require(CorePackages.Workspace.Packages.React)
+local React = require(CorePackages.Packages.React)
 
 local ImageSetLabel = UIBlox.Core.ImageSet.ImageSetLabel
 

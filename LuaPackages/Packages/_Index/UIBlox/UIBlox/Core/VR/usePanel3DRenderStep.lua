@@ -25,6 +25,13 @@ end
 local function usePanel3DRenderStep(props: Constants.Panel3DProps, basePart: Constants.Ref<Part | nil>)
 	local adorneeSize, setAdorneeSize
 	local adorneeCFrame, setAdorneeCFrame
+	if
+		UIBloxConfig.enablePanelManagedAnchoring
+		and props.anchoring == Constants.AnchoringTypes.PanelManaged
+		and props.connectPanelManagerFunction
+	then
+		return adorneeSize, adorneeCFrame
+	end
 	if UIBloxConfig.refactorPanel3D then
 		adorneeSize, setAdorneeSize = React.useBinding(Vector3.new(props.partSize.X, props.partSize.Y, 0.05))
 		adorneeCFrame, setAdorneeCFrame = React.useBinding(props.offset * CFrame.Angles(math.rad(props.tilt), 0, 0))

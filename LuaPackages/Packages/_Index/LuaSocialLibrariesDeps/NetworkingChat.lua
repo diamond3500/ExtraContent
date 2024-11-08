@@ -3,6 +3,6 @@
 ]]
 local PackageIndex = script.Parent.Parent.Parent._Index
 
-local Package = require(PackageIndex["roblox_networking-chat"]["networking-chat"])
+local Package = require(PackageIndex["NetworkingChat"]["NetworkingChat"])
 
 return Package

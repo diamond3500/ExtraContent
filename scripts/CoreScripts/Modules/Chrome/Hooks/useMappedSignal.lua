@@ -1,6 +1,8 @@
+local Chrome = script:FindFirstAncestor("Chrome")
+
 local CorePackages = game:GetService("CorePackages")
 local React = require(CorePackages.Packages.React)
-local ChromeUtils = require(script.Parent.Parent.Service.ChromeUtils)
+local ChromeUtils = require(Chrome.Service.ChromeUtils)
 
 -- A Hook to wrap a MappedSignal object
 

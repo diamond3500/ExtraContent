@@ -11,14 +11,7 @@ local useExternalEvent = UIBlox.Core.Hooks.useExternalEvent
 local GetTextSize = require(CorePackages.Workspace.Packages.Style).GetTextSize
 local useDesignTokens = require(CorePackages.Workspace.Packages.Style).useDesignTokens
 
-local GetFFlagSwitchInExpTranslationsPackage = require(RobloxGui.Modules.Flags.GetFFlagSwitchInExpTranslationsPackage)
-
-local Localization : any
-if GetFFlagSwitchInExpTranslationsPackage() then
-	Localization = require(CorePackages.Workspace.Packages.InExperienceLocales).Localization
-else
-	Localization = require(CoreGui.RobloxGui.Modules.InGameMenu.Localization.Localization)
-end
+local Localization = require(CorePackages.Workspace.Packages.InExperienceLocales).Localization
 
 local FFlagLocalizeMenuNavigationToggleDialog =
 	require(CoreGui.RobloxGui.Modules.TopBar.Flags.FFlagLocalizeMenuNavigationToggleDialog)

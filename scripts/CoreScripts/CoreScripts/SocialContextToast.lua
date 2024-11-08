@@ -9,7 +9,7 @@ local SocialContextToastPackage = require(CorePackages.Workspace.Packages.Social
 local SocialContextToastContainer = SocialContextToastPackage.SocialContextToastContainer
 local GetFFlagSocialContextToastEventStream = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagSocialContextToastEventStream
 
-local HttpRequest = require(CorePackages.Workspace.Packages.HttpRequest)
+local HttpRequest = require(CorePackages.Packages.HttpRequest)
 local httpRequest = HttpRequest.config({
     requestFunction = function(url, requestMethod, requestOptions)
         return HttpRequest.requestFunctions.HttpRbxApi(url, requestMethod, requestOptions)

@@ -12,18 +12,14 @@ local UIBloxImages = UIBlox.App.ImageSet.Images
 local getIconSize = UIBlox.App.ImageSet.getIconSize
 local IconSize = UIBlox.App.ImageSet.Enum.IconSize
 
-local EnableInGameMenuModernization = require(RobloxGui.Modules.Flags.GetFFlagEnableInGameMenuModernization)
-local EnableInGameMenuModernizationBigText = require(RobloxGui.Modules.Flags.GetFFlagEnableInGameMenuModernizationBigText)
-local EnableInGameMenuModernizationStickyBar = require(RobloxGui.Modules.Flags.GetFFlagEnableInGameMenuModernizationStickyBar)
-local ChromeEnabled = require(script.Parent.Parent.Chrome.Enabled)
 local FFlagIncreaseUtilityRowTextSizeConsole = game:DefineFastFlag("IncreaseUtilityRowTextSizeConsole", false)
 
 local AppFontBaseSize = 16 * 1.2
 
-local ThemeEnabled = EnableInGameMenuModernization() or ChromeEnabled()
+local ThemeEnabled = true
 
-local UseBiggerText = EnableInGameMenuModernizationBigText()
-local UseStickyBarEnabled = EnableInGameMenuModernizationStickyBar()
+local UseBiggerText = false
+local UseStickyBarEnabled = false
 local UseIconButtons = false
 local UseBottomButtonBarOnMobile = false
 

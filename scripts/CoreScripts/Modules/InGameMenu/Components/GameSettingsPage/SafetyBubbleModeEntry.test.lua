@@ -8,7 +8,7 @@ local it = JestGlobals.it
 local beforeEach = JestGlobals.beforeEach
 local beforeAll = JestGlobals.beforeAll
 local jest = JestGlobals.jest
-local ReactTestingLibrary = require(CorePackages.Workspace.Packages.ReactTestingLibrary)
+local ReactTestingLibrary = require(CorePackages.Packages.Dev.ReactTestingLibrary)
 local render = ReactTestingLibrary.render
 local fireEvent = ReactTestingLibrary.fireEvent
 local GameSettings = UserSettings().GameSettings
@@ -32,7 +32,7 @@ local function resetModules()
 	Roact = InGameMenuDependencies.Roact
 
 	-- All the ReactTestingLibrary stuff needs to be re-imported
-	ReactTestingLibrary = require(CorePackages.Workspace.Packages.ReactTestingLibrary)
+	ReactTestingLibrary = require(CorePackages.Packages.Dev.ReactTestingLibrary)
 	render = ReactTestingLibrary.render
 	fireEvent = ReactTestingLibrary.fireEvent
 

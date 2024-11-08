@@ -9,8 +9,6 @@ local UserGameSettings = UserSettings():GetService("UserGameSettings")
 
 local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 
-local renderWithCoreScriptsStyleProvider = require(RobloxGui.Modules.Common.renderWithCoreScriptsStyleProvider)
-
 local TenFootInterface = require(RobloxGui.Modules.TenFootInterface)
 local SettingsUtil = require(RobloxGui.Modules.Settings.Utility)
 local PolicyService = require(RobloxGui.Modules.Common.PolicyService)
@@ -27,13 +25,8 @@ local ApolloProvider = ApolloClientModule.ApolloProvider
 
 local PlayerList = script.Parent
 
-local PlayerListApp = require(PlayerList.Components.Presentation.PlayerListApp)
 local Reducer = require(PlayerList.Reducers.Reducer)
 local GlobalConfig = require(PlayerList.GlobalConfig)
-local CreateLayoutValues = require(PlayerList.CreateLayoutValues)
-local Connection = PlayerList.Components.Connection
-local LayoutValues = require(Connection.LayoutValues)
-local LayoutValuesProvider = LayoutValues.Provider
 local PlayerListSwitcher = require(PlayerList.PlayerListSwitcher)
 
 -- Actions
@@ -48,10 +41,9 @@ local SetMinimized = require(PlayerList.Actions.SetMinimized)
 local SetSubjectToChinaPolicies = require(PlayerList.Actions.SetSubjectToChinaPolicies)
 local SetSettings = require(PlayerList.Actions.SetSettings)
 
-local FFlagMobilePlayerList = require(RobloxGui.Modules.Flags.FFlagMobilePlayerList)
 local FFlagRefactorPlayerNameTag = require(PlayerList.Flags.FFlagRefactorPlayerNameTag)
-local FFlagPlayerListChangesForInspector = game:DefineFastFlag("PlayerListChangesForInspector", false)
 local FFlagRemoveSideBarABTest = require(PlayerList.Flags.FFlagRemoveSideBarABTest)
+local FFlagXboxRemoveLatentVoiceChatPrivilegeCheck = game:DefineFastFlag("XboxRemoveLatentVoiceChatPrivilegeCheck", false)
 
 if not Players.LocalPlayer then
 	Players:GetPropertyChangedSignal("LocalPlayer"):Wait()
@@ -64,16 +56,6 @@ local function isSmallTouchScreen()
 		return false
 	end
 	return SettingsUtil:IsSmallTouchScreen()
-end
-
-local layerCollector
-if FFlagMobilePlayerList and not FFlagPlayerListChangesForInspector then
-	layerCollector = Instance.new("ScreenGui")
-	layerCollector.Parent = CoreGui
-	layerCollector.Name = "PlayerList"
-	layerCollector.DisplayOrder = 1
-	layerCollector.IgnoreGuiInset = true
-	layerCollector.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 end
 
 local function setupSettings(store)
@@ -128,17 +110,20 @@ function PlayerListMaster.new()
 	end)()
 
 	self.store:dispatch(SetTenFootInterface(TenFootInterface:IsEnabled()))
-	if TenFootInterface:IsEnabled() then
-		coroutine.wrap(function()
-			pcall(function()
-				--This is pcalled because platformService won't exist in Roblox studio when emulating xbox.
-				local platformService = game:GetService("PlatformService")
-				if platformService:BeginCheckXboxPrivilege(
-					XPRIVILEGE_COMMUNICATION_VOICE_INGAME).PrivilegeCheckResult == "NoIssue" then
-					self.store:dispatch(SetHasPermissionToVoiceChat(true))
-				end
-			end)
-		end)()
+
+	if not FFlagXboxRemoveLatentVoiceChatPrivilegeCheck then
+		if TenFootInterface:IsEnabled() then
+			coroutine.wrap(function()
+				pcall(function()
+					--This is pcalled because platformService won't exist in Roblox studio when emulating xbox.
+					local platformService = game:GetService("PlatformService")
+					if platformService:BeginCheckXboxPrivilege(
+						XPRIVILEGE_COMMUNICATION_VOICE_INGAME).PrivilegeCheckResult == "NoIssue" then
+						self.store:dispatch(SetHasPermissionToVoiceChat(true))
+					end
+				end)
+			end)()
+		end
 	end
 
 	coroutine.wrap(function()
@@ -156,101 +141,47 @@ function PlayerListMaster.new()
 		fontName = StyleConstants.FontName.Gotham
 	}
 
-	if FFlagMobilePlayerList then
-		self.root = Roact.createElement(RoactRodux.StoreProvider, {
-			store = self.store,
+	self.root = Roact.createElement(RoactRodux.StoreProvider, {
+		store = self.store,
+	}, {
+		Switcher = Roact.createElement(PlayerListSwitcher, {
+			appStyleForUiModeStyleProvider = appStyleForUiModeStyleProvider,
+			setLayerCollectorEnabled = function(enabled)
+				if not self.layerCollectorRef.current then
+					return
+				end
+				self.layerCollectorRef.current.Enabled = enabled
+			end,
+		})
+	})
+
+	if FFlagRefactorPlayerNameTag then
+		self.root = Roact.createElement(ApolloProvider, {
+			client = ApolloClientInstance
 		}, {
-			Switcher = Roact.createElement(PlayerListSwitcher, {
-				appStyleForUiModeStyleProvider = appStyleForUiModeStyleProvider,
-				setLayerCollectorEnabled = function(enabled)
-					if FFlagPlayerListChangesForInspector then
-						if not self.layerCollectorRef.current then
-							return
-						end
-						self.layerCollectorRef.current.Enabled = enabled
-					else
-						layerCollector.Enabled = enabled
-					end
-				end,
-			})
+			StoreProvider = self.root,
 		})
-
-		if FFlagRefactorPlayerNameTag then
-			self.root = Roact.createElement(ApolloProvider, {
-				client = ApolloClientInstance
-			}, {
-				StoreProvider = self.root,
-			})
-		end
-
-		if FFlagPlayerListChangesForInspector then
-			self.root = Roact.createElement("ScreenGui", {
-				AutoLocalize = false,
-				IgnoreGuiInset = true,
-				DisplayOrder = 1,
-				ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
-				[Roact.Ref] = self.layerCollectorRef,
-			}, {
-				PlayerListMaster = self.root
-			})
-		end
-
-		if FFlagRemoveSideBarABTest then
-			self.root = Roact.createElement(RoactAppExperiment.Provider, {
-				value = IXPService
-			}, {
-				RoactAppExperimentProvider = self.root
-			})
-		end
-
-		local parent = if FFlagPlayerListChangesForInspector then CoreGui else layerCollector
-		self.element = Roact.mount(self.root, parent, "PlayerList")
-
-	else
-		local themeProvider = renderWithCoreScriptsStyleProvider({
-			PlayerListApp = Roact.createElement(PlayerListApp)
-		})
-		self.root = Roact.createElement(RoactRodux.StoreProvider, {
-			store = self.store,
-		}, {
-			LayoutValuesProvider = Roact.createElement(LayoutValuesProvider, {
-				layoutValues = CreateLayoutValues(TenFootInterface:IsEnabled())
-			}, {
-				ThemeProvider = themeProvider,
-			})
-		})
-
-		if FFlagRefactorPlayerNameTag then
-			self.root = Roact.createElement(ApolloProvider, {
-				client = ApolloClientInstance
-			}, {
-				StoreProvider = self.root,
-			})
-		end
-
-		if FFlagPlayerListChangesForInspector then
-			self.root = Roact.createElement("ScreenGui", {
-				AutoLocalize = false,
-				IgnoreGuiInset = true,
-				DisplayOrder = 1,
-				ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
-				[Roact.Ref] = self.layerCollectorRef,
-			}, {
-				PlayerListMaster = self.root
-			})
-		end
-
-		if FFlagRemoveSideBarABTest then
-			self.root = Roact.createElement(RoactAppExperiment.Provider, {
-				value = IXPService
-			}, {
-				RoactAppExperimentProvider = self.root
-			})
-		end
-
-		local parent = if FFlagPlayerListChangesForInspector then CoreGui else RobloxGui
-		self.element = Roact.mount(self.root, parent, "PlayerList")
 	end
+
+	self.root = Roact.createElement("ScreenGui", {
+		AutoLocalize = false,
+		IgnoreGuiInset = true,
+		DisplayOrder = 1,
+		ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
+		[Roact.Ref] = self.layerCollectorRef,
+	}, {
+		PlayerListMaster = self.root
+	})
+
+	if FFlagRemoveSideBarABTest then
+		self.root = Roact.createElement(RoactAppExperiment.Provider, {
+			value = IXPService
+		}, {
+			RoactAppExperimentProvider = self.root
+		})
+	end
+
+	self.element = Roact.mount(self.root, CoreGui, "PlayerList")
 
 	self.topBarEnabled = true
 	self.mounted = true
@@ -272,13 +203,7 @@ function PlayerListMaster:_updateMounted()
 	if not TenFootInterface:IsEnabled() then
 		local shouldMount = self.coreGuiEnabled and self.topBarEnabled
 		if shouldMount and not self.mounted then
-			local root
-			if FFlagPlayerListChangesForInspector then
-				root = CoreGui
-			else
-				root = FFlagMobilePlayerList and layerCollector or RobloxGui	
-			end
-			self.element = Roact.mount(self.root, root, "PlayerList")
+			self.element = Roact.mount(self.root, CoreGui, "PlayerList")
 			self.mounted = true
 		elseif not shouldMount and self.mounted then
 			Roact.unmount(self.element)

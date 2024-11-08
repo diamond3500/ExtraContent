@@ -12,11 +12,16 @@ local t = InGameMenuDependencies.t
 local withStyle = UIBlox.Core.Style.withStyle
 local withSelectionCursorProvider = UIBlox.App.SelectionImage.withSelectionCursorProvider
 local CursorKind = UIBlox.App.SelectionImage.CursorKind
+local OpenTypeSupport = UIBlox.Utility.OpenTypeSupport
 
 local InGameMenu = script.Parent.Parent
 
 local FFlagLuaMenuPerfImprovements = require(InGameMenu.Flags.FFlagLuaMenuPerfImprovements)
 local FFlagAlwaysShowDisplayNameInExpMenu = require(InGameMenu.Flags.FFlagAlwaysShowDisplayNameInExpMenu)
+local GetFFlagLuaAppEnableOpenTypeSupport =
+	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagLuaAppEnableOpenTypeSupport
+local GetFFlagLuaAppEnableOpenTypeIGMFix =
+	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagLuaAppEnableOpenTypeIGMFix
 
 local ThemedTextLabel = require(InGameMenu.Components.ThemedTextLabel)
 
@@ -153,6 +158,11 @@ function PlayerLabel:renderWithSelectionCursor(getSelectionCursor)
 				Text = "@" .. props.username,
 				TextXAlignment = Enum.TextXAlignment.Left,
 				TextTruncate = Enum.TextTruncate.AtEnd,
+				OpenTypeFeatures = if (
+						GetFFlagLuaAppEnableOpenTypeSupport() and GetFFlagLuaAppEnableOpenTypeIGMFix()
+					)
+					then OpenTypeSupport:getUserNameStylisticAlternative()
+					else nil,
 			}),
 
 			ButtonContainer = Roact.createElement("Frame", {

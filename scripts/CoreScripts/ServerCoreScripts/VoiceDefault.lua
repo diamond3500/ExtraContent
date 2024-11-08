@@ -2,6 +2,12 @@ local Players = game:GetService("Players")
 local RobloxReplicatedStorage = game:GetService("RobloxReplicatedStorage")
 local VoiceChatService = game:GetService("VoiceChatService")
 local SoundService = game:GetService("SoundService")
+local CorePackages = game:GetService("CorePackages")
+local AvatarChatService = game:GetService("AvatarChatService")
+
+local GetFFlagAvatarChatServiceEnabled =
+	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagAvatarChatServiceEnabled
+
 local FFlagDebugLogVoiceDefault = game:DefineFastFlag("DebugLogVoiceDefault", false)
 local FFlagSetNewDeviceToFalse = game:DefineFastFlag("SetNewDeviceToFalse", false)
 local FFlagFixNewPlayerCheck = game:DefineFastFlag("FixNewPlayerCheck", false)
@@ -10,12 +16,34 @@ local FFlagSendLikelySpeakingUsers = game:DefineFastFlag("SendLikelySpeakingUser
 local FFlagReceiveLikelySpeakingUsersEvent = game:DefineFastFlag("ReceiveLikelySpeakingUsersEventV3", false)
 local FFlagUseAudioInstanceAdded = game:DefineFastFlag("VoiceDefaultUseAudioInstanceAdded", false)
 	and game:GetEngineFeature("AudioInstanceAddedApiEnabled")
+local FFlagUseGetAudioInstances = game:DefineFastFlag("VoiceDefaultUseGetAudioInstances", false)
+local FFlagUseAudioDeviceRemoving = game:DefineFastFlag("VoiceDefaultUseAudioDeviceRemoving", false)
+local FFlagStopVoiceDefaultIfNotVoiceEnabled = game:DefineFastFlag("StopVoiceDefaultIfNotVoiceEnabled", false)
 
 local function log(...)
 	if FFlagDebugLogVoiceDefault then
 		print("[VoiceDefault]", ...)
 	end
 end
+
+if GetFFlagAvatarChatServiceEnabled() and FFlagStopVoiceDefaultIfNotVoiceEnabled then
+	local ok: boolean, serverFeatures: number = pcall(AvatarChatService.GetServerFeaturesAsync, AvatarChatService)
+
+	if not ok then
+		log("Failed to get GetServerFeaturesAsync, returning early")
+		return
+	end
+
+	local universeVoiceEnabled =
+		AvatarChatService:IsEnabled(serverFeatures, Enum.AvatarChatServiceFeature.UniverseAudio)
+	local placeVoiceEnabled = AvatarChatService:IsEnabled(serverFeatures, Enum.AvatarChatServiceFeature.PlaceAudio)
+
+	if not universeVoiceEnabled or not placeVoiceEnabled then
+		log("Universe or place not voice enabled, returning early")
+		return
+	end
+end
+
 type AudioDeviceConnections = {
 	onPlayerChanged: RBXScriptConnection,
 }
@@ -109,6 +137,13 @@ local function trackDevice(device: AudioDeviceInput)
 	end)
 
 	audioDevices[device] = connections :: AudioDeviceConnections
+	if FFlagUseAudioDeviceRemoving then
+		if FFlagFixNewPlayerCheck then
+			device.Destroying:Connect(function() untrackDeviceForPlayer(device, device.Player) end)
+		else
+			device.Destroying:Connect(function() untrackDevice(device) end)
+		end
+	end
 end
 
 local function createAudioDevice(forPlayer: Player)
@@ -187,26 +222,40 @@ if (VoiceChatService :: any).UseNewAudioApi then
 		end)
 	end
 
-	for _, inst in game:GetDescendants() do
-		if inst:IsA("AudioDeviceInput") then
-			local device = inst :: AudioDeviceInput
-			if FFlagSetNewDeviceToFalse then
-				device.Active = false
+	if FFlagUseGetAudioInstances then
+		for _, inst in SoundService:GetAudioInstances() do
+			if inst:IsA("AudioDeviceInput") then
+				local device = inst :: AudioDeviceInput
+				if FFlagSetNewDeviceToFalse then
+					device.Active = false
+				end
+				trackDevice(device)
 			end
-			trackDevice(device)
+		end
+	else
+		for _, inst in game:GetDescendants() do
+			if inst:IsA("AudioDeviceInput") then
+				local device = inst :: AudioDeviceInput
+				if FFlagSetNewDeviceToFalse then
+					device.Active = false
+				end
+				trackDevice(device)
+			end
 		end
 	end
 
-	game.DescendantRemoving:Connect(function(inst)
-		if inst:IsA("AudioDeviceInput") then
-			local device = inst :: AudioDeviceInput
-			if FFlagFixNewPlayerCheck then
-				untrackDeviceForPlayer(device, device.Player)
-			else
-				untrackDevice(device)
+	if not FFlagUseAudioDeviceRemoving then
+		game.DescendantRemoving:Connect(function(inst)
+			if inst:IsA("AudioDeviceInput") then
+				local device = inst :: AudioDeviceInput
+				if FFlagFixNewPlayerCheck then
+					untrackDeviceForPlayer(device, device.Player)
+				else
+					untrackDevice(device)
+				end
 			end
-		end
-	end)
+		end)
+	end
 
 	SetUserActive.OnServerEvent:Connect(function(player, active)
 		local playerDevices = playerDevices[player]
@@ -226,8 +275,8 @@ if FFlagSendLikelySpeakingUsers then
 	local SendLikelySpeakingUsers = Instance.new("UnreliableRemoteEvent")
 	SendLikelySpeakingUsers.Name = "SendLikelySpeakingUsers"
 	SendLikelySpeakingUsers.Parent = RobloxReplicatedStorage
-	local likelySpeakingPlayers: {[number]: boolean} = {}
-	local canPollLikelySpeaking: {[number]: boolean} = {}
+	local likelySpeakingPlayers: { [number]: boolean } = {}
+	local canPollLikelySpeaking: { [number]: boolean } = {}
 	log("Setting up likely speaking users")
 	Players.PlayerAdded:Connect(function(player)
 		local ok, result = pcall(function()

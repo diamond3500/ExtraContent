@@ -12,7 +12,10 @@ local t = require(Packages.t)
 local FitFrame = require(Packages.FitFrame)
 local FitFrameOnAxis = FitFrame.FitFrameOnAxis
 
+local UIBloxConfig = require(UIBlox.UIBloxConfig)
+
 local Button = require(ButtonRoot.Button)
+local ComboButton = require(ButtonRoot.ComboButton)
 local IconButton = require(ButtonRoot.IconButton)
 local TextButton = require(ButtonRoot.TextButton)
 local ButtonType = require(ButtonRoot.Enum.ButtonType)
@@ -58,10 +61,14 @@ function ActionBar:init()
 end
 
 ActionBar.validateProps = t.strictInterface({
-	-- A table of button tables that contain props that [[Button]] allows.
-	button = t.optional(t.strictInterface({
-		props = Button.validateProps,
-	})),
+	-- A table of button tables that contain props that [[Button]] or
+	-- [[ComboButton]] allows
+	button = t.optional(
+		t.union(
+			t.strictInterface({ props = Button.validateProps }),
+			t.strictInterface({ props = ComboButton.validateProps })
+		)
+	),
 
 	-- Height of the icon wrapper
 	iconSize = t.optional(t.number),
@@ -224,6 +231,8 @@ function ActionBar:render()
 			)
 			local buttonIndex = isButtonAtStart and 1 or iconNumber + 1
 
+			local useComboButton = UIBloxConfig.enableComboButtonInActionBar
+				and ComboButton.validateProps(self.props.button.props)
 			local newProps = {
 				layoutOrder = buttonIndex,
 				size = buttonSize,
@@ -240,11 +249,13 @@ function ActionBar:render()
 				NextSelectionLeft = self.getGamepadNextSelectionLeft(buttonIndex, buttonRefNumber),
 				NextSelectionRight = self.getGamepadNextSelectionRight(buttonIndex, buttonRefNumber),
 				inputBindings = {
-					Activated = RoactGamepad.Input.onBegin(Enum.KeyCode.ButtonA, buttonProps.onActivated),
+					Activated = if not useComboButton
+						then RoactGamepad.Input.onBegin(Enum.KeyCode.ButtonA, buttonProps.onActivated)
+						else nil,
 				},
 			}
 
-			if buttonProps.buttonType == nil then
+			if not useComboButton and buttonProps.buttonType == nil then
 				buttonProps.buttonType = if iconNumber == 0
 					then ButtonType.PrimarySystem
 					else ButtonType.PrimaryContextual
@@ -254,7 +265,7 @@ function ActionBar:render()
 				buttonTable,
 				isButtonAtStart and 1 or buttonRefNumber,
 				Roact.createElement(RoactGamepad.Focusable.Frame, gamepadFrameProps, {
-					Icon = Roact.createElement(Button, buttonProps),
+					Icon = Roact.createElement(if useComboButton then ComboButton else Button, buttonProps),
 				})
 			)
 		end

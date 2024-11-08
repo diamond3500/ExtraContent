@@ -13,6 +13,7 @@ local AppFonts = require(CorePackages.Workspace.Packages.Style).AppFonts
 
 local EnableAutomaticSizeVerticalOffsetWidthFix = require(RobloxGui.Modules.Flags.FFlagEnableAutomaticSizeVerticalOffsetWidthFix)
 local FFlagFixProximityPromptAncestry = require(RobloxGui.Modules.Flags.FFlagFixProximityPromptAncestry)
+local FFlagFixProximityPromptOffsetPop = game:DefineFastFlag("FixProximityPromptOffsetPop", false)
 
 local LocalPlayer = Players.LocalPlayer
 while LocalPlayer == nil do
@@ -355,6 +356,7 @@ local function createPrompt(prompt, inputType, gui)
 		elseif buttonTextString ~= nil and buttonTextString ~= '' then
 			local buttonText = Instance.new("TextLabel")
 			buttonText.Name = "ButtonText"
+			buttonText.AutoLocalize = false
 			buttonText.Position = UDim2.fromOffset(0, -1)
 			buttonText.Size = UDim2.fromScale(1, 1)
 			buttonText.Font = AppFonts.default:getMedium()
@@ -481,6 +483,9 @@ local function createPrompt(prompt, inputType, gui)
 		objectText.Position = UDim2.new(0, 0, 0, -10)
 
 		promptUI.Size = UDim2.fromOffset(promptWidth, promptHeight)
+		if FFlagFixProximityPromptOffsetPop then
+			promptUI.SizeOffset = Vector2.new(prompt.UIOffset.X / promptUI.Size.Width.Offset, prompt.UIOffset.Y / promptUI.Size.Height.Offset)
+		end
 
 		-- BillboardGuis can't be automatically sized, so we need to calculate
 		-- the size based on the automatically sized prompt frame.

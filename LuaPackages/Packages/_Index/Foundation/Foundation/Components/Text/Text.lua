@@ -7,8 +7,6 @@ local ReactIs = require(Packages.ReactIs)
 local Cryo = require(Packages.Cryo)
 
 local Interactable = require(Foundation.Components.Interactable)
-local AspectRatio = require(Foundation.Components.AspectRatio)
-local Padding = require(Foundation.Components.Padding)
 
 local Types = require(Foundation.Components.Types)
 local withDefaults = require(Foundation.Utility.withDefaults)
@@ -17,6 +15,7 @@ local StateLayerAffordance = require(Foundation.Enums.StateLayerAffordance)
 local withGuiObjectProps = require(Foundation.Utility.withGuiObjectProps)
 local useStyledDefaults = require(Foundation.Utility.useStyledDefaults)
 local indexBindable = require(Foundation.Utility.indexBindable)
+local GuiObjectChildren = require(Foundation.Utility.GuiObjectChildren)
 type ColorStyle = Types.ColorStyle
 type FontFaceTable = Types.FontFaceTable
 type FontStyle = Types.FontStyle
@@ -49,7 +48,7 @@ local defaultProps = {
 	isDisabled = false,
 }
 
-local defaultTags = "gui-object-defaults text-defaults"
+local defaultTags = "gui-object-defaults text-defaults text-size-defaults text-color-defaults"
 
 local function Text(textProps: TextProps, ref: React.Ref<GuiObject>?)
 	local defaultPropsWithStyles = if Flags.FoundationStylingPolyfill
@@ -111,6 +110,11 @@ local function Text(textProps: TextProps, ref: React.Ref<GuiObject>?)
 		return paddingOffset
 	end, { fontFace :: any, props.fontStyle })
 
+	-- Only set line height padding if it's not already set to mimic styling behavior
+	if props.padding == nil and lineHeightPaddingOffset ~= 0 then
+		props.padding = Vector2.new(0, lineHeightPaddingOffset)
+	end
+
 	local engineComponent = if isInteractable then "TextButton" else "TextLabel"
 
 	local engineComponentProps = withGuiObjectProps(props, {
@@ -145,54 +149,7 @@ local function Text(textProps: TextProps, ref: React.Ref<GuiObject>?)
 		})
 		else engineComponentProps
 
-	return React.createElement(component, componentProps, {
-		Children = React.createElement(React.Fragment, {}, props.children) :: any,
-		AspectRatio = if props.aspectRatio ~= nil
-			then React.createElement(AspectRatio, { value = props.aspectRatio })
-			else nil,
-		CornerRadius = if props.cornerRadius ~= nil
-			then React.createElement("UICorner", {
-				CornerRadius = props.cornerRadius,
-			})
-			else nil,
-		FlexItem = if props.flexItem ~= nil
-			then React.createElement("UIFlexItem", {
-				FlexMode = props.flexItem.FlexMode,
-				GrowRatio = props.flexItem.GrowRatio,
-				ShrinkRatio = props.flexItem.ShrinkRatio,
-				ItemLineAlignment = props.flexItem.ItemLineAlignment,
-			})
-			else nil,
-		ListLayout = if props.layout ~= nil and props.layout.FillDirection ~= nil
-			then React.createElement("UIListLayout", {
-				FillDirection = props.layout.FillDirection,
-				ItemLineAlignment = props.layout.ItemLineAlignment,
-				HorizontalAlignment = props.layout.HorizontalAlignment,
-				HorizontalFlex = props.layout.HorizontalFlex,
-				VerticalAlignment = props.layout.VerticalAlignment,
-				VerticalFlex = props.layout.VerticalFlex,
-				Padding = props.layout.Padding,
-				SortOrder = props.layout.SortOrder,
-				Wraps = props.layout.Wraps,
-			})
-			else nil,
-		SizeConstraint = if props.sizeConstraint ~= nil
-			then React.createElement("UISizeConstraint", props.sizeConstraint)
-			else nil,
-		Padding = if props.padding ~= nil or lineHeightPaddingOffset ~= 0
-			then React.createElement(Padding, {
-				value = if props.padding
-					then props.padding
-					else if lineHeightPaddingOffset then Vector2.new(0, lineHeightPaddingOffset) else nil,
-			})
-			else nil,
-		Scale = if props.scale ~= nil
-			then React.createElement("UIScale", {
-				Scale = props.scale,
-			})
-			else nil,
-		Stroke = if props.stroke ~= nil then React.createElement("UIStroke", props.stroke) else nil,
-	})
+	return React.createElement(component, componentProps, GuiObjectChildren(props))
 end
 
 return React.memo(React.forwardRef(Text))

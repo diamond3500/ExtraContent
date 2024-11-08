@@ -1,9 +1,10 @@
+local Chrome = script:FindFirstAncestor("Chrome")
+
 local CorePackages = game:GetService("CorePackages")
 local GuiService = game:GetService("GuiService")
 local React = require(CorePackages.Packages.React)
 local RoactUtils = require(CorePackages.Workspace.Packages.RoactUtils)
 local useSelector = RoactUtils.Hooks.RoactRodux.useSelector
-local Chrome = script.Parent.Parent
 local Constants = require(Chrome.Unibar.Constants)
 
 local FIntLuaUIOcclusionMetricsReportingPeriodSeconds =

@@ -29,7 +29,12 @@ local function insertRule(ruleNodes: { React.ReactNode }, rule: StyleRuleNoTag, 
 
 	table.insert(
 		ruleNodes,
-		if tag == "gui-object-defaults" or tag == "text-defaults" then 1 else #ruleNodes + 1,
+		if tag == "gui-object-defaults"
+				or tag == "text-defaults"
+				or tag == "text-size-defaults"
+				or tag == "text-color-defaults"
+			then 1
+			else #ruleNodes + 1,
 		React.createElement(StyleRule, {
 			key = selector, -- Improves readability and improves performance during reconciliaton
 			Selector = selector,
@@ -81,10 +86,10 @@ local function StyleSheet(props: StyleSheetProps)
 	end, { props.derives })
 
 	return React.createElement(React.Fragment, nil, {
-		Sheet = React.createElement("StyleSheet", {
+		FoundationStyleSheet = React.createElement("StyleSheet", {
 			ref = sheet,
 		}, createRules(rules, props.tags)),
-		Link = React.createElement("StyleLink", {
+		FoundationStyleLink = React.createElement("StyleLink", {
 			StyleSheet = sheet,
 		}),
 	})

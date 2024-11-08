@@ -52,7 +52,7 @@ local function resetModules()
 	MockableProxyServices.VRService = mockVRService
 
 	-- All the ReactTestingLibrary stuff needs to be re-imported
-	ReactTestingLibrary = require(CorePackages.Workspace.Packages.ReactTestingLibrary)
+	ReactTestingLibrary = require(CorePackages.Packages.Dev.ReactTestingLibrary)
 	render = ReactTestingLibrary.render
 	cleanup = ReactTestingLibrary.cleanup
 

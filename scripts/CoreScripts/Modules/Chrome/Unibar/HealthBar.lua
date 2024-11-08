@@ -1,11 +1,12 @@
+local Chrome = script:FindFirstAncestor("Chrome")
+
 local CorePackages = game:GetService("CorePackages")
 local CoreGui = game:GetService("CoreGui")
 local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 
 local React = require(CorePackages.Packages.React)
-local Constants = require(script.Parent.Constants)
+local Constants = require(Chrome.Unibar.Constants)
 
-local Chrome = script.Parent.Parent
 local useHealthBinding = require(Chrome.Hooks.useHealthBinding)
 local useCoreGuiEnabled = require(Chrome.Hooks.useCoreGuiEnabled)
 local useChromeMenuStatus = require(Chrome.Hooks.useChromeMenuStatus)

@@ -9,6 +9,8 @@ local function withCommonProps<T>(props: CommonProps, baseProps: T)
 		baseProps.Position = props.Position
 		baseProps.Visible = props.Visible
 		baseProps.ZIndex = props.ZIndex
+		baseProps.onAbsoluteSizeChanged = props.onAbsoluteSizeChanged
+		baseProps.testId = props.testId
 	end
 	return baseProps :: T & CommonProps
 end

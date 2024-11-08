@@ -14,23 +14,6 @@ local RunService = game:GetService("RunService")
 local RobloxGui = game:GetService("CoreGui"):WaitForChild("RobloxGui")
 local CoreGuiModules = RobloxGui:WaitForChild("Modules")
 
-local FFlagDebugCoreScriptRoactInspector = game:DefineFastFlag("DebugCoreScriptRoactInspector", false)
-
-if FFlagDebugCoreScriptRoactInspector then
-	local hasInternalPermission = UserSettings().GameSettings:InStudioMode()
-		and game:GetService("StudioService"):HasInternalPermission()
-
-	if hasInternalPermission then
-		local DeveloperTools = require(CorePackages.DeveloperTools)
-		local inspector = DeveloperTools.forCoreGui("Core UI", {
-			rootInstance = "RobloxGui",
-		})
-
-		local ReactDevtoolsExtensions = require(CorePackages.Packages.Dev.ReactDevtoolsExtensions)
-		inspector:initRoact(ReactDevtoolsExtensions)
-	end
-end
-
 -- Load the error reporter as early as possible, even before we finish requiring,
 -- so that it can report any errors that come after this point.
 ScriptContext:AddCoreScriptLocal("CoreScripts/CoreScriptErrorReporter", RobloxGui)
@@ -54,8 +37,8 @@ local ExperienceMenuABTestManager = require(CoreGuiModules.ExperienceMenuABTestM
 local GetFFlagEnableNewInviteMenuIXP = require(CoreGuiModules.Flags.GetFFlagEnableNewInviteMenuIXP)
 local NewInviteMenuExperimentManager = require(CoreGuiModules.Settings.Pages.ShareGame.NewInviteMenuExperimentManager)
 local GetFFlagEnableSoundSessionTelemetry = require(CoreGuiModules.Flags.GetFFlagEnableSoundSessionTelemetry)
-local GetFFlagReportAnythingAnnotationIXP = require(CoreGuiModules.Settings.Flags.GetFFlagReportAnythingAnnotationIXP)
-local TrustAndSafetyIXPManager = require(RobloxGui.Modules.TrustAndSafety.TrustAndSafetyIXPManager)
+local GetFFlagReportAnythingAnnotationIXP = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagReportAnythingAnnotationIXP
+local TrustAndSafetyIXPManager = require(CorePackages.Workspace.Packages.TrustAndSafetyIxp).TrustAndSafetyIXPManager
 
 local GetCoreScriptsLayers = require(CoreGuiModules.Experiment.GetCoreScriptsLayers)
 
@@ -79,7 +62,6 @@ game:DefineFastFlag("MoodsEmoteFix3", false)
 local FFlagEnableSendCameraAccessAnalytics = game:DefineFastFlag("EnableSendCameraAccessAnalytics", false)
 
 local FFlagEnableExperienceNotificationPrompts = game:DefineFastFlag("EnableExperienceNotificationPrompts2", false)
-local FFlagEnableBulkPurchaseApp = game:DefineFastFlag("EnableBulkPurchaseApp3", false)
 local FFlagEnablePremiumSponsoredExperienceReporting = game:DefineFastFlag("EnablePremiumSponsoredExperienceReporting", false)
 local FFlagMoveUGCValidationFunction = require(RobloxGui.Modules.Common.Flags.FFlagMoveUGCValidationFunctionFeature)
 local FFlagEnableCancelSubscriptionApp = game:GetEngineFeature("EnableCancelSubscriptionApp")
@@ -87,6 +69,10 @@ local FFlagEnableCancelSubscriptionAppLua = game:DefineFastFlag("EnableCancelSub
 local AudioFocusManagementEnabled = game:GetEngineFeature("AudioFocusManagement")
 local FFlagEnableExperienceMenuSessionTracking = require(RobloxGui.Modules.Flags.FFlagEnableExperienceMenuSessionTracking)
 local FFlagCoreGuiEnableAnalytics = game:DefineFastFlag("CoreGuiEnableAnalytics", false)
+local FFlagEnableExperienceGenericChallengeRendering = game:DefineFastFlag("EnableExperienceGenericChallengeRendering", false)
+
+local FFlagEnableRobloxCommerce = game:GetEngineFeature("EnableRobloxCommerce")
+local FFlagEnableRobloxCommerceLuaSignals = game:DefineFastFlag("EnableRobloxCommerceLuaSignals", false)
 
 local UIBlox = require(CorePackages.UIBlox)
 local uiBloxConfig = require(CorePackages.Workspace.Packages.CoreScriptsInitializer).UIBloxInGameConfig
@@ -120,7 +106,7 @@ if FFlagEnableExperienceMenuSessionTracking then
 end
 
 
-local FFlagAvatarChatCoreScriptSupport = require(RobloxGui.Modules.Flags.FFlagAvatarChatCoreScriptSupport)
+local FFlagAvatarChatCoreScriptSupport = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagAvatarChatCoreScriptSupport()
 local ChromeEnabled = require(RobloxGui.Modules.Chrome.Enabled)()
 if ChromeEnabled then
 	local ExperienceChat = require(CorePackages.ExperienceChat)
@@ -137,7 +123,7 @@ if getFFlagDoNotPromptCameraPermissionsOnMount() then
 	ExperienceChat.GlobalFlags.DoNotPromptCameraPermissionsOnMount = true
 end
 
-local GetFFlagJoinWithoutMicPermissions = require(RobloxGui.Modules.Flags.GetFFlagJoinWithoutMicPermissions)
+local GetFFlagJoinWithoutMicPermissions = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagJoinWithoutMicPermissions
 if GetFFlagJoinWithoutMicPermissions() then
 	local ExperienceChat = require(CorePackages.ExperienceChat) :: any
 	ExperienceChat.GlobalFlags.JoinWithoutMicPermissions = true
@@ -163,7 +149,7 @@ if getFFlagRenderVoiceBubbleAfterAsyncInit() then
 	GlobalFlags.RenderVoiceBubbleAfterAsyncInit = true
 end
 
-local GetFFlagShowLikelySpeakingBubbles = require(RobloxGui.Modules.Flags.GetFFlagShowLikelySpeakingBubbles)
+local GetFFlagShowLikelySpeakingBubbles = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagShowLikelySpeakingBubbles
 if GetFFlagShowLikelySpeakingBubbles() then
 	local ExperienceChat = require(CorePackages.ExperienceChat)
 	local GlobalFlags = (ExperienceChat.GlobalFlags :: any)
@@ -491,9 +477,7 @@ if FFlagEnableSendCameraAccessAnalytics then
 	ScriptContext:AddCoreScriptLocal("CoreScripts/SendCameraAccessAnalytics", RobloxGui)
 end
 
-if FFlagEnableBulkPurchaseApp then
-	ScriptContext:AddCoreScriptLocal("CoreScripts/BulkPurchaseApp", RobloxGui)
-end
+ScriptContext:AddCoreScriptLocal("CoreScripts/BulkPurchaseApp", RobloxGui)
 
 if AudioFocusManagementEnabled then
 	ScriptContext:AddCoreScriptLocal("CoreScripts/ExperienceAudioFocusBinder", RobloxGui)
@@ -503,6 +487,9 @@ if FFlagEnableCancelSubscriptionApp and FFlagEnableCancelSubscriptionAppLua then
 	ScriptContext:AddCoreScriptLocal("CoreScripts/CancelSubscriptionApp", RobloxGui)
 end
 
+if FFlagEnableRobloxCommerce and FFlagEnableRobloxCommerceLuaSignals then
+	ScriptContext:AddCoreScriptLocal("CoreScripts/CommercePurchaseApp", RobloxGui)
+end
 if FFlagCoreGuiEnableAnalytics then
 	ScriptContext:AddCoreScriptLocal("CoreScripts/CoreGuiEnableAnalytics", RobloxGui)
 end
@@ -512,4 +499,22 @@ local GetFFlagEnableConnectCaptureEvents =
 
 if GetFFlagEnableConnectCaptureEvents() then
 	ScriptContext:AddCoreScriptLocal("CoreScripts/ConnectCaptureEvents", script.Parent)
+end
+
+if FFlagEnableExperienceGenericChallengeRendering then
+	-- Initializes the in-experience challenge interceptor, used to handle
+	-- rendering challenges such as 2-Step-Verification on suspicious actions e.g. economic actions.
+	coroutine.wrap(function()
+		local initChallengeInterceptor = require(CorePackages.Workspace.Packages.GenericChallenges).Middleware.InitExperienceChallengeInterceptor
+		initChallengeInterceptor()
+	end)()
+end
+
+local ReactPerfTracker = require(CoreGuiModules.Common.ReactPerfTracker)
+if ReactPerfTracker then
+	local reactPerfTracker = ReactPerfTracker.new()
+	-- delay for 5 seconds to reduce startup noise
+	task.delay(5, function()
+		reactPerfTracker:start()
+	end)
 end

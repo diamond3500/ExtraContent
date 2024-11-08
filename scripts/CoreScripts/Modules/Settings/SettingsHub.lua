@@ -62,6 +62,7 @@ local BOTTOM_BUTTON_BAR_HEIGHT = 80
 local BOTTOM_BUTTON_10FT_SIZE = 72
 
 local CHECK_LEAVE_GAME_UPSELL_COOLDOWN = game:DefineFastInt("CheckLeaveGameUpsellCooldown", 300)
+local GET_SERVER_CHANNEL_RETRIES = game:DefineFastInt("GetServerChannelRetries", 10)
 
 -- [[ FAST FLAGS ]]
 local FFlagUseNotificationsLocalization = settings():GetFFlag('UseNotificationsLocalization')
@@ -80,7 +81,7 @@ local GetFFlagRemoveAssetVersionEndpoint = require(RobloxGui.Modules.Flags.GetFF
 local GetFFlagNewEventIngestPlayerScriptsDimensions = require(RobloxGui.Modules.Flags.GetFFlagNewEventIngestPlayerScriptsDimensions)
 local GetFFlagShareInviteLinkContextMenuV1Enabled = require(RobloxGui.Modules.Settings.Flags.GetFFlagShareInviteLinkContextMenuV1Enabled)
 local GetFFlagReportAbuseMenuEntrypointAnalytics = require(RobloxGui.Modules.Settings.Flags.GetFFlagReportAbuseMenuEntrypointAnalytics)
-local FFlagAvatarChatCoreScriptSupport = require(RobloxGui.Modules.Flags.FFlagAvatarChatCoreScriptSupport)
+local FFlagAvatarChatCoreScriptSupport = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagAvatarChatCoreScriptSupport()
 local GetFFlagVoiceRecordingIndicatorsEnabled = require(RobloxGui.Modules.Flags.GetFFlagVoiceRecordingIndicatorsEnabled)
 local ChromeEnabled = require(RobloxGui.Modules.Chrome.Enabled)()
 local GetFFlagOpenControlsOnMenuOpen = require(RobloxGui.Modules.Chrome.Flags.GetFFlagOpenControlsOnMenuOpen)
@@ -88,7 +89,6 @@ local GetFFlagEnableCapturesInChrome = require(RobloxGui.Modules.Chrome.Flags.Ge
 local FFlagLuaEnableGameInviteModalSettingsHub = game:DefineFastFlag("LuaEnableGameInviteModalSettingsHub", false)
 local GetFFlagLuaInExperienceCoreScriptsGameInviteUnification = require(RobloxGui.Modules.Flags.GetFFlagLuaInExperienceCoreScriptsGameInviteUnification)
 local GetFStringGameInviteMenuLayer = require(SharedFlags).GetFStringGameInviteMenuLayer
-local GetFFlagFixSettingsHubVRBackgroundError =  require(RobloxGui.Modules.Settings.Flags.GetFFlagFixSettingsHubVRBackgroundError)
 local GetFFlagRightAlignMicText =  require(RobloxGui.Modules.Settings.Flags.GetFFlagRightAlignMicText)
 local FFlagPreventHiddenSwitchPage = game:DefineFastFlag("PreventHiddenSwitchPage", false)
 local GetFFlagEnableScreenshotUtility = require(SharedFlags).GetFFlagEnableScreenshotUtility
@@ -99,14 +99,16 @@ local GetFFlagEnableConnectDisconnectButtonAnalytics = require(RobloxGui.Modules
 local GetFFlagEnableShowVoiceUI = require(SharedFlags).GetFFlagEnableShowVoiceUI
 local GetFFlagUseMicPermForEnrollment = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagUseMicPermForEnrollment
 local GetFFlagEnableAppChatInExperience = require(SharedFlags).GetFFlagEnableAppChatInExperience
-local FFlagSettingsHubCurrentPageSignal = game:DefineFastFlag("SettingsHubCurrentPageSignal", false)
 local EngineFeatureRbxAnalyticsServiceExposePlaySessionId = game:GetEngineFeature("RbxAnalyticsServiceExposePlaySessionId")
 local GetFFlagEnableInExpPhoneVoiceUpsellEntrypoints = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagEnableInExpPhoneVoiceUpsellEntrypoints
 local GetFFlagEnableLeaveGameUpsellEntrypoint = require(RobloxGui.Modules.Settings.Flags.GetFFlagEnableLeaveGameUpsellEntrypoint)
 local GetFFlagFixIGMBottomBarVisibility = require(RobloxGui.Modules.Settings.Flags.GetFFlagFixIGMBottomBarVisibility)
+local GetFFlagDisplayServerChannel = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagDisplayServerChannel
 local FFlagCoreGuiFinalStateAnalytic = require(RobloxGui.Modules.Flags.FFlagCoreGuiFinalStateAnalytic)
 local FFlagEnableExperienceMenuSessionTracking = require(RobloxGui.Modules.Flags.FFlagEnableExperienceMenuSessionTracking)
 local FFlagSettingsHubIndependentBackgroundVisibility = require(CorePackages.Workspace.Packages.SharedFlags).getFFlagSettingsHubIndependentBackgroundVisibility()
+local FFlagAppChatReappearIfClosedByTiltMenu = game:DefineFastFlag("AppChatReappearIfClosedByTiltMenu", true)
+local FFlagInExperienceMenuResetButtonTextToRespawn = require(RobloxGui.Modules.Settings.Flags.FFlagInExperienceMenuResetButtonTextToRespawn)
 
 --[[ SERVICES ]]
 local RobloxReplicatedStorage = game:GetService("RobloxReplicatedStorage")
@@ -136,6 +138,13 @@ spawn(function()
 	GetServerVersionRemote = RobloxReplicatedStorage:WaitForChild("GetServerVersion", math.huge)
 end)
 
+local GetServerChannelRemote = nil
+if GetFFlagDisplayServerChannel() then
+	spawn(function()
+		GetServerChannelRemote = RobloxReplicatedStorage:WaitForChild("GetServerChannel", math.huge)
+	end)
+end
+
 --[[ VARIABLES ]]
 local log = require(CorePackages.Workspace.Packages.CoreScriptsInitializer).CoreLogger:new(script.Name)
 local isTouchDevice = UserInputService.TouchEnabled
@@ -151,6 +160,7 @@ local chatWasVisible = false
 local connectWasVisible = false
 
 local connectedServerVersion = nil
+local connectedServerChannel = nil
 
 local SettingsFullScreenTitleBar = require(RobloxGui.Modules.Settings.Components.SettingsFullScreenTitleBar)
 local PermissionsButtons = require(RobloxGui.Modules.Settings.Components.PermissionsButtons)
@@ -177,8 +187,7 @@ local shouldLocalize = PolicyService:IsSubjectToChinaPolicies()
 
 local VoiceChatServiceManager = require(RobloxGui.Modules.VoiceChat.VoiceChatServiceManager).default
 local VoiceConstants = require(RobloxGui.Modules.VoiceChat.Constants)
-local GetFFlagPlayerListAnimateMic = require(RobloxGui.Modules.Flags.GetFFlagPlayerListAnimateMic)
-local GetFFlagSwitchInExpTranslationsPackage = require(RobloxGui.Modules.Flags.GetFFlagSwitchInExpTranslationsPackage)
+local GetFFlagPlayerListAnimateMic = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagPlayerListAnimateMic
 local FFlagSettingsHubRaceConditionFix = game:DefineFastFlag("SettingsHubRaceConditionFix", false)
 local FFlagFixReportButtonCutOff = game:DefineFastFlag("FixReportButtonCutOff", false)
 
@@ -193,6 +202,9 @@ if GetFFlagVoiceRecordingIndicatorsEnabled() then
 		dampingRatio = 1,
 	}
 end
+
+--[[ Localization Package Initialization ]]
+local Localization = require(CorePackages.Workspace.Packages.InExperienceLocales).Localization
 
 --[[ Localization Fixes for Version Labels]]
 local shouldTryLocalizeVersionLabels = FFlagLocalizeVersionLabels or shouldLocalize
@@ -246,6 +258,27 @@ local function GetServerVersionBlocking()
 	end
 	connectedServerVersion = GetServerVersionRemote:InvokeServer()
 	return connectedServerVersion
+end
+
+local function GetServerChannelBlocking()
+	if connectedServerChannel then
+		return connectedServerChannel
+	end
+
+	local repeatTimes = GET_SERVER_CHANNEL_RETRIES
+	if not GetServerChannelRemote then
+		repeat
+			task.wait()
+			repeatTimes = repeatTimes - 1
+		until GetServerChannelRemote or repeatTimes == 0
+	end
+	if GetServerChannelRemote then
+		connectedServerChannel = GetServerChannelRemote:InvokeServer()
+	else
+		warn("GetServerChannelRemote not available")
+		connectedServerChannel = "Unknown"
+	end
+	return connectedServerChannel
 end
 
 local function GetPlaceVersionText()
@@ -419,17 +452,18 @@ local function CreateSettingsHub()
 		MicOn = "",
 	}
 
+	local localeId
+	local localization
+	if FFlagInExperienceMenuResetButtonTextToRespawn then
+		localeId = LocalizationService.RobloxLocaleId
+		localization = Localization.new(localeId)
+	end
+
 	local function pollVoiceTextLabel()
 		-- Lazy load and cache strings from IGMv3
 		local localeId = LocalizationService.RobloxLocaleId
 		if not IGMLocalizationStrings[localeId] then
-
-			local Localization
-			if GetFFlagSwitchInExpTranslationsPackage() then
-				Localization = require(CorePackages.Workspace.Packages.InExperienceLocales).Localization
-			else
-				Localization = require(RobloxGui.Modules.InGameMenu.Localization.Localization)
-			end
+			local Localization = require(CorePackages.Workspace.Packages.InExperienceLocales).Localization
 			IGMLocalizationStrings[localeId] = Localization.new(localeId)
 			local strings = IGMLocalizationStrings[localeId]
 			VoiceStateStrings.Loading = strings:Format("CoreScripts.InGameMenu.QuickActions.Connecting")
@@ -1037,34 +1071,6 @@ local function CreateSettingsHub()
 		})
 	end
 
-	this.createBackgroundFadeGui = function()
-		if not this.FullscreenGui then
-			this.FullscreenGui = Create("ScreenGui")
-			{
-				Name = "FSSettingsMenuBackground",
-				ScreenInsets = Enum.ScreenInsets.None,
-				ClipToDeviceSafeArea = false,
-				DisplayOrder = RobloxGui.DisplayOrder - 1,
-				Enabled = false,
-				Parent = CoreGui,
-			}
-		end
-
-		if not this.FullscreenBackgroundCover then
-			this.FullscreenBackgroundCover = Create("Frame")
-			{
-				Name = "BackgroundCover",
-				Size = UDim2.fromScale(1, 1),
-				Position = UDim2.fromScale(0, 0),
-				BackgroundColor3 = SETTINGS_SHIELD_COLOR,
-				BackgroundTransparency = 1,
-				Visible = true,
-				Active = true,
-				Parent = this.FullscreenGui,
-			}
-		end
-	end
-
 	local function createGui()
 		local PageViewSizeReducer = 0
 		if utility:IsSmallTouchScreen() then
@@ -1181,6 +1187,30 @@ local function CreateSettingsHub()
 			local marginSize = 6
 			local defaultSize = UDim2.new(0.2, -6, 1, 0)
 			label.Size = canGetCoreScriptVersion and UDim2.new(0, label.TextBounds.X + marginSize, 0, VERSION_BAR_HEIGHT) or defaultSize
+		end
+		if GetFFlagDisplayServerChannel() then
+			this.ServerChannelLabel = Create("TextLabel") {
+				Name = "ServerChannelLabel",
+				Parent = this.VersionContainer,
+				LayoutOrder = 3,
+				BackgroundTransparency = 1,
+				TextColor3 = Color3.new(1,1,1),
+				TextSize = Theme.textSize(isTenFootInterface and 28 or (utility:IsSmallTouchScreen() and 14 or 20)),
+				Text = "Server Channel: ...",
+				Font = Theme.font(Enum.Font.SourceSans, "SettingsHub"),
+				TextXAlignment = Enum.TextXAlignment.Center,
+				TextYAlignment = Enum.TextYAlignment.Center,
+				ZIndex = 5
+			}
+			spawn(function()
+				local serverChannelString = "Server Channel: "
+				if shouldTryLocalizeVersionLabels then
+					serverChannelString = tryTranslate("InGame.HelpMenu.Label.ServerChannel", "Server Channel: ")
+				end
+				this.ServerChannelLabel.Text = serverChannelString..GetServerChannelBlocking()
+				addSizeToLabel(this.ServerChannelLabel)
+				this.ServerChannelLabel.TextScaled = not (canGetCoreScriptVersion or this.ServerChannelLabel.TextFits)
+			end)
 		end
 
 		this.ServerVersionLabel = Create("TextLabel") {
@@ -1998,13 +2028,14 @@ local function CreateSettingsHub()
 			end
 		end
 
+		local RESET_TEXT = if FFlagInExperienceMenuResetButtonTextToRespawn then localization:Format(Constants.RespawnLocalizedKey) else "Reset Character"
 		if Theme.UseIconButtons then
-			addBottomBarIconButton("ResetCharacter", "icons/actions/respawn", "Reset Character", buttonY,
+			addBottomBarIconButton("ResetCharacter", "icons/actions/respawn", RESET_TEXT, buttonY,
 				"rbxasset://textures/ui/Settings/Help/ResetIcon.png", UDim2.new(0.5,isTenFootInterface and -550 or -400,0.5,-25),
 				resetCharFunc, {Enum.KeyCode.R, Enum.KeyCode.ButtonY}
 			)
 		else
-			addBottomBarButtonOld("ResetCharacter", "Reset Character", buttonY,
+			addBottomBarButtonOld("ResetCharacter", RESET_TEXT, buttonY,
 				"rbxasset://textures/ui/Settings/Help/ResetIcon.png", UDim2.new(0.5,isTenFootInterface and -550 or -400,0.5,-25),
 				resetCharFunc, {Enum.KeyCode.R, Enum.KeyCode.ButtonY}, resetCharFunc
 			)
@@ -2358,7 +2389,7 @@ local function CreateSettingsHub()
 		local newPageViewClipperSize = nil
 		if not isTenFootInterface then
 			if utility:IsSmallTouchScreen() then
-				local backButtonExtraSize = if getBackBarVisible() or Theme.UIBloxThemeEnabled then 0 else 44
+				local backButtonExtraSize = if Theme.UIBloxThemeEnabled or getBackBarVisible() then 0 else 44
 				
 				newPageViewClipperSize = UDim2.new(
 					0,
@@ -2787,10 +2818,7 @@ local function CreateSettingsHub()
 
 		this.Pages.CurrentPage = pageToSwitchTo
 		this.Pages.CurrentPage.Active = true
-
-		if ChromeEnabled or FFlagSettingsHubCurrentPageSignal then
-			this.CurrentPageSignal:fire(this.Pages.CurrentPage and this.Pages.CurrentPage.Page.Name or nil)
-		end
+		this.CurrentPageSignal:fire(this.Pages.CurrentPage and this.Pages.CurrentPage.Page.Name or nil)
 
 		if Theme.UseStickyBar() == false then
 			local pageSize = this.Pages.CurrentPage:GetSize()
@@ -2903,9 +2931,7 @@ local function CreateSettingsHub()
 		this.Pages.CurrentPage = pageToSwitchTo
 		this.Pages.CurrentPage:Display(this.PageViewInnerFrame, skipAnimation)
 		this.Pages.CurrentPage.Active = true
-		if ChromeEnabled or FFlagSettingsHubCurrentPageSignal then
-			this.CurrentPageSignal:fire(this.Pages.CurrentPage and this.Pages.CurrentPage.Page.Name or nil)
-		end
+		this.CurrentPageSignal:fire(this.Pages.CurrentPage and this.Pages.CurrentPage.Page.Name or nil)
 
 		if Theme.UseStickyBar() == false then
 			local pageSize = this.Pages.CurrentPage:GetSize()
@@ -2995,8 +3021,11 @@ local function CreateSettingsHub()
 
 		if not this.checkedUpsell and this.leaveGameUpsellProp == VoiceConstants.PHONE_UPSELL_VALUE_PROP.None then
 			this.checkedUpsell = true
-			this.leaveGameUpsellProp =
-			VoiceChatServiceManager:FetchPhoneVerificationUpsell(VoiceConstants.EXIT_CONFIRMATION_PHONE_UPSELL_IXP_LAYER, this.sessionStartTime, true)
+			this.leaveGameUpsellProp = VoiceChatServiceManager:FetchPhoneVerificationUpsell(
+				VoiceConstants.EXIT_CONFIRMATION_PHONE_UPSELL_IXP_LAYER, 
+				this.sessionStartTime, 
+				true
+			)
 			this.LeaveGameUpsellPage:SetUpsellProp(this.leaveGameUpsellProp)
 			task.delay(CHECK_LEAVE_GAME_UPSELL_COOLDOWN, function()
 				this.checkedUpsell = false
@@ -3270,15 +3299,15 @@ local function CreateSettingsHub()
 				this.TakingScreenshot = takingScreenshot or false
 			end
 
-			if ChromeEnabled or FFlagSettingsHubCurrentPageSignal then
-				this.CurrentPageSignal:fire("")
-			end
+			this.CurrentPageSignal:fire("")
 			
-			local forceNoAnimationIfWeWillShowConnect = if GetFFlagEnableAppChatInExperience() then connectWasVisible else false
+			local forceNoAnimationIfWeWillShowConnect = if GetFFlagEnableAppChatInExperience() then (FFlagAppChatReappearIfClosedByTiltMenu and connectWasVisible) else false
 			
 			if GetFFlagEnableAppChatInExperience() and connectWasVisible then
 				connectWasVisible = false
-				InExperienceAppChatModal.default:setVisible(true)
+				if FFlagAppChatReappearIfClosedByTiltMenu then
+					InExperienceAppChatModal.default:setVisible(true)
+				end
 			end
 			
 			if noAnimation or forceNoAnimationIfWeWillShowConnect then
@@ -3529,16 +3558,6 @@ local function CreateSettingsHub()
 	end
 	function this:HideShield()
 		this.Shield.BackgroundTransparency = 1
-
-		if UserInputService.VREnabled then
-			if GetFFlagFixSettingsHubVRBackgroundError() then
-				if this.FullscreenGui then
-					this.FullscreenGui.Enabled = false
-				end
-			else
-				this.FullscreenGui.Enabled = false
-			end
-		end
 	end
 
 	local thisModuleName = "SettingsMenu"

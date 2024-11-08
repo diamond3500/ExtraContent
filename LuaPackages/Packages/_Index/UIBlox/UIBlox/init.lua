@@ -219,6 +219,9 @@ local function initializeLibrary(configs)
 			UtilityActionIcon = lazify(function()
 				return require(script.App.Button.UtilityActionIcon)
 			end),
+			ComboButton = lazify(function()
+				return require(script.App.Button.ComboButton)
+			end),
 		}),
 
 		Cell = strict({

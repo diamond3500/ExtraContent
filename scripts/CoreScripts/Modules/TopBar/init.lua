@@ -10,6 +10,7 @@ local Localization = require(CorePackages.Workspace.Packages.InExperienceLocales
 local LocalizationProvider = require(CorePackages.Workspace.Packages.Localization).LocalizationProvider
 local DesignTokenProvider = require(CorePackages.Workspace.Packages.Style).DesignTokenProvider
 local CrossExperienceVoice = require(CorePackages.Workspace.Packages.CrossExperienceVoice)
+local ReactSceneUnderstanding = require(CorePackages.Packages.ReactSceneUnderstanding)
 
 local Roact = require(CorePackages.Roact)
 local Rodux = require(CorePackages.Rodux)
@@ -18,6 +19,7 @@ local UIBlox = require(CorePackages.UIBlox)
 
 local StyleConstants = UIBlox.App.Style.Constants
 local UiModeStyleProvider = require(CorePackages.Workspace.Packages.Style).UiModeStyleProvider
+local Songbird = require(CorePackages.Workspace.Packages.Songbird)
 
 local SettingsUtil = require(RobloxGui.Modules.Settings.Utility)
 local TenFootInterface = require(RobloxGui.Modules.TenFootInterface)
@@ -26,7 +28,8 @@ local ChromeEnabled = require(RobloxGui.Modules.Chrome.Enabled)()
 local Constants = require(script.Constants)
 local MenuNavigationPromptTokenMapper = require(script.TokenMappers.MenuNavigationPromptTokenMapper)
 
-local GetFFlagEnableSceneAnalysis = require(CoreGui.RobloxGui.Modules.Flags.GetFFlagEnableSceneAnalysis)
+local GetFFlagMountSceneAnalysisProvider = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagMountSceneAnalysisProvider
+local GetFFlagSongbirdUseReportAudioModal = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagSongbirdUseReportAudioModal
 
 if ChromeEnabled and not TenFootInterface:IsEnabled() then
 	-- set this prior to TopBarApp require
@@ -40,7 +43,6 @@ if ChromeEnabled and not TenFootInterface:IsEnabled() then
 end
 
 local TopBarApp = require(script.Components.TopBarApp)
-local SceneAnalysisExperimentProvider = require(script.Components.SceneAnalysisExperimentProvider)
 local Reducer = require(script.Reducer)
 local TopBarAppPolicy = require(script.TopBarAppPolicy)
 
@@ -168,8 +170,8 @@ function TopBar.new()
 				}, {
 					ExperimentProvider = Roact.createFragment({
 						RoactAppExperimentProvider = Roact.createElement(
-							RoactAppExperiment.Provider, 
-							{ value = IXPService }, 
+							RoactAppExperiment.Provider,
+							{ value = IXPService },
 							{ TopBarApp = TopBarWithProviders }
 						),
 						CrossExperienceVoice = GetFFlagEnableCrossExpVoice() and Roact.createElement(CrossExperienceVoiceComponent) or nil,
@@ -179,8 +181,12 @@ function TopBar.new()
 		),
 	})
 
-	if GetFFlagEnableSceneAnalysis() then
-		self.root = Roact.createElement(SceneAnalysisExperimentProvider, {}, self.root)
+	if GetFFlagMountSceneAnalysisProvider() then
+		self.root = Roact.createElement(ReactSceneUnderstanding.SceneAnalysisProvider, nil, self.root)
+	end
+
+	if GetFFlagSongbirdUseReportAudioModal() then
+		self.root = Roact.createElement(Songbird.ReportAudioPopupContext.Provider, nil, self.root)
 	end
 
 	self.element = Roact.mount(self.root, CoreGui, "TopBar")

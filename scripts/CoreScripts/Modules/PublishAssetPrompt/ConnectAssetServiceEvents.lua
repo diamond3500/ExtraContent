@@ -13,12 +13,10 @@ local PublishAssetPrompt = script.Parent
 local OpenPublishAssetPrompt = require(PublishAssetPrompt.Thunks.OpenPublishAssetPrompt)
 local OpenPublishAvatarPrompt = require(PublishAssetPrompt.Thunks.OpenPublishAvatarPrompt)
 local OpenResultModal = require(PublishAssetPrompt.Thunks.OpenResultModal)
-local SetSerializedModel = require(PublishAssetPrompt.Actions.SetSerializedModel)
+local SetHumanoidModel = require(PublishAssetPrompt.Actions.SetHumanoidModel)
 local SetPriceInRobux = require(PublishAssetPrompt.Actions.SetPriceInRobux)
 local OpenValidationErrorModal = require(PublishAssetPrompt.Actions.OpenValidationErrorModal)
 
-local FFlagInExperiencePublishDeserializeAsset = game:DefineFastFlag("InExperiencePublishDeserializeAsset", false)
-local FFlagNewInExperienceSerializationFix = game:DefineFastFlag("NewInExperienceSerializationFix", false)
 local FFlagPublishAvatarPromptEnabled = require(script.Parent.FFlagPublishAvatarPromptEnabled)
 
 local EngineFeaturePromptImportAnimationClipFromVideoAsyncEnabled =
@@ -39,44 +37,16 @@ local function ConnectAssetServiceEvents(store)
 				and scopes[1] == Enum.ExperienceAuthScope.CreatorAssetsCreate
 				and not isVideoToAnimationFlow
 			then
-				if FFlagNewInExperienceSerializationFix then
-					-- We need to handle asset passed as either instance or as serialized string.
-					if metadata["instanceToPublish"] then
-						store:dispatch(
-							OpenPublishAssetPrompt(metadata["instanceToPublish"], metadata["assetType"], guid, scopes)
-						)
-					elseif metadata["serializedInstance"] then
-						local instance = AssetService:DeserializeInstance(metadata["serializedInstance"])
-						store:dispatch(OpenPublishAssetPrompt(instance, metadata["assetType"], guid, scopes))
-					elseif FFlagPublishAvatarPromptEnabled and metadata["outfitToPublish"] then
-						store:dispatch(OpenPublishAvatarPrompt(guid, scopes))
-					end
-				else
-					if
-						game:GetEngineFeature("AssetServiceDeserializeInstance")
-						and FFlagInExperiencePublishDeserializeAsset
-					then
-						if FFlagPublishAvatarPromptEnabled and metadata["outfitToPublish"] then
-							store:dispatch(OpenPublishAvatarPrompt(guid, scopes))
-						else
-							local instance = AssetService:DeserializeInstance(metadata["serializedInstance"])
-
-							store:dispatch(OpenPublishAssetPrompt(instance, metadata["assetType"], guid, scopes))
-						end
-					else
-						if FFlagPublishAvatarPromptEnabled and metadata["outfitToPublish"] then
-							store:dispatch(OpenPublishAvatarPrompt(guid, scopes))
-						else
-							store:dispatch(
-								OpenPublishAssetPrompt(
-									metadata["instanceToPublish"],
-									metadata["assetType"],
-									guid,
-									scopes
-								)
-							)
-						end
-					end
+				-- We need to handle asset passed as either instance or as serialized string.
+				if metadata["instanceToPublish"] then
+					store:dispatch(
+						OpenPublishAssetPrompt(metadata["instanceToPublish"], metadata["assetType"], guid, scopes)
+					)
+				elseif metadata["serializedInstance"] then
+					local instance = AssetService:DeserializeInstance(metadata["serializedInstance"])
+					store:dispatch(OpenPublishAssetPrompt(instance, metadata["assetType"], guid, scopes))
+				elseif FFlagPublishAvatarPromptEnabled and metadata["outfitToPublish"] then
+					store:dispatch(OpenPublishAvatarPrompt(guid, scopes))
 				end
 			end
 		end)
@@ -97,15 +67,17 @@ local function ConnectAssetServiceEvents(store)
 	if pcall(checkNewEventsExist) then
 		table.insert(
 			connections,
-			AvatarCreationService.UgcValidationSuccess:Connect(function(guid, serializedModel)
+			AvatarCreationService.UgcValidationSuccess:Connect(function(guid, serializedModel, priceFromToken)
 				local state = store:getState()
 
 				-- check that guid matches for the prompt to update humanoid model
 				if state and state.promptRequest.promptInfo.guid == guid then
-					store:dispatch(SetSerializedModel(serializedModel))
-					-- TODO AVBURST-13509 Update this to match + use actual token API response
-					-- Currently set to zero so the submit button is always enabled
-					store:dispatch(SetPriceInRobux(0))
+					store:dispatch(SetHumanoidModel(AvatarCreationService:DeserializeAvatarModel(serializedModel)))
+					if FFlagPublishAvatarPromptEnabled then
+						store:dispatch(SetPriceInRobux(priceFromToken))
+					else
+						store:dispatch(SetPriceInRobux(0))
+					end
 				end
 			end)
 		)

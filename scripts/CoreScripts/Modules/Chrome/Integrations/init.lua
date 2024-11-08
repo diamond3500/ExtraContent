@@ -17,9 +17,10 @@ return {
 	LikeButton = require(script.MusicUtility.LikeButton),
 	MusicEntrypoint = require(script.MusicUtility.MusicEntrypoint),
 	Songbird = require(script.MusicUtility.Songbird),
+	MusicIcon = require(script.MusicUtility.MusicIcon),
 	MusicPlayingIcon = require(script.MusicUtility.MusicPlayingIcon),
 	PeekTrackDetails = require(script.MusicUtility.PeekTrackDetails),
-	Party = require(script.Party),
 	PartyMic = require(script.Party.PartyMic),
 	PeekCloseButton = require(script.PeekCloseButton),
+	OverflowButton = require(script.MusicUtility.OverflowButton),
 }

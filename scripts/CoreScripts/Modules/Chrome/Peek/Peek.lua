@@ -4,17 +4,18 @@ local CorePackages = game:GetService("CorePackages")
 
 local React = require(CorePackages.Packages.React)
 local ReactOtter = require(CorePackages.Packages.ReactOtter)
-local ReactUtils = require(CorePackages.Workspace.Packages.ReactUtils)
+local ReactUtils = require(CorePackages.Packages.ReactUtils)
 local Songbird = require(CorePackages.Workspace.Packages.Songbird)
 local UIBlox = require(CorePackages.UIBlox)
-local GuiObjectUtils = require(CorePackages.Workspace.Packages.GuiObjectUtils)
+local Foundation = require(CorePackages.Packages.Foundation)
 
 local ChromeService = require(Chrome.Service)
 local IntegrationRow = require(Chrome.Peek.IntegrationRow)
+local useChromePeekId = require(Chrome.Hooks.useChromePeekId)
 local useChromePeekItems = require(Chrome.Hooks.useChromePeekItems)
 local Types = require(Chrome.Service.Types)
+local shouldUseSmallPeek = require(Chrome.Integrations.MusicUtility.shouldUseSmallPeek)
 
-local useHoverState = GuiObjectUtils.useHoverState
 local useMusicPeek = Songbird.useMusicPeek
 local usePrevious = ReactUtils.usePrevious
 local useEffect = React.useEffect
@@ -22,36 +23,52 @@ local useRef = React.useRef
 local useCallback = React.useCallback
 
 local GetFFlagEnableSongbirdPeek = require(Chrome.Flags.GetFFlagEnableSongbirdPeek)
-local GetFStringChromeMusicIntegrationId =
-	require(CorePackages.Workspace.Packages.SharedFlags).GetFStringChromeMusicIntegrationId
-local GetFFlagPeekShowsOnSongChange = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagPeekShowsOnSongChange
-local GetFFlagSongbirdTranslationStrings =
-	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagSongbirdTranslationStrings
-local GetFFlagFixPeekRenderingWithoutContent =
-	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagFixPeekRenderingWithoutContent
-local GetFFlagPeekShowsOneSongOverLifetime =
-	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagPeekShowsOneSongOverLifetime
+local GetFFlagPeekUseUpdatedDesign = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagPeekUseUpdatedDesign
+local GetFFlagEnablePeekStaticMusicIconIntegration =
+	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagEnablePeekStaticMusicIconIntegration
+local GetFFlagFixPeekTogglingWhenSpammingUnibar =
+	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagFixPeekTogglingWhenSpammingUnibar
 
 local useStyle = UIBlox.Core.Style.useStyle
+local ControlState = Foundation.Enums.ControlState
+local StateLayerAffordance = Foundation.Enums.StateLayerAffordance
 
 function configurePeek()
 	if GetFFlagEnableSongbirdPeek() then
 		ChromeService:configurePeek("music_peek", {
-			integrations = if GetFFlagPeekShowsOneSongOverLifetime()
-				then {
-					"peek_close",
-					"music_playing_icon",
-					"peek_track_details",
-					"like_button",
-				}
-				else {
-					"peek_close",
-					"music_playing_icon",
-					if GetFFlagSongbirdTranslationStrings()
-						then "now_playing"
-						else GetFStringChromeMusicIntegrationId(),
-					"like_button",
-				},
+			integrations = {
+				"peek_close",
+				if GetFFlagEnablePeekStaticMusicIconIntegration() then "music_icon" else "music_playing_icon",
+				"peek_track_details",
+				"like_button",
+			},
+		})
+	end
+
+	ChromeService:configurePeek("music_peek_portrait", {
+		integrations = {
+			if GetFFlagEnablePeekStaticMusicIconIntegration() then "music_icon" else "music_playing_icon",
+			"peek_track_details",
+			"like_button",
+		},
+	})
+
+	-- In the new design, the same components are rendered regardless of screen size
+	-- TO-DO: clean up music_peek_portrait mentions once design is confirmed
+	if GetFFlagPeekUseUpdatedDesign() then
+		ChromeService:configurePeek("music_peek", {
+			integrations = {
+				if GetFFlagEnablePeekStaticMusicIconIntegration() then "music_icon" else "music_playing_icon",
+				"peek_track_details",
+				"peek_close",
+			},
+		})
+		ChromeService:configurePeek("music_peek_portrait", {
+			integrations = {
+				if GetFFlagEnablePeekStaticMusicIconIntegration() then "music_icon" else "music_playing_icon",
+				"peek_track_details",
+				"peek_close",
+			},
 		})
 	end
 end
@@ -74,12 +91,15 @@ export type Props = {
 
 local function Peek(props: Props): React.Node?
 	local style = useStyle()
-	local frameRef = useRef(nil :: Frame?)
 	local peekItemsRef = useRef(nil :: Types.PeekList?)
 	local peekItems = useChromePeekItems()
-	local prevPeekItems = usePrevious(peekItems)
-
-	local isHovered = useHoverState(frameRef)
+	local peekId
+	local prevPeekId
+	if GetFFlagFixPeekTogglingWhenSpammingUnibar() then
+		peekId = useChromePeekId()
+		prevPeekId = usePrevious(peekId)
+	end
+	local prevPeekItems = if GetFFlagFixPeekTogglingWhenSpammingUnibar() then nil else usePrevious(peekItems)
 
 	local onComplete = useCallback(function(alpha)
 		if alpha == 0 then
@@ -89,16 +109,27 @@ local function Peek(props: Props): React.Node?
 
 	local binding, setGoal = ReactOtter.useAnimatedBinding(0, onComplete)
 
-	useEffect(function()
-		if isHovered then
+	local onStateChanged = useCallback(function(state)
+		if state == ControlState.Pressed or state == ControlState.Hover then
 			ChromeService:lockCurrentPeek()
 		else
 			ChromeService:unlockCurrentPeek()
 		end
-	end, { isHovered })
+	end, {})
 
-	useEffect(function()
-		if GetFFlagFixPeekRenderingWithoutContent() then
+	if GetFFlagFixPeekTogglingWhenSpammingUnibar() then
+		useEffect(function()
+			if peekId ~= prevPeekId then
+				if peekItems and #peekItems > 0 and not peekItemsRef.current then
+					peekItemsRef.current = peekItems
+					setGoal(ReactOtter.spring(1, SPRING_CONFIG))
+				else
+					setGoal(ReactOtter.spring(0, SPRING_CONFIG))
+				end
+			end
+		end, { peekId, prevPeekId, peekItems } :: { unknown })
+	else
+		useEffect(function()
 			if peekItems ~= prevPeekItems then
 				if peekItems and #peekItems > 0 and not peekItemsRef.current then
 					peekItemsRef.current = peekItems
@@ -107,28 +138,19 @@ local function Peek(props: Props): React.Node?
 					setGoal(ReactOtter.spring(0, SPRING_CONFIG))
 				end
 			end
-		else
-			if prevPeekItems and peekItems ~= prevPeekItems then
-				if peekItemsRef.current then
-					setGoal(ReactOtter.spring(0, SPRING_CONFIG))
-				else
-					peekItemsRef.current = peekItems
-					setGoal(ReactOtter.spring(1, SPRING_CONFIG))
-				end
-			end
-		end
-	end, { peekItems, prevPeekItems } :: { unknown })
-
-	if GetFFlagPeekShowsOnSongChange() then
-		useMusicPeek(ChromeService)
+		end, { peekItems, prevPeekItems } :: { unknown })
 	end
 
+	useMusicPeek(ChromeService, shouldUseSmallPeek())
+
 	if peekItemsRef.current then
-		return React.createElement("Frame", {
+		return React.createElement(Foundation.View, {
 			Size = UDim2.fromScale(1, 1),
-			BackgroundTransparency = 1,
 			LayoutOrder = props.layoutOrder,
-			ref = frameRef,
+			stateLayer = {
+				affordance = StateLayerAffordance.None,
+			},
+			onStateChanged = onStateChanged,
 		}, {
 			PeekContainer = React.createElement("Frame", {
 				Size = UDim2.fromScale(1, 1),
@@ -155,15 +177,19 @@ local function Peek(props: Props): React.Node?
 						* style.Settings.PreferredTransparency,
 				}, {
 					UICorner = React.createElement("UICorner", {
-						CornerRadius = UDim.new(1, 0),
+						CornerRadius = if GetFFlagPeekUseUpdatedDesign()
+							then UDim.new(0, style.Tokens.Global.Size_100)
+							else UDim.new(1, 0),
 					}),
 
-					Padding = React.createElement("UIPadding", {
-						PaddingTop = UDim.new(0, style.Tokens.Global.Space_25),
-						PaddingRight = UDim.new(0, style.Tokens.Global.Space_25),
-						PaddingBottom = UDim.new(0, style.Tokens.Global.Space_25),
-						PaddingLeft = UDim.new(0, style.Tokens.Global.Space_25),
-					}),
+					Padding = if GetFFlagPeekUseUpdatedDesign()
+						then nil
+						else React.createElement("UIPadding", {
+							PaddingTop = UDim.new(0, style.Tokens.Global.Space_25),
+							PaddingRight = UDim.new(0, style.Tokens.Global.Space_25),
+							PaddingBottom = UDim.new(0, style.Tokens.Global.Space_25),
+							PaddingLeft = UDim.new(0, style.Tokens.Global.Space_25),
+						}),
 
 					IntegrationRow = React.createElement(IntegrationRow, {
 						integrations = peekItemsRef.current,

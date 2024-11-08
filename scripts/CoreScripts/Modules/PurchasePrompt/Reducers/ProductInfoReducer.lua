@@ -1,9 +1,12 @@
 --!nonstrict
 local Root = script.Parent.Parent
 
+local CoreGui = game:GetService("CoreGui")
 local CorePackages = game:GetService("CorePackages")
 local PurchasePromptDeps = require(CorePackages.PurchasePromptDeps)
 local Rodux = PurchasePromptDeps.Rodux
+
+local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 
 local Constants = require(Root.Misc.Constants)
 local CompleteRequest = require(Root.Actions.CompleteRequest)
@@ -15,7 +18,7 @@ local getPreviewImageUrl = require(Root.getPreviewImageUrl)
 local USER_OUTFIT = "UserOutfit"
 
 local GetFFlagTranslateDevProducts = require(Root.Flags.GetFFlagTranslateDevProducts)
-local GetFFlagEnableAvatarCreationFeePurchase = require(Root.Flags.GetFFlagEnableAvatarCreationFeePurchase)
+local FFlagPublishAvatarPromptEnabled = require(RobloxGui.Modules.PublishAssetPrompt.FFlagPublishAvatarPromptEnabled)
 local GetFFlagFixBundlePromptThumbnail = require(Root.Flags.GetFFlagFixBundlePromptThumbnail)
 
 local ProductInfoReducer = Rodux.createReducer({}, {
@@ -31,7 +34,7 @@ local ProductInfoReducer = Rodux.createReducer({}, {
 
 		return {
 			name = GetFFlagTranslateDevProducts() and (productInfo.DisplayName or productInfo.Name) or productInfo.Name,
-			description = if GetFFlagEnableAvatarCreationFeePurchase() then productInfo.Description else nil,
+			description = if FFlagPublishAvatarPromptEnabled then productInfo.Description else nil,
 			price = productInfo.PriceInRobux or 0,
 			premiumPrice = productInfo.PremiumPriceInRobux,
 			imageUrl = getPreviewImageUrl(productInfo),

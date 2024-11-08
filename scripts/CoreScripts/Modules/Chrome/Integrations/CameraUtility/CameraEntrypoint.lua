@@ -1,19 +1,23 @@
+local Chrome = script:FindFirstAncestor("Chrome")
+
 local CorePackages = game:GetService("CorePackages")
 local CoreGui = game:GetService("CoreGui")
 local StarterGui = game:GetService("StarterGui")
 local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 
-local ChromeService = require(script.Parent.Parent.Parent.Service)
-local CommonIcon = require(script.Parent.Parent.CommonIcon)
-local ChromeUtils = require(script.Parent.Parent.Parent.Service.ChromeUtils)
+local ChromeService = require(Chrome.Service)
+local CommonIcon = require(Chrome.Integrations.CommonIcon)
+local ChromeUtils = require(Chrome.Service.ChromeUtils)
 local ScreenshotsApp = require(RobloxGui.Modules.Screenshots.ScreenshotsApp)
 local MappedSignal = ChromeUtils.MappedSignal
 
-local GetFFlagChromeCapturesToggle = require(script.Parent.Parent.Parent.Flags.GetFFlagChromeCapturesToggle)
+local GetFFlagChromeCapturesToggle = require(Chrome.Flags.GetFFlagChromeCapturesToggle)
 local GetFFlagEnableScreenshotUtility =
 	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagEnableScreenshotUtility
 local GetFFlagEnableToggleCaptureIntegration =
 	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagEnableToggleCaptureIntegration
+local GetFFlagFixCapturesAvailability = require(Chrome.Flags.GetFFlagFixCapturesAvailability)
+local GetFFlagAddChromeActivatedEvents = require(Chrome.Flags.GetFFlagAddChromeActivatedEvents)
 
 local initialAvailability = ChromeService.AvailabilitySignal.Available
 if GetFFlagChromeCapturesToggle() then
@@ -45,6 +49,11 @@ local cameraEntrypointIntegration = GetFFlagEnableScreenshotUtility()
 					ChromeService:toggleCompactUtility("camera_utility")
 				end
 			end,
+			isActivated = if GetFFlagAddChromeActivatedEvents()
+				then function()
+					return isActive:get()
+				end
+				else nil,
 			components = {
 				Icon = function(props)
 					if GetFFlagEnableToggleCaptureIntegration() then
@@ -57,7 +66,10 @@ local cameraEntrypointIntegration = GetFFlagEnableScreenshotUtility()
 		})
 	or nil
 
-if GetFFlagChromeCapturesToggle() then
+-- TODO: APPEXP-1879 Remove cameraEntrypointIntegration from this predicate when cleaning up GetFFlagEnableScreenshotUtility
+if GetFFlagFixCapturesAvailability() and cameraEntrypointIntegration then
+	ChromeUtils.setCoreGuiAvailability(cameraEntrypointIntegration, Enum.CoreGuiType.Captures)
+elseif GetFFlagChromeCapturesToggle() then
 	StarterGui.CoreGuiChangedSignal:Connect(function(coreGuiType, _enabled)
 		if coreGuiType == Enum.CoreGuiType.All or coreGuiType == Enum.CoreGuiType.Captures then
 			local integration: any = cameraEntrypointIntegration

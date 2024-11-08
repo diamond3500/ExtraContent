@@ -21,12 +21,12 @@ local requiredServices = {
 	ExternalSettings,
 }
 
-local function initiateAvatarCreationFeePurchase(avatarPublishMetadata, guid, serializedModel, priceInRobux)
+local function initiateAvatarCreationFeePurchase(avatarPublishMetadata, guid, humanoidModel, priceInRobux)
 	return Thunk.new(script.Name, requiredServices, function(store, services)
 		local network = services[Network]
 		local externalSettings = services[ExternalSettings]
 
-	store:dispatch(RequestAvatarCreationFeePurchase(serializedModel, guid))
+	store:dispatch(RequestAvatarCreationFeePurchase(humanoidModel, guid))
 
 		return Promise.all({
 			accountInfo = getAccountInfo(network, externalSettings),

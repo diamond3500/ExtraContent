@@ -34,7 +34,6 @@ local CoreScriptModules = EmotesModules.Parent
 local RobloxTranslator = require(CoreScriptModules.RobloxTranslator)
 
 local GetFFlagFixMissingPlayerGuiCrash = require(RobloxGui.Modules.Flags.GetFFlagFixMissingPlayerGuiCrash)
-local FFlagFixEmotesMenuVR = game:DefineFastFlag("FixEmotesMenuVR", false) or game:GetEngineFeature("EnableMaquettesSupport")
 local LocalPlayer = Players.LocalPlayer
 local PlayerGui
 
@@ -189,10 +188,7 @@ function EmotesMenu:didMount()
 		end
 
 		local inputType = input.UserInputType
-		if
-			(inputType == Enum.UserInputType.MouseButton1 or inputType == Enum.UserInputType.Touch)
-			and (FFlagFixEmotesMenuVR or not VRService.VREnabled)
-		then
+		if inputType == Enum.UserInputType.MouseButton1 or inputType == Enum.UserInputType.Touch then
 			-- Don't close the emotes menu when interacting with the game outside of the menu with
 			-- the new emotes flag on
 			self.props.hideMenu()

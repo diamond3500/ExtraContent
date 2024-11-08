@@ -3,9 +3,13 @@ local Packages = script.Parent.Parent.Parent
 
 local Roact = require(Packages.Roact)
 local t = require(Packages.t)
-local withStyle = require(Packages.UIBlox.Core.Style.withStyle)
-local ImageSetComponent = require(Packages.UIBlox.Core.ImageSet.ImageSetComponent)
+
 local Images = require(Packages.UIBlox.App.ImageSet.Images)
+local ImageSetComponent = require(Packages.UIBlox.Core.ImageSet.ImageSetComponent)
+local UIBloxConfig = require(Packages.UIBlox.UIBloxConfig)
+local lerp = require(Packages.UIBlox.Utility.lerp)
+local withStyle = require(Packages.UIBlox.Core.Style.withStyle)
+local RoundedFrame = require(Packages.UIBlox.App.Menu.RoundedFrame)
 
 local ModalBottomSheetButton = Roact.PureComponent:extend("ModalBottomSheetButton")
 local imageSize = Images["component_assets/circle_17"].ImageRectSize
@@ -14,6 +18,7 @@ local imageOffset = Images["component_assets/circle_17"].ImageRectOffset
 local xOffset = 8 * Images.ImagesResolutionScale
 local yOffset = 8 * Images.ImagesResolutionScale
 local imageCenter = Rect.new(xOffset, yOffset, imageSize.x - xOffset, imageSize.y - yOffset)
+local cornerRadius = 8 * Images.ImagesResolutionScale
 
 local WIDTH_FIXED = 300
 local WIDTH_MARGIN = 16
@@ -43,6 +48,10 @@ ModalBottomSheetButton.defaultProps = {
 }
 
 function ModalBottomSheetButton:init()
+	if UIBloxConfig.fixModalBottomSheetPressState then
+		self.pressed, self.updatePressed = Roact.createBinding(false)
+	end
+
 	self.ref = Roact.createRef()
 	self.onColorChange = function(styledColor)
 		if not self.ref.current then
@@ -119,29 +128,68 @@ function ModalBottomSheetButton:render()
 		local transparency = theme.BackgroundUIDefault.Transparency
 		local textColor = theme.TextEmphasis.Color
 
-		return Roact.createElement("ImageButton", {
+		local backgroundColor
+		local backgroundTransparency
+		local contentColor
+		local contentTransparency
+		if UIBloxConfig.fixModalBottomSheetPressState then
+			backgroundColor = if UIBloxConfig.useFoundationColors
+				then self.pressed:map(function(pressed)
+					return if pressed then theme.BackgroundOnPress.Color else theme.BackgroundUIDefault.Color
+				end)
+				else theme.BackgroundUIDefault.Color
+			backgroundTransparency = self.pressed:map(function(pressed)
+				return if pressed
+					then (if UIBloxConfig.useFoundationColors
+						then theme.BackgroundOnPress.Transparency
+						else lerp(theme.BackgroundUIDefault.Transparency, 1, 0.5))
+					else theme.BackgroundUIDefault.Transparency
+			end)
+			contentColor = theme.TextEmphasis.Color
+			contentTransparency = if UIBloxConfig.useFoundationColors
+				then theme.TextEmphasis.Transparency
+				else self.pressed:map(function(pressed)
+					return if pressed
+						then lerp(theme.TextEmphasis.Transparency, 1, 0.5)
+						else theme.TextEmphasis.Transparency
+				end)
+		end
+
+		local button = Roact.createElement("ImageButton", {
 			AutoButtonColor = false,
 			BackgroundTransparency = 1,
 			BorderSizePixel = 0,
 			ScaleType = Enum.ScaleType.Slice,
 			SliceCenter = SliceCenter,
 			Image = Images["component_assets/circle_17"].Image,
-			ImageColor3 = theme.BackgroundUIDefault.Color,
+			ImageColor3 = if UIBloxConfig.fixModalBottomSheetPressState
+				then backgroundColor
+				else theme.BackgroundUIDefault.Color,
 			ImageRectSize = ImageRectSize,
 			ImageRectOffset = ImageRectOffset,
-			ImageTransparency = transparency,
-			Size = buttonSize,
+			ImageTransparency = if UIBloxConfig.fixModalBottomSheetPressState
+				then backgroundTransparency
+				else transparency,
+			Size = if UIBloxConfig.useFoundationColors then UDim2.fromScale(1, 1) else buttonSize,
 			LayoutOrder = self.props.LayoutOrder,
 			[Roact.Ref] = self.ref,
 			[Roact.Event.Activated] = self.props.onActivatedAndDismissed,
 			[Roact.Event.InputBegan] = function(_, inputObject)
 				if self.onInputBegan(inputObject) then
-					self.onColorChange(theme.BackgroundOnPress.Color)
+					if UIBloxConfig.fixModalBottomSheetPressState then
+						self.updatePressed(true)
+					else
+						self.onColorChange(theme.BackgroundOnPress.Color)
+					end
 				end
 			end,
 			[Roact.Event.InputEnded] = function(_, inputObject)
 				if self.onInputEnd(inputObject) then
-					self.onColorChange(theme.BackgroundUIDefault.Color)
+					if UIBloxConfig.fixModalBottomSheetPressState then
+						self.updatePressed(false)
+					else
+						self.onColorChange(theme.BackgroundUIDefault.Color)
+					end
 				end
 			end,
 		}, {
@@ -161,8 +209,10 @@ function ModalBottomSheetButton:render()
 				}),
 				icon = self.props.showImage and Roact.createElement(ImageSetComponent.Label, {
 					Image = self.props.icon,
-					ImageColor3 = textColor,
-					ImageTransparency = transparency,
+					ImageColor3 = if UIBloxConfig.fixModalBottomSheetPressState then contentColor else textColor,
+					ImageTransparency = if UIBloxConfig.fixModalBottomSheetPressState
+						then contentTransparency
+						else transparency,
 					BackgroundTransparency = 1,
 					Size = UDim2.new(0, iconSize, 0, iconSize),
 					LayoutOrder = 1,
@@ -172,9 +222,11 @@ function ModalBottomSheetButton:render()
 					BackgroundTransparency = 1,
 					Size = UDim2.new(1, -textWidthOffset, 1, 0),
 					Text = self.props.text,
-					TextTransparency = transparency,
+					TextTransparency = if UIBloxConfig.fixModalBottomSheetPressState
+						then contentTransparency
+						else transparency,
 					Font = font.Header2.Font,
-					TextColor3 = textColor,
+					TextColor3 = if UIBloxConfig.fixModalBottomSheetPressState then contentColor else textColor,
 					TextSize = font.Header2.RelativeSize * font.BaseSize,
 					TextTruncate = Enum.TextTruncate.AtEnd,
 					LayoutOrder = 2,
@@ -197,6 +249,25 @@ function ModalBottomSheetButton:render()
 				Position = UDim2.new(0, 0, 1, 0),
 			}),
 		})
+
+		if UIBloxConfig.useFoundationColors then
+			return Roact.createElement("Frame", {
+				LayoutOrder = self.props.LayoutOrder,
+				Size = buttonSize,
+				BackgroundTransparency = 1,
+				BorderSizePixel = 0,
+			}, {
+				Background = Roact.createElement(RoundedFrame, {
+					zIndex = -1,
+					background = theme.BackgroundUIDefault,
+					topCornerRadius = if hasRoundTop then UDim.new(0, cornerRadius) else nil,
+					bottomCornerRadius = if hasRoundBottom then UDim.new(0, cornerRadius) else nil,
+				}),
+				Button = button,
+			})
+		else
+			return button
+		end
 	end)
 end
 

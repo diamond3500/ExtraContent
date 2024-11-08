@@ -1,8 +1,10 @@
+local Chrome = script:FindFirstAncestor("Chrome")
+
 local CorePackages = game:GetService("CorePackages")
 local React = require(CorePackages.Packages.React)
 
-local useChromeWindowItems = require(script.Parent.Parent.Hooks.useChromeWindowItems)
-local WindowHost = require(script.Parent.ComponentHosts.WindowHost)
+local useChromeWindowItems = require(Chrome.Hooks.useChromeWindowItems)
+local WindowHost = require(Chrome.Unibar.ComponentHosts.WindowHost)
 
 type Array<T> = { [number]: T }
 type Table = { [any]: any }

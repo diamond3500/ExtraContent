@@ -1,6 +1,8 @@
-local ChromeUtils = require(script.Parent.ChromeUtils)
-local WindowSizeSignal = require(script.Parent.WindowSizeSignal)
-local ContainerSlotSignal = require(script.Parent.ContainerSlotSignal)
+local Chrome = script:FindFirstAncestor("Chrome")
+
+local ChromeUtils = require(Chrome.Service.ChromeUtils)
+local WindowSizeSignal = require(Chrome.Service.WindowSizeSignal)
+local ContainerSlotSignal = require(Chrome.Service.ContainerSlotSignal)
 
 export type IntegrationComponents = {
 	Icon: any?,

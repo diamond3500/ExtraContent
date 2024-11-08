@@ -4,6 +4,7 @@ local TileRoot = SplitTileRoot.Parent
 local App = TileRoot.Parent
 local UIBlox = App.Parent
 local Packages = UIBlox.Parent
+local UIBloxConfig = require(UIBlox.UIBloxConfig)
 
 local React = require(Packages.React)
 
@@ -48,7 +49,7 @@ local function ExperienceActionRow(props: Props)
 	local height = props.height or DEFAULT_ROW_HEIGHT
 	local text = props.text
 	local icon = props.icon
-	if not icon then
+	if not icon and not UIBloxConfig.disableExperienceActionRowDefaultIcon then
 		icon = if isActionable then Images[PLAY_ICON] else Images[UNAVAILABLE_ICON]
 	end
 

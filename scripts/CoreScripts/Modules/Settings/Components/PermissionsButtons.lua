@@ -40,13 +40,13 @@ local VoiceConstants = require(Modules.VoiceChat.Constants)
 local log = require(CorePackages.Workspace.Packages.CoreScriptsInitializer).CoreLogger:new(script.Name)
 
 local GetFFlagInvertMuteAllPermissionButton = require(RobloxGui.Modules.Flags.GetFFlagInvertMuteAllPermissionButton)
-local FFlagAvatarChatCoreScriptSupport = require(RobloxGui.Modules.Flags.FFlagAvatarChatCoreScriptSupport)
+local FFlagAvatarChatCoreScriptSupport = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagAvatarChatCoreScriptSupport()
 local GetFFlagUpdateSelfieViewOnBan = require(RobloxGui.Modules.Flags.GetFFlagUpdateSelfieViewOnBan)
 local GetFFlagShowMicConnectingIconAndToast = require(RobloxGui.Modules.Flags.GetFFlagShowMicConnectingIconAndToast)
 local FFlagMuteNonFriendsEvent = require(RobloxGui.Modules.Flags.FFlagMuteNonFriendsEvent)
 local GetFFlagRemoveInGameChatBubbleChatReferences =
 	require(RobloxGui.Modules.Flags.GetFFlagRemoveInGameChatBubbleChatReferences)
-local GetFFlagJoinWithoutMicPermissions = require(RobloxGui.Modules.Flags.GetFFlagJoinWithoutMicPermissions)
+local GetFFlagJoinWithoutMicPermissions = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagJoinWithoutMicPermissions
 local GetFFlagEnableInExpVoiceUpsell = require(RobloxGui.Modules.Flags.GetFFlagEnableInExpVoiceUpsell)
 local GetFFlagEnableInExpJoinVoiceAnalytics = require(RobloxGui.Modules.Flags.GetFFlagEnableInExpJoinVoiceAnalytics)
 local GetFFlagEnableConnectDisconnectButtonAnalytics = require(RobloxGui.Modules.Flags.GetFFlagEnableConnectDisconnectButtonAnalytics)
@@ -59,6 +59,8 @@ local GetFFlagUseMicPermForEnrollment = require(CorePackages.Workspace.Packages.
 local GetFFlagEnableInExpPhoneVoiceUpsellEntrypoints = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagEnableInExpPhoneVoiceUpsellEntrypoints 
 local GetFFlagEnableShowVoiceUI = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagEnableShowVoiceUI 
 local GetFFlagEnableSeamlessVoiceConnectDisconnectButton = require(RobloxGui.Modules.Flags.GetFFlagEnableSeamlessVoiceConnectDisconnectButton)
+local GetFFlagEnableConnectDisconnectInSettingsAndChrome = require(RobloxGui.Modules.Flags.GetFFlagEnableConnectDisconnectInSettingsAndChrome)
+local GetFFlagHideVoiceDisconnectButton = require(RobloxGui.Modules.Flags.GetFFlagHideVoiceDisconnectButton)
 
 if GetFFlagRemoveInGameChatBubbleChatReferences() then
 	displayCameraDeniedToast = require(RobloxGui.Modules.VoiceChat.Helpers.displayCameraDeniedToast)
@@ -396,7 +398,9 @@ function PermissionsButtons:init()
 			)
 		end
 		VoiceChatServiceManager:Leave()
-		VoiceChatServiceManager:SetVoiceConnectCookieValue(false)
+		if not GetFFlagEnableConnectDisconnectInSettingsAndChrome() then
+			VoiceChatServiceManager:SetVoiceConnectCookieValue(false)
+		end
 	end
 
 	self.voiceJoinProgressCallback = function(state)
@@ -505,7 +509,7 @@ end
 
 function PermissionsButtons:getLeaveVoiceButtonVisibleAtMount()
 	-- M3 Treatment
-	if GetFFlagEnableSeamlessVoiceConnectDisconnectButton() and VoiceChatServiceManager:IsSeamlessVoice() then
+	if GetFFlagEnableSeamlessVoiceConnectDisconnectButton() and not GetFFlagHideVoiceDisconnectButton() and VoiceChatServiceManager:IsSeamlessVoice() then
 		return self.state.isVoiceUIVisible and not VoiceChatServiceManager.isShowingFTUX
 	end
 

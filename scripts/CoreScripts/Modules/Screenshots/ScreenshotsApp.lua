@@ -11,8 +11,9 @@ local Screenshots = require(CorePackages.Workspace.Packages.Screenshots)
 local GetFFlagEnableScreenshotUtility =
 	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagEnableScreenshotUtility
 local GetFFlagEnableCapturesInChrome = require(Modules.Chrome.Flags.GetFFlagEnableCapturesInChrome)
-local FFlagScreenshotsEventSetupEnabled =
-	require(CorePackages.Workspace.Packages.SharedFlags).FFlagScreenshotsEventSetupEnabled
+local FFlagScreenshotsSetupEnabled = require(CorePackages.Workspace.Packages.SharedFlags).FFlagScreenshotsSetupEnabled
+local FFlagUpdateComposerScreenInsets =
+	require(CorePackages.Workspace.Packages.SharedFlags).FFlagUpdateComposerScreenInsets
 
 local ScreenshotsApp = Screenshots.App.createApp()
 
@@ -37,7 +38,9 @@ ComposerScreenGui.Name = "Composer"
 ComposerScreenGui.ResetOnSpawn = false
 ComposerScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ComposerScreenGui.SafeAreaCompatibility = Enum.SafeAreaCompatibility.FullscreenExtension
-ComposerScreenGui.ScreenInsets = Enum.ScreenInsets.DeviceSafeInsets
+ComposerScreenGui.ScreenInsets = if FFlagUpdateComposerScreenInsets
+	then Enum.ScreenInsets.None
+	else Enum.ScreenInsets.DeviceSafeInsets
 ComposerScreenGui.Parent = CoreGui
 
 local OverlayScreenGui = Instance.new("ScreenGui")
@@ -47,14 +50,24 @@ OverlayScreenGui.ResetOnSpawn = false
 OverlayScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 OverlayScreenGui.Parent = CoreGui
 
-if FFlagScreenshotsEventSetupEnabled then
+if FFlagScreenshotsSetupEnabled then
 	local SubmissionModal = Instance.new("ScreenGui")
 	SubmissionModal.DisplayOrder = Screenshots.Constants.SubmissionModalDisplayOrder
 	SubmissionModal.Name = "SubmissionModal"
 	SubmissionModal.ResetOnSpawn = false
 	SubmissionModal.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 	SubmissionModal.Parent = CoreGui
+	SubmissionModal.ScreenInsets = Enum.ScreenInsets.None
 	ScreenshotsApp.mountSubmissionModal(SubmissionModal)
+
+	local EventSplashModal = Instance.new("ScreenGui")
+	EventSplashModal.DisplayOrder = Screenshots.Constants.EventSplashModalDisplayOrder
+	EventSplashModal.Name = "EventSplashModal"
+	EventSplashModal.ResetOnSpawn = false
+	EventSplashModal.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+	EventSplashModal.Parent = CoreGui
+	EventSplashModal.ScreenInsets = Enum.ScreenInsets.None
+	ScreenshotsApp.mountEventSplashModal(EventSplashModal)
 end
 
 ScreenshotsApp.mountCaptureManager(CaptureManagerScreenGui)

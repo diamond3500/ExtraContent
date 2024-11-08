@@ -3,6 +3,6 @@
 ]]
 local PackageIndex = script.Parent._Index
 
-local Package = require(PackageIndex["tutils-04e2814e-937da4f7"]["tutils"])
+local Package = require(PackageIndex["tutils"]["tutils"])
 
 return Package

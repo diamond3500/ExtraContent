@@ -1,3 +1,5 @@
+local Chrome = script:FindFirstAncestor("Chrome")
+
 local CorePackages = game:GetService("CorePackages")
 local CoreGui = game:GetService("CoreGui")
 local RobloxGui = CoreGui:WaitForChild("RobloxGui")
@@ -10,39 +12,40 @@ local SignalLib = require(CorePackages.Workspace.Packages.AppCommonLib)
 local Localization = require(CorePackages.Workspace.Packages.InExperienceLocales).Localization
 
 local Signal = SignalLib.Signal
-local utils = require(script.Parent.ChromeUtils)
-local LocalStore = require(script.Parent.LocalStore)
-local ViewportUtil = require(script.Parent.ViewportUtil)
-local WindowSizeSignal = require(script.Parent.WindowSizeSignal)
-local ContainerSlotSignal = require(script.Parent.ContainerSlotSignal)
+local utils = require(Chrome.Service.ChromeUtils)
+local LocalStore = require(Chrome.Service.LocalStore)
+local ViewportUtil = require(Chrome.Service.ViewportUtil)
+local WindowSizeSignal = require(Chrome.Service.WindowSizeSignal)
+local ContainerSlotSignal = require(Chrome.Service.ContainerSlotSignal)
 local ObservableValue = utils.ObservableValue
 local NotifySignal = utils.NotifySignal
 local AvailabilitySignal = utils.AvailabilitySignal
-local Types = require(script.Parent.Types)
-local Constants = require(script.Parent.Parent.Unibar.Constants)
-local ChromeEnabled = require(script.Parent.Parent.Enabled)
-local PeekService = require(script.Parent.PeekService)
+local Types = require(Chrome.Service.Types)
+local Constants = require(Chrome.Unibar.Constants)
+local ChromeEnabled = require(Chrome.Enabled)
+local PeekService = require(Chrome.Service.PeekService)
 
-local GetFFlagEnableUnibarSneakPeak = require(script.Parent.Parent.Flags.GetFFlagEnableUnibarSneakPeak)
-local GetFFlagEnableChromeFTUX = require(script.Parent.Parent.Flags.GetFFlagEnableChromeFTUX)
-local GetFFlagEnableUnibarMaxDefaultOpen = require(script.Parent.Parent.Flags.GetFFlagEnableUnibarMaxDefaultOpen)
-local GetFFlagEnableChromeEscapeFix = require(script.Parent.Parent.Flags.GetFFlagEnableChromeEscapeFix)
-local GetFFlagEnableChromeDefaultOpen = require(script.Parent.Parent.Flags.GetFFlagEnableChromeDefaultOpen)
-local GetFFlagEnableChromePinIntegrations = require(script.Parent.Parent.Flags.GetFFlagEnableChromePinIntegrations)
+local GetFFlagEnableUnibarSneakPeak = require(Chrome.Flags.GetFFlagEnableUnibarSneakPeak)
+local GetFFlagEnableChromeFTUX = require(Chrome.Flags.GetFFlagEnableChromeFTUX)
+local GetFFlagEnableUnibarMaxDefaultOpen = require(Chrome.Flags.GetFFlagEnableUnibarMaxDefaultOpen)
+local GetFFlagEnableChromeEscapeFix = require(Chrome.Flags.GetFFlagEnableChromeEscapeFix)
+local GetFFlagEnableChromeDefaultOpen = require(Chrome.Flags.GetFFlagEnableChromeDefaultOpen)
+local GetFFlagEnableChromePinIntegrations = require(Chrome.Flags.GetFFlagEnableChromePinIntegrations)
 local GetFFlagChromeSurveySupport = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagChromeSurveySupport
-local GetFFlagOpenControlsOnMenuOpen = require(script.Parent.Parent.Flags.GetFFlagOpenControlsOnMenuOpen)
+local GetFFlagOpenControlsOnMenuOpen = require(Chrome.Flags.GetFFlagOpenControlsOnMenuOpen)
 local GetFFlagSupportCompactUtility = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagSupportCompactUtility
-local GetFFlagDisableMostRecentlyUsed = require(script.Parent.Parent.Flags.GetFFlagDisableMostRecentlyUsed)
-local GetFFlagEnableSaveUserPins = require(script.Parent.Parent.Flags.GetFFlagEnableSaveUserPins)
-local GetFFlagUseSelfieViewFlatIcon = require(script.Parent.Parent.Flags.GetFFlagUseSelfieViewFlatIcon)
-local GetFFlagEnableUserPinPortraitFix = require(script.Parent.Parent.Flags.GetFFlagEnableUserPinPortraitFix)
-local GetFFlagSupportChromeContainerSizing = require(script.Parent.Parent.Flags.GetFFlagSupportChromeContainerSizing)
+local GetFFlagDisableMostRecentlyUsed = require(Chrome.Flags.GetFFlagDisableMostRecentlyUsed)
+local GetFFlagEnableSaveUserPins = require(Chrome.Flags.GetFFlagEnableSaveUserPins)
+local GetFFlagUseSelfieViewFlatIcon = require(Chrome.Flags.GetFFlagUseSelfieViewFlatIcon)
+local GetFFlagEnableUserPinPortraitFix = require(Chrome.Flags.GetFFlagEnableUserPinPortraitFix)
 local GetFFlagFixChromeReferences = require(RobloxGui.Modules.Flags.GetFFlagFixChromeReferences)
-local GetFFlagDisableCompactUtilityCore = require(script.Parent.Parent.Flags.GetFFlagDisableCompactUtilityCore)
+local GetFFlagDisableCompactUtilityCore = require(Chrome.Flags.GetFFlagDisableCompactUtilityCore)
 local GetFFlagChromePeekArchitecture = require(RobloxGui.Modules.Flags.GetFFlagChromePeekArchitecture)
 local GetFFlagEnableAlwaysOpenUnibar = require(RobloxGui.Modules.Flags.GetFFlagEnableAlwaysOpenUnibar)
 local FFlagPreserveWindowsCompactUtility = game:DefineFastFlag("PreserveWindowsCompactUtility", false)
 local GetFFlagSelfieViewV4 = require(RobloxGui.Modules.Flags.GetFFlagSelfieViewV4)
+local GetFFlagFixPeekTogglingWhenSpammingUnibar =
+	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagFixPeekTogglingWhenSpammingUnibar
 
 local DEFAULT_PINS = game:DefineFastString("ChromeServiceDefaultPins", "leaderboard,trust_and_safety")
 
@@ -83,6 +86,7 @@ export type ObservableInFocusNav = utils.ObservableValue<boolean>
 
 export type ObservableWindowList = utils.ObservableValue<Types.WindowList>
 export type ObservablePeekList = utils.ObservableValue<Types.PeekList>
+export type ObservablePeekId = utils.ObservableValue<Types.PeekId?>
 
 export type ObservableDragConnection = utils.ObservableValue<{ current: RBXScriptConnection? }?>
 type DragConnectionObjectType = any
@@ -180,9 +184,11 @@ export type ChromeService = {
 	dismissCurrentPeek: (ChromeService) -> (),
 	updatePeekList: (ChromeService) -> (),
 	peekList: (ChromeService) -> ObservablePeekList,
+	peekId: (ChromeService) -> ObservablePeekId,
 	onPeekShown: SignalLib.Signal,
 	onPeekHidden: SignalLib.Signal,
 	_peekList: ObservablePeekList,
+	_peekId: ObservablePeekId,
 	_peekService: PeekService.PeekService,
 
 	onIntegrationRegistered: (ChromeService) -> SignalLib.Signal,
@@ -294,6 +300,7 @@ function ChromeService.new(): ChromeService
 	self._menuList = ObservableValue.new({})
 	self._windowList = ObservableValue.new({})
 	self._peekList = ObservableValue.new({})
+	self._peekId = if GetFFlagFixPeekTogglingWhenSpammingUnibar() then ObservableValue.new(nil) else nil
 	self._dragConnection = {}
 	self._windowPositions = ObservableValue.new({})
 	self._totalNotifications = NotifySignal.new(true)
@@ -348,6 +355,16 @@ function ChromeService.new(): ChromeService
 		self._peekService.onPeekChanged:connect(function()
 			service:updateMenuList()
 		end)
+
+		if GetFFlagFixPeekTogglingWhenSpammingUnibar() then
+			self._peekService.onPeekShown:connect(function(peekId)
+				service._peekId:set(peekId)
+			end)
+
+			self._peekService.onPeekHidden:connect(function()
+				service._peekId:set(nil)
+			end)
+		end
 	end
 
 	if GetFFlagEnableUnibarMaxDefaultOpen() then
@@ -418,22 +435,14 @@ function ChromeService:updateScreenSize(
 
 	if isMobileDevice then
 		if isTinyPortrait then
-			mostRecentlyUsedAndPinnedSlots = if GetFFlagSupportChromeContainerSizing()
-				then Constants.MOBILE_TINY_PORTRAIT_SLOTS - Constants.CORE_SLOTS
-				else 0
+			mostRecentlyUsedAndPinnedSlots = Constants.MOBILE_TINY_PORTRAIT_SLOTS - Constants.CORE_SLOTS
 		elseif isPortrait then
-			mostRecentlyUsedAndPinnedSlots = if GetFFlagSupportChromeContainerSizing()
-				then Constants.MOBILE_PORTRAIT_SLOTS - Constants.CORE_SLOTS
-				else 1
+			mostRecentlyUsedAndPinnedSlots = Constants.MOBILE_PORTRAIT_SLOTS - Constants.CORE_SLOTS
 		else
-			mostRecentlyUsedAndPinnedSlots = if GetFFlagSupportChromeContainerSizing()
-				then Constants.MOBILE_LANDSCAPE_SLOTS - Constants.CORE_SLOTS
-				else 2
+			mostRecentlyUsedAndPinnedSlots = Constants.MOBILE_LANDSCAPE_SLOTS - Constants.CORE_SLOTS
 		end
 	else
-		mostRecentlyUsedAndPinnedSlots = if GetFFlagSupportChromeContainerSizing()
-			then Constants.NON_MOBILE_SLOTS - Constants.CORE_SLOTS
-			else 4
+		mostRecentlyUsedAndPinnedSlots = Constants.NON_MOBILE_SLOTS - Constants.CORE_SLOTS
 	end
 
 	-- 2) Repopulate most recently and user pin lists if the slot count changes
@@ -523,11 +532,9 @@ function ChromeService:updateWindowSizeSignals()
 end
 
 function ChromeService:updateContainerSlotSignals()
-	if GetFFlagSupportChromeContainerSizing() then
-		for i, v in self._integrations do
-			if v.containerWidthSlots then
-				v.containerWidthSlots:updateConstraints()
-			end
+	for i, v in self._integrations do
+		if v.containerWidthSlots then
+			v.containerWidthSlots:updateConstraints()
 		end
 	end
 end
@@ -745,6 +752,12 @@ if GetFFlagChromePeekArchitecture() then
 	function ChromeService:peekList()
 		return self._peekList
 	end
+
+	if GetFFlagFixPeekTogglingWhenSpammingUnibar() then
+		function ChromeService:peekId()
+			return self._peekId
+		end
+	end
 end
 
 function ChromeService:dragConnection(componentId: Types.IntegrationId)
@@ -847,16 +860,11 @@ function ChromeService:register(component: Types.IntegrationRegisterProps): Type
 	end
 
 	-- Add a containerWidthSlots signal for integrations with containers if missing
-	if
-		GetFFlagSupportChromeContainerSizing()
-		and component.containerWidthSlots == nil
-		and component.components
-		and component.components.Container
-	then
+	if component.containerWidthSlots == nil and component.components and component.components.Container then
 		component.containerWidthSlots = ContainerSlotSignal.new()
 	end
 
-	if GetFFlagSupportChromeContainerSizing() and component.containerWidthSlots then
+	if component.containerWidthSlots then
 		conns[#conns + 1] = component.containerWidthSlots:connect(function()
 			self:containerWidthSlotsChanged(component :: Types.IntegrationProps)
 		end)
@@ -1052,9 +1060,7 @@ function ChromeService:updateMenuList()
 								validIconCount += 1
 							end
 						else
-							if
-								GetFFlagSupportChromeContainerSizing() and self._integrations[v].components.Container
-							then
+							if self._integrations[v].components.Container then
 								table.insert(parent.children, containerProps(v))
 							else
 								table.insert(parent.children, iconProps(v))

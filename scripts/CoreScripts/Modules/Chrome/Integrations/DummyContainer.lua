@@ -1,11 +1,12 @@
+local Chrome = script:FindFirstAncestor("Chrome")
+
 local CorePackages = game:GetService("CorePackages")
 local React = require(CorePackages.Packages.React)
 
-local ChromeService = require(script.Parent.Parent.Service)
-local ContainerSlotSignal = require(script.Parent.Parent.Service.ContainerSlotSignal)
+local ChromeService = require(Chrome.Service)
+local ContainerSlotSignal = require(Chrome.Service.ContainerSlotSignal)
 
-local GetFFlagDebugEnableUnibarDummyIntegrations =
-	require(script.Parent.Parent.Flags.GetFFlagDebugEnableUnibarDummyIntegrations)
+local GetFFlagDebugEnableUnibarDummyIntegrations = require(Chrome.Flags.GetFFlagDebugEnableUnibarDummyIntegrations)
 
 local containerSlots = ContainerSlotSignal.new(5)
 

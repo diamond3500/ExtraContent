@@ -7,21 +7,20 @@ local React = require(CorePackages.Packages.React)
 local Songbird = require(CorePackages.Workspace.Packages.Songbird)
 
 local GetFFlagChromePeekArchitecture = require(Chrome.Parent.Flags.GetFFlagChromePeekArchitecture)
-local GetFFlagSongbirdTranslationStrings =
-	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagSongbirdTranslationStrings
+
+local function onDismiss()
+	ChromeService:dismissCurrentPeek()
+end
 
 return if GetFFlagChromePeekArchitecture()
 	then ChromeService:register({
 		id = "peek_close",
-		label = if GetFFlagSongbirdTranslationStrings()
-			then "CoreScripts.TopBar.PeekClose"
-			else "CoreScripts.TopBar.MenuToggle",
-		activated = function()
-			ChromeService:dismissCurrentPeek()
-		end,
+		label = "CoreScripts.TopBar.PeekClose",
 		components = {
 			Icon = function(props)
-				return React.createElement(Songbird.DismissButton)
+				return React.createElement(Songbird.DismissButton, {
+					onDismiss = onDismiss,
+				})
 			end,
 		},
 		initialAvailability = ChromeService.AvailabilitySignal.Available,

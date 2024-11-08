@@ -1,16 +1,18 @@
+local Chrome = script:FindFirstAncestor("Chrome")
+
 local CorePackages = game:GetService("CorePackages")
 local React = require(CorePackages.Packages.React)
 local UIBlox = require(CorePackages.UIBlox)
 local useStyle = UIBlox.Core.Style.useStyle
 local ImageSetLabel = UIBlox.Core.ImageSet.ImageSetLabel
 local Images = UIBlox.App.ImageSet.Images
-local Constants = require(script.Parent.Parent.Unibar.Constants)
-local ChromeUtils = require(script.Parent.Parent.Service.ChromeUtils)
-local SubMenuContext = require(script.Parent.Parent.Unibar.SubMenuContext)
+local Constants = require(Chrome.Unibar.Constants)
+local ChromeUtils = require(Chrome.Service.ChromeUtils)
+local SubMenuContext = require(Chrome.Unibar.SubMenuContext)
 
-local GetFFlagAnimateSubMenu = require(script.Parent.Parent.Flags.GetFFlagAnimateSubMenu)
+local GetFFlagAnimateSubMenu = require(Chrome.Flags.GetFFlagAnimateSubMenu)
 
-local useMappedSignal = require(script.Parent.Parent.Hooks.useMappedSignal)
+local useMappedSignal = require(Chrome.Hooks.useMappedSignal)
 
 local ICON_SIZE = UDim2.new(0, Constants.ICON_SIZE, 0, Constants.ICON_SIZE)
 

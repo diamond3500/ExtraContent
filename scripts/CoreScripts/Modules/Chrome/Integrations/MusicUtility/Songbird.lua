@@ -8,27 +8,19 @@ local React = require(CorePackages.Packages.React)
 local Songbird = require(CorePackages.Workspace.Packages.Songbird)
 local ContainerSlotSignal = require(Chrome.Service.ContainerSlotSignal)
 
-local GetFFlagEnableChromeMusicIntegration =
-	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagEnableChromeMusicIntegration
-local GetFStringChromeMusicIntegrationUtilityLabel =
-	require(CorePackages.Workspace.Packages.SharedFlags).GetFStringChromeMusicIntegrationUtilityLabel
-local GetFStringChromeMusicIntegrationId =
-	require(CorePackages.Workspace.Packages.SharedFlags).GetFStringChromeMusicIntegrationId
-local GetFFlagSongbirdTranslationStrings =
-	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagSongbirdTranslationStrings
+local Constants = require(Chrome.Integrations.MusicUtility.Constants)
+local shouldUseSmallPeek = require(Chrome.Integrations.MusicUtility.shouldUseSmallPeek)
 
-return if GetFFlagEnableChromeMusicIntegration()
-	then ChromeService:register({
-		id = if GetFFlagSongbirdTranslationStrings() then "now_playing" else GetFStringChromeMusicIntegrationId(),
-		label = if GetFFlagSongbirdTranslationStrings()
-			then "CoreScripts.TopBar.NowPlaying"
-			else GetFStringChromeMusicIntegrationUtilityLabel(),
-		initialAvailability = ChromeService.AvailabilitySignal.Available,
-		containerWidthSlots = ContainerSlotSignal.new(6),
-		components = {
-			Container = function()
-				return React.createElement(Songbird.UnibarSongbirdWrapper)
-			end,
-		},
-	})
-	else nil
+return ChromeService:register({
+	id = "now_playing",
+	label = "CoreScripts.TopBar.NowPlaying",
+	initialAvailability = ChromeService.AvailabilitySignal.Available,
+	containerWidthSlots = ContainerSlotSignal.new(
+		if shouldUseSmallPeek() then Constants.MIN_TRACK_DETAILS_WIDTH else Constants.MAX_TRACK_DETAILS_WIDTH
+	),
+	components = {
+		Container = function()
+			return React.createElement(Songbird.UnibarSongbirdWrapper)
+		end,
+	},
+})

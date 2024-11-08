@@ -1,6 +1,8 @@
+local Chrome = script:FindFirstAncestor("Chrome")
+
 local Workspace = game:GetService("Workspace")
 local UserInputService = game:GetService("UserInputService")
-local utils = require(script.Parent.ChromeUtils)
+local utils = require(Chrome.Service.ChromeUtils)
 local ObservableValue = utils.ObservableValue
 
 export type ObservableScreenSize = utils.ObservableValue<Vector2>

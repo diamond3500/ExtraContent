@@ -12,6 +12,7 @@ local Packages = CorePackages.Packages
 local useLocalization = require(CorePackages.Workspace.Packages.Localization).Hooks.useLocalization
 local React = require(Packages.React)
 local RoactUtils = require(CorePackages.Workspace.Packages.RoactUtils)
+local useAppPolicy = require(CorePackages.Workspace.Packages.UniversalAppPolicy).useAppPolicy
 local useSelector = RoactUtils.Hooks.RoactRodux.useSelector
 local LuauPolyfill = require(Packages.LuauPolyfill)
 local setTimeout = LuauPolyfill.setTimeout
@@ -52,6 +53,8 @@ local GetFFlagSelfieViewDontWaitForCharacter = require(SelfieViewModule.Flags.Ge
 local GetFFlagSelfieViewDontStartOnOpen = require(SelfieViewModule.Flags.GetFFlagSelfieViewDontStartOnOpen)
 local GetFFlagSelfieViewHideCameraStatusDot = require(SelfieViewModule.Flags.GetFFlagSelfieViewHideCameraStatusDot)
 local GetFFlagSelfieViewV4 = require(RobloxGui.Modules.Flags.GetFFlagSelfieViewV4)
+local GetFFlagSelfieViewUseNewErrorBody =
+	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagSelfieViewUseNewErrorBody
 
 local Analytics = require(RobloxGui.Modules.SelfView.Analytics).new()
 
@@ -86,9 +89,17 @@ local function Window(props: WindowProps): React.ReactNode
 	local theme = style.Theme
 	local font = style.Font
 
+	local showUpdatedCameraPath = if GetFFlagSelfieViewUseNewErrorBody()
+		then useAppPolicy(function(appPolicy)
+			return appPolicy.getShowUpdatedCameraPath()
+		end)
+		else false
+
 	local localized = useLocalization({
 		robloxPermissionErrorHeader = "CoreScripts.TopBar.RobloxPermissionErrorHeader",
-		robloxPermissionErrorBody = "CoreScripts.TopBar.RobloxPermissionErrorBody",
+		robloxPermissionErrorBody = if GetFFlagSelfieViewUseNewErrorBody() and showUpdatedCameraPath
+			then "CoreScripts.TopBar.RobloxPermissionErrorBodyTwo"
+			else "CoreScripts.TopBar.RobloxPermissionErrorBody",
 		dynamicAvatarMissingErrorHeader = "CoreScripts.TopBar.DynamicAvatarMissingErrorHeader",
 		dynamicAvatarMissingErrorBody = "CoreScripts.TopBar.DynamicAvatarMissingErrorBody",
 	})

@@ -8,10 +8,14 @@
 
 local root = script.Parent.Parent
 
-local getFFlagDebugUGCDisableRCCOwnershipCheck = require(root.flags.getFFlagDebugUGCDisableRCCOwnershipCheck)
+local RunService = game:GetService("RunService")
+
 local getFFlagUGCValidateBodyPartsModeration = require(root.flags.getFFlagUGCValidateBodyPartsModeration)
 local getFFlagUGCValidationAnalytics = require(root.flags.getFFlagUGCValidationAnalytics)
 local FFlagValidateUserAndUniverseNoModeration = game:DefineFastFlag("ValidateUserAndUniverseNoModeration", false)
+local FFlagNoStudioOwnershipCheck = game:DefineFastFlag("NoStudioOwnershipCheck", false)
+local getEngineFeatureUGCValidateEditableMeshAndImage =
+	require(root.flags.getEngineFeatureUGCValidateEditableMeshAndImage)
 
 local Analytics = require(root.Analytics)
 local Constants = require(root.Constants)
@@ -146,12 +150,15 @@ end
 
 local function validateDependencies(
 	instance: Instance,
-	validationContext: Types.ValidationContext?
+	validationContext: Types.ValidationContext
 ): (boolean, { string }?)
 	local startTime = tick()
 
 	local isServer = if validationContext then validationContext.isServer else nil
 	local allowUnreviewedAssets = if validationContext then validationContext.allowUnreviewedAssets else nil
+	local allowEditableInstances = if getEngineFeatureUGCValidateEditableMeshAndImage()
+		then validationContext.allowEditableInstances
+		else false
 	local restrictedUserIds = if validationContext then validationContext.restrictedUserIds else nil
 	local universeId = if validationContext then validationContext.universeId else nil
 
@@ -163,20 +170,21 @@ local function validateDependencies(
 		contentIdMap,
 		instance,
 		nil,
-		Constants.CONTENT_ID_REQUIRED_FIELDS
+		Constants.CONTENT_ID_REQUIRED_FIELDS,
+		validationContext
 	)
 	if not parseSuccess then
 		Analytics.reportFailure(Analytics.ErrorType.validateDependencies_ParseFailure)
 		return false, parseReasons
 	end
 
-	if isServer then
+	if isServer and not allowEditableInstances then
 		validateExistance(contentIdMap)
 	end
 
 	local reasonsAccumulator = FailureReasonsAccumulator.new()
 
-	if not getFFlagDebugUGCDisableRCCOwnershipCheck() then
+	if not FFlagNoStudioOwnershipCheck or (FFlagNoStudioOwnershipCheck and not RunService:IsStudio()) then
 		if isServer then
 			-- This block will check user and universe permissions without considering moderation
 			-- This is from in experience creation, assets may not be moderated yet
@@ -198,7 +206,7 @@ local function validateDependencies(
 			checkModeration = false
 		end
 		if checkModeration then
-			reasonsAccumulator:updateReasons(validateModeration(instance, restrictedUserIds))
+			reasonsAccumulator:updateReasons(validateModeration(instance, restrictedUserIds, validationContext))
 		end
 	end
 

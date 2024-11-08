@@ -11,6 +11,10 @@ local Analytics = require(root.Analytics)
 local getFFlagDebugUGCDisableSurfaceAppearanceTests = require(root.flags.getFFlagDebugUGCDisableSurfaceAppearanceTests)
 local getFFlagUGCValidateBodyPartsCollisionFidelity = require(root.flags.getFFlagUGCValidateBodyPartsCollisionFidelity)
 local getFFlagUGCValidateBodyPartsModeration = require(root.flags.getFFlagUGCValidateBodyPartsModeration)
+local getFFlagRefactorValidateAssetTransparency = require(root.flags.getFFlagRefactorValidateAssetTransparency)
+local getEngineFeatureUGCValidateEditableMeshAndImage =
+	require(root.flags.getEngineFeatureUGCValidateEditableMeshAndImage)
+local getFFlagUGCValidateOrientedSizing = require(root.flags.getFFlagUGCValidateOrientedSizing)
 
 local validateBodyPartMeshBounds = require(root.validation.validateBodyPartMeshBounds)
 local validateAssetBounds = require(root.validation.validateAssetBounds)
@@ -27,7 +31,8 @@ local validateHSR = require(root.validation.validateHSR)
 local validateBodyPartCollisionFidelity = require(root.validation.validateBodyPartCollisionFidelity)
 local validateModeration = require(root.validation.validateModeration)
 local validateAssetTransparency = require(root.validation.validateAssetTransparency)
-
+local DEPRECATED_validateAssetTransparency = require(root.validation.DEPRECATED_validateAssetTransparency)
+local validatePose = require(root.validation.validatePose)
 local validateWithSchema = require(root.util.validateWithSchema)
 local FailureReasonsAccumulator = require(root.util.FailureReasonsAccumulator)
 local resetPhysicsData = require(root.util.resetPhysicsData)
@@ -44,7 +49,7 @@ local function validateMeshPartBodyPart(
 	local skipSnapshot = if validationContext.bypassFlags then validationContext.bypassFlags.skipSnapshot else false
 	local restrictedUserIds = validationContext.restrictedUserIds
 
-	local validationResult = validateWithSchema(schema, inst)
+	local validationResult = validateWithSchema(schema, inst, validationContext)
 	if not validationResult.success then
 		Analytics.reportFailure(Analytics.ErrorType.validateMeshPartBodyPart_ValidateWithSchema)
 		return false,
@@ -55,7 +60,7 @@ local function validateMeshPartBodyPart(
 	end
 
 	if not getFFlagDebugUGCDisableSurfaceAppearanceTests() then
-		local result, failureReasons = validateSurfaceAppearances(inst)
+		local result, failureReasons = validateSurfaceAppearances(inst, validationContext)
 		if not result then
 			return result, failureReasons
 		end
@@ -83,6 +88,10 @@ local function validateMeshPartBodyPart(
 
 	reasonsAccumulator:updateReasons(validateBodyPartChildAttachmentBounds(inst, validationContext))
 
+	if getFFlagUGCValidateOrientedSizing() then
+		reasonsAccumulator:updateReasons(validatePose(inst, validationContext))
+	end
+
 	reasonsAccumulator:updateReasons(validateAssetBounds(nil, inst, validationContext))
 
 	reasonsAccumulator:updateReasons(validateDescendantMeshMetrics(inst, validationContext))
@@ -91,10 +100,13 @@ local function validateMeshPartBodyPart(
 
 	reasonsAccumulator:updateReasons(validateHSR(inst, validationContext))
 
-	-- TODO: refactor to take in a context table after FFlagUseThumbnailerUtil is cleaned up
-	if not skipSnapshot then
+	if getEngineFeatureUGCValidateEditableMeshAndImage() and getFFlagRefactorValidateAssetTransparency() then
 		local startTime = tick()
-		reasonsAccumulator:updateReasons(validateAssetTransparency(inst, assetTypeEnum, isServer))
+		reasonsAccumulator:updateReasons(validateAssetTransparency(inst, validationContext))
+		Analytics.recordScriptTime("validateAssetTransparency", startTime, validationContext)
+	elseif not skipSnapshot then
+		local startTime = tick()
+		reasonsAccumulator:updateReasons(DEPRECATED_validateAssetTransparency(inst, assetTypeEnum, isServer))
 		Analytics.recordScriptTime("validateAssetTransparency", startTime, validationContext)
 	end
 
@@ -103,12 +115,12 @@ local function validateMeshPartBodyPart(
 	reasonsAccumulator:updateReasons(validateProperties(inst, assetTypeEnum))
 
 	if getFFlagUGCValidateBodyPartsCollisionFidelity() then
-		reasonsAccumulator:updateReasons(validateBodyPartCollisionFidelity(inst))
+		reasonsAccumulator:updateReasons(validateBodyPartCollisionFidelity(inst, validationContext))
 	end
 
 	reasonsAccumulator:updateReasons(validateTags(inst))
 
-	reasonsAccumulator:updateReasons(validateAttributes(inst))
+	reasonsAccumulator:updateReasons(validateAttributes(inst, validationContext))
 
 	if getFFlagUGCValidateBodyPartsModeration() then
 		local checkModeration = not isServer
@@ -116,7 +128,7 @@ local function validateMeshPartBodyPart(
 			checkModeration = false
 		end
 		if checkModeration then
-			reasonsAccumulator:updateReasons(validateModeration(inst, restrictedUserIds))
+			reasonsAccumulator:updateReasons(validateModeration(inst, restrictedUserIds, validationContext))
 		end
 	end
 

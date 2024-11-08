@@ -19,7 +19,8 @@ local LocalizationContextProvider = require(Root.Components.Connection.Localizat
 local getLocalizationContext = require(Root.Localization.getLocalizationContext)
 local Reducer = require(Root.Reducers.Reducer)
 local LayoutValues = require(Root.Services.LayoutValues)
-local UnitTestHelpers = require(CorePackages.Workspace.Packages.UnitTestHelpers)
+local Style = require(CorePackages.Workspace.Packages.Style)
+local StyleProviderWithDefaultTheme = Style.StyleProviderWithDefaultTheme
 
 local UnitTestContainer = Roact.Component:extend("UnitTestContainer")
 
@@ -41,7 +42,7 @@ function UnitTestContainer:render()
 		LocaleProvider = Roact.createElement(LocaleProvider, {
 			locale = LocalizationService.RobloxLocaleId
 		}, {
-			StyleProvider = UnitTestHelpers.createStyleProvider({
+			StyleProvider = Roact.createElement(StyleProviderWithDefaultTheme, {
 				LocalizationContextProvider = Roact.createElement(LocalizationContextProvider, {
 					localizationContext = self.localizationContext,
 					render = function()

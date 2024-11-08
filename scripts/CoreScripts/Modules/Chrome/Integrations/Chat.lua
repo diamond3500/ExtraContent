@@ -1,3 +1,5 @@
+local Chrome = script:FindFirstAncestor("Chrome")
+
 local CoreGui = game:GetService("CoreGui")
 local CorePackages = game:GetService("CorePackages")
 local TextChatService = game:GetService("TextChatService")
@@ -6,11 +8,11 @@ local Chat = game:GetService("Chat")
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
 
-local ChromeService = require(script.Parent.Parent.Service)
-local ChromeUtils = require(script.Parent.Parent.Service.ChromeUtils)
-local ViewportUtil = require(script.Parent.Parent.Service.ViewportUtil)
+local ChromeService = require(Chrome.Service)
+local ChromeUtils = require(Chrome.Service.ChromeUtils)
+local ViewportUtil = require(Chrome.Service.ViewportUtil)
 local MappedSignal = ChromeUtils.MappedSignal
-local CommonIcon = require(script.Parent.CommonIcon)
+local CommonIcon = require(Chrome.Integrations.CommonIcon)
 local GameSettings = UserSettings().GameSettings
 local GuiService = game:GetService("GuiService")
 
@@ -19,8 +21,9 @@ local SharedFlags = require(CorePackages.Workspace.Packages.SharedFlags)
 local InExperienceAppChatExperimentation = AppChat.App.InExperienceAppChatExperimentation
 
 local ChatSelector = require(RobloxGui.Modules.ChatSelector)
-local EnabledPinnedChat = require(script.Parent.Parent.Flags.GetFFlagEnableChromePinnedChat)()
+local EnabledPinnedChat = require(Chrome.Flags.GetFFlagEnableChromePinnedChat)()
 local GetFFlagEnableAppChatInExperience = SharedFlags.GetFFlagEnableAppChatInExperience
+local GetFFlagAddChromeActivatedEvents = require(Chrome.Flags.GetFFlagAddChromeActivatedEvents)
 
 local unreadMessages = 0
 -- note: do not rely on ChatSelector:GetVisibility after startup; it's state is incorrect if user opens via keyboard shortcut
@@ -60,6 +63,11 @@ chatChromeIntegration = ChromeService:register({
 			end)
 		end
 	end,
+	isActivated = if GetFFlagAddChromeActivatedEvents()
+		then function()
+			return chatVisibilitySignal:get()
+		end
+		else nil,
 	components = {
 		Icon = function(props)
 			if

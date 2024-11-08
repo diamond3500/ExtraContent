@@ -15,7 +15,7 @@ local CloseOpenPrompt = require(Root.Actions.CloseOpenPrompt)
 local OpenResultModal = require(Root.Actions.OpenResultModal)
 local CloseResultModal = require(Root.Actions.CloseResultModal)
 local OpenValidationErrorModal = require(Root.Actions.OpenValidationErrorModal)
-local SetSerializedModel = require(Root.Actions.SetSerializedModel)
+local SetHumanoidModel = require(Root.Actions.SetHumanoidModel)
 local SetPriceInRobux = require(Root.Actions.SetPriceInRobux)
 local SetPromptVisibility = require(Root.Actions.SetPromptVisibility)
 
@@ -51,10 +51,10 @@ local PromptRequestReducer = Rodux.createReducer(EMPTY_STATE, {
 		})
 	end,
 
-	[SetSerializedModel.name] = function(state, action)
+	[SetHumanoidModel.name] = function(state, action)
 		return Cryo.Dictionary.join(state, {
 			promptInfo = Cryo.Dictionary.join(state.promptInfo, {
-				serializedModel = action.serializedModel,
+				humanoidModel = action.humanoidModel,
 			}),
 		})
 	end,

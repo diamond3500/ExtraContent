@@ -27,7 +27,6 @@ local Network = require(Root.Services.Network)
 local getPaymentPlatform = require(Root.Utils.getPaymentPlatform)
 local getPaymentFromPlatformLegacy = require(Root.Utils.getPaymentFromPlatformLegacy)
 local getHasAmazonUserAgent = require(Root.Utils.getHasAmazonUserAgent)
-local GetFFlagEnableQuestPaymentPlatformType = require(Root.Flags.GetFFlagEnableQuestPaymentPlatformType)
 local GetFFlagRespectBalanceInfoForBundleUpsellInStudio =
 	require(Root.Flags.GetFFlagRespectBalanceInfoForBundleUpsellInStudio)
 local Thunk = require(Root.Thunk)
@@ -67,7 +66,7 @@ local function meetsBundlePrerequisitesV2(catalogItemDetails, bundleDetails, bal
 			-- Non-limited collectibles can only be purchased once
 			return false, PurchaseError.AlreadyOwn
 		end
-	else
+ else
 		if isOwned then
 			-- Legacy bundles can only be puchased once
 			return false, PurchaseError.AlreadyOwn
@@ -213,14 +212,7 @@ local function resolveBundlePromptState(
 					local neededRobux = price - balanceInfo.robux
 					local isPlayerPremium = accountInfo.isPremium
 
-					local paymentPlatform
-					if GetFFlagEnableQuestPaymentPlatformType() then
-						paymentPlatform = getPaymentPlatform(platform)
-					else
-						local isAmazon = getHasAmazonUserAgent()
-						local isLuobu = GetFFlagEnableLuobuInGameUpsell()
-						paymentPlatform = getPaymentFromPlatformLegacy(platform, isLuobu, isAmazon)
-					end
+					local paymentPlatform = getPaymentPlatform(platform)
 
 					local robuxBalance = balanceInfo.robux
 

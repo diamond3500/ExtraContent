@@ -34,13 +34,13 @@ local getPlayerProductInfoPrice = require(Root.Utils.getPlayerProductInfoPrice)
 local getPaymentPlatform = require(Root.Utils.getPaymentPlatform)
 local getPaymentFromPlatformLegacy = require(Root.Utils.getPaymentFromPlatformLegacy)
 local getHasAmazonUserAgent = require(Root.Utils.getHasAmazonUserAgent)
-local GetFFlagEnableQuestPaymentPlatformType = require(Root.Flags.GetFFlagEnableQuestPaymentPlatformType)
 local hasPendingRequest = require(Root.Utils.hasPendingRequest)
 
 local Thunk = require(Root.Thunk)
 
 local GetFFlagEnableLuobuInGameUpsell = require(Root.Flags.GetFFlagEnableLuobuInGameUpsell)
-local GetFStringLargerRobuxUpsellIxpLayer = require(CorePackages.Workspace.Packages.SharedFlags).GetFStringLargerRobuxUpsellIxpLayer
+local GetFStringLargerRobuxUpsellIxpLayer =
+	require(CorePackages.Workspace.Packages.SharedFlags).GetFStringLargerRobuxUpsellIxpLayer
 local LargerRobuxUpsellTest = require(Root.Flags.LargerRobuxUpsellTest)
 
 local requiredServices = {
@@ -89,14 +89,7 @@ local function resolvePromptState(productInfo, accountInfo, balanceInfo, already
 				return store:dispatch(ErrorOccurred(PurchaseError.NotEnoughRobuxNoUpsell))
 			end
 
-			local paymentPlatform
-			if GetFFlagEnableQuestPaymentPlatformType() then
-				paymentPlatform = getPaymentPlatform(platform)
-			else
-				local isAmazon = getHasAmazonUserAgent()
-				local isLuobu = GetFFlagEnableLuobuInGameUpsell()
-				paymentPlatform =  getPaymentFromPlatformLegacy(platform, isLuobu, isAmazon)
-			end
+			local paymentPlatform = getPaymentPlatform(platform)
 
 			-- This flow was successful on all mobile platforms but NOT Web
 			if paymentPlatform ~= PaymentPlatform.Web then

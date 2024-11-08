@@ -9,7 +9,7 @@ local VoiceChatServiceManager = require(RobloxGui.Modules.VoiceChat.VoiceChatSer
 local VoiceConstants = require(RobloxGui.Modules.VoiceChat.Constants)
 
 local Roact = require(CorePackages.Roact)
-local React = require(CorePackages.Workspace.Packages.React)
+local React = require(CorePackages.Packages.React)
 local UIBlox = require(CorePackages.UIBlox)
 local StyledTextLabel = UIBlox.App.Text.StyledTextLabel
 local Button = UIBlox.App.Button.Button
@@ -28,7 +28,7 @@ local useLocalization = require(CorePackages.Workspace.Packages.Localization).Ho
 local useRoactService = require(CorePackages.Workspace.Packages.RobloxAppHooks).useRoactService
 local useInputType = require(CorePackages.Workspace.Packages.RoactUtils).Hooks.useInputType
 local InputTypeConstants = require(CorePackages.Workspace.Packages.InputType).InputTypeConstants
-local ReactUtils = require(CorePackages.Workspace.Packages.ReactUtils)
+local ReactUtils = require(CorePackages.Packages.ReactUtils)
 local useEventConnection = ReactUtils.useEventConnection
 local getPlatformTarget = require(CorePackages.Workspace.Packages.Analytics).getPlatformTarget
 local EventStreamConstants = require(CorePackages.Workspace.Packages.AuthAnalytics).EventStreamConstants

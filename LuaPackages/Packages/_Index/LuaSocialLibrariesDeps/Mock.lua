@@ -3,6 +3,6 @@
 ]]
 local PackageIndex = script.Parent.Parent.Parent._Index
 
-local Package = require(PackageIndex["mock"]["mock"])
+local Package = require(PackageIndex["mock-31ab8d40-1.1.0"]["mock"])
 
 return Package

@@ -1,9 +1,12 @@
 --!nonstrict
 local Root = script.Parent.Parent
+local CoreGui = game:GetService("CoreGui")
 local HttpService = game:GetService("HttpService")
 local Workspace = game:GetService("Workspace")
 local Players = game:GetService("Players")
 local ExperienceAuthService = game:GetService("ExperienceAuthService")
+
+local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 
 local SetPromptState = require(Root.Actions.SetPromptState)
 local StartPurchase = require(Root.Actions.StartPurchase)
@@ -26,13 +29,14 @@ local Promise = require(Root.Promise)
 local completePurchase = require(script.Parent.completePurchase)
 
 local FFlagEnableCollectibleCheckToPurchaseItem = require(Root.Parent.Flags.FFlagEnableCollectibleCheckToPurchaseItem)
-local GetFFlagEnableAvatarCreationFeePurchase = require(Root.Flags.GetFFlagEnableAvatarCreationFeePurchase)
+local FFlagPublishAvatarPromptEnabled = require(RobloxGui.Modules.PublishAssetPrompt.FFlagPublishAvatarPromptEnabled)
 
 -- Only tools can be equipped on purchase
 local ASSET_TYPE_TOOL = 19
 
 local AVATAR_NAME_KEY = "avatarName"
 local AVATAR_DESCRIPTION_KEY = "avatarDescription"
+local PRICE_FROM_TOKEN_KEY = "priceFromToken"
 
 local requiredServices = {
 	Network,
@@ -54,7 +58,7 @@ local function purchaseItem()
 
 		store:dispatch(StartPurchase(Workspace.DistributedGameTime))
 
-		if GetFFlagEnableAvatarCreationFeePurchase() and requestType == RequestType.AvatarCreationFee then
+		if FFlagPublishAvatarPromptEnabled and requestType == RequestType.AvatarCreationFee then
 			--[[
 			Avatar Creation Purchase is handled by
 			AvatarCreationService:PromptCreateAvatarAsync.
@@ -66,6 +70,7 @@ local function purchaseItem()
 			local metadata = {}
 			metadata[AVATAR_NAME_KEY] = state.productInfo.name
 			metadata[AVATAR_DESCRIPTION_KEY] = state.productInfo.description
+			metadata[PRICE_FROM_TOKEN_KEY] = state.productInfo.price
 
 			local scopes = {}
 			scopes[1] = Enum.ExperienceAuthScope.CreatorAssetsCreate

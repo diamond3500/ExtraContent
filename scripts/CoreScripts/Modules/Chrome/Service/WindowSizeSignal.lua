@@ -1,9 +1,11 @@
+local Chrome = script:FindFirstAncestor("Chrome")
+
 local CorePackages = game:GetService("CorePackages")
 local SignalLib = require(CorePackages.Workspace.Packages.AppCommonLib)
 local Signal = SignalLib.Signal
 
-local ViewportUtil = require(script.Parent.ViewportUtil)
-local Constants = require(script.Parent.Parent.Unibar.Constants)
+local ViewportUtil = require(Chrome.Service.ViewportUtil)
+local Constants = require(Chrome.Unibar.Constants)
 
 -- returned constrained window size for mobile devices depending on if portrait or landscape
 local function getConstrainedWindowSize(width: number, height: number): UDim2

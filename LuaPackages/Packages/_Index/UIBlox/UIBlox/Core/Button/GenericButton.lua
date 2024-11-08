@@ -139,6 +139,9 @@ GenericButton.validateProps = t.interface({
 	--Determine whether hover background is enabled
 	isHoverBackgroundEnabled = t.optional(t.boolean),
 
+	--The image used when hovering.
+	hoverImage = t.optional(validateImage),
+
 	--Used to start the input delay, set to true when you want to start the animation.
 	enableInputDelayed = t.optional(t.boolean),
 
@@ -321,6 +324,7 @@ function GenericButton:renderButton(loadingProgress)
 		-- Temp solution to add an additional hover background layer for Hover state.
 		-- For long term, need design support to provide a new style with dedicated hover state color
 		local showHoverBackground = currentState == ControlState.Hover and self.props.isHoverBackgroundEnabled == true
+		local hoverImage = self.props.hoverImage
 
 		-- Handle standard button sizes
 		local sidePadding = CONTENT_PADDING
@@ -456,6 +460,7 @@ function GenericButton:renderButton(loadingProgress)
 				onActivated = Cryo.None,
 				isLoading = Cryo.None,
 				isHoverBackgroundEnabled = Cryo.None,
+				hoverImage = Cryo.None,
 				isDelayedInput = Cryo.None,
 				enableInputDelayed = Cryo.None,
 				delayInputSeconds = Cryo.None,
@@ -511,7 +516,13 @@ function GenericButton:renderButton(loadingProgress)
 					ScaleType = Enum.ScaleType.Slice,
 					SliceCenter = self.props.SliceCenter,
 				}),
-				HoverBackground = showHoverBackground and Roact.createElement(HoverButtonBackground) or nil,
+				HoverBackground = showHoverBackground and Roact.createElement(HoverButtonBackground, {
+					sidePadding = if UIBloxConfig.fixGenericButtonHoverBackgroundPadding and standardSize
+						then UDim.new(0, sidePadding)
+						else nil,
+					image = if UIBloxConfig.enableGenericButtonHoverImage then hoverImage else nil,
+					sliceCenter = if UIBloxConfig.enableGenericButtonHoverImage then self.props.SliceCenter else nil,
+				}) or nil,
 				EventConnection = UIBloxConfig.useRobloxGuiFocusedChangedEventInGenericButton
 						and Roact.createElement(EventConnection, {
 							event = RunService.RobloxGuiFocusedChanged,

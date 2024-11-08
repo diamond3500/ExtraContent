@@ -9,6 +9,8 @@ local getFFlagUGCLCQualityReplaceLua = require(root.flags.getFFlagUGCLCQualityRe
 local getEngineFeatureUGCValidateEditableMeshAndImage =
 	require(root.flags.getEngineFeatureUGCValidateEditableMeshAndImage)
 
+local getFFlagUGCValidatePartSizeWithinRenderSizeLimits =
+	require(root.flags.getFFlagUGCValidatePartSizeWithinRenderSizeLimits)
 local Analytics = require(root.Analytics)
 
 local DEFAULT_OFFSET = Vector3.new(0, 0, 0)
@@ -23,6 +25,10 @@ local function pointInBounds(worldPos, boundsCF, boundsSize)
 		and objectPos.Y <= boundsSize.Y / 2
 		and objectPos.Z >= -boundsSize.Z / 2
 		and objectPos.Z <= boundsSize.Z / 2
+end
+
+local function isSizeWithinBounds(part, boundsSize)
+	return part.Size.X <= boundsSize.X and part.Size.Y <= boundsSize.Y and part.Size.Z <= boundsSize.Z
 end
 
 local function truncate(number)
@@ -48,7 +54,7 @@ local function validateMeshBounds(
 	meshInfo: Types.MeshInfo,
 	meshScale: Vector3,
 	boundsInfo: any,
-	name: string,
+	assetTypeName: string,
 	validationContext: Types.ValidationContext
 ): (boolean, { string }?)
 	local isServer = validationContext.isServer
@@ -116,7 +122,7 @@ local function validateMeshBounds(
 
 		if not result then
 			Analytics.reportFailure(Analytics.ErrorType.validateMeshBounds_TooLarge)
-			return false, getErrors(meshInfo.context :: string, name, boundsSize)
+			return false, getErrors(meshInfo.context :: string, assetTypeName, boundsSize)
 		end
 	else
 		local success, verts
@@ -156,8 +162,15 @@ local function validateMeshBounds(
 			local worldPos = handle.CFrame:PointToWorldSpace(vertPos * meshScale)
 			if not pointInBounds(worldPos, boundsCF, boundsSize) then
 				Analytics.reportFailure(Analytics.ErrorType.validateMeshBounds_TooLarge)
-				return false, getErrors(meshInfo.context :: string, name, boundsSize)
+				return false, getErrors(meshInfo.context :: string, assetTypeName, boundsSize)
 			end
+		end
+	end
+
+	if getFFlagUGCValidatePartSizeWithinRenderSizeLimits() then
+		if not isSizeWithinBounds(handle, boundsSize) then
+			Analytics.reportFailure(Analytics.ErrorType.validateMeshBounds_TooLarge)
+			return false, getErrors(handle:GetFullName(), assetTypeName, boundsSize)
 		end
 	end
 

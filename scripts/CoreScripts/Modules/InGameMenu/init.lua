@@ -10,7 +10,6 @@ local Roact = InGameMenuDependencies.Roact
 local RoactRodux = InGameMenuDependencies.RoactRodux
 local UIBlox = InGameMenuDependencies.UIBlox
 
-local GetFFlagSwitchInExpTranslationsPackage = require(RobloxGui.Modules.Flags.GetFFlagSwitchInExpTranslationsPackage)
 local GetFFlagEnableUISoundAndHaptics =
 	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagEnableUISoundAndHaptics
 local InteractionFeedbackPackage = require(CorePackages.Workspace.Packages.InteractionFeedback)
@@ -18,15 +17,8 @@ local FeedbackManagerInjectionContextProvider = InteractionFeedbackPackage.Feedb
 local AppInteractionFeedbackProvider =
 	require(CorePackages.Workspace.Packages.RobloxAppInteractionFeedbackConfig).AppInteractionFeedbackProvider
 
-local Localization
-local LocalizationProvider
-if GetFFlagSwitchInExpTranslationsPackage() then
-	Localization = require(CorePackages.Workspace.Packages.InExperienceLocales).Localization
-	LocalizationProvider = require(CorePackages.Workspace.Packages.Localization).LocalizationProvider
-else
-	Localization = require(script.Localization.Localization)
-	LocalizationProvider = require(script.Localization.LocalizationProvider)
-end
+local Localization = require(CorePackages.Workspace.Packages.InExperienceLocales).Localization
+local LocalizationProvider = require(CorePackages.Workspace.Packages.Localization).LocalizationProvider
 
 local SelectionCursorProvider = UIBlox.App.SelectionImage.SelectionCursorProvider
 
@@ -131,7 +123,7 @@ return {
 			})
 		end
 
-		local menuTree = Roact.createElement("ScreenGui", {
+		local _menuTree = Roact.createElement("ScreenGui", {
 			ResetOnSpawn = false,
 			IgnoreGuiInset = true,
 			DisplayOrder = Constants.DisplayOrder.RootMenu,
@@ -151,19 +143,7 @@ return {
 				}),
 			}),
 		})
-
-		local hasInternalPermission = UserSettings().GameSettings:InStudioMode()
-			and game:GetService("StudioService"):HasInternalPermission()
-		local root = Roact.mount(menuTree, CoreGui, "InGameMenu")
-		if hasInternalPermission then
-			local DeveloperTools = require(CorePackages.DeveloperTools)
-			local inspector = DeveloperTools.forCoreGui("InGameMenu", {
-				rootInstance = "InGameMenu",
-			})
-			inspector:addRoactTree("Roact tree", root, Roact)
-		end
-
-		return
+		Roact.mount(_menuTree, CoreGui, "InGameMenu")
 	end,
 
 	openInGameMenu = function(pageKey)

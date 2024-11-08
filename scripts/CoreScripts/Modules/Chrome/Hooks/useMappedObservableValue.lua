@@ -1,7 +1,9 @@
+local Chrome = script:FindFirstAncestor("Chrome")
+
 local CorePackages = game:GetService("CorePackages")
 local React = require(CorePackages.Packages.React)
-local ChromeUtils = require(script.Parent.Parent.Service.ChromeUtils)
-local FFlagChromeObservableStateCheck = require(script.Parent.Parent.Flags.GetFFlagChromeObservableStateCheck)()
+local ChromeUtils = require(Chrome.Service.ChromeUtils)
+local FFlagChromeObservableStateCheck = require(Chrome.Flags.GetFFlagChromeObservableStateCheck)()
 
 -- An optimized version of useObservableValue. Allowing the user to narrow the return data to reduce re-renders.
 

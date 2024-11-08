@@ -55,6 +55,9 @@ ItemTileName.validateProps = t.strictInterface({
 	-- Font style for header (Header2, Body, etc)
 	-- Defaults to Header2.
 	titleFontStyle = t.optional(t.union(validateFontInfo, validateTypographyInfo)),
+
+	-- Alignment of titleName to tile; necessary for correct RichText center alignment
+	horizontalAlignment = t.optional(t.enum(Enum.HorizontalAlignment)),
 })
 
 function ItemTileName:render()
@@ -67,6 +70,9 @@ function ItemTileName:render()
 	local useFluidSizing = self.props.fluidSizing
 	local hasVerifiedBadge = self.props.hasVerifiedBadge
 	local richText = self.props.richText
+	local horizontalXAlignment = if self.props.horizontalAlignment == Enum.HorizontalAlignment.Center
+		then Enum.TextXAlignment.Center
+		else nil
 
 	return withStyle(function(stylePalette)
 		local theme = stylePalette.Theme
@@ -127,6 +133,7 @@ function ItemTileName:render()
 						then Enum.TextTruncate.SplitWord
 						else Enum.TextTruncate.AtEnd,
 					RichText = richText,
+					TextXAlignment = horizontalXAlignment,
 				},
 
 				frameProps = {

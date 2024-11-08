@@ -13,12 +13,17 @@ export type StateChangedCallback = createGuiControlStateTable.onGuiControlStateC
 local React = require(Packages.React)
 export type Bindable<T> = T | React.Binding<T>
 
-export type CommonProps = {
+export type NativeCommonProps = {
 	LayoutOrder: Bindable<number>?,
 	Position: Bindable<UDim2>?,
 	Visible: Bindable<boolean>?,
 	ZIndex: Bindable<number>?,
 }
+
+export type CommonProps = {
+	onAbsoluteSizeChanged: (instance: GuiObject) -> ()?,
+	testId: string?,
+} & NativeCommonProps
 
 export type FlexItem = {
 	FlexMode: Bindable<Enum.UIFlexMode>?,
@@ -141,6 +146,17 @@ export type FontStyle = {
 	Font: FontFace?,
 	FontSize: number?,
 	LineHeight: number?,
+}
+
+export type InternalTextInputRef = {
+	getIsFocused: () -> boolean,
+	focus: () -> (),
+	setHover: (isHovering: boolean) -> (),
+}
+
+export type TextInputRef = {
+	getIsFocused: () -> boolean,
+	focus: () -> (),
 }
 
 return {}

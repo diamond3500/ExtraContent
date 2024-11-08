@@ -1,7 +1,8 @@
+local Chrome = script:FindFirstAncestor("Chrome")
+
 local CorePackages = game:GetService("CorePackages")
 local React = require(CorePackages.Packages.React)
 
-local Chrome = script:FindFirstAncestor("Chrome")
 local Constants = require(Chrome.Unibar.Constants)
 local ChromeTypes = require(Chrome.Service.Types)
 

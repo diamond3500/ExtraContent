@@ -1,7 +1,6 @@
 local Foundation = script:FindFirstAncestor("Foundation")
 
 local lerp = require(Foundation.Utility.lerp)
-local Flags = require(Foundation.Utility.Flags)
 local Types = require(Foundation.Components.Types)
 type ColorStyleValue = Types.ColorStyleValue
 
@@ -25,9 +24,7 @@ local function getBackgroundStyleWithStateLayer(
 		local transparency = backgroundStyle.Transparency or 0
 		return {
 			Color3 = backgroundStyle.Color3:Lerp(stateLayerStyle.Color3, 1 - stateLayerStyle.Transparency),
-			Transparency = if Flags.FoundationStateLayerTransparencyLerp
-				then lerp(transparency, stateLayerStyle.Transparency, transparency)
-				else backgroundStyle.Transparency,
+			Transparency = lerp(transparency, stateLayerStyle.Transparency, transparency),
 		}
 	end
 end

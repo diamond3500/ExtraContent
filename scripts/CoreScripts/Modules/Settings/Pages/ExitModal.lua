@@ -35,20 +35,15 @@ local Players = game:GetService("Players")
 ----------- UTILITIES --------------
 
 local SharedFlags = CorePackages.Workspace.Packages.SharedFlags
-local GetFFlagSwitchInExpTranslationsPackage = require(RobloxGui.Modules.Flags.GetFFlagSwitchInExpTranslationsPackage)
 local GetFFlagChromeSurveySupport = require(SharedFlags).GetFFlagChromeSurveySupport
 local GetFFlagGateEducationalPopupVisibilityViaGUAC = require(SharedFlags).GetFFlagGateEducationalPopupVisibilityViaGUAC
-local InExperienceCapabilities = require(CorePackages.Workspace.Packages.InExperienceCapabilities).InExperienceCapabilities
+local InExperienceCapabilities =
+	require(CorePackages.Workspace.Packages.InExperienceCapabilities).InExperienceCapabilities
 
 local NotificationType = GuiService:GetNotificationTypeList()
 local Roact = require(CorePackages.Roact)
 local LinkingProtocol = require(CorePackages.Workspace.Packages.LinkingProtocol).LinkingProtocol
-local Localization
-if GetFFlagSwitchInExpTranslationsPackage() then
-	Localization = require(CorePackages.Workspace.Packages.InExperienceLocales).Localization
-else
-	Localization = require(RobloxGui.Modules.InGameMenu.Localization.Localization)
-end
+local Localization = require(CorePackages.Workspace.Packages.InExperienceLocales).Localization
 local SendAnalytics = require(RobloxGui.Modules.InGameMenu.Utility.SendAnalytics)
 local UserLocalStore = require(RobloxGui.Modules.InGameMenu.Utility.UserLocalStore)
 local GetDefaultQualityLevel = require(CorePackages.Workspace.Packages.AppCommonLib).GetDefaultQualityLevel
@@ -67,7 +62,8 @@ local renderWithCoreScriptsStyleProvider = require(RobloxGui.Modules.Common.rend
 ------------ VARIABLES -------------------
 
 local PageInstance = nil
-local Constants = require(RobloxGui.Modules:WaitForChild("InGameMenu"):WaitForChild("Resources"):WaitForChild("Constants"))
+local Constants =
+	require(RobloxGui.Modules:WaitForChild("InGameMenu"):WaitForChild("Resources"):WaitForChild("Constants"))
 
 ------------ FLAGS -------------------
 
@@ -234,7 +230,10 @@ local function Initialize()
 					end
 
 					local localUserId = tostring(Players.LocalPlayer.UserId)
-					MessageBus.publish(Constants.OnSurveyEventDescriptor, {eventType = Constants.SurveyEventType, userId = localUserId, customProps = customProps})
+					MessageBus.publish(
+						Constants.OnSurveyEventDescriptor,
+						{ eventType = Constants.SurveyEventType, userId = localUserId, customProps = customProps }
+					)
 				end,
 			}),
 		}
@@ -263,8 +262,10 @@ end
 PageInstance = Initialize()
 
 PageInstance.Displayed.Event:connect(function()
-	if not PageInstance.ShouldShow() or
-	(GetFFlagGateEducationalPopupVisibilityViaGUAC() and not InExperienceCapabilities.canViewEducationalPopup) then
+	if
+		not PageInstance.ShouldShow()
+		or (GetFFlagGateEducationalPopupVisibilityViaGUAC() and not InExperienceCapabilities.canViewEducationalPopup)
+	then
 		PageInstance.LeaveAppFunc(true)
 	end
 

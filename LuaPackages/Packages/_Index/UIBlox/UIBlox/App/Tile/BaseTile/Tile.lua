@@ -360,11 +360,7 @@ function Tile:render()
 							FillDirection = Enum.FillDirection.Vertical,
 							SortOrder = Enum.SortOrder.LayoutOrder,
 							Padding = UDim.new(0, innerPadding),
-							HorizontalAlignment = if (
-									UIBloxConfig.tileHorizontalAlignmentFix and not self.props.nameOverThumbnail
-								)
-								then horizontalAlignment
-								else nil,
+							HorizontalAlignment = if not self.props.nameOverThumbnail then horizontalAlignment else nil,
 						}),
 						Thumbnail = React.createElement(RoactGamepad.Focusable.Frame, {
 							Size = thumbnailFrameSize,
@@ -435,6 +431,9 @@ function Tile:render()
 								useMaxHeight = useMaxTitleHeight,
 								titleFontStyle = titleFontStyle,
 								richText = titleRichText,
+								horizontalAlignment = if UIBloxConfig.imageTextLabelTextXAlignment
+									then horizontalAlignment
+									else nil,
 							}),
 							Subtitle = (subtitle ~= "" and subtitle ~= nil) and React.createElement(StyledTextLabel, {
 								size = UDim2.new(0, 0, 0, subtitleTextHeight),

@@ -3,6 +3,6 @@
 ]]
 local PackageIndex = script.Parent.Parent.Parent._Index
 
-local Package = require(PackageIndex["roblox_http-request"]["http-request"])
+local Package = require(PackageIndex["HttpRequest"]["HttpRequest"])
 
 return Package

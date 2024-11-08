@@ -1,3 +1,5 @@
+local Chrome = script:FindFirstAncestor("Chrome")
+
 local AnalyticsService = game:GetService("RbxAnalyticsService")
 local CorePackages = game:GetService("CorePackages")
 local GuiService = game:GetService("GuiService")
@@ -12,7 +14,6 @@ local PlayerGui = (Players.LocalPlayer :: Player):FindFirstChildOfClass("PlayerG
 local Cryo = require(CorePackages.Cryo)
 local PerfUtils = require(RobloxGui.Modules.Common.PerfUtils)
 
-local Chrome = script.Parent.Parent
 local ChromeService = require(Chrome.Service)
 local Constants = require(Chrome.Unibar.Constants)
 local Types = require(Chrome.Service.Types)
@@ -22,7 +23,7 @@ local GetFFlagEnableScreenshotUtility =
 	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagEnableScreenshotUtility
 local FFlagEnabledChromeIntegrationIsActivated = game:DefineFastFlag("EnabledChromeIntegrationIsActivated", false)
 
-local Tracker = require(script.Parent.Tracker)
+local Tracker = require(Chrome.Analytics.Tracker)
 
 local TRACKER_NAME_UNIBAR_TIME = "unibar_time"
 local TRACKER_NAME_WINDOW_SIZE_PREFIX = "window_size_"

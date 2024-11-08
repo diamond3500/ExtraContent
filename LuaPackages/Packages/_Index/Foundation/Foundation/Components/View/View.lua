@@ -8,14 +8,13 @@ local Cryo = require(Packages.Cryo)
 local Logger = require(Foundation.Utility.Logger)
 
 local Interactable = require(Foundation.Components.Interactable)
-local Padding = require(Foundation.Components.Padding)
-local AspectRatio = require(Foundation.Components.AspectRatio)
 
 local Types = require(Foundation.Components.Types)
 local withDefaults = require(Foundation.Utility.withDefaults)
 local useDefaultTags = require(Foundation.Utility.useDefaultTags)
 local withGuiObjectProps = require(Foundation.Utility.withGuiObjectProps)
 local useStyledDefaults = require(Foundation.Utility.useStyledDefaults)
+local GuiObjectChildren = require(Foundation.Utility.GuiObjectChildren)
 
 local useStyleTags = require(Foundation.Providers.Style.useStyleTags)
 
@@ -67,7 +66,7 @@ local function View(viewProps: ViewProps, ref: React.Ref<GuiObject>?)
 
 	local engineComponent = React.useMemo(function()
 		if usesCanvasGroup then
-			if isInteractable then
+			if isInteractable and not props.isDisabled then
 				Logger:warning("Some state changes are not supported with GroupTransparency")
 			end
 			return "CanvasGroup"
@@ -99,48 +98,7 @@ local function View(viewProps: ViewProps, ref: React.Ref<GuiObject>?)
 		})
 		else engineComponentProps
 
-	return React.createElement(component, componentProps, {
-		Children = React.createElement(React.Fragment, {}, props.children) :: any,
-		AspectRatio = if props.aspectRatio ~= nil
-			then React.createElement(AspectRatio, { value = props.aspectRatio })
-			else nil,
-		CornerRadius = if props.cornerRadius ~= nil
-			then React.createElement("UICorner", {
-				CornerRadius = props.cornerRadius,
-			})
-			else nil,
-		FlexItem = if props.flexItem ~= nil
-			then React.createElement("UIFlexItem", {
-				FlexMode = props.flexItem.FlexMode,
-				GrowRatio = props.flexItem.GrowRatio,
-				ShrinkRatio = props.flexItem.ShrinkRatio,
-				ItemLineAlignment = props.flexItem.ItemLineAlignment,
-			})
-			else nil,
-		ListLayout = if props.layout ~= nil and props.layout.FillDirection ~= nil
-			then React.createElement("UIListLayout", {
-				FillDirection = props.layout.FillDirection,
-				ItemLineAlignment = props.layout.ItemLineAlignment,
-				HorizontalAlignment = props.layout.HorizontalAlignment,
-				HorizontalFlex = props.layout.HorizontalFlex,
-				VerticalAlignment = props.layout.VerticalAlignment,
-				VerticalFlex = props.layout.VerticalFlex,
-				Padding = props.layout.Padding,
-				SortOrder = props.layout.SortOrder,
-				Wraps = props.layout.Wraps,
-			})
-			else nil,
-		SizeConstraint = if props.sizeConstraint ~= nil
-			then React.createElement("UISizeConstraint", props.sizeConstraint)
-			else nil,
-		Padding = if props.padding ~= nil then React.createElement(Padding, { value = props.padding }) else nil,
-		Scale = if props.scale ~= nil
-			then React.createElement("UIScale", {
-				Scale = props.scale,
-			})
-			else nil,
-		Stroke = if props.stroke ~= nil then React.createElement("UIStroke", props.stroke) else nil,
-	})
+	return React.createElement(component, componentProps, GuiObjectChildren(props))
 end
 
 return React.memo(React.forwardRef(View))

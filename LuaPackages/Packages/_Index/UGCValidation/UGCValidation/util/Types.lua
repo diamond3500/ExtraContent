@@ -49,6 +49,7 @@ export type ValidationContext = {
 	scriptTimes: ScriptTimes?,
 	validateMeshPartAccessories: boolean,
 	partSizes: PartSizes?,
+	requireAllFolders: boolean?,
 }
 
 export type MeshInfo = {
@@ -66,5 +67,54 @@ export type TextureInfo = {
 	fullName: string,
 	fieldName: string,
 }
+
+export type AxisValidateBoundsResult = {
+	ok: boolean,
+	min: number,
+	max: number,
+}
+
+export type ScaleTypeValidateBoundsResult = {
+	ok: boolean,
+	X: AxisValidateBoundsResult,
+	Y: AxisValidateBoundsResult,
+	Z: AxisValidateBoundsResult,
+	min: number,
+	max: number,
+}
+
+export type ExtraDataValidateBoundsResult = {
+	meshSize: Vector3,
+	overallSize: Vector3,
+	Classic: ScaleTypeValidateBoundsResult,
+	ProportionsSlender: ScaleTypeValidateBoundsResult,
+	ProportionsNormal: ScaleTypeValidateBoundsResult,
+}
+
+export type ErrorValidateBoundsResult = {
+	ok: boolean,
+	errors: { string },
+}
+
+export type OverallValidateBoundsResult = {
+	ok: boolean,
+	scale: number?,
+	scaleType: string?,
+}
+
+export type MainValidateBoundsResult = {
+	ok: boolean,
+	Overall: OverallValidateBoundsResult,
+
+	FullBody: ExtraDataValidateBoundsResult,
+	DynamicHead: ExtraDataValidateBoundsResult,
+	Torso: ExtraDataValidateBoundsResult,
+	LeftArm: ExtraDataValidateBoundsResult,
+	RightArm: ExtraDataValidateBoundsResult,
+	LeftLeg: ExtraDataValidateBoundsResult,
+	RightLeg: ExtraDataValidateBoundsResult,
+}
+
+export type ValidateBoundsResult = MainValidateBoundsResult | ErrorValidateBoundsResult
 
 return Types

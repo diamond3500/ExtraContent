@@ -28,11 +28,13 @@ local DevicePermissionsModal = require(script.Parent.DevicePermissionsModal)
 
 local Assets = require(script.Parent.Parent.Parent.InGameMenu.Resources.Assets)
 
+local VoiceChatCore = require(CorePackages.Workspace.Packages.VoiceChatCore)
+
 local CoreGui = game:GetService("CoreGui")
 local runService = game:GetService("RunService")
 local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 local GetFFlagEnableVoicePromptReasonText = require(RobloxGui.Modules.Flags.GetFFlagEnableVoicePromptReasonText)
-local GetFFlagEnableVoiceNudge = require(RobloxGui.Modules.Flags.GetFFlagEnableVoiceNudge)
+local GetFFlagEnableVoiceNudge = require(VoiceChatCore.Flags.GetFFlagEnableVoiceNudge)
 local GetFIntVoiceToxicityToastDurationSeconds =
 	require(RobloxGui.Modules.Flags.GetFIntVoiceToxicityToastDurationSeconds)
 local GetFFlagVoiceBanShowToastOnSubsequentJoins =
@@ -50,12 +52,20 @@ local EngineFeatureRbxAnalyticsServiceExposePlaySessionId =
 local GetFFlagEnableSeamlessVoiceUX = require(RobloxGui.Modules.Flags.GetFFlagEnableSeamlessVoiceUX)
 local GetFIntVoiceJoinM3ToastDurationSeconds = require(RobloxGui.Modules.Flags.GetFIntVoiceJoinM3ToastDurationSeconds)
 local GetFFlagSendDevicePermissionsModalAnalytics = require(RobloxGui.Modules.Flags.GetFFlagSendDevicePermissionsModalAnalytics)
+local GetFFlagEnableSeamlessVoiceDataConsentToast = require(RobloxGui.Modules.Flags.GetFFlagEnableSeamlessVoiceDataConsentToast)
 
 local RobloxTranslator
 if FFlagEnableVoiceChatStorybookFix() then
 	RobloxTranslator = require(RobloxGui.Modules.RobloxTranslator)
 else
 	RobloxTranslator = require(RobloxGui:WaitForChild("Modules"):WaitForChild("RobloxTranslator"))
+end
+
+local locales = nil
+if GetFFlagEnableSeamlessVoiceDataConsentToast() then 
+	local LocalizationService = game:GetService("LocalizationService")
+	local Localization = require(CorePackages.Workspace.Packages.InExperienceLocales).Localization
+	locales = Localization.new(LocalizationService.RobloxLocaleId)
 end
 
 -- Constants
@@ -112,6 +122,9 @@ local PromptTitle = {
 	[PromptType.DevicePermissionsModal] = RobloxTranslator:FormatByKey(
 		"Feature.SettingsHub.Prompt.NeedMicrophoneAccess"
 	),
+	[PromptType.VoiceDataConsentOptOutToast] = if GetFFlagEnableSeamlessVoiceDataConsentToast() then locales:Format(
+		"Feature.SettingsHub.Prompt.Title.ImproveVoiceChat"
+	) else nil,
 }
 local PromptSubTitle = {
 	[PromptType.None] = "",
@@ -172,6 +185,9 @@ local PromptSubTitle = {
 	[PromptType.DevicePermissionsModal] = RobloxTranslator:FormatByKey(
 		"Feature.SettingsHub.Prompt.Subtitle.AllowMicrophoneAccess"
 	),
+	[PromptType.VoiceDataConsentOptOutToast] = if GetFFlagEnableSeamlessVoiceDataConsentToast() then locales:Format(
+		"Feature.SettingsHub.Prompt.Subtitle.ThanksForVoiceData"
+	) else nil,
 }
 
 if runService:IsStudio() then
@@ -219,6 +235,10 @@ end
 
 local function PromptTypeIsVoiceConsent(promptType)
 	return promptType == PromptType.VoiceConsentDeclinedToast or promptType == PromptType.VoiceConsentAcceptedToast
+end
+
+local function PromptTypeIsVoiceDataConsent(promptType)
+	return promptType == PromptType.VoiceDataConsentOptOutToast
 end
 
 local function PromptTypeIsConnectDisconnectToast(promptType)
@@ -342,6 +362,8 @@ function VoiceChatPromptFrame:init()
 				iconImage = Images["icons/controls/publicAudioJoin"]
 			elseif GetFFlagEnableSeamlessVoiceUX() and PromptTypeIsConnectDisconnectToast(promptType) then
 				iconImage = Images["icons/actions/info"]
+			elseif PromptTypeIsVoiceDataConsent(promptType) and GetFFlagEnableSeamlessVoiceDataConsentToast() then
+				iconImage = nil
 			else
 				iconImage = Images["icons/status/alert"]
 			end

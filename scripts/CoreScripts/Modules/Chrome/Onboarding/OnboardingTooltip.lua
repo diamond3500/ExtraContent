@@ -1,3 +1,5 @@
+local Chrome = script:FindFirstAncestor("Chrome")
+
 local CorePackages = game:GetService("CorePackages")
 local CoreGui = game:GetService("CoreGui")
 local RobloxGui = CoreGui:WaitForChild("RobloxGui")
@@ -6,8 +8,8 @@ local GuiService = game:GetService("GuiService")
 local UserInputService = game:GetService("UserInputService")
 local VoiceChatServiceManager = require(RobloxGui.Modules.VoiceChat.VoiceChatServiceManager).default
 
-local GetFStringFTUXVersion = require(script.Parent.GetFStringFTUXVersion)
-local GetFIntFTUXDelay = require(script.Parent.GetFIntFTUXDelay)
+local GetFStringFTUXVersion = require(Chrome.Onboarding.GetFStringFTUXVersion)
+local GetFIntFTUXDelay = require(Chrome.Onboarding.GetFIntFTUXDelay)
 
 local useLastInputMode
 local GetFFlagEnableAppCommonInputHooks =
@@ -22,13 +24,12 @@ end
 local useLocalization = require(CorePackages.Workspace.Packages.Localization).Hooks.useLocalization
 
 local React = require(CorePackages.Packages.React)
-local Chrome = script.Parent.Parent
 local Cryo = require(CorePackages.Cryo)
 local ChromeService = require(Chrome.Service)
 
 local LocalStore = require(RobloxGui.Modules.Chrome.Service.LocalStore)
-local OnboardingTooltipAnchor = require(script.Parent.OnboardingTooltipAnchor)
-local OnboardingAnalytics = require(script.Parent.OnboardingAnalytics)
+local OnboardingTooltipAnchor = require(Chrome.Onboarding.OnboardingTooltipAnchor)
+local OnboardingAnalytics = require(Chrome.Onboarding.OnboardingAnalytics)
 
 local FTUX_LAST_SEEN_KEY = GetFStringFTUXVersion() .. "_LAST"
 local FTUX_DISMISSED_TS = GetFStringFTUXVersion() .. "_DISMISSED_TS"

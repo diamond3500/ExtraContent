@@ -1,3 +1,5 @@
+local Chrome = script:FindFirstAncestor("Chrome")
+
 local CorePackages = game:GetService("CorePackages")
 local GuiService = game:GetService("GuiService")
 
@@ -6,18 +8,17 @@ local UserInputService = game:GetService("UserInputService")
 local useLocalization = require(CorePackages.Workspace.Packages.Localization).Hooks.useLocalization
 
 local React = require(CorePackages.Packages.React)
-local Chrome = script.Parent.Parent
 local Cryo = require(CorePackages.Cryo)
 local ChromeService = require(Chrome.Service)
 local LocalStore = require(Chrome.Service.LocalStore)
 
-local LuauPolyfill = require(CorePackages.Workspace.Packages.LuauPolyfill)
+local LuauPolyfill = require(CorePackages.Packages.LuauPolyfill)
 local clearTimeout = LuauPolyfill.clearTimeout
 local setTimeout = LuauPolyfill.setTimeout
 
 local menuIconHoveredSignal = require(Chrome.Parent.TopBar.Components.Presentation.menuIconHoveredSignal)
 
-local FtuxTooltipAnchor = require(script.Parent.FtuxTooltipAnchor)
+local FtuxTooltipAnchor = require(Chrome.Integrations.FtuxTooltipAnchor)
 
 type FtuxTooltipDismissalReason =
 	"timeout"

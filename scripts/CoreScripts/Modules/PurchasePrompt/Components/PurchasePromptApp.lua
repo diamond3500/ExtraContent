@@ -14,6 +14,8 @@ local LocaleProvider =  IAPExperience.Locale.LocaleProvider
 local ToastLite = require(CorePackages.Workspace.Packages.ToastLite)
 local Toast = ToastLite.Components.Toast
 
+local RobloxGui = CoreGui:WaitForChild("RobloxGui")
+
 local Reducer = require(Root.Reducers.Reducer)
 local ABTest = require(Root.Services.ABTest)
 local Network = require(Root.Services.Network)
@@ -32,7 +34,7 @@ local RobuxUpsellContainer = require(script.Parent.RobuxUpsell.RobuxUpsellContai
 local PremiumUpsellContainer = require(script.Parent.PremiumUpsell.PremiumUpsellContainer)
 local SubscriptionPurchaseContainer = require(script.Parent.SubscriptionPurchase.SubscriptionPurchaseContainer)
 
-local GetFFlagEnableAvatarCreationFeePurchase = require(Root.Flags.GetFFlagEnableAvatarCreationFeePurchase)
+local FFlagPublishAvatarPromptEnabled = require(RobloxGui.Modules.PublishAssetPrompt.FFlagPublishAvatarPromptEnabled)
 local GetFFlagEnableToastLiteRender = require(Root.Flags.GetFFlagEnableToastLiteRender)
 local renderWithCoreScriptsStyleProvider =
 	require(script.Parent.Parent.Parent.Common.renderWithCoreScriptsStyleProvider)
@@ -49,8 +51,8 @@ function PurchasePromptApp:init()
 	local externalSettings = ExternalSettings.new()
 
 	self.state = {
-		-- Remove store from state with FFlagEnableAvatarCreationFeePurchase
-		store = if not GetFFlagEnableAvatarCreationFeePurchase() then Rodux.Store.new(Reducer, initialState, {
+		-- Remove store from state with FFlagPublishAvatarPromptEnabled
+		store = if not FFlagPublishAvatarPromptEnabled then Rodux.Store.new(Reducer, initialState, {
 			Thunk.middleware({
 				[ABTest] = abTest,
 				[Network] = network,
@@ -70,7 +72,7 @@ end
 function PurchasePromptApp:render()
 	return provideRobloxLocale(function()
 		return Roact.createElement(RoactRodux.StoreProvider, {
-			store = if GetFFlagEnableAvatarCreationFeePurchase() then self.props.store else self.state.store,
+			store = if FFlagPublishAvatarPromptEnabled then self.props.store else self.state.store,
 		}, {
 			StyleProvider = self:renderWithStyle({
 				LayoutValuesProvider = Roact.createElement(LayoutValuesProvider, {

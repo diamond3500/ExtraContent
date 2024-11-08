@@ -33,6 +33,10 @@ local Constants = require(script.Parent.Parent.Constants)
 local TopBarConstants = require(RobloxGui.Modules.TopBar.Constants)
 local PreviewViewport = require(Components.Common.PreviewViewport)
 local ValidationErrorModal = require(Components.ValidationErrorModal)
+local PurchasePrompt = require(RobloxGui.Modules.PurchasePrompt)
+local Analytics = PurchasePrompt.PublishAssetAnalytics
+
+local FFlagCoreScriptPublishAssetAnalytics = require(RobloxGui.Modules.Flags.FFlagCoreScriptPublishAssetAnalytics)
 
 local NAME_HEIGHT_PIXELS = 30
 local DISCLAIMER_HEIGHT_PIXELS = 50
@@ -117,6 +121,10 @@ function BasePublishPrompt:init()
 		self:setState({
 			showUnsavedDataWarning = true,
 		})
+
+		if FFlagCoreScriptPublishAssetAnalytics then
+			Analytics.sendButtonClicked(Analytics.Section.BuyCreationPage, Analytics.Element.X)
+		end
 	end
 
 	self.cancelClosePrompt = function()
@@ -318,7 +326,9 @@ function BasePublishPrompt:renderAlertLocalized(localized)
 				BackgroundTransparency = 1,
 				Size = UDim2.new(1, 0, 1, -TOP_BAR_HEIGHT),
 				Position = UDim2.fromOffset(0, TOP_BAR_HEIGHT),
-				Visible = not self.state.showUnsavedDataWarning and not self.props.showingPreviewView,
+				Visible = not self.state.showUnsavedDataWarning
+					and not self.props.showingPreviewView
+					and not self.props.showTopScrim,
 			}, {
 				FullPageModal = Roact.createElement(FullPageModal, {
 					title = self.props.titleText,
@@ -381,9 +391,6 @@ function BasePublishPrompt:renderAlertLocalized(localized)
 				BackgroundTransparency = 1,
 				Visible = self.props.showTopScrim,
 			}, {
-				Overlay = Roact.createElement(Overlay, {
-					showGradient = false,
-				}),
 				InputSink = Roact.createElement("TextButton", {
 					Size = UDim2.fromScale(1, 1),
 					BackgroundTransparency = 1,

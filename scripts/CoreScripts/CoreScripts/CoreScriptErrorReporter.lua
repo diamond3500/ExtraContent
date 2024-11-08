@@ -36,7 +36,6 @@ game:DefineFastInt("CoreScriptBacktraceRepeatedErrorRateLimitPeriod", 60)
 -- beyond the settings above.
 game:DefineFastInt("CoreScriptBacktraceRepeatedErrorRateLimitProcessIntervalTenths", 10)
 
-game:DefineFastFlag("AddRobloxChannelToLuaBacktrace", false)
 game:DefineFastInt("CoreScriptBacktraceErrorReportPercentage", 100)
 
 local function CanReportCoreScriptBacktrace()
@@ -81,11 +80,9 @@ then
 			PlayerCount = playerCount,
 		})
 
-		if game:GetFastFlag("AddRobloxChannelToLuaBacktrace") then
-			report:addAttributes({
-				RobloxChannel = RunService:GetRobloxClientChannel(),
-			})
-		end
+		report:addAttributes({
+			RobloxChannel = RunService:GetRobloxClientChannel(),
+		})
 
 		return report
 	end

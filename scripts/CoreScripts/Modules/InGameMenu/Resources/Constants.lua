@@ -137,7 +137,11 @@ local Constants = {
 		}),
 	},
 	SurveyEventType =  "leaveButtonClick",
-	ChromeSeenCountKey = "ChromeSeenCount"
+	ChromeSeenCountKey = "ChromeSeenCount",
+
+	--[[ Localization Keys ]]
+	RespawnLocalizedKey = "CoreScripts.InGameMenu.QuickActions.Respawn",
+	
 }
 
 return Constants

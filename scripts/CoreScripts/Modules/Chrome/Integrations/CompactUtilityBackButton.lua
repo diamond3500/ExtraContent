@@ -1,3 +1,5 @@
+local Chrome = script:FindFirstAncestor("Chrome")
+
 local CorePackages = game:GetService("CorePackages")
 local React = require(CorePackages.Packages.React)
 local UIBlox = require(CorePackages.UIBlox)
@@ -5,7 +7,7 @@ local useStyle = UIBlox.Core.Style.useStyle
 local ImageSetLabel = UIBlox.Core.ImageSet.ImageSetLabel
 local Images = UIBlox.App.ImageSet.Images
 
-local ChromeService = require(script.Parent.Parent.Service)
+local ChromeService = require(Chrome.Service)
 local GetFFlagSupportCompactUtility = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagSupportCompactUtility
 
 function CompactUtilityBackButton(props)

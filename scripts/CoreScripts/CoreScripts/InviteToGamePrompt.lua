@@ -9,7 +9,13 @@ local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 local Modules = RobloxGui.Modules
 local SettingsHubDirectory = Modules.Settings
 local ShareGameDirectory = SettingsHubDirectory.Pages.ShareGame
-local SettingsHub = require(SettingsHubDirectory.SettingsHub)
+
+local GetFFlagFixSettingshubImportOrder = require(Modules.Flags.GetFFlagFixSettingshubImportOrder)
+
+local SettingsHub
+if not GetFFlagFixSettingshubImportOrder() then
+	SettingsHub = require(SettingsHubDirectory.SettingsHub)
+end
 
 local GetFFlagEnableNewInviteMenuCustomization = require(Modules.Flags.GetFFlagEnableNewInviteMenuCustomization)
 local GetFFlagEnableInvitePromptLoadingState = require(Modules.Flags.GetFFlagEnableInvitePromptLoadingState)
@@ -74,6 +80,12 @@ SocialService.PromptInviteRequested:Connect(function(player, experienceInviteOpt
 	if newGameInviteModalEnabled then
 		if player ~= Players.LocalPlayer then
 			return
+		end
+
+		if GetFFlagFixSettingshubImportOrder() then
+			-- We need to ensure we don't require SettingsHub before TopBar has finished
+			-- This is due to ordering of SetGlobalGuiInset defined in TopBar
+			SettingsHub = require(SettingsHubDirectory.SettingsHub)
 		end
 
 		if SettingsHub:GetVisibility() then

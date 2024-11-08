@@ -16,96 +16,116 @@ local OnPostDeleted = Instance.new("BindableEvent")
 local OnPostReported = Instance.new("BindableEvent")
 
 ----------- METHODS --------------
-local function onGetUserPosts(userId, postTypeFilter, sortOrder, cursor, limit)
-    -- Guard required parameters
-    if userId == nil then 
-        error(`userId cannot be nil`)
-    end
-
-    -- Construct the API path and parameters
-    local apiPath = "posts-api/v1/content-posts/findByUser"
-
-    
-    local params = "userId=" .. userId
-    if postTypeFilter then
-        params = params .. "&postTypeFilter=" .. postTypeFilter
-    end
-    if sortOrder then
-        params = params .. "&sortOrder=" .. sortOrder
-    end
-    if cursor ~= nil then 
-        params = params .. "&cursor=" .. cursor
-    end
-    if limit ~= nil then 
-        params = params .. "&limit=" .. limit
-    end
-
-    local url = string.format("%s%s?%s", Url.APIS_URL, apiPath, params)
-
-    -- Make the HTTP request
-    local success, result = pcall(HttpRbxApiService.GetAsyncFullUrl, HttpRbxApiService, url)
-    if result then
-        return success, result
-    end
-    return success, {}
-end
-
 local function transformPost(post)
-    post.screenshotMetadata = nil
-    post.contentId = "rbxpost://" .. post.postId
+	if post.screenshotMetadata then
+		if post.screenshotMetadata.fullSizeUrl then
+			post.screenshotMetadata.fullSizeUrl = nil
+			post.screenshotMetadata.contentId = "rbxpost://" .. post.postId
+		end
+	end
 end
 
 local function transformPosts(posts)
-    for _, post in ipairs(posts) do
-        transformPost(post)
-    end
+	for _, post in ipairs(posts) do
+		transformPost(post)
+	end
+end
+
+local function onGetUserPosts(userId, postTypeFilter, sortOrder, cursor, limit)
+	-- Guard required parameters
+	if userId == nil then 
+		error(`userId cannot be nil`)
+	end
+
+	-- Construct the API path and parameters
+	local apiPath = "posts-api/v1/content-posts/findByUser"
+
+	
+	local params = "userId=" .. userId
+	if postTypeFilter then
+		if typeof(postTypeFilter) == "table" then
+			postTypeFilter = table.concat(postTypeFilter, ",")
+		end
+		params = params .. "&postTypeFilter=" .. postTypeFilter
+	end
+	if sortOrder then
+		params = params .. "&sortOrder=" .. sortOrder
+	end
+	if cursor ~= nil then 
+		params = params .. "&cursor=" .. cursor
+	end
+	if limit ~= nil then 
+		params = params .. "&limit=" .. limit
+	end
+
+	local url = string.format("%s%s?%s", Url.APIS_URL, apiPath, params)
+
+	-- Make the HTTP request
+	local success, result = pcall(HttpRbxApiService.GetAsyncFullUrl, HttpRbxApiService, url)
+	if success then
+		local data = HttpService:JSONDecode(result)
+		if data["posts"] ~= nil then
+			transformPosts(data["posts"])
+		end
+		return success, data
+	end
+	return success, {errorMessage = result}
 end
 
 local function onLoadFeedItems(postTypeFilter, feedType, experienceId, cursor, limit)
-    -- Guard required parameters
-    if postTypeFilter == nil then 
-        error(`postTypeFilter cannot be nil`)
-    end
+	-- Guard required parameters
+	if postTypeFilter == nil then 
+		error(`postTypeFilter cannot be nil`)
+	end
 
-    -- Construct the API path and parameters
-    local apiPath = "posts-api/v1/content-posts/findFeedPosts"
+	-- Construct the API path and parameters
+	local apiPath = "posts-api/v1/content-posts/findFeedPosts"
 
-    local params = "postTypeFilter=" .. postTypeFilter
-    if feedType ~= nil then 
-        params = params .. "&feedType=" .. feedType
-    end
-    if experienceId ~= nil then 
-        params = params .. "&experienceId=" .. experienceId
-    end
-    if cursor ~= nil then 
-        params = params .. "&cursor=" .. cursor
-    end
-    if limit ~= nil then 
-        params = params .. "&limit=" .. limit
-    end
+	if typeof(postTypeFilter) == "table" then
+		postTypeFilter = table.concat(postTypeFilter, ",")
+	end
 
-    local url = string.format("%s%s?%s", Url.APIS_URL, apiPath, params)
+	local params = "postTypeFilter=" .. postTypeFilter
+	if feedType ~= nil then 
+		params = params .. "&feedType=" .. feedType
+	end
+	if experienceId ~= nil then 
+		params = params .. "&experienceId=" .. experienceId
+	end
+	if cursor ~= nil then 
+		params = params .. "&cursor=" .. cursor
+	end
+	if limit ~= nil then 
+		params = params .. "&limit=" .. limit
+	end
 
-    -- Make the HTTP request
-    local success, result = pcall(HttpRbxApiService.GetAsyncFullUrl, HttpRbxApiService, url)
-    if result then
-        if result.posts then
-            transformPosts(result.posts)
-        end
-        return success, result
-    end
+	local url = string.format("%s%s?%s", Url.APIS_URL, apiPath, params)
 
-    return success, {}
+	-- Make the HTTP request
+	local success, result = pcall(HttpRbxApiService.GetAsyncFullUrl, HttpRbxApiService, url)
+	if success then
+		local data = HttpService:JSONDecode(result)
+		if data["posts"] ~= nil then
+			transformPosts(data["posts"])
+		end
+		return success, data
+	end
+
+	return success, {errorMessage = result}
 end
 
 local function onGetVotingCategories()
-     -- Construct the API path
-    local apiPath = "posts-api/v1/content-posts/getActiveCategories"
-    local url = string.format("%s%s", Url.APIS_URL, apiPath)
+	 -- Construct the API path
+	local apiPath = "posts-api/v1/content-posts/getActiveCategories"
+	local url = string.format("%s%s", Url.APIS_URL, apiPath)
 
-    -- Make the HTTP request
-    local success, result = pcall(HttpRbxApiService.GetAsyncFullUrl, HttpRbxApiService, url)
-    return success, result
+	-- Make the HTTP request
+	local success, result = pcall(HttpRbxApiService.GetAsyncFullUrl, HttpRbxApiService, url)
+	if success then
+		local data = HttpService:JSONDecode(result)
+		return success, data
+	end
+	return success, result
 end
 
 local function onPostDeleted(postId)
@@ -113,12 +133,12 @@ local function onPostDeleted(postId)
 	local url = string.format("%s%s/%s", Url.APIS_URL, apiPath, postId)
 
 	-- Make the HTTP request
-	pcall(HttpRbxApiService.PostAsyncFullUrl, HttpRbxApiService, url)
+	pcall(HttpRbxApiService.PostAsyncFullUrl, HttpRbxApiService, url, "")
 end
 
 local function onPostReported(postId)
-    -- Guard required parameters
-    if not postId then
+	-- Guard required parameters
+	if not postId then
 		error("postId cannot be nil")
 	end
 
@@ -126,14 +146,14 @@ local function onPostReported(postId)
 	local apiPath = "posts-api/v1/content-posts/report"
 	local url = string.format("%s%s", Url.APIS_URL, apiPath)
 
-    local request = HttpService:JSONEncode(
+	local request = HttpService:JSONEncode(
 			{
 				postId = postId
 			}
 		)
 
 	-- Make the HTTP request
-    pcall(HttpRbxApiService.PostAsyncFullUrl, HttpRbxApiService, url, request)
+	pcall(HttpRbxApiService.PostAsyncFullUrl, HttpRbxApiService, url, request)
 end
 
 

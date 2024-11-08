@@ -1,6 +1,8 @@
+local Chrome = script:FindFirstAncestor("Chrome")
+
 local CorePackages = game:GetService("CorePackages")
 local React = require(CorePackages.Packages.React)
-local Types = require(script.Parent.Parent.Service.Types)
+local Types = require(Chrome.Service.Types)
 
 return function(integration: Types.IntegrationProps?): UDim2
 	if integration and integration.windowSize then

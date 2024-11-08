@@ -17,7 +17,6 @@ local PlayerList = Presentation.Parent.Parent
 
 local PlayerListSorter = require(Presentation.PlayerListSorter)
 local PlayerEntry = require(Presentation.PlayerEntry)
-local VoiceChatShield = require(Presentation.Parent.PresentationCommon.VoiceChatShield)
 local TenFootSideBar = require(Presentation.Parent.PresentationCommon.TenFootSideBar)
 
 local Connection = PlayerList.Components.Connection
@@ -27,7 +26,6 @@ local TopStatConnector = require(Connection.TopStatConnector)
 local LayoutValues = require(Connection.LayoutValues)
 local WithLayoutValues = LayoutValues.WithLayoutValues
 
-local FFlagMobilePlayerList = require(RobloxGui.Modules.Flags.FFlagMobilePlayerList)
 local FFlagRemoveSideBarABTest = require(PlayerList.Flags.FFlagRemoveSideBarABTest)
 local GetFStringRemoveSideBarABTestLayerName = require(PlayerList.Flags.GetFStringRemoveSideBarABTestLayerName)
 
@@ -97,9 +95,7 @@ function PlayerListApp:render()
 			containerPosition += UDim2.fromOffset(0, StatsUtils.ButtonHeight)
 		end
 
-		if FFlagMobilePlayerList then
-			containerPosition += UDim2.fromOffset(0, layoutValues.TopBarOffset)
-		end
+		containerPosition += UDim2.fromOffset(0, layoutValues.TopBarOffset)
 
 		local maxLeaderstats = layoutValues.MaxLeaderstats
 		if self.props.displayOptions.isSmallTouchDevice then
@@ -172,12 +168,6 @@ function PlayerListApp:render()
 		childElements["ContextActionsBindings"] = Roact.createElement(ContextActionsBinder)
 		childElements["TopStatConnector"] = Roact.createElement(TopStatConnector)
 
-		if not game:GetEngineFeature("XboxRemoveVoiceChatButton") then
-			if self.props.displayOptions.hasPermissionToVoiceChat then
-				childElements["VoiceChatShield"] = Roact.createElement(VoiceChatShield)
-			end
-		end
-
 		if not (FFlagRemoveSideBarABTest and self.props.removeSideBar) then
 			if self.props.displayOptions.isTenFootInterface then
 				childElements["TenFootSideBar"] = Roact.createElement(TenFootSideBar)
@@ -190,7 +180,6 @@ function PlayerListApp:render()
 			Size = containerSize,
 			BackgroundTransparency = 1,
 			Visible = self.state.visible,
-			---Increase ZIndex on TenFootInferface to put this on front of the VoiceChatShield.
 			ZIndex = layoutValues.IsTenFoot and 2 or 1,
 			AutoLocalize = false,
 

@@ -21,6 +21,9 @@ local Util = require(RobloxGui.Modules.ChatUtil)
 local CorePackages = game:GetService("CorePackages")
 local ExperienceChat = require(CorePackages.ExperienceChat)
 
+local SharedFlags = require(CorePackages.Workspace.Packages.SharedFlags)
+local GetFFlagReenableTextChatForTenFootInterfaces = SharedFlags.GetFFlagReenableTextChatForTenFootInterfaces
+
 local moduleApiTable = {}
 do
 		local ChatWindowState =
@@ -95,6 +98,10 @@ do
 
 		function moduleApiTable:FocusChatBar()
 			DispatchEvent("FocusChatBar")
+
+			if GetFFlagReenableTextChatForTenFootInterfaces() then
+				ExperienceChat.Events.ChatTopBarFocusActivated()
+			end
 		end
 
 		function moduleApiTable:EnterWhisperState(player)
@@ -183,7 +190,6 @@ do
 			end
 		end)
 
-
 		GuiService:AddSpecialKey(Enum.SpecialKey.ChatHotkey)
 		GuiService.SpecialKeyPressed:connect(function(key, modifiers)
 			if GuiService.MenuIsOpen then
@@ -192,7 +198,6 @@ do
 
 			DispatchEvent("SpecialKeyPressed", key, modifiers)
 		end)
-
 
 		function DoConnectSetCore(setCoreName)
 			StarterGui:RegisterSetCore(setCoreName, function(data)

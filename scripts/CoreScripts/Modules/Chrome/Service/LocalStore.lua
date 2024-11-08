@@ -1,3 +1,5 @@
+local Chrome = script:FindFirstAncestor("Chrome")
+
 local AppStorageService = game:GetService("AppStorageService")
 local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
@@ -7,10 +9,10 @@ local hasEngineSupport = game:GetEngineFeature("InGameMenuStateStorageKey")
 
 local APP_STORAGE_KEY = "InGameMenuState"
 local CHROME_SEEN_COUNT_KEY = "ChromeSeenCount"
-local GetFFlagEnableUnibarMaxDefaultOpen = require(script.Parent.Parent.Flags.GetFFlagEnableUnibarMaxDefaultOpen)
+local GetFFlagEnableUnibarMaxDefaultOpen = require(Chrome.Flags.GetFFlagEnableUnibarMaxDefaultOpen)
 local GetFFlagChromeSurveySupport = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagChromeSurveySupport
-local GetFFlagEnableChromeFTUX = require(script.Parent.Parent.Flags.GetFFlagEnableChromeFTUX)
-local FFlagEnableUnibarFtuxTooltips = require(script.Parent.Parent.Parent.Flags.FFlagEnableUnibarFtuxTooltips)
+local GetFFlagEnableChromeFTUX = require(Chrome.Flags.GetFFlagEnableChromeFTUX)
+local FFlagEnableUnibarFtuxTooltips = require(Chrome.Parent.Flags.FFlagEnableUnibarFtuxTooltips)
 
 local storeRoot: any
 local loaded = false

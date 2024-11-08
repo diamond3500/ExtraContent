@@ -1,12 +1,14 @@
+local Chrome = script:FindFirstAncestor("Chrome")
+
 local CorePackages = game:GetService("CorePackages")
 local React = require(CorePackages.Packages.React)
 local UIBlox = require(CorePackages.UIBlox)
 local useStyle = UIBlox.Core.Style.useStyle
 
-local chromeService = require(script.Parent.Parent.Service)
-local RedVoiceDot = require(script.Parent.RedVoiceDot)
+local chromeService = require(Chrome.Service)
+local RedVoiceDot = require(Chrome.Integrations.RedVoiceDot)
 
-local GetFFlagTweakedMicPinning = require(script.Parent.Parent.Flags.GetFFlagTweakedMicPinning)
+local GetFFlagTweakedMicPinning = require(Chrome.Flags.GetFFlagTweakedMicPinning)
 
 local burgerSpacing = 0.17
 

@@ -86,7 +86,7 @@ local RequestReducer = Rodux.createReducer(EMPTY_STATE, {
 	[RequestAvatarCreationFeePurchase.name] = function(state, action)
 		return {
 			requestType = RequestType.AvatarCreationFee,
-			serializedModel = action.serializedModel,
+			humanoidModel = action.humanoidModel,
 			id = action.guid,
 		}
 	end,

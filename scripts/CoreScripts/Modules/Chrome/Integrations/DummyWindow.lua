@@ -1,17 +1,18 @@
+local Chrome = script:FindFirstAncestor("Chrome")
+
 local CorePackages = game:GetService("CorePackages")
 local React = require(CorePackages.Packages.React)
 
-local ChromeService = require(script.Parent.Parent.Service)
-local CommonIcon = require(script.Parent.CommonIcon)
-local Constants = require(script.Parent.Parent.Unibar.Constants)
-local WindowSizeSignal = require(script.Parent.Parent.Service.WindowSizeSignal)
+local ChromeService = require(Chrome.Service)
+local CommonIcon = require(Chrome.Integrations.CommonIcon)
+local Constants = require(Chrome.Unibar.Constants)
+local WindowSizeSignal = require(Chrome.Service.WindowSizeSignal)
 
 local UIBlox = require(CorePackages.UIBlox)
 local Images = UIBlox.App.ImageSet.Images
 local IconButton = UIBlox.App.Button.IconButton
 
-local GetFFlagDebugEnableUnibarDummyIntegrations =
-	require(script.Parent.Parent.Flags.GetFFlagDebugEnableUnibarDummyIntegrations)
+local GetFFlagDebugEnableUnibarDummyIntegrations = require(Chrome.Flags.GetFFlagDebugEnableUnibarDummyIntegrations)
 
 local sizeIcon = Images["icons/navigation/cycleUp"]
 local isLargeSize = false

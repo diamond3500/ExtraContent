@@ -8,6 +8,7 @@ local Packages = CorePackages.Packages
 local useLocalization = require(CorePackages.Workspace.Packages.Localization).Hooks.useLocalization
 local React = require(Packages.React)
 local AppCommonLib = require(CorePackages.Workspace.Packages.AppCommonLib)
+local useAppPolicy = require(CorePackages.Workspace.Packages.UniversalAppPolicy).useAppPolicy
 local FaceChatUtils = require(script.Parent.Parent.Utils.FaceChatUtils)
 local ModelUtils = require(script.Parent.Parent.Utils.ModelUtils)
 
@@ -27,6 +28,8 @@ local useTooltipDismissal = require(script.Parent.Parent.Hooks.useTooltipDismiss
 local SelfieViewModule = script.Parent.Parent.Parent.SelfieView
 local GetFFlagSelfieViewDontWaitForCharacter = require(SelfieViewModule.Flags.GetFFlagSelfieViewDontWaitForCharacter)
 local GetFFlagSelfViewVisibilityFix = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagSelfViewVisibilityFix
+local GetFFlagSelfieViewUseNewErrorBody =
+	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagSelfieViewUseNewErrorBody
 
 local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 local Analytics = require(RobloxGui.Modules.SelfView.Analytics).new()
@@ -39,9 +42,17 @@ export type IconProps = {
 }
 
 local function Icon(props: IconProps): React.ReactNode
+	local showUpdatedCameraPath = if GetFFlagSelfieViewUseNewErrorBody()
+		then useAppPolicy(function(appPolicy)
+			return appPolicy.getShowUpdatedCameraPath()
+		end)
+		else false
+
 	local localized = useLocalization({
 		robloxPermissionErrorHeader = "CoreScripts.TopBar.RobloxPermissionErrorHeader",
-		robloxPermissionErrorBody = "CoreScripts.TopBar.RobloxPermissionErrorBody",
+		robloxPermissionErrorBody = if GetFFlagSelfieViewUseNewErrorBody() and showUpdatedCameraPath
+			then "CoreScripts.TopBar.RobloxPermissionErrorBodyTwo"
+			else "CoreScripts.TopBar.RobloxPermissionErrorBody",
 		dynamicAvatarMissingErrorHeader = "CoreScripts.TopBar.DynamicAvatarMissingErrorHeader",
 		dynamicAvatarMissingErrorBody = "CoreScripts.TopBar.DynamicAvatarMissingErrorBody",
 	})

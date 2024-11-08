@@ -18,31 +18,31 @@ local log = require(CorePackages.Workspace.Packages.CoreScriptsInitializer).Core
 local CoreGuiModules = RobloxGui:WaitForChild("Modules")
 local IXPServiceWrapper = require(CoreGuiModules.Common.IXPServiceWrapper)
 
+local VoiceChatCore = require(CorePackages.Workspace.Packages.VoiceChatCore)
+
 local GetFFlagEnableCoreVoiceManagerMuteAll = require(script.Parent.Flags.GetFFlagEnableCoreVoiceManagerMuteAll)
 
 local GetFFlagEnableUniveralVoiceToasts = require(RobloxGui.Modules.Flags.GetFFlagEnableUniveralVoiceToasts)
 local GetFFlagEnableVoicePromptReasonText = require(RobloxGui.Modules.Flags.GetFFlagEnableVoicePromptReasonText)
 local GetFFlagOldMenuUseSpeakerIcons = require(RobloxGui.Modules.Flags.GetFFlagOldMenuUseSpeakerIcons)
-local GetFFlagAvatarChatServiceEnabled = require(RobloxGui.Modules.Flags.GetFFlagAvatarChatServiceEnabled)
+local GetFFlagAvatarChatServiceEnabled = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagAvatarChatServiceEnabled
 local GetFFlagVoiceChatServiceManagerUseAvatarChat =
-	require(RobloxGui.Modules.Flags.GetFFlagVoiceChatServiceManagerUseAvatarChat)
-local FFlagAvatarChatCoreScriptSupport = require(RobloxGui.Modules.Flags.FFlagAvatarChatCoreScriptSupport)
-local GetFFlagUseLuaSignalrConsumer = require(RobloxGui.Modules.Flags.GetFFlagUseLuaSignalrConsumer)
+	require(VoiceChatCore.Flags.GetFFlagVoiceChatServiceManagerUseAvatarChat)
+local FFlagAvatarChatCoreScriptSupport = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagAvatarChatCoreScriptSupport()
+local GetFFlagUseLuaSignalrConsumer = require(VoiceChatCore.Flags.GetFFlagUseLuaSignalrConsumer)
 local GetFFlagAlwaysMountVoicePrompt = require(RobloxGui.Modules.Flags.GetFFlagAlwaysMountVoicePrompt)
 local GetFFlagSeamlessVoiceFTUX = require(RobloxGui.Modules.Flags.GetFFlagSeamlessVoiceFTUX)
-local GetFFlagEnableNudgeAnalytics = require(RobloxGui.Modules.Flags.GetFFlagEnableNudgeAnalytics)
-local GetFFlagVoiceUseAudioRoutingAPI = require(RobloxGui.Modules.Flags.GetFFlagVoiceUseAudioRoutingAPI)
+local GetFFlagEnableNudgeAnalytics = require(VoiceChatCore.Flags.GetFFlagEnableNudgeAnalytics)
+local GetFFlagVoiceUseAudioRoutingAPI = require(VoiceChatCore.Flags.GetFFlagVoiceUseAudioRoutingAPI)
 local FFlagMuteNonFriendsEvent = require(RobloxGui.Modules.Flags.FFlagMuteNonFriendsEvent)
 local GetFFlagShowMuteToggles = require(RobloxGui.Modules.Settings.Flags.GetFFlagShowMuteToggles)
-local GetFFlagJoinWithoutMicPermissions = require(RobloxGui.Modules.Flags.GetFFlagJoinWithoutMicPermissions)
+local GetFFlagJoinWithoutMicPermissions = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagJoinWithoutMicPermissions
 local GetFFlagEnableShowVoiceUI = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagEnableShowVoiceUI
 local GetFFlagEnableSeamlessVoiceConnectDisconnectButton = require(RobloxGui.Modules.Flags.GetFFlagEnableSeamlessVoiceConnectDisconnectButton)
 local GetFIntVoiceReverseNudgeUXDisplayTimeSeconds = require(RobloxGui.Modules.Flags.GetFIntVoiceReverseNudgeUXDisplayTimeSeconds)
 local EngineFeatureRbxAnalyticsServiceExposePlaySessionId =
 	game:GetEngineFeature("RbxAnalyticsServiceExposePlaySessionId")
 local GetFFlagUseMicPermForEnrollment = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagUseMicPermForEnrollment
-
-local VoiceChatCore = require(CorePackages.Workspace.Packages.VoiceChatCore)
 
 local FFlagFixNudgeDeniedEvents = game:DefineFastFlag("FixNudgeDeniedEvents", false)
 local DebugShowAudioDeviceInputDebugger = game:DefineFastFlag("DebugShowAudioDeviceInputDebugger", false)
@@ -63,24 +63,26 @@ local GetFFlagEnableInExpVoiceUpsell = require(RobloxGui.Modules.Flags.GetFFlagE
 local GetFFlagEnableInExpVoiceConsentAnalytics =
 	require(RobloxGui.Modules.Flags.GetFFlagEnableInExpVoiceConsentAnalytics)
 local GetFFlagEnableInExpMicPermissionsAnalytics = require(RobloxGui.Modules.Flags.GetFFlagEnableInExpMicPermissionsAnalytics)
-local GetFIntThrottleParticipantsUpdateMs = require(RobloxGui.Modules.Flags.GetFIntThrottleParticipantsUpdateMs)
+local GetFIntThrottleParticipantsUpdateMs = require(VoiceChatCore.Flags.GetFIntThrottleParticipantsUpdateMs)
 local GetFFlagEnableInExpJoinVoiceAnalytics = require(RobloxGui.Modules.Flags.GetFFlagEnableInExpJoinVoiceAnalytics)
 local GetFFlagEnableConnectDisconnectAnalytics =
 	require(RobloxGui.Modules.Flags.GetFFlagEnableConnectDisconnectAnalytics)
 local GetFFlagSendDevicePermissionsModalAnalytics = require(RobloxGui.Modules.Flags.GetFFlagSendDevicePermissionsModalAnalytics)
+local GetFFlagEnableConnectDisconnectInSettingsAndChrome = require(RobloxGui.Modules.Flags.GetFFlagEnableConnectDisconnectInSettingsAndChrome)
 local FStringVoiceUIImprovementsIXPLayerName =
 	game:DefineFastString("VoiceUIImprovementsIXPLayerName", "Voice.Exposure")
 local FStringThrottleParticipantsUpdateIXPLayerValue =
 	game:DefineFastString("ThrottleParticipantsUpdateIXPLayerValue", "ThrottleParticipantsUpdate")
 local FIntSeamlessVoiceSTUXDisplayCount =
 	game:DefineFastInt("SeamlessVoiceSTUXDisplayCount", 3)
-local GetFFlagShowLikelySpeakingBubbles = require(RobloxGui.Modules.Flags.GetFFlagShowLikelySpeakingBubbles)
+local GetFFlagShowLikelySpeakingBubbles = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagShowLikelySpeakingBubbles
 local GetFFlagEnableInExpPhoneVoiceUpsellEntrypoints = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagEnableInExpPhoneVoiceUpsellEntrypoints
 local GetFFlagShowDevicePermissionsModal = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagShowDevicePermissionsModal
 local FFlagEnableRetryForLinkingProtocolFetch = game:DefineFastFlag("EnableRetryForLinkingProtocolFetch", false)
 local GetFFlagIntegratePhoneUpsellJoinVoice = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagIntegratePhoneUpsellJoinVoice
 local FIntLinkingProtocolFetchRetries = game:DefineFastInt("LinkingProtocolFetchRetries", 1)
 local FIntLinkingProtocolFetchTimeoutMS = game:DefineFastInt("LinkingProtocolFetchTimeoutMS", 1)
+local FFlagFixOutputDeviceChange = game:DefineFastFlag("FixOutputDeviceChange", false)
 local VoiceChat = require(CorePackages.Workspace.Packages.VoiceChat)
 local Constants = VoiceChat.Constants
 local PostRecordUserSeenGeneralModal = VoiceChat.AgeVerificationOverlay.PostRecordUserSeenGeneralModal
@@ -457,7 +459,9 @@ function VoiceChatServiceManager.new(
 		if GetFFlagEnableShowVoiceUI() then
 			local inEndedState = newState == (Enum :: any).VoiceChatState.Ended
 			if inEndedState and self.bannedUntil == nil then
-				self:HideVoiceUI()
+				if not GetFFlagEnableConnectDisconnectInSettingsAndChrome() then
+					self:HideVoiceUI()
+				end
 				self:showPrompt(VoiceChatPromptType.LeaveVoice)
 			end
 		end
@@ -1605,7 +1609,16 @@ function VoiceChatServiceManager:JoinVoice(hubRef: any?)
 		)
 	end
 
-	if self:UserOnlyEligibleForVoice() then
+	if GetFFlagEnableConnectDisconnectInSettingsAndChrome() and self.previousGroupId then
+		-- previously joined voice and left in the same session
+		self:RejoinPreviousChannel()
+		self:showPrompt(VoiceChatPromptType.JoinVoice)
+		self:ShowVoiceUI()
+	elseif GetFFlagEnableConnectDisconnectInSettingsAndChrome() and self:UserVoiceEnabled() then
+		-- First time joining voice this session
+		self.attemptVoiceRejoin:Fire()
+	elseif self:UserOnlyEligibleForVoice() then
+		-- Opted out or control users
 		self:SetInExpUpsellEntrypoint(VoiceConstants.IN_EXP_UPSELL_ENTRYPOINTS.JOIN_VOICE)
 
 		local promptToShow = self:GetInExpUpsellPromptFromEnum(voiceInExpUpsellVariant)
@@ -1624,6 +1637,12 @@ end
 
 -- Show join voice button in voice enabled experiences, for voice eligible users who haven't enabled voice and voice enabled users with denied mic permissions
 function VoiceChatServiceManager:ShouldShowJoinVoice()
+	-- M3
+	if GetFFlagEnableConnectDisconnectInSettingsAndChrome() and self:IsSeamlessVoice() then
+		return not self.voiceUIVisible
+	end
+
+	-- M1/Control
 	local userInInExperienceUpsellTreatment = self:UserInInExperienceUpsellTreatment()
 	local userVoiceUpsellEligible = self:UserOnlyEligibleForVoice()
 		or self:UserVoiceEnabled()
@@ -1644,6 +1663,10 @@ end
 
 function VoiceChatServiceManager:IsSeamlessVoice()
 	local ageVerificationOverlayData = self:FetchAgeVerificationOverlay()
+	if not ageVerificationOverlayData or not ageVerificationOverlayData.voiceSettings then
+		log:error("VoiceChatServiceManager:IsSeamlessVoice() - ageVerificationOverlayData or voiceSettings is nil")
+		return false
+	end
 	local seamlessVoiceStatus = ageVerificationOverlayData.voiceSettings.seamlessVoiceStatus
 	return seamlessVoiceStatus == SeamlessVoiceStatus.EnabledExistingUser or seamlessVoiceStatus == SeamlessVoiceStatus.EnabledNewUser
 end
@@ -1688,6 +1711,9 @@ function VoiceChatServiceManager:Leave()
 	self:HideVoiceUI()
 	self.previousGroupId = 	previousGroupId
 	self.previousMutedState = previousMutedState
+	if GetFFlagEnableConnectDisconnectInSettingsAndChrome() then
+		self:SetVoiceConnectCookieValue(false)
+	end
 end
 
 function VoiceChatServiceManager:GetVoiceStateFromEnum(voiceStateEnum)
@@ -1835,7 +1861,7 @@ function VoiceChatServiceManager:SwitchDevice(deviceType, deviceName, deviceGuid
 	else
 		SoundService:SetOutputDevice(deviceName, deviceGuid)
 		log:info("[OutputDeviceSelection] Setting SS Speaker Device To {} {}", deviceName, deviceGuid)
-		setVCSOutput(deviceName)
+		setVCSOutput(deviceName, if FFlagFixOutputDeviceChange then self.service else nil)
 	end
 end
 

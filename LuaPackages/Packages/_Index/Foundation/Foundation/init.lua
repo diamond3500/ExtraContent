@@ -1,4 +1,5 @@
 local strict = require(script.Utility.strict)
+local Flags = require(script.Utility.Flags)
 
 local Types = require(script.Components.Types)
 
@@ -12,6 +13,8 @@ export type Tags = Types.Tags
 export type ColorStyle = Types.ColorStyle
 export type ColorStyleValue = Types.ColorStyleValue
 export type FontStyle = Types.FontStyle
+
+local TextInput = require(script.Components.TextInput)
 
 local Foundation = strict({
 	-- Components
@@ -30,13 +33,17 @@ local Foundation = strict({
 	Skeleton = require(script.Components.Skeleton),
 	Toggle = require(script.Components.Toggle),
 	Text = require(script.Components.Text),
-	TextInput = require(script.Components.TextInput),
+	TextInput = (if Flags.FoundationCompositeTextInput
+		then require(script.Components.CompositeTextInput)
+		else TextInput) :: typeof(TextInput),
+	NumberInput = require(script.Components.NumberInput),
 	Toast = require(script.Components.Toast),
 	View = require(script.Components.View),
 	KeyLabel = require(script.Components.KeyLabel),
 
 	-- Providers
 	FoundationProvider = require(script.Providers.Foundation),
+	OverlayProvider = require(script.Providers.Overlay),
 
 	-- Hooks
 	Hooks = {
@@ -44,12 +51,14 @@ local Foundation = strict({
 		withCursor = require(script.Providers.Cursor.withCursor),
 		useDefaultTags = require(script.Utility.useDefaultTags),
 		usePreferences = require(script.Providers.Preferences.usePreferences),
+		useScaledValue = require(script.Utility.useScaledValue),
 		useStyleTags = require(script.Providers.Style.useStyleTags),
 		useTokens = require(script.Providers.Style.useTokens),
 	},
 
 	-- Enums
 	Enums = {
+		BadgeSize = require(script.Enums.BadgeSize),
 		BadgeVariant = require(script.Enums.BadgeVariant),
 		ButtonSize = require(script.Enums.ButtonSize),
 		ButtonVariant = require(script.Enums.ButtonVariant),

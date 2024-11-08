@@ -2,6 +2,9 @@
 
 local root = script.Parent.Parent
 
+local getEngineFeatureUGCValidationRequiredFolderContext =
+	require(root.flags.getEngineFeatureUGCValidationRequiredFolderContext)
+
 local Analytics = require(root.Analytics)
 local Constants = require(root.Constants)
 
@@ -100,7 +103,11 @@ local function validateFolderAssetIdsMatch(
 	return reasonsAccumulator:getFinalResults()
 end
 
-local function validateR6Folder(inst: Instance, assetTypeEnum: Enum.AssetType)
+local function validateR6Folder(
+	inst: Instance,
+	assetTypeEnum: Enum.AssetType,
+	validationContext: Types.ValidationContext
+)
 	local reasonsAccumulator = FailureReasonsAccumulator.new()
 
 	if #(inst:GetChildren()) > 0 then
@@ -117,7 +124,7 @@ local function validateR6Folder(inst: Instance, assetTypeEnum: Enum.AssetType)
 
 	reasonsAccumulator:updateReasons(validateProperties(inst, assetTypeEnum))
 
-	reasonsAccumulator:updateReasons(validateAttributes(inst))
+	reasonsAccumulator:updateReasons(validateAttributes(inst, validationContext))
 
 	return reasonsAccumulator:getFinalResults()
 end
@@ -130,14 +137,23 @@ local function validateLimbsAndTorso(validationContext: Types.ValidationContext)
 		validationContext.assetTypeEnum ~= nil,
 		"assetTypeEnum required in validationContext for validateLimbsAndTorso"
 	)
+	local requireAllFolders = validationContext.requireAllFolders
 	local assetTypeEnum = validationContext.assetTypeEnum :: Enum.AssetType
 	local isServer = validationContext.isServer
 
 	local requiredTopLevelFolders: { string } = { Constants.FOLDER_NAMES.R15ArtistIntent }
-	if isServer then
-		-- in Studio these folders are automatically added just before upload
-		table.insert(requiredTopLevelFolders, Constants.FOLDER_NAMES.R15Fixed)
-		table.insert(requiredTopLevelFolders, Constants.FOLDER_NAMES.R6)
+	if getEngineFeatureUGCValidationRequiredFolderContext() then
+		if requireAllFolders then
+			-- in Studio these folders are automatically added just before upload
+			table.insert(requiredTopLevelFolders, Constants.FOLDER_NAMES.R15Fixed)
+			table.insert(requiredTopLevelFolders, Constants.FOLDER_NAMES.R6)
+		end
+	else
+		if isServer then
+			-- in Studio these folders are automatically added just before upload
+			table.insert(requiredTopLevelFolders, Constants.FOLDER_NAMES.R15Fixed)
+			table.insert(requiredTopLevelFolders, Constants.FOLDER_NAMES.R6)
+		end
 	end
 
 	if not areTopLevelFoldersCorrect(allSelectedInstances, requiredTopLevelFolders) then
@@ -155,7 +171,7 @@ local function validateLimbsAndTorso(validationContext: Types.ValidationContext)
 		local reasons
 
 		if folderName == Constants.FOLDER_NAMES.R6 then
-			result, reasons = validateR6Folder(inst, assetTypeEnum)
+			result, reasons = validateR6Folder(inst, assetTypeEnum, validationContext)
 		else
 			result, reasons = validateMeshPartBodyPart(
 				inst,

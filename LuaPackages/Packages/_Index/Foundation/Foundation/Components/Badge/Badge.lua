@@ -14,6 +14,8 @@ local useBadgeVariants = require(script.Parent.useBadgeVariants)
 
 local BadgeVariant = require(Foundation.Enums.BadgeVariant)
 type BadgeVariant = BadgeVariant.BadgeVariant
+local BadgeSize = require(Foundation.Enums.BadgeSize)
+type BadgeSize = BadgeSize.BadgeSize
 
 local IconSize = require(Foundation.Enums.IconSize)
 local IconPosition = require(Foundation.Enums.IconPosition)
@@ -29,17 +31,18 @@ type BadgeProps = {
 	icon: (string | Icon)?,
 	isDisabled: boolean?,
 	variant: BadgeVariant?,
+	size: BadgeSize?,
 } & Types.CommonProps
 
 local defaultProps = {
 	variant = BadgeVariant.Primary,
+	size = BadgeSize.Medium,
 }
 
 local function Badge(badgeProps: BadgeProps, ref: React.Ref<GuiObject>?)
 	local props = withDefaults(badgeProps, defaultProps)
 
 	local tokens = useTokens()
-	local badgeVariants = useBadgeVariants(props.variant)
 
 	local icon = React.useMemo(function(): Icon?
 		if typeof(props.icon) == "string" then
@@ -53,8 +56,10 @@ local function Badge(badgeProps: BadgeProps, ref: React.Ref<GuiObject>?)
 	end, { props.icon })
 
 	local hasIcon = icon ~= nil
-	local hasText = props.text and #props.text > 0
-	local horizontalPadding = if not hasText then tokens.Padding.XXSmall else tokens.Padding.XSmall
+	local hasText = props.text ~= nil and #props.text > 0
+
+	local badgeVariants, containerSizeConstraint, textSizeConstraint, containerTags, textTags =
+		useBadgeVariants(props.variant, props.size, hasIcon, hasText)
 
 	return React.createElement(
 		View,
@@ -65,17 +70,8 @@ local function Badge(badgeProps: BadgeProps, ref: React.Ref<GuiObject>?)
 				Color = tokens.Color.Surface.Surface_100.Color3,
 				Transparency = tokens.Color.Surface.Surface_100.Transparency,
 			},
-			sizeConstraint = {
-				MinSize = Vector2.new(tokens.Size.Size_200, tokens.Size.Size_200),
-				-- Closest we have to 60 as per design spec
-				MaxSize = Vector2.new(tokens.Size.Size_1600, math.huge),
-			},
-			tag = {
-				["auto-xy radius-circle row align-y-center align-x-center stroke-thick"] = true,
-				["padding-y-xxsmall"] = hasIcon or hasText,
-				["padding-x-xsmall"] = hasText,
-				["padding-x-xxsmall"] = not hasText and hasIcon,
-			},
+			sizeConstraint = containerSizeConstraint,
+			tag = containerTags,
 			ref = ref,
 		}),
 		{
@@ -97,18 +93,8 @@ local function Badge(badgeProps: BadgeProps, ref: React.Ref<GuiObject>?)
 					},
 					RichText = true,
 					LayoutOrder = 2,
-					sizeConstraint = if hasIcon
-						then {
-							-- Necessary to ensure that the ... fits inside badge
-							MaxSize = Vector2.new(
-								tokens.Size.Size_1600
-									- tokens.Semantic.Icon.Size.Small -- TODO(tokens): replace with non-semantic value
-									- horizontalPadding,
-								math.huge
-							),
-						}
-						else nil,
-					tag = "auto-xy padding-x-xsmall text-label-small text-truncate-end",
+					sizeConstraint = textSizeConstraint,
+					tag = textTags,
 				})
 				else nil,
 		}

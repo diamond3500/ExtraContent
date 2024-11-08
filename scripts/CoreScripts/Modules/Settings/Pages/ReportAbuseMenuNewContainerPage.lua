@@ -6,8 +6,8 @@ local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 local Roact = require(CorePackages.Roact)
 local utility = require(RobloxGui.Modules.Settings.Utility)
 
-local AbuseReportMenu = require(CorePackages.Workspace.Packages.AbuseReportMenu).AbuseReportMenu
-local ReportAbuseAnalytics = require(CorePackages.Workspace.Packages.AbuseReportMenu).ReportAbuseAnalytics
+local AbuseReportMenu = require(RobloxGui.Modules.AbuseReportMenu).AbuseReportMenu
+local ReportAbuseAnalytics = require(RobloxGui.Modules.AbuseReportMenu).ReportAbuseAnalytics
 local GetFFlagOpenControlsOnMenuOpen = require(RobloxGui.Modules.Chrome.Flags.GetFFlagOpenControlsOnMenuOpen)
 
 ------------ Variables -------------------

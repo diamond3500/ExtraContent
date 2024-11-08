@@ -1,10 +1,12 @@
+local Chrome = script:FindFirstAncestor("Chrome")
+
 local CorePackages = game:GetService("CorePackages")
 local GuiService = game:GetService("GuiService")
 local CoreGui = game:GetService("CoreGui")
 local UserGameSettings = UserSettings():GetService("UserGameSettings")
 local React = require(CorePackages.Packages.React)
 local UIBlox = require(CorePackages.UIBlox)
-local LocalStore = require(script.Parent.Parent.Service.LocalStore)
+local LocalStore = require(Chrome.Service.LocalStore)
 local StyledTextLabel = UIBlox.App.Text.StyledTextLabel
 local useStyle = UIBlox.Core.Style.useStyle
 local Interactable = UIBlox.Core.Control.Interactable
@@ -18,14 +20,13 @@ local VerticalScrollView = UIBlox.App.Container.VerticalScrollView
 local ScrollBarType = UIBlox.App.Container.Enum.ScrollBarType
 local ReactOtter = require(CorePackages.Packages.ReactOtter)
 
-local Chrome = script.Parent.Parent
 local ChromeService = require(Chrome.Service)
 local ChromeTypes = require(Chrome.Service.Types)
 local ChromeAnalytics = require(Chrome.Analytics.ChromeAnalytics)
 local ViewportUtil = require(Chrome.Service.ViewportUtil)
 local Constants = require(Chrome.Unibar.Constants)
 local TopBarConstants = require(Chrome.Parent.TopBar.Constants)
-local SubMenuContext = require(script.Parent.SubMenuContext)
+local SubMenuContext = require(Chrome.Unibar.SubMenuContext)
 
 local UserInputService = game:GetService("UserInputService")
 
@@ -47,11 +48,14 @@ local GetFFlagEnableChromePinAnalytics = require(Chrome.Flags.GetFFlagEnableChro
 local useMappedObservableValue = require(Chrome.Hooks.useMappedObservableValue)
 local GetFFlagChromeUsePreferredTransparency =
 	require(CoreGui.RobloxGui.Modules.Flags.GetFFlagChromeUsePreferredTransparency)
+local GetFFlagPostLaunchUnibarDesignTweaks =
+	require(CoreGui.RobloxGui.Modules.Flags.GetFFlagPostLaunchUnibarDesignTweaks)
 
 local FFlagFixChromeIntegrationLayoutBug = game:DefineFastFlag("FixChromeIntegrationLayoutBug", false)
 local FFlagSubmenuV4Layout = game:DefineFastFlag("SubmenuV4Layout2", false)
+local FFlagSubmenuFixInvisibleButtons = game:DefineFastFlag("SubmenuFixInvisibleButtons", false)
 
-local IconHost = require(script.Parent.ComponentHosts.IconHost)
+local IconHost = require(Chrome.Unibar.ComponentHosts.IconHost)
 local ROW_HEIGHT = Constants.SUB_MENU_ROW_HEIGHT
 local SCROLL_OFFSET = ROW_HEIGHT * 0.5
 
@@ -202,6 +206,11 @@ function MenuRow(props: ChromeTypes.IntegrationComponentProps)
 		LayoutOrder = props.order,
 		onStateChanged = if useTouchTargets then nil else stateChange,
 	}, {
+		UICorner = if GetFFlagPostLaunchUnibarDesignTweaks()
+			then React.createElement("UICorner", {
+				CornerRadius = UDim.new(0, 10),
+			})
+			else nil,
 		ButtonTouchTarget = if useTouchTargets
 			then React.createElement(Interactable, {
 				Size = UDim2.new(1, -Constants.PIN_BUTTON_SIZE - Constants.PIN_RIGHT_PADDING * 2, 0, ROW_HEIGHT),
@@ -443,13 +452,24 @@ function SubMenu(props: SubMenuProps)
 		else style.Theme.BackgroundUIContrast.Transparency
 
 	return React.createElement("Frame", {
-
-		Size = if FFlagSubmenuV4Layout
-			then UDim2.new(0, TopBarConstants.TopBarHeight + Constants.ICON_CELL_WIDTH * 3, 0, 0)
+		Size = if GetFFlagPostLaunchUnibarDesignTweaks()
+			then UDim2.new(
+				0,
+				Constants.ICON_CELL_WIDTH * 4 + TopBarConstants.Padding + Constants.UNIBAR_END_PADDING * 2,
+				0,
+				0
+			)
+			elseif FFlagSubmenuV4Layout then UDim2.new(
+				0,
+				TopBarConstants.TopBarHeight + Constants.ICON_CELL_WIDTH * 3,
+				0,
+				0
+			)
 			else UDim2.new(0, 240, 0, 0),
 		AnchorPoint = if leftAlign then Vector2.zero else Vector2.new(1, 0),
-		Position = if FFlagSubmenuV4Layout
-			then UDim2.new(0, -TopBarConstants.TopBarHeight + 2, 0, 0)
+		Position = if GetFFlagPostLaunchUnibarDesignTweaks()
+			then UDim2.new(0, -TopBarConstants.TopBarHeight - 2 + TopBarConstants.Padding, 0, 0)
+			elseif FFlagSubmenuV4Layout then UDim2.new(0, -TopBarConstants.TopBarHeight + 2, 0, 0)
 			elseif leftAlign then UDim2.new(0, 0, 0, 0)
 			else UDim2.new(1, 0, 0, 0),
 		BackgroundColor3 = theme.BackgroundUIContrast.Color,
@@ -461,10 +481,12 @@ function SubMenu(props: SubMenuProps)
 		AutomaticSize = Enum.AutomaticSize.Y,
 		ref = menuRef,
 	}, {
-		UIPadding = React.createElement("UIPadding", {
-			PaddingTop = UDim.new(0, 8),
-			PaddingBottom = UDim.new(0, 8),
-		}),
+		UIPadding = if not GetFFlagPostLaunchUnibarDesignTweaks()
+			then React.createElement("UIPadding", {
+				PaddingTop = UDim.new(0, 8),
+				PaddingBottom = UDim.new(0, 8),
+			})
+			else nil,
 		UICorner = React.createElement("UICorner", {
 			CornerRadius = UDim.new(0, 10),
 		}),
@@ -522,6 +544,9 @@ return function(props: SubMenuHostProps) -- SubMenuHost
 
 		if currentSubMenu then
 			if GetFFlagAnimateSubMenu() then
+				if FFlagSubmenuFixInvisibleButtons then
+					setOpenState(AnimationStatus.Closed)
+				end
 				setMenuTransition(ReactOtter.spring(AnimationStatus.Open, Constants.MENU_ANIMATION_SPRING))
 			end
 
@@ -569,6 +594,9 @@ return function(props: SubMenuHostProps) -- SubMenuHost
 			end)
 		else
 			if GetFFlagAnimateSubMenu() then
+				if FFlagSubmenuFixInvisibleButtons then
+					setOpenState(AnimationStatus.Open)
+				end
 				setMenuTransition(ReactOtter.spring(AnimationStatus.Closed, Constants.MENU_ANIMATION_SPRING))
 			end
 		end

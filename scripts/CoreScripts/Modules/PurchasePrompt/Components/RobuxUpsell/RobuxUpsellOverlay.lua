@@ -27,7 +27,7 @@ local CONFIRM_BUTTON_BIND = "ProductPurchaseConfirmButtonBind"
 local CANCEL_BUTTON_BIND = "ProductPurchaseCancelButtonBind"
 
 local GetFFlagDisablePurchasePromptFunctionForMaquettes = require(Root.Flags.GetFFlagDisablePurchasePromptFunctionForMaquettes)
-local GetFFlagEnableAvatarCreationFeePurchase = require(Root.Flags.GetFFlagEnableAvatarCreationFeePurchase)
+local FFlagPublishAvatarPromptEnabled = require(RobloxGui.Modules.PublishAssetPrompt.FFlagPublishAvatarPromptEnabled)
 
 local PaymentPlatform = require(Root.Enums.PaymentPlatform)
 local getPaymentPlatform = require(Root.Utils.getPaymentPlatform)
@@ -48,7 +48,7 @@ type Props = {
 	robuxProviderId: string,
 	robuxProductId: number,
 
-	serializedModel: string?,
+	humanoidModel: Model?,
 	itemIcon: any,
 	itemName: string,
 	itemRobuxCost: number,
@@ -282,7 +282,7 @@ function RobuxUpsellOverlay:render()
 		isDelayedInput = true,
 		onDelayedInputComplete = self.onDelayedInputComplete,
 
-		model = if props.serializedModel then AssetService:DeserializeInstance(props.serializedModel) else nil,
+		model = props.humanoidModel,
 		itemIcon = props.itemIcon,
 		itemName = props.itemName,
 		itemRobuxCost = props.itemRobuxCost,
@@ -315,10 +315,10 @@ function RobuxUpsellOverlay:render()
 	})
 end
 
-if GetFFlagEnableAvatarCreationFeePurchase() then
+if FFlagPublishAvatarPromptEnabled then
 	local function mapStateToProps(state)
 		return {
-			serializedModel = state.promptRequest.serializedModel,
+			humanoidModel = state.promptRequest.humanoidModel,
 		}
 	end
 

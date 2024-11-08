@@ -21,33 +21,29 @@ local MarketplaceService = game:GetService("MarketplaceService")
 local TextService = game:GetService("TextService")
 local HttpService = game:GetService("HttpService")
 local UserInputService = game:GetService("UserInputService")
-local ContextActionService = game:GetService("ContextActionService")
 local StarterGui = game:GetService("StarterGui")
 local CoreGui = game:GetService("CoreGui")
 local AnalyticsService = game:GetService("RbxAnalyticsService")
 local VRService = game:GetService("VRService")
 local GroupService = game:GetService("GroupService")
 local TeleportService = game:GetService("TeleportService")
-local CorePackages = game:GetService("CorePackages")
 local RobloxGui = CoreGui.RobloxGui
 local Settings = UserSettings()
 local GameSettings = Settings.GameSettings
 
 local FFlagCoreScriptShowTeleportPrompt = require(RobloxGui.Modules.Flags.FFlagCoreScriptShowTeleportPrompt)
-local success, result = pcall(function()
-	return settings():GetFFlag("UseNotificationsLocalization")
-end)
-local FFlagUseNotificationsLocalization = success and result
 
 local FFlagLogAcceptFriendshipEvent = game:DefineFastFlag("LogAcceptFriendshipEvent", false)
-local FFlagClientToastNotificationsRedirect = game:DefineFastFlag("ClientToastNotificationsRedirect", false)
 local FFlagClientToastNotificationsEnabled = game:GetEngineFeature("ClientToastNotificationsEnabled")
+local GetFFlagClientToastNotificationsRedirect =
+	require(RobloxGui.Modules.Flags.GetFFlagClientToastNotificationsRedirect)
 
 local shouldSaveScreenshotToAlbum = require(RobloxGui.Modules.shouldSaveScreenshotToAlbum)
 
 local RobloxTranslator = require(RobloxGui.Modules.RobloxTranslator)
 
-local FFlagNotificationsNoLongerRequireControllerState = game:DefineFastFlag("NotificationsNoLongerRequireControllerState", false)
+local FFlagNotificationsNoLongerRequireControllerState =
+	game:DefineFastFlag("NotificationsNoLongerRequireControllerState", false)
 
 local function LocalizedGetString(key, rtv)
 	pcall(function()
@@ -81,7 +77,7 @@ local GameTranslator = require(RobloxGui.Modules.GameTranslator)
 local PolicyService = require(RobloxGui.Modules.Common.PolicyService)
 
 local BG_TRANSPARENCY_DEFAULT = 0.6
-local bgTransparency = BG_TRANSPARENCY_DEFAULT * GameSettings.PreferredTransparency 
+local bgTransparency = BG_TRANSPARENCY_DEFAULT * GameSettings.PreferredTransparency
 local MAX_NOTIFICATIONS = 3
 local IMAGE_SIZE = isTenFootInterface and 72 or 48
 
@@ -193,7 +189,8 @@ end
 NotificationFrame.Parent = RbxGui
 
 local function createDefaultNotification()
-	local Frame = createFrame("Notification", UDim2.new(1, 0, 0, NOTIFICATION_Y_OFFSET), UDim2.new(0, 0, 0, 0), bgTransparency)
+	local Frame =
+		createFrame("Notification", UDim2.new(1, 0, 0, NOTIFICATION_Y_OFFSET), UDim2.new(0, 0, 0, 0), bgTransparency)
 	Frame.BackgroundColor3 = Color3.new(0, 0, 0)
 	Frame.BorderSizePixel = 0
 	return Frame
@@ -202,7 +199,7 @@ local DefaultNotification = createDefaultNotification()
 
 local NotificationTitle = Instance.new("TextLabel")
 NotificationTitle.Name = "NotificationTitle"
-NotificationTitle.Size = UDim2.new(1, -NOTIFICATION_PADDING*2, 0, NOTIFICATION_TITLE_HEIGHT)
+NotificationTitle.Size = UDim2.new(1, -NOTIFICATION_PADDING * 2, 0, NOTIFICATION_TITLE_HEIGHT)
 NotificationTitle.Position = UDim2.new(0, NOTIFICATION_PADDING, 0.5, NOTIFICATION_TITLE_Y_OFFSET)
 NotificationTitle.BackgroundTransparency = 1
 NotificationTitle.Font = Enum.Font.SourceSansBold
@@ -211,7 +208,7 @@ NotificationTitle.TextColor3 = Color3.new(0.97, 0.97, 0.97)
 
 local NotificationText = Instance.new("TextLabel")
 NotificationText.Name = "NotificationText"
-NotificationText.Size = UDim2.new(1, -NOTIFICATION_PADDING*2, 0, NOTIFICATION_TEXT_HEIGHT)
+NotificationText.Size = UDim2.new(1, -NOTIFICATION_PADDING * 2, 0, NOTIFICATION_TEXT_HEIGHT)
 NotificationText.Position = UDim2.new(0, NOTIFICATION_PADDING, 0.5, NOTIFICATION_TEXT_Y_OFFSET)
 NotificationText.BackgroundTransparency = 1
 NotificationText.Font = Enum.Font.SourceSans
@@ -349,7 +346,7 @@ local function createNotification(title, text, image)
 			notificationFrame.Size = notificationFrame.Size + UDim2.new(0, 0, 0, addHeight)
 		end
 	else
-		local leftPadding = IMAGE_SIZE + NOTIFICATION_PADDING*2
+		local leftPadding = IMAGE_SIZE + NOTIFICATION_PADDING * 2
 		local rightPadding = NOTIFICATION_PADDING
 
 		local notificationImage = NotificationImage:Clone()
@@ -357,12 +354,14 @@ local function createNotification(title, text, image)
 		notificationImage.Parent = notificationFrame
 
 		notificationTitle.Size = UDim2.new(1, -leftPadding - rightPadding, 0, notificationTitle.Size.Y.Offset)
-		notificationTitle.Position =  UDim2.new(0, leftPadding, notificationTitle.Position.Y.Scale, notificationTitle.Position.Y.Offset)
+		notificationTitle.Position =
+			UDim2.new(0, leftPadding, notificationTitle.Position.Y.Scale, notificationTitle.Position.Y.Offset)
 		notificationTitle.TextXAlignment = Enum.TextXAlignment.Left
 
 		-- Indent
 		notificationText.Size = UDim2.new(1, -leftPadding - rightPadding, 0, notificationText.Size.Y.Offset)
-		notificationText.Position = UDim2.new(0, leftPadding, notificationText.Position.Y.Scale, notificationText.Position.Y.Offset)
+		notificationText.Position =
+			UDim2.new(0, leftPadding, notificationText.Position.Y.Scale, notificationText.Position.Y.Offset)
 		notificationText.TextXAlignment = Enum.TextXAlignment.Left
 
 		if not notificationTitle.TextFits then
@@ -374,8 +373,10 @@ local function createNotification(title, text, image)
 
 			-- Slight vertical offset for consistent placement with 2 line notificationText
 			local verticalOffset = 4
-			notificationTitle.Position = notificationTitle.Position + UDim2.new(0, 0, 0, subtractHeight / 2 - verticalOffset / 2)
-			notificationText.Position = notificationText.Position + UDim2.new(0, 0, 0, subtractHeight / 2 - verticalOffset / 2)
+			notificationTitle.Position = notificationTitle.Position
+				+ UDim2.new(0, 0, 0, subtractHeight / 2 - verticalOffset / 2)
+			notificationText.Position = notificationText.Position
+				+ UDim2.new(0, 0, 0, subtractHeight / 2 - verticalOffset / 2)
 			notificationFrame.Size = notificationFrame.Size - UDim2.new(0, 0, 0, subtractHeight + verticalOffset)
 		end
 
@@ -590,6 +591,22 @@ local function sendNotificationInfo(notificationInfo)
 	BindableEvent_SendNotificationInfo:Fire(notificationInfo)
 end
 
+local function createNotificationButtonDetails(buttonText: string, buttonType: Enum.NotificationButtonType, callback)
+	return {
+		Text = buttonText,
+		ButtonType = buttonType,
+		OnActivated = function()
+			if callback and type(callback) ~= "function" then -- callback should be a bindable
+				pcall(function()
+					callback:Invoke(buttonText)
+				end)
+			elseif type(callback) == "function" then
+				callback(buttonText)
+			end
+		end,
+	}
+end
+
 local function onSendNotificationInfo(notificationInfo)
 	if VRService.VREnabled then
 		--If VR is enabled, notifications will be handled by Modules.VR.NotificationHub
@@ -600,47 +617,36 @@ local function onSendNotificationInfo(notificationInfo)
 	local button1Text = notificationInfo.Button1Text
 	local button2Text = notificationInfo.Button2Text
 
-    if FFlagClientToastNotificationsEnabled and FFlagClientToastNotificationsRedirect then
-        local newNotificationInfo = {
-            Title = notificationInfo.Title,
-            Text = notificationInfo.Text,
-            Icon = notificationInfo.Image,
-            Buttons = {
-                if button1Text then 
-                {
-                    Text = button1Text,
-                    ButtonType = Enum.NotificationButtonType.Secondary,
-                    OnActivated = function()
-                        if callback and type(callback) ~= "function" then -- callback should be a bindable
-                            pcall(function()
-                                callback:Invoke(button1Text)
-                            end)
-                        elseif type(callback) == "function" then
-                            callback(button1Text)
-                        end        
-                    end
-                }
-                else nil,
-                if button2Text then
-                {
-                    Text = button2Text,
-                    ButtonType = Enum.NotificationButtonType.Primary,
-                    OnActivated = function()
-                        if callback and type(callback) ~= "function" then -- callback should be a bindable
-                            pcall(function()
-                                callback:Invoke(button2Text)
-                            end)
-                        elseif type(callback) == "function" then
-                            callback(button2Text)
-                        end        
-                    end
-                }
-                else nil,
-            }
-        }
-        GuiService:SendNotification(newNotificationInfo)
-        return
-    end
+	if FFlagClientToastNotificationsEnabled and GetFFlagClientToastNotificationsRedirect() then
+		local buttons = {}
+
+		if button1Text and button1Text ~= "" then
+			table.insert(
+				buttons,
+				createNotificationButtonDetails(button1Text, Enum.NotificationButtonType.Secondary, callback)
+			)
+		end
+
+		if button2Text and button2Text ~= "" then
+			table.insert(
+				buttons,
+				createNotificationButtonDetails(button2Text, Enum.NotificationButtonType.Primary, callback)
+			)
+		end
+
+		local newNotificationInfo = {
+			Title = if notificationInfo.Autolocalize
+				then GameTranslator:TranslateGameText(CoreGui, notificationInfo.Title)
+				else notificationInfo.Title,
+			Text = if notificationInfo.AutoLocalize
+				then GameTranslator:TranslateGameText(CoreGui, notificationInfo.Text)
+				else notificationInfo.Text,
+			Icon = notificationInfo.Image,
+			Buttons = buttons,
+		}
+		(GuiService :: any):SendNotification(newNotificationInfo)
+		return
+	end
 
 	local notification = {}
 	local notificationFrame
@@ -742,13 +748,13 @@ local function createDeveloperNotification(notificationTable)
 
 			local button1Text
 			local button2Text
-            if FFlagClientToastNotificationsEnabled and FFlagClientToastNotificationsRedirect then
-                button1Text = (type(notificationTable.Button1) == "string" and notificationTable.Button1 or nil)
-                button2Text = (type(notificationTable.Button2) == "string" and notificationTable.Button2 or nil)    
-            else
-                button1Text = (type(notificationTable.Button1) == "string" and notificationTable.Button1 or "")
-                button2Text = (type(notificationTable.Button2) == "string" and notificationTable.Button2 or "")    
-            end
+			if FFlagClientToastNotificationsEnabled and GetFFlagClientToastNotificationsRedirect() then
+				button1Text = (type(notificationTable.Button1) == "string" and notificationTable.Button1 or nil)
+				button2Text = (type(notificationTable.Button2) == "string" and notificationTable.Button2 or nil)
+			else
+				button1Text = (type(notificationTable.Button1) == "string" and notificationTable.Button1 or "")
+				button2Text = (type(notificationTable.Button2) == "string" and notificationTable.Button2 or "")
+			end
 
 			-- AutoLocalize allows developers to disable automatic localization if they have pre-localized it. Defaults true.
 			local autoLocalize = notificationTable.AutoLocalize == nil or notificationTable.AutoLocalize == true
@@ -813,7 +819,7 @@ local function sendFriendNotification(fromPlayer)
 					AnalyticsService:ReportCounter("NotificationScript-AcceptFriendship")
 					AnalyticsService:TrackEvent("Game", "AcceptFriendship", "NotificationScript")
 				end
-						
+
 				LocalPlayer:RequestFriendship(fromPlayer)
 			else
 				AnalyticsService:ReportCounter("NotificationScript-RevokeFriendship")
@@ -921,24 +927,29 @@ local function onBadgeAwarded(userId, creatorId, badgeId)
 			local success, groupInfo = pcall(function()
 				return GroupService:GetGroupInfoAsync(creatorId)
 			end)
-			if not success then creatorName = "" end
+			if not success then
+				creatorName = ""
+			end
 
 			if groupInfo then
 				creatorName = groupInfo.Name
 			end
 		elseif game.CreatorType == Enum.CreatorType.User then
-
 			local success
 			success, creatorName = pcall(function()
 				return Players:GetNameFromUserIdAsync(creatorId)
 			end)
-			if not success then creatorName = "" end
+			if not success then
+				creatorName = ""
+			end
 		end
 
 		local success, badgeInfo = pcall(function()
 			return BadgeService:GetBadgeInfoAsync(badgeId)
 		end)
-		if not success then return end -- could not get info from network
+		if not success then
+			return
+		end -- could not get info from network
 
 		local badgeAwardText = RobloxTranslator:FormatByKey(
 			"NotificationScript2.onBadgeAwardedDetail",
@@ -1132,7 +1143,6 @@ local function onPreferredTransparencyChanged()
 	end
 end
 GameSettings:GetPropertyChangedSignal("PreferredTransparency"):connect(onPreferredTransparencyChanged)
-
 
 if not FFlagNotificationsNoLongerRequireControllerState then
 	local Platform = UserInputService:GetPlatform()

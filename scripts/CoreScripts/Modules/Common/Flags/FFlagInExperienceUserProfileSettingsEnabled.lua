@@ -1,1 +1,1 @@
-return game:DefineFastFlag("InExperienceUserProfileSettingsEnabled", false)
+return game:DefineFastFlag("InExperienceUserProfileSettingsEnabled_v2", false)

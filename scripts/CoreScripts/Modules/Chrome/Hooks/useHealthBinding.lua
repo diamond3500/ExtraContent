@@ -45,7 +45,7 @@ function useHealthBinding()
 					healthChangedConn = humanoid.HealthChanged:Connect(updateHealthValue)
 				else
 					childAddedConn = character.ChildAdded:Connect(function(child: Instance)
-						if child:isA("Humanoid") then
+						if child:IsA("Humanoid") then
 							observeHumanoid()
 						end
 					end)
