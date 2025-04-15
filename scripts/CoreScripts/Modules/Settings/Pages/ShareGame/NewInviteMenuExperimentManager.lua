@@ -1,8 +1,7 @@
 local CoreGui = game:GetService("CoreGui")
-local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 local CorePackages = game:GetService("CorePackages")
 local Modules = CoreGui.RobloxGui.Modules
-local IXPServiceWrapper = require(RobloxGui.Modules.Common.IXPServiceWrapper)
+local IXPServiceWrapper = require(CorePackages.Workspace.Packages.IxpServiceWrapper).IXPServiceWrapper
 
 local IXP_STYLE_PARAMETER = "NewInviteMenuStyleEnabled"
 local IXP_CUSTOMIZATION_PARAMETER = "NewInviteMenuCustomizationEnabled"

@@ -8,7 +8,7 @@ local GUI_MOUSE_SENSITIVITY_GRANULARITY = 0.01
 local UserGameSettings = UserSettings():GetService("UserGameSettings")
 local CorePackages = game:GetService("CorePackages")
 
-local InGameMenuDependencies = require(CorePackages.InGameMenuDependencies)
+local InGameMenuDependencies = require(CorePackages.Packages.InGameMenuDependencies)
 local Roact = InGameMenuDependencies.Roact
 local t = InGameMenuDependencies.t
 
@@ -30,16 +30,12 @@ local Constants = require(InGameMenu.Resources.Constants)
 local function guiToEngineSensitivity(guiSensitivity)
 	local engineSensitivity
 	if guiSensitivity <= 5 then
-		engineSensitivity = 0.198  * guiSensitivity + 0.01
+		engineSensitivity = 0.198 * guiSensitivity + 0.01
 	else
 		engineSensitivity = 0.6 * guiSensitivity - 2
 	end
 
-	return math.clamp(
-		engineSensitivity,
-		MIN_ENGINE_MOUSE_SENSITIVITY,
-		MAX_ENGINE_MOUSE_SENSITIVITY
-	)
+	return math.clamp(engineSensitivity, MIN_ENGINE_MOUSE_SENSITIVITY, MAX_ENGINE_MOUSE_SENSITIVITY)
 end
 
 local function engineToGuiSensitivity(engineSensitivity)
@@ -50,15 +46,10 @@ local function engineToGuiSensitivity(engineSensitivity)
 		guiSensitivity = (engineSensitivity + 2) / 0.6
 	end
 
-	guiSensitivity = math.floor(
-		guiSensitivity / GUI_MOUSE_SENSITIVITY_GRANULARITY + 0.5
-	) * GUI_MOUSE_SENSITIVITY_GRANULARITY
+	guiSensitivity = math.floor(guiSensitivity / GUI_MOUSE_SENSITIVITY_GRANULARITY + 0.5)
+		* GUI_MOUSE_SENSITIVITY_GRANULARITY
 
-	return math.clamp(
-		guiSensitivity,
-		MIN_GUI_MOUSE_SENSITIVITY,
-		MAX_GUI_MOUSE_SENSITIVITY
-	)
+	return math.clamp(guiSensitivity, MIN_GUI_MOUSE_SENSITIVITY, MAX_GUI_MOUSE_SENSITIVITY)
 end
 
 local CameraSensitivityEntry = Roact.PureComponent:extend("CameraSensitivityEntry")
@@ -99,14 +90,15 @@ function CameraSensitivityEntry:render()
 			end,
 			canCaptureFocus = self.props.canCaptureFocus,
 			isMenuOpen = self.props.isMenuOpen,
-		})
+		}),
 	}
 
 	for _, event in ipairs(sensitivityEvents) do
-		children[tostring(event) .. "CameraSensitivityControlConnection"] = Roact.createElement(ExternalEventConnection, {
-			event = event,
-			callback = self.onSensitivityChanged,
-		})
+		children[tostring(event) .. "CameraSensitivityControlConnection"] =
+			Roact.createElement(ExternalEventConnection, {
+				event = event,
+				callback = self.onSensitivityChanged,
+			})
 	end
 
 	return Roact.createFragment(children)

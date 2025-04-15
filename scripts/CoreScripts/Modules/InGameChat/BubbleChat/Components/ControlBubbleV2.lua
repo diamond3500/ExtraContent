@@ -10,7 +10,7 @@ local TweenService = game:GetService("TweenService")
 
 local React = require(CorePackages.Packages.React)
 
-local UIBlox = require(CorePackages.UIBlox)
+local UIBlox = require(CorePackages.Packages.UIBlox)
 local Images = UIBlox.App.ImageSet.Images
 
 local success, migratedImageSetLabel = pcall(function()
@@ -21,12 +21,13 @@ local ImageSetLabel = success and migratedImageSetLabel or UIBlox.Core.ImageSet.
 local getVoiceIndicatorAssetName = require(script.Parent.Parent.Helpers.getVoiceIndicatorAssetName)
 
 local Modules = CoreGui.RobloxGui.Modules
-local getFFlagEnableShimmeringIconLegacyChatService = require(Modules.Flags.getFFlagEnableShimmeringIconLegacyChatService)
-local getFFlagLegacyConnectingMicStateFix = require(Modules.Flags.getFFlagLegacyConnectingMicStateFix)
+local getFFlagEnableShimmeringIconLegacyChatService =
+	require(Modules.Flags.getFFlagEnableShimmeringIconLegacyChatService)
 
 local SHIMMER_TRANSPARENCY = 0.6
 local GRADIENT_INITIAL_OFFSET = Vector2.new(-1, 0)
-local FFlagEnableDarkerShimmerTransparencyLegacyChatService = game:DefineFastFlag("EnableDarkerShimmerTransparencyLegacyChatService", false)
+local FFlagEnableDarkerShimmerTransparencyLegacyChatService =
+	game:DefineFastFlag("EnableDarkerShimmerTransparencyLegacyChatService", false)
 
 if FFlagEnableDarkerShimmerTransparencyLegacyChatService then
 	SHIMMER_TRANSPARENCY = 0.4
@@ -80,7 +81,8 @@ return function(props: propArgs)
 			return function()
 				RunService:UnbindFromRenderStep(props.renderStepName)
 			end
-		elseif getFFlagEnableShimmeringIconLegacyChatService()
+		elseif
+			getFFlagEnableShimmeringIconLegacyChatService()
 			and props.voiceState
 			and props.voiceState == "Connecting"
 			and shimmerGradientRef
@@ -90,14 +92,11 @@ return function(props: propArgs)
 
 			return function()
 				shimmer:Cancel()
-
-				if getFFlagLegacyConnectingMicStateFix() then
-					-- reset to the initial offset so that subsequent tweens can animate correctly
-					if shimmerGradientRef and shimmerGradientRef.current then
-						shimmerGradientRef.current.Offset = GRADIENT_INITIAL_OFFSET
-					end
+				-- reset to the initial offset so that subsequent tweens can animate correctly
+				if shimmerGradientRef and shimmerGradientRef.current then
+					shimmerGradientRef.current.Offset = GRADIENT_INITIAL_OFFSET
 				end
-			end
+		end
 		else
 			return function()
 				if props.renderStepName then
@@ -141,22 +140,23 @@ return function(props: propArgs)
 				BorderSizePixel = 0,
 				Image = Images[iconAssetName],
 			}, {
-				ShimmerGradient = getFFlagEnableShimmeringIconLegacyChatService() and React.createElement("UIGradient", {
-					Color = ColorSequence.new({
-						ColorSequenceKeypoint.new(
-							0,
-							Color3.new(SHIMMER_TRANSPARENCY, SHIMMER_TRANSPARENCY, SHIMMER_TRANSPARENCY)
-						),
-						ColorSequenceKeypoint.new(0.5, Color3.new(0.8, 0.8, 0.8)),
-						ColorSequenceKeypoint.new(
-							1,
-							Color3.new(SHIMMER_TRANSPARENCY, SHIMMER_TRANSPARENCY, SHIMMER_TRANSPARENCY)
-						),
+				ShimmerGradient = getFFlagEnableShimmeringIconLegacyChatService()
+					and React.createElement("UIGradient", {
+						Color = ColorSequence.new({
+							ColorSequenceKeypoint.new(
+								0,
+								Color3.new(SHIMMER_TRANSPARENCY, SHIMMER_TRANSPARENCY, SHIMMER_TRANSPARENCY)
+							),
+							ColorSequenceKeypoint.new(0.5, Color3.new(0.8, 0.8, 0.8)),
+							ColorSequenceKeypoint.new(
+								1,
+								Color3.new(SHIMMER_TRANSPARENCY, SHIMMER_TRANSPARENCY, SHIMMER_TRANSPARENCY)
+							),
+						}),
+						Enabled = props.voiceState == "Connecting",
+						Rotation = -45,
+						Offset = GRADIENT_INITIAL_OFFSET,
 					}),
-					Enabled = props.voiceState == "Connecting",
-					Rotation = -45,
-					Offset = GRADIENT_INITIAL_OFFSET,
-				}),
 			}),
 		}),
 	})

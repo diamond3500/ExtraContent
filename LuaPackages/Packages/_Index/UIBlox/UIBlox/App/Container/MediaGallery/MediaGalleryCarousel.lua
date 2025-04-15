@@ -1,4 +1,5 @@
 --!nonstrict
+-- moving this file to LuaApps, please replicate any changes in the LuaApps file as well
 local UIBlox = script:FindFirstAncestor("UIBlox")
 local ImageSetComponent = require(UIBlox.Core.ImageSet.ImageSetComponent)
 local Images = require(UIBlox.App.ImageSet.Images)
@@ -6,6 +7,7 @@ local Button = require(UIBlox.App.Button.Button)
 local ButtonType = require(UIBlox.App.Button.Enum.ButtonType)
 local Cryo = require(UIBlox.Parent.Cryo)
 local React = require(UIBlox.Parent.React)
+local UIBloxConfig = require(UIBlox.UIBloxConfig)
 
 local ICON_PLAY = "icons/common/play"
 local PLAY_BUTTON_SIZE_SCALE = UDim2.fromScale(0.4, 0.512)
@@ -126,4 +128,4 @@ local function MediaGalleryCarousel(providedProps: Props)
 	})
 end
 
-return MediaGalleryCarousel
+return (if UIBloxConfig.moveMediaGalleryToLuaApps then nil else MediaGalleryCarousel) :: any

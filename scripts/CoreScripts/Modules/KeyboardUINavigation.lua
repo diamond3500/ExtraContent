@@ -3,14 +3,14 @@ local Players = game:GetService("Players")
 local GuiService = game:GetService("GuiService")
 local ContextActionService = game:GetService("ContextActionService")
 local CoreGuiService = game:GetService("CoreGui")
+local CorePackages = game:GetService("CorePackages")
 
 local Settings = UserSettings()
 local GameSettings = Settings.GameSettings
 
 local RobloxGui = CoreGuiService:WaitForChild("RobloxGui")
 local SendNotification = RobloxGui:WaitForChild("SendNotificationInfo")
-local RobloxTranslator = require(RobloxGui:WaitForChild("Modules"):WaitForChild("RobloxTranslator"))
-local GetFFlagFixMissingPlayerGuiCrash = require(RobloxGui.Modules.Flags.GetFFlagFixMissingPlayerGuiCrash)
+local RobloxTranslator = require(CorePackages.Workspace.Packages.RobloxTranslator)
 
 local PlayerGui
 
@@ -88,17 +88,10 @@ local function EnableKeyboardNavigation(actionName, inputState, inputObject)
 		return Enum.ContextActionResult.Sink
 	end
 
-	if GetFFlagFixMissingPlayerGuiCrash() then
-		if PlayerGui == nil then
-			-- To avoid race condition with not using a "WaitForChild" we will grab the PlayerGui instance before use
-			local Player = Players.LocalPlayer
-			PlayerGui = Player:FindFirstChildOfClass("PlayerGui")
-		end
-	else
-		if PlayerGui == nil then
-			local Player = Players.LocalPlayer
-			PlayerGui = Player:WaitForChild("PlayerGui")
-		end
+	if PlayerGui == nil then
+		-- To avoid race condition with not using a "WaitForChild" we will grab the PlayerGui instance before use
+		local Player = Players.LocalPlayer
+		PlayerGui = Player:FindFirstChildOfClass("PlayerGui")
 	end
 	GuiService:Select(PlayerGui)
 

@@ -101,6 +101,8 @@ ContextualMenu.validateProps = t.strictInterface({
 	renderHeader = t.optional(t.callback),
 	-- Height of header
 	headerHeight = t.optional(t.number),
+	-- If the shadow effect is visible
+	showDropShadow = t.optional(t.boolean),
 })
 
 ContextualMenu.defaultProps = {
@@ -263,6 +265,7 @@ function ContextualMenu:render()
 					enableTokenOverride = self.props.enableTokenOverride,
 					renderHeader = self.props.renderHeader,
 					headerHeight = self.props.headerHeight,
+					showDropShadow = self.props.showDropShadow,
 				}),
 			}),
 		})

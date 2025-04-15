@@ -3,12 +3,11 @@
 ]]
 local CorePackages = game:GetService("CorePackages")
 
-local InGameMenuDependencies = require(CorePackages.InGameMenuDependencies)
+local InGameMenuDependencies = require(CorePackages.Packages.InGameMenuDependencies)
 local Roact = InGameMenuDependencies.Roact
 
 local InitalPage = Roact.PureComponent:extend("InitalPage")
 
-function InitalPage:render()
-end
+function InitalPage:render() end
 
 return InitalPage

@@ -1,4 +1,5 @@
 --!nonstrict
+-- moving this file to LuaApps, please replicate any changes in the LuaApps file as well
 local UserInputService = game:GetService("UserInputService")
 
 local MediaGallery = script.Parent
@@ -16,6 +17,8 @@ local EventConnection = ReactUtils.EventConnection
 local Images = require(App.ImageSet.Images)
 local IconButton = require(App.Button.IconButton)
 local withStyle = require(UIBlox.Core.Style.withStyle)
+
+local UIBloxConfig = require(UIBlox.UIBloxConfig)
 
 local ThumbnailButton = require(MediaGallery.ThumbnailButton)
 local getShowItems = require(MediaGallery.getShowItems)
@@ -271,4 +274,4 @@ function MediaGalleryFullScreen:renderWithProvider(style)
 	})
 end
 
-return MediaGalleryFullScreen
+return if UIBloxConfig.moveMediaGalleryToLuaApps then nil else MediaGalleryFullScreen

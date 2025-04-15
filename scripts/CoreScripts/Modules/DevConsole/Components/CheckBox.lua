@@ -1,6 +1,6 @@
 local CorePackages = game:GetService("CorePackages")
 local TextService = game:GetService("TextService")
-local Roact = require(CorePackages.Roact)
+local Roact = require(CorePackages.Packages.Roact)
 
 local Constants = require(script.Parent.Parent.Constants)
 local PADDING = Constants.UtilityBarFormatting.CheckBoxInnerPadding
@@ -47,7 +47,7 @@ function CheckBox:render()
 		Icon = Roact.createElement("ImageLabel", {
 			Image = image,
 			Size = UDim2.new(0, checkBoxHeight, 0, checkBoxHeight),
-			Position = UDim2.new(0, 0, .5, -checkBoxHeight / 2),
+			Position = UDim2.new(0, 0, 0.5, -checkBoxHeight / 2),
 			BackgroundColor3 = backgroundColor,
 			BackgroundTransparency = 0,
 			BorderColor3 = Constants.Color.Text,
@@ -63,7 +63,7 @@ function CheckBox:render()
 			Size = UDim2.new(1, -frameHeight, 1, 0),
 			Position = UDim2.new(0, checkBoxHeight + PADDING, 0, 0),
 			BackgroundTransparency = 1,
-		})
+		}),
 	})
 end
 

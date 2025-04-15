@@ -3,12 +3,9 @@ local UGCValidationService = game:GetService("UGCValidationService")
 local root = script.Parent.Parent
 
 local getFFlagUGCLCQualityReplaceLua = require(root.flags.getFFlagUGCLCQualityReplaceLua)
-local getEngineFeatureUGCValidateEditableMeshAndImage =
-	require(root.flags.getEngineFeatureUGCValidateEditableMeshAndImage)
 
 local Types = require(root.util.Types)
 local pcallDeferred = require(root.util.pcallDeferred)
-local getFFlagUGCValidationShouldYield = require(root.flags.getFFlagUGCValidationShouldYield)
 
 local Analytics = require(root.Analytics)
 local Constants = require(root.Constants)
@@ -22,49 +19,25 @@ local function validateTextureSize(
 
 	local isServer = validationContext.isServer
 
-	if getEngineFeatureUGCValidateEditableMeshAndImage() then
-		if not textureInfo.editableImage then
-			if allowNoTexture then
-				return true
-			else
-				Analytics.reportFailure(Analytics.ErrorType.validateTextureSize_InvalidTextureId)
-				return false,
-					{
-						string.format(
-							"Invalid textureID used in mesh '%s'. Make sure the texture exists and try again.",
-							textureInfo.fullName
-						),
-					}
-			end
-		end
-	else
-		if textureInfo.contentId == "" then
-			if allowNoTexture then
-				return true
-			else
-				Analytics.reportFailure(Analytics.ErrorType.validateTextureSize_InvalidTextureId)
-				return false,
-					{
-						string.format(
-							"Invalid textureID used in mesh '%s'. Make sure the texture exists and try again.",
-							textureInfo.fullName
-						),
-					}
-			end
+	if not textureInfo.editableImage then
+		if allowNoTexture then
+			return true
+		else
+			Analytics.reportFailure(Analytics.ErrorType.validateTextureSize_InvalidTextureId, nil, validationContext)
+			return false,
+				{
+					string.format(
+						"Invalid textureID used in mesh '%s'. Make sure the texture exists and try again.",
+						textureInfo.fullName
+					),
+				}
 		end
 	end
 
 	if getFFlagUGCLCQualityReplaceLua() then
-		local success, result
-		if getEngineFeatureUGCValidateEditableMeshAndImage() and getFFlagUGCValidationShouldYield() then
-			success, result = pcallDeferred(function()
-				return UGCValidationService:ValidateEditableImageSize(textureInfo.editableImage)
-			end, validationContext)
-		else
-			success, result = pcall(function()
-				return UGCValidationService:ValidateTextureSize(textureInfo.contentId)
-			end)
-		end
+		local success, result = pcallDeferred(function()
+			return UGCValidationService:ValidateEditableImageSize(textureInfo.editableImage)
+		end, validationContext)
 
 		if not success then
 			if nil ~= isServer and isServer then
@@ -73,25 +46,18 @@ local function validateTextureSize(
 				-- which would mean the asset failed validation
 				error("Failed to execute validateTextureSize check")
 			end
-			Analytics.reportFailure(Analytics.ErrorType.validateTextureSize_FailedToExecute)
+			Analytics.reportFailure(Analytics.ErrorType.validateTextureSize_FailedToExecute, nil, validationContext)
 			return false, { "Failed to execute validateTextureSize check" }
 		end
 
 		if not result then
-			Analytics.reportFailure(Analytics.ErrorType.validateTextureSize_TextureTooBig)
+			Analytics.reportFailure(Analytics.ErrorType.validateTextureSize_TextureTooBig, nil, validationContext)
 			return false, { "Your textures exceeds the max texture size limit for UGC upload requirements." }
 		end
 	else
-		local success, imageSize
-		if getEngineFeatureUGCValidateEditableMeshAndImage() and getFFlagUGCValidationShouldYield() then
-			success, imageSize = pcallDeferred(function()
-				return UGCValidationService:GetEditableImageSize(textureInfo.editableImage)
-			end, validationContext)
-		else
-			success, imageSize = pcall(function()
-				return UGCValidationService:GetTextureSize(textureInfo.contentId)
-			end)
-		end
+		local success, imageSize = pcallDeferred(function()
+			return UGCValidationService:GetEditableImageSize(textureInfo.editableImage)
+		end, validationContext)
 
 		if not success then
 			if nil ~= isServer and isServer then
@@ -105,7 +71,7 @@ local function validateTextureSize(
 					)
 				)
 			end
-			Analytics.reportFailure(Analytics.ErrorType.validateTextureSize_FailedToLoadTexture)
+			Analytics.reportFailure(Analytics.ErrorType.validateTextureSize_FailedToLoadTexture, nil, validationContext)
 			return false,
 				{
 					string.format(
@@ -114,7 +80,7 @@ local function validateTextureSize(
 					),
 				} :: { any }
 		elseif imageSize.X > Constants.MAX_TEXTURE_SIZE or imageSize.Y > Constants.MAX_TEXTURE_SIZE then
-			Analytics.reportFailure(Analytics.ErrorType.validateTextureSize_TextureTooBig)
+			Analytics.reportFailure(Analytics.ErrorType.validateTextureSize_TextureTooBig, nil, validationContext)
 			return false,
 				{
 					string.format(

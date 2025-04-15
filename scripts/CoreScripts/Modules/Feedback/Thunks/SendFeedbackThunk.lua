@@ -2,7 +2,7 @@
 	Thunk that handles posting a feedback request and handling actions taken as a result of posting such a request (incrementing submission attempts, for example)
 ]]
 local CorePackages = game:GetService("CorePackages")
-local InGameMenuDependencies = require(CorePackages.InGameMenuDependencies)
+local InGameMenuDependencies = require(CorePackages.Packages.InGameMenuDependencies)
 local Promise = InGameMenuDependencies.Promise
 local PerformFetch = require(CorePackages.Workspace.Packages.Http).PerformFetch
 

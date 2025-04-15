@@ -1,6 +1,6 @@
 --!nonstrict
 local CorePackages = game:GetService("CorePackages")
-local Roact = require(CorePackages.Roact)
+local Roact = require(CorePackages.Packages.Roact)
 
 local Constants = require(script.Parent.Parent.Parent.Constants)
 
@@ -34,7 +34,7 @@ table.insert(headerCellSize, UDim2.new(1, -totalSummaryWidth - CELL_PADDING, 0, 
 table.insert(entryCellSize, UDim2.new(1, -totalSummaryWidth - CELL_PADDING, 0, ENTRY_HEIGHT))
 
 for _, width in ipairs(CELL_WIDTH) do
-	table.insert(cellOffset,UDim2.new(1, currOffset + CELL_PADDING, 0, 0))
+	table.insert(cellOffset, UDim2.new(1, currOffset + CELL_PADDING, 0, 0))
 	table.insert(headerCellSize, UDim2.new(0, width - CELL_PADDING, 0, HEADER_HEIGHT))
 	table.insert(entryCellSize, UDim2.new(0, width - CELL_PADDING, 0, ENTRY_HEIGHT))
 	currOffset = currOffset + width
@@ -42,12 +42,7 @@ end
 
 local verticalOffsets = {}
 for i, offset in ipairs(cellOffset) do
-	verticalOffsets[i] = UDim2.new(
-		offset.X.Scale,
-		offset.X.Offset - CELL_PADDING,
-		offset.Y.Scale,
-		offset.Y.Offset
-	)
+	verticalOffsets[i] = UDim2.new(offset.X.Scale, offset.X.Offset - CELL_PADDING, offset.Y.Scale, offset.Y.Offset)
 end
 
 local NetworkSummary = Roact.Component:extend("NetworkSummary")
@@ -79,7 +74,7 @@ function NetworkSummary:render()
 	})
 
 	for i = 2, #verticalOffsets do
-		local key = string.format("VerticalLine_%d",i)
+		local key = string.format("VerticalLine_%d", i)
 		summaryHeader[key] = Roact.createElement("Frame", {
 			Size = UDim2.new(0, LINE_WIDTH, 0, HEADER_HEIGHT),
 			Position = verticalOffsets[i],
@@ -151,7 +146,7 @@ function NetworkSummary:render()
 		})
 
 		for ind = 2, #verticalOffsets do
-			local key = string.format("VerticalLine_%d",ind)
+			local key = string.format("VerticalLine_%d", ind)
 			row[key] = Roact.createElement("Frame", {
 				Size = UDim2.new(0, LINE_WIDTH, 1, 0),
 				Position = verticalOffsets[ind],
@@ -163,8 +158,8 @@ function NetworkSummary:render()
 		elements[dataEntry.RequestType] = Roact.createElement("Frame", {
 			Size = UDim2.new(0, width, 0, ENTRY_HEIGHT),
 			BackgroundTransparency = 1,
-			LayoutOrder = entryCount + 1
-		},row)
+			LayoutOrder = entryCount + 1,
+		}, row)
 	end
 
 	if entryCount == 0 then
@@ -173,7 +168,7 @@ function NetworkSummary:render()
 			Text = NON_DATA_STR,
 			TextColor3 = TEXT_COLOR,
 			BackgroundTransparency = 1,
-			LayoutOrder = 2
+			LayoutOrder = 2,
 		})
 		entryCount = 1
 	end

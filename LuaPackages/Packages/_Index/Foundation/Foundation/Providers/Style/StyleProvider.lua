@@ -3,6 +3,7 @@ local Foundation = script:FindFirstAncestor("Foundation")
 local Packages = Foundation.Parent
 local React = require(Packages.React)
 local Flags = require(Foundation.Utility.Flags)
+local Cryo = require(Packages.Cryo)
 
 local Theme = require(Foundation.Enums.Theme)
 local Device = require(Foundation.Enums.Device)
@@ -15,14 +16,16 @@ local useTagsState = require(Style.useTagsState)
 local VariantsContext = require(Style.VariantsContext)
 local withDefaults = require(Foundation.Utility.withDefaults)
 local useGeneratedRules = require(Foundation.Utility.useGeneratedRules)
+local StyleSheetContext = require(Style.StyleSheetContext)
 
 local getTokens = Tokens.getTokens
 
 export type StyleProviderProps = {
 	theme: Theme,
 	device: Device?,
+	-- **Deprecated**. Use useStyleSheet hook insteads to derive the Foundation styles.
 	derives: { StyleSheet }?,
-	DONOTUSE_colorUpdate: boolean?,
+	sheetRef: React.Ref<StyleSheet>?,
 	children: React.ReactNode,
 }
 
@@ -37,22 +40,36 @@ local defaultStyle = {
 	device = Device.Desktop :: Device,
 }
 
+function StyleSheetContextWrapper(props: {
+	setStyleSheetRef: { current: ((StyleSheet?) -> ()) | nil }?,
+	children: React.ReactNode,
+})
+	local styleSheet, setStyleSheet = React.useState(nil :: StyleSheet?)
+	if props.setStyleSheetRef and props.setStyleSheetRef.current ~= setStyleSheet then
+		props.setStyleSheetRef.current = setStyleSheet
+	end
+
+	return React.createElement(StyleSheetContext.Provider, {
+		value = styleSheet or Cryo.None,
+	}, props.children)
+end
+
 local function StyleProvider(styleProviderProps: StyleProviderProps)
 	local props = withDefaults({
 		theme = styleProviderProps.theme,
 		device = styleProviderProps.device,
 	}, defaultStyle)
 
+	-- Hack to update the sibling node, without rerendering the parent
+	local setStyleSheetRef = React.useRef(nil :: ((StyleSheet?) -> ())?)
 	local tags, addTags = useTagsState()
 	local useVariants = VariantsContext.useVariantsState()
 
 	local tokens: Tokens = React.useMemo(function()
-		return getTokens(props.device, props.theme, styleProviderProps.DONOTUSE_colorUpdate)
-	end, { props.device :: any, props.theme, styleProviderProps.DONOTUSE_colorUpdate })
+		return getTokens(props.device, props.theme)
+	end, { props.device :: any, props.theme })
 
-	local rules = if Flags.FoundationStylingPolyfill
-		then useGeneratedRules(props.theme, props.device, styleProviderProps.DONOTUSE_colorUpdate == true)
-		else nil
+	local rules = if Flags.FoundationStylingPolyfill then useGeneratedRules(props.theme, props.device) else nil
 
 	return React.createElement(TokensContext.Provider, {
 		value = tokens,
@@ -69,15 +86,24 @@ local function StyleProvider(styleProviderProps: StyleProviderProps)
 					}, styleProviderProps.children),
 				}
 				else {
-					TagsContext = React.createElement(TagsContext.Provider, {
-						value = addTags,
-					}, styleProviderProps.children),
+					TagsContext = React.createElement(
+						TagsContext.Provider,
+						{
+							value = addTags,
+						},
+						if Flags.FoundationStyleSheetContext
+							then React.createElement(StyleSheetContextWrapper, {
+								setStyleSheetRef = setStyleSheetRef,
+							}, styleProviderProps.children)
+							else styleProviderProps.children
+					),
 					StyleSheet = React.createElement(StyleSheet, {
 						theme = props.theme :: Theme,
 						device = props.device :: Device,
 						tags = tags,
 						derives = styleProviderProps.derives,
-						DONOTUSE_colorUpdate = styleProviderProps.DONOTUSE_colorUpdate,
+						sheetRef = styleProviderProps.sheetRef,
+						setStyleSheetRef = if Flags.FoundationStyleSheetContext then setStyleSheetRef else nil,
 					}),
 				}
 		),

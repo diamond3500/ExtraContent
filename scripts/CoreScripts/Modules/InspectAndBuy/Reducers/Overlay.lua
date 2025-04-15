@@ -5,7 +5,7 @@
 ]]
 
 local CorePackages = game:GetService("CorePackages")
-local Rodux = require(CorePackages.Rodux)
+local Rodux = require(CorePackages.Packages.Rodux)
 local InspectAndBuyFolder = script.Parent.Parent
 local OpenOverlay = require(InspectAndBuyFolder.Actions.OpenOverlay)
 local CloseOverlay = require(InspectAndBuyFolder.Actions.CloseOverlay)

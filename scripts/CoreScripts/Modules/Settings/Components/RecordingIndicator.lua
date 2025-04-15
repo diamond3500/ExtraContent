@@ -1,13 +1,11 @@
-local CoreGui = game:GetService("CoreGui")
 local CorePackages = game:GetService("CorePackages")
-local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 local RunService = game:GetService("RunService")
 
-local Roact = require(CorePackages.Roact)
-local Otter = require(CorePackages.Otter)
+local Roact = require(CorePackages.Packages.Roact)
+local Otter = require(CorePackages.Packages.Otter)
 local t = require(CorePackages.Packages.t)
 local AppFonts = require(CorePackages.Workspace.Packages.Style).AppFonts
-local RobloxTranslator = require(RobloxGui.Modules.RobloxTranslator)
+local RobloxTranslator = require(CorePackages.Workspace.Packages.RobloxTranslator)
 
 local SPRING_PARAMS = {
 	frequency = 4,

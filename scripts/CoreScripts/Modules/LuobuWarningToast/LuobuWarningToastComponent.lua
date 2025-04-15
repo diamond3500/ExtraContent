@@ -1,12 +1,12 @@
 local CorePackages = game:GetService("CorePackages")
 local CoreGui = game:GetService("CoreGui")
 
-local Roact = require(CorePackages.Roact)
-local UIBlox = require(CorePackages.UIBlox)
+local Roact = require(CorePackages.Packages.Roact)
+local UIBlox = require(CorePackages.Packages.UIBlox)
 local Images = UIBlox.App.ImageSet.Images
 local SlideFromTopToast = UIBlox.App.Dialog.Toast
 local RobloxGui = CoreGui:WaitForChild("RobloxGui")
-local RobloxTranslator = require(RobloxGui.Modules.RobloxTranslator)
+local RobloxTranslator = require(CorePackages.Workspace.Packages.RobloxTranslator)
 local ContentProvider = game:GetService("ContentProvider")
 local renderWithCoreScriptsStyleProvider = require(RobloxGui.Modules.Common.renderWithCoreScriptsStyleProvider)
 
@@ -23,7 +23,7 @@ function LuobuWarningToastComponent:init()
 	task.spawn(function()
 		local imageAsset = Images["icons/status/alert"].Image
 		pcall(function()
-			ContentProvider:PreloadAsync({imageAsset})
+			ContentProvider:PreloadAsync({ imageAsset })
 		end)
 		self:setState({
 			isLoaded = true,

@@ -2,10 +2,10 @@
 local CorePackages = game:GetService("CorePackages")
 local Players = game:GetService("Players")
 
-local Cryo = require(CorePackages.Cryo)
-local Roact = require(CorePackages.Roact)
-local RoactRodux = require(CorePackages.RoactRodux)
-local UIBlox = require(CorePackages.UIBlox)
+local Cryo = require(CorePackages.Packages.Cryo)
+local Roact = require(CorePackages.Packages.Roact)
+local RoactRodux = require(CorePackages.Packages.RoactRodux)
+local UIBlox = require(CorePackages.Packages.UIBlox)
 local t = require(CorePackages.Packages.t)
 
 local TnsModule = script.Parent.Parent
@@ -62,7 +62,6 @@ local CELL_THEME_OVERRIDES = {
 local CELL_HEIGHT = 72
 
 local ReportMenu = Roact.PureComponent:extend("ReportMenu")
-
 
 local VoiceIndicatorWrapper = function(props)
 	local voiceServiceState = React.useContext(VoiceStateContext.Context)
@@ -173,12 +172,11 @@ function ReportMenu:getPlayerList()
 		end
 	end
 	-- sort by display name in alphabetical order
-	local sorted = Cryo.List.sort(list, function (p1, p2)
+	local sorted = Cryo.List.sort(list, function(p1, p2)
 		return p1.DisplayName:lower() < p2.DisplayName:lower()
 	end)
 	return sorted
 end
-
 
 local categoryTitles = {
 	[Constants.Category.Voice] = "CoreScripts.InGameMenu.Report.Title.VoiceChat",
@@ -191,8 +189,7 @@ function ReportMenu:categoryTitle()
 end
 
 function ReportMenu:renderHeaderBar()
-
-	local leftButton;
+	local leftButton
 	if self.props.canNavigateBack then
 		leftButton = if GetFFlagUIBloxUseNewHeaderBar()
 			then makeBackButton(self.navigateBack)
@@ -229,7 +226,7 @@ function ReportMenu:renderHeaderBar()
 	else
 		return Roact.createElement("Frame", {
 			BackgroundTransparency = 1,
-			Position = UDim2.fromOffset(24, 6),	-- centered
+			Position = UDim2.fromOffset(24, 6), -- centered
 			Size = UDim2.new(1, -48, 1, -12),
 		}, {
 			Roact.createElement(SearchBar, {
@@ -238,26 +235,26 @@ function ReportMenu:renderHeaderBar()
 				autoCaptureFocus = true,
 				onTextChanged = self.onTextChanged,
 				onCancelled = self.onCancel,
-			})
+			}),
 		})
 	end
 end
 
 function ReportMenu:renderContents()
 	local props = self.props
-	local voiceReportFlow = self.props.reportCategory == Constants.Category.Voice;
+	local voiceReportFlow = self.props.reportCategory == Constants.Category.Voice
 
 	local itemsLen = 0
 	local items = {
 		ListLayout = Roact.createElement("UIListLayout", {
 			FillDirection = Enum.FillDirection.Vertical,
 			SortOrder = Enum.SortOrder.LayoutOrder,
-		})
+		}),
 	}
 	-- game
 	if not self.state.isFilterMode and self.props.reportCategory == Constants.Category.None then
 		-- Don't show "Report Experience" in filter mode.
-		items["GameCell"] =  Roact.createElement(GameCell, {
+		items["GameCell"] = Roact.createElement(GameCell, {
 			gameId = game.GameId,
 			layoutOrder = self.getLayoutBinding("GameCell", itemsLen),
 			onActivated = function()
@@ -265,7 +262,7 @@ function ReportMenu:renderContents()
 			end,
 		})
 	end
-	itemsLen += 1;
+	itemsLen += 1
 	local canvasHeight = CELL_HEIGHT
 	-- players
 	local players = self:getPlayerList()
@@ -277,46 +274,56 @@ function ReportMenu:renderContents()
 	self.sortedUserIds = {}
 
 	for idx, player in pairs(players) do
-		local pid = tostring(player.UserId);
+		local pid = tostring(player.UserId)
 
 		if voiceReportFlow and not voiceActiveUsers[tostring(player.UserId)] then
 			continue
 		end
 		table.insert(self.sortedUserIds, player.UserId)
 
-		local memoKey = 0;
-		if voiceReportFlow then memoKey += 1 end
-		if self.props.isReportMenuOpen  then memoKey += 2 end
-		items["Divider"..pid] = Roact.createElement(Divider, {
-			LayoutOrder = self.getLayoutBinding("Divider"..pid, itemsLen),
+		local memoKey = 0
+		if voiceReportFlow then
+			memoKey += 1
+		end
+		if self.props.isReportMenuOpen then
+			memoKey += 2
+		end
+		items["Divider" .. pid] = Roact.createElement(Divider, {
+			LayoutOrder = self.getLayoutBinding("Divider" .. pid, itemsLen),
 			Size = UDim2.new(1, 0, 0, 1),
 		})
-		itemsLen += 1;
+		itemsLen += 1
 
-		items["PlayerCell"..pid] = Roact.createElement(PlayerCell, {
+		items["PlayerCell" .. pid] = Roact.createElement(PlayerCell, {
 			userId = player.UserId,
 			username = player.Name,
 			displayName = player.DisplayName,
 			hasVerifiedBadge = isPlayerVerified(player),
 			isOnline = true,
 			isSelected = false,
-			LayoutOrder = self.getLayoutBinding("PlayerCell"..pid, itemsLen),
+			LayoutOrder = self.getLayoutBinding("PlayerCell" .. pid, itemsLen),
 			onActivated = function()
 				props.openReportDialog(Constants.ReportType.Player, player)
 			end,
 			memoKey = memoKey,
 		}, {
-			VoiceIndicator = voiceReportFlow and self.props.isReportMenuOpen and Roact.createElement(VoiceIndicatorWrapper, {
-				userId = tostring(player.UserId),
-				hideOnError = true,
-				iconStyle = "SpeakerLight",
-				size = UDim2.fromOffset(36, 36),
-				onClicked = function()
-					VoiceChatServiceManager:ToggleMutePlayer(player.UserId, VoiceConstants.VOICE_CONTEXT_TYPE.REPORT_MENU)
-				end,
-			}) or nil,
+			VoiceIndicator = voiceReportFlow and self.props.isReportMenuOpen and Roact.createElement(
+				VoiceIndicatorWrapper,
+				{
+					userId = tostring(player.UserId),
+					hideOnError = true,
+					iconStyle = "SpeakerLight",
+					size = UDim2.fromOffset(36, 36),
+					onClicked = function()
+						VoiceChatServiceManager:ToggleMutePlayer(
+							player.UserId,
+							VoiceConstants.VOICE_CONTEXT_TYPE.REPORT_MENU
+						)
+					end,
+				}
+			) or nil,
 		})
-		itemsLen += 1;
+		itemsLen += 1
 
 		canvasHeight += CELL_HEIGHT + 1
 	end
@@ -324,7 +331,7 @@ function ReportMenu:renderContents()
 		LayoutOrder = self.getLayoutBinding("DividerEnd", itemsLen),
 		Size = UDim2.new(1, 0, 0, 1),
 	})
-	itemsLen += 1;
+	itemsLen += 1
 
 	-- override cell style
 	return withStyle(function(style)
@@ -339,13 +346,13 @@ function ReportMenu:renderContents()
 				Size = UDim2.fromScale(1, 1),
 				CanvasSize = UDim2.new(1, 0, 0, canvasHeight),
 				scrollingFrameRef = self.scrollingFrameRef,
-			}, items)
+			}, items),
 		})
 	end)
 end
 
 function ReportMenu:render()
-	local backButton = self.props.reportCategory ~= nil;
+	local backButton = self.props.reportCategory ~= nil
 
 	return Roact.createFragment({
 		ModalDialog = Roact.createElement(ModalDialog, {
@@ -386,37 +393,25 @@ end, function(dispatch)
 	return {
 		navigateBack = function(filterTextChanged)
 			dispatch(NavigateBack())
-			SendAnalytics(
-				Constants.Page.Listing,
-				Constants.Analytics.ReportFlowBack,
-				{
-					source = Constants.Page.Listing,
-					filterTextChanged = filterTextChanged
-				}
-			)
+			SendAnalytics(Constants.Page.Listing, Constants.Analytics.ReportFlowBack, {
+				source = Constants.Page.Listing,
+				filterTextChanged = filterTextChanged,
+			})
 		end,
 		closeDialog = function(filterTextChanged)
 			dispatch(EndReportFlow())
-			SendAnalytics(
-				Constants.Page.Listing,
-				Constants.Analytics.ReportFlowAbandoned,
-				{
-					source = Constants.Page.Listing,
-					filterTextChanged = filterTextChanged
-				}
-			)
+			SendAnalytics(Constants.Page.Listing, Constants.Analytics.ReportFlowAbandoned, {
+				source = Constants.Page.Listing,
+				filterTextChanged = filterTextChanged,
+			})
 			SessionUtility.endAbuseReportSession()
 		end,
 		openReportDialog = function(reportType, targetPlayer, sortedUserIds)
 			dispatch(SelectReportListing(reportType, targetPlayer, sortedUserIds))
-			SendAnalytics(
-				Constants.Page.Listing,
-				Constants.Analytics.ReportFlowAdvance,
-				{
-					source = Constants.Page.Listing,
-					reportType = reportType
-				}
-			)
+			SendAnalytics(Constants.Page.Listing, Constants.Analytics.ReportFlowAdvance, {
+				source = Constants.Page.Listing,
+				reportType = reportType,
+			})
 		end,
 	}
 end)(ReportMenu)

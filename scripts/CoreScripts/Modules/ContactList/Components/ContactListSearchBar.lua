@@ -14,16 +14,7 @@ local Images = UIBlox.App.ImageSet.Images
 local ImageSetLabel = UIBlox.Core.ImageSet.ImageSetLabel
 local useStyle = UIBlox.Core.Style.useStyle
 
-local GetFFlagIrisUseLocalizationProvider =
-	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagIrisUseLocalizationProvider
-
-local useLocalization
-local RobloxTranslator
-if GetFFlagIrisUseLocalizationProvider() then
-	useLocalization = dependencies.Hooks.useLocalization
-else
-	RobloxTranslator = require(RobloxGui.Modules.RobloxTranslator)
-end
+local useLocalization = dependencies.Hooks.useLocalization
 
 export type Props = {
 	layoutOrder: number?,
@@ -55,15 +46,10 @@ local ContactListSearchBar = function(passedProps)
 		end
 	end, { props.onSearchChanged })
 
-	local searchFriendsLabel
-	if GetFFlagIrisUseLocalizationProvider() then
-		local localized = useLocalization({
-			searchFriendsLabel = "Feature.Call.Prompt.SearchFriends",
-		})
-		searchFriendsLabel = localized.searchFriendsLabel
-	else
-		searchFriendsLabel = RobloxTranslator:FormatByKey("Feature.Call.Prompt.SearchFriends")
-	end
+	local localized = useLocalization({
+		searchFriendsLabel = "Feature.Call.Prompt.SearchFriends",
+	})
+	local searchFriendsLabel = localized.searchFriendsLabel
 
 	return React.createElement("Frame", {
 		Size = UDim2.new(1, -48, 0, props.searchBarHeight),

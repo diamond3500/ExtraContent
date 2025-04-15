@@ -9,11 +9,24 @@ local AssetTraversalUtils = require(root.util.AssetTraversalUtils)
 local ConstantsInterface = require(root.ConstantsInterface)
 
 local getFFlagUGCValidationRemoveRotationCheck = require(root.flags.getFFlagUGCValidationRemoveRotationCheck)
+local getFFlagUGCValidateFixDeprecatedTransparency = require(root.flags.getFFlagUGCValidateFixDeprecatedTransparency)
 
-return function(transparentPart: MeshPart, inst: Instance, assetTypeEnum: Enum.AssetType): boolean
+return function(
+	transparentPart: MeshPart,
+	inst: Instance,
+	instOrig: Instance,
+	assetTypeEnum: Enum.AssetType,
+	validationContext: Types.ValidationContext
+): boolean
 	local minMaxBounds: Types.BoundsData = {}
 	if Enum.AssetType.DynamicHead == assetTypeEnum then
-		AssetTraversalUtils.calculateBounds(assetTypeEnum, inst :: MeshPart, CFrame.new(), minMaxBounds)
+		AssetTraversalUtils.calculateBounds(
+			assetTypeEnum,
+			if getFFlagUGCValidateFixDeprecatedTransparency() then instOrig :: MeshPart else inst :: MeshPart,
+			CFrame.new(),
+			minMaxBounds,
+			if getFFlagUGCValidateFixDeprecatedTransparency() then validationContext else nil
+		)
 		if getFFlagUGCValidationRemoveRotationCheck() then
 			transparentPart.CFrame = CFrame.new();
 			(inst :: MeshPart).CFrame = CFrame.new()
@@ -25,13 +38,14 @@ return function(transparentPart: MeshPart, inst: Instance, assetTypeEnum: Enum.A
 		local hierarchy = AssetTraversalUtils.assetHierarchy[assetTypeEnum :: Enum.AssetType]
 		AssetTraversalUtils.traverseHierarchy(
 			nil,
-			inst :: Folder,
+			if getFFlagUGCValidateFixDeprecatedTransparency() then instOrig :: Folder else inst :: Folder,
 			assetTypeEnum,
 			nil,
 			CFrame.new(),
 			hierarchy.root,
 			hierarchy,
-			minMaxBounds
+			minMaxBounds,
+			if getFFlagUGCValidateFixDeprecatedTransparency() then validationContext else nil
 		)
 		local function moveParts(folder: Folder?, parentName: string?, parentCFrame: CFrame, name: string, details: any)
 			local meshHandle = (folder :: Folder):FindFirstChild(name) :: MeshPart

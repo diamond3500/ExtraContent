@@ -46,12 +46,18 @@ ComboButton.validateProps = t.strictInterface({
 		onActivated = t.callback,
 	}),
 	overflow = t.strictInterface({
+		-- The icon of the button
+		icon = t.optional(validateImage),
+
 		-- Is the button disabled
 		isDisabled = t.optional(t.boolean),
 
 		-- The activated callback for the button
 		onActivated = t.callback,
 	}),
+
+	-- The position of the component
+	position = t.optional(t.UDim2),
 
 	-- The size of the entire component including button and overflow
 	size = t.optional(t.UDim2),
@@ -97,6 +103,7 @@ function ComboButton:renderWithProviders(style, getSelectionCursor, getCursor)
 
 	return Roact.createElement("Frame", {
 		LayoutOrder = self.props.layoutOrder,
+		Position = self.props.position,
 		Size = size,
 		BackgroundTransparency = 1,
 	}, {
@@ -128,7 +135,7 @@ function ComboButton:renderWithProviders(style, getSelectionCursor, getCursor)
 			buttonStateColorMap = BUTTON_STATE_COLOR,
 			contentStateColorMap = CONTENT_STATE_COLOR,
 			hoverImage = Images["component_assets/bulletRight_17"],
-			icon = Images["icons/actions/truncationExpand"],
+			icon = self.props.overflow.icon or Images["icons/actions/truncationExpand"],
 			isDisabled = self.props.overflow.isDisabled,
 			isHoverBackgroundEnabled = true,
 			onActivated = self.props.overflow.onActivated,

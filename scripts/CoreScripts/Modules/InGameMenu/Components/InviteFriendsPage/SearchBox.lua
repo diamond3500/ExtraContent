@@ -1,7 +1,7 @@
 --!nonstrict
 local CorePackages = game:GetService("CorePackages")
 
-local InGameMenuDependencies = require(CorePackages.InGameMenuDependencies)
+local InGameMenuDependencies = require(CorePackages.Packages.InGameMenuDependencies)
 local Roact = InGameMenuDependencies.Roact
 local t = InGameMenuDependencies.t
 local UIBlox = InGameMenuDependencies.UIBlox

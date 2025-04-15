@@ -8,8 +8,8 @@ local CoreGui = game:GetService("CoreGui")
 local VideoCaptureService = game:GetService("VideoCaptureService")
 local FaceAnimatorService = game:GetService("FaceAnimatorService")
 
-local Roact = require(CorePackages.Roact)
-local UIBlox = require(CorePackages.UIBlox)
+local Roact = require(CorePackages.Packages.Roact)
+local UIBlox = require(CorePackages.Packages.UIBlox)
 local t = require(CorePackages.Packages.t)
 
 local ExternalEventConnection = UIBlox.Utility.ExternalEventConnection
@@ -17,7 +17,8 @@ local ExternalEventConnection = UIBlox.Utility.ExternalEventConnection
 local Modules = CoreGui.RobloxGui.Modules
 local VoiceChatServiceManager = require(Modules.VoiceChat.VoiceChatServiceManager).default
 local getCamMicPermissions = require(Modules.Settings.getCamMicPermissions)
-local FFlagAvatarChatCoreScriptSupport = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagAvatarChatCoreScriptSupport()
+local FFlagAvatarChatCoreScriptSupport =
+	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagAvatarChatCoreScriptSupport()
 
 local ANIMATION_SPEED = 3
 local FLASHING_DOT = "rbxasset://textures/AnimationEditor/FaceCaptureUI/FlashingDot.png"
@@ -44,10 +45,14 @@ function FlashingDot:init()
 	self.transparencyBinding, self.updateTransparencyBinding = Roact.createBinding(0)
 
 	self.checkNewVisibility = function()
-		local isUsingMic = self.state.hasMicPermissions and VoiceChatServiceManager.localMuted ~= nil and not VoiceChatServiceManager.localMuted
+		local isUsingMic = self.state.hasMicPermissions
+			and VoiceChatServiceManager.localMuted ~= nil
+			and not VoiceChatServiceManager.localMuted
 		-- @TODO: Remove VideoCaptureService.Active when FaceAnimatorService.VideoAnimationEnabled gives correct values for voice-enabled experiences
 		-- Note that we have to add VideoCaptureService.Active here because FaceAnimatorService.VideoAnimationEnabled returns true for voice-enabled experiences
-		local isUsingCamera = self.state.hasCameraPermissions and FaceAnimatorService.VideoAnimationEnabled and VideoCaptureService.Active
+		local isUsingCamera = self.state.hasCameraPermissions
+			and FaceAnimatorService.VideoAnimationEnabled
+			and VideoCaptureService.Active
 		local newVisible = isUsingMic or isUsingCamera
 
 		local updatedVisibility = self.state.Visible ~= newVisible
@@ -90,7 +95,10 @@ function FlashingDot:didMount()
 end
 
 function FlashingDot:didUpdate(prevProps, prevState)
-	if self.state.hasMicPermissions ~= prevProps.hasMicPermissions or self.state.hasCameraPermissions ~= prevProps.hasCameraPermissions then
+	if
+		self.state.hasMicPermissions ~= prevProps.hasMicPermissions
+		or self.state.hasCameraPermissions ~= prevProps.hasCameraPermissions
+	then
 		self.checkNewVisibility()
 	end
 end
@@ -99,7 +107,9 @@ function FlashingDot:render()
 	local image
 	local imageSize = UDim2.fromOffset(4, 4)
 	if FFlagAvatarChatCoreScriptSupport then
-		local isUsingCamera = self.state.hasCameraPermissions and FaceAnimatorService.VideoAnimationEnabled and VideoCaptureService.Active
+		local isUsingCamera = self.state.hasCameraPermissions
+			and FaceAnimatorService.VideoAnimationEnabled
+			and VideoCaptureService.Active
 		if self.state.isUsingMic then
 			image = FLASHING_DOT
 		elseif isUsingCamera then
@@ -115,8 +125,8 @@ function FlashingDot:render()
 		ZIndex = 2,
 		BorderSizePixel = 0,
 		BackgroundTransparency = 1,
-		Visible = self.state.Visible
-	},  {
+		Visible = self.state.Visible,
+	}, {
 		FlashingDot = Roact.createElement("ImageLabel", {
 			BackgroundTransparency = 1,
 			AnchorPoint = if FFlagAvatarChatCoreScriptSupport then Vector2.new(0.5, 0.5) else nil,
@@ -134,10 +144,12 @@ function FlashingDot:render()
 			event = FaceAnimatorService:GetPropertyChangedSignal("VideoAnimationEnabled"),
 			callback = self.checkNewVisibility,
 		}),
-		AnimationConnection = if self.state.Visible then Roact.createElement(ExternalEventConnection, {
-			event = RunService.RenderStepped,
-			callback = self.animationConnection,
-		}) else nil,
+		AnimationConnection = if self.state.Visible
+			then Roact.createElement(ExternalEventConnection, {
+				event = RunService.RenderStepped,
+				callback = self.animationConnection,
+			})
+			else nil,
 	})
 end
 

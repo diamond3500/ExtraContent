@@ -1,6 +1,6 @@
 local CorePackages = game:GetService("CorePackages")
 
-local InGameMenuDependencies = require(CorePackages.InGameMenuDependencies)
+local InGameMenuDependencies = require(CorePackages.Packages.InGameMenuDependencies)
 local Roact = InGameMenuDependencies.Roact
 local t = InGameMenuDependencies.t
 
@@ -28,7 +28,7 @@ return function(props)
 		Size = UDim2.new(1, 0, 0, 36),
 	}, {
 		Label = withLocalization({
-			text = props.localizationKey
+			text = props.localizationKey,
 		})(function(localization)
 			return Roact.createElement(ThemedTextLabel, {
 				fontKey = "Footer",
@@ -41,6 +41,6 @@ return function(props)
 				TextTruncate = Enum.TextTruncate.AtEnd,
 				TextXAlignment = Enum.TextXAlignment.Left,
 			})
-		end)
+		end),
 	})
 end

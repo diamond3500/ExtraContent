@@ -25,6 +25,9 @@ local ANIMATION_CONFIG = {
 export type ScrollingFrameProps = {
 	controlState: ControlState,
 	scrollBarVisibility: Bindable<ScrollBarVisibility>?,
+	onCanvasPositionChanged: ((instance: ScrollingFrame) -> ())?,
+	onAbsoluteCanvasSizeChanged: ((instance: ScrollingFrame) -> ())?,
+	onAbsoluteWindowSizeChanged: ((instance: ScrollingFrame) -> ())?,
 	children: React.Node?,
 
 	AutomaticCanvasSize: Bindable<Enum.AutomaticSize>?,
@@ -94,8 +97,13 @@ local function ScrollingFrame(scrollingFrameProps: ScrollingFrameProps, ref: Rea
 		[React.Change.CanvasPosition] = if props.scrollBarVisibility == "Auto"
 			then function(rbx)
 				setIsScrollBarVisible(true, HIDE_SCROLLBAR_DELAY)
+				if props.onCanvasPositionChanged then
+					props.onCanvasPositionChanged(rbx)
+				end
 			end
-			else nil,
+			else props.onCanvasPositionChanged,
+		[React.Change.AbsoluteCanvasSize] = props.onAbsoluteCanvasSizeChanged,
+		[React.Change.AbsoluteWindowSize] = props.onAbsoluteWindowSizeChanged,
 
 		ref = ref,
 	}, props.children)

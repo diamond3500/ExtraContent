@@ -4,11 +4,13 @@ local React = require(Packages.React)
 
 local View = require(Foundation.Components.View)
 local ScrollView = require(Foundation.Components.ScrollView)
+local useTokens = require(Foundation.Providers.Style.useTokens)
 local ControlState = require(Foundation.Enums.ControlState)
 type ControlState = ControlState.ControlState
 
 local function StoryScrolling(props)
 	local controls = props.controls
+	local tokens = useTokens()
 
 	return React.createElement(View, {
 		tag = "row gap-large auto-xy",
@@ -27,17 +29,11 @@ local function StoryScrolling(props)
 		}, {
 			React.createElement(View, {
 				Size = UDim2.fromOffset(120, 75),
-				backgroundStyle = {
-					Transparency = 0,
-					Color3 = Color3.new(0, 1, 1),
-				},
+				backgroundStyle = tokens.Color.Extended.Turquoise.Turquoise_500,
 			}),
 			React.createElement(View, {
 				Size = UDim2.fromOffset(120, 75),
-				backgroundStyle = {
-					Transparency = 0,
-					Color3 = Color3.new(1, 0, 1),
-				},
+				backgroundStyle = tokens.Color.Extended.Magenta.Magenta_500,
 			}),
 		}),
 		Horizontal = React.createElement(ScrollView, {
@@ -54,17 +50,11 @@ local function StoryScrolling(props)
 		}, {
 			React.createElement(View, {
 				Size = UDim2.fromOffset(120, 75),
-				backgroundStyle = {
-					Transparency = 0,
-					Color3 = Color3.new(0, 1, 1),
-				},
+				backgroundStyle = tokens.Color.Extended.Turquoise.Turquoise_500,
 			}),
 			React.createElement(View, {
 				Size = UDim2.fromOffset(120, 75),
-				backgroundStyle = {
-					Transparency = 0,
-					Color3 = Color3.new(1, 0, 1),
-				},
+				backgroundStyle = tokens.Color.Extended.Magenta.Magenta_500,
 			}),
 		}),
 	})

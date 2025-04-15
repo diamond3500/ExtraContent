@@ -4,8 +4,7 @@ local Chrome = script:FindFirstAncestor("Chrome")
 local CorePackages = game:GetService("CorePackages")
 local React = require(CorePackages.Packages.React)
 local ChromeService = require(Chrome.Service)
-local ChromeUtils = require(Chrome.Service.ChromeUtils)
-local LocalStore = require(Chrome.Service.LocalStore)
+local ChromeUtils = require(Chrome.ChromeShared.Service.ChromeUtils)
 local VideoCaptureService = game:GetService("VideoCaptureService")
 local FaceAnimatorService = game:GetService("FaceAnimatorService")
 local SocialService = game:GetService("SocialService")
@@ -21,38 +20,31 @@ local TopBarConstants = require(TopBar.Constants)
 
 local SelfieViewModule = Chrome.Parent.SelfieView
 local GetFFlagSelfieViewEnabled = require(SelfieViewModule.Flags.GetFFlagSelfieViewEnabled)
-local GetFFlagTweakedMicPinning = require(Chrome.Flags.GetFFlagTweakedMicPinning)
-local FFlagSelfViewFixes = require(Chrome.Flags.GetFFlagSelfViewFixes)()
-local FFlagEnableChromeFTUX = require(Chrome.Flags.GetFFlagEnableChromeFTUX)()
-local FFlagFixSelfViewPopin = game:DefineFastFlag("FixSelfViewPopin", false)
-local GetFFlagSelfViewVisibilityFix = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagSelfViewVisibilityFix
-local GetFFlagUseSelfieViewFlatIcon = require(Chrome.Flags.GetFFlagUseSelfieViewFlatIcon)
-local GetFFlagSelfieViewRedStatusDot = require(SelfieViewModule.Flags.GetFFlagSelfieViewRedStatusDot)
-local GetFFlagSelfieViewV4 = require(RobloxGui.Modules.Flags.GetFFlagSelfieViewV4)
-local GetFFlagDisableSelfViewDefaultOpen = require(Chrome.Flags.GetFFlagDisableSelfViewDefaultOpen)
 local GetFFlagChromeSupportSocialService = require(Chrome.Flags.GetFFlagChromeSupportSocialService)
 local GetFFlagChromeSelfViewIgnoreCoreGui = require(Chrome.Flags.GetFFlagChromeSelfViewIgnoreCoreGui)
-local GetFFlagAddChromeActivatedEvents = require(Chrome.Flags.GetFFlagAddChromeActivatedEvents)
+local GetFFlagChromeTrackWindowPosition = require(Chrome.Flags.GetFFlagChromeTrackWindowPosition)
+local GetFFlagChromeTrackWindowStatus = require(Chrome.Flags.GetFFlagChromeTrackWindowStatus)
+local FFlagDisableCameraOnCoreGuiDisabled = game:DefineFastFlag("DisableCameraOnCoreGuiDisabled", false)
+
+local SharedFlags = require(CorePackages.Workspace.Packages.SharedFlags)
+local FFlagChromeSelfieViewUsePolicy = SharedFlags.FFlagChromeSelfieViewUsePolicy
+local FFlagSelfViewFixes = SharedFlags.GetFFlagSelfViewFixes()
 
 local SelfieView = require(SelfieViewModule)
 local FaceChatUtils = require(SelfieViewModule.Utils.FaceChatUtils)
 local SizingUtils = require(SelfieViewModule.Utils.SizingUtils)
-local AvailabilitySignalState = require(Chrome.Service.ChromeUtils).AvailabilitySignalState
-local WindowSizeSignal = require(Chrome.Service.WindowSizeSignal)
+local SelfieViewPolicy = require(SelfieViewModule.Utils.SelfieViewPolicy)
+local AvailabilitySignalState = require(Chrome.ChromeShared.Service.ChromeUtils).AvailabilitySignalState
+local WindowSizeSignal = require(Chrome.ChromeShared.Service.WindowSizeSignal)
 
-local AppCommonLib = require(CorePackages.Workspace.Packages.AppCommonLib)
-local activatedSignal = AppCommonLib.Signal.new()
-
-local ViewportUtil = require(Chrome.Service.ViewportUtil)
+local ViewportUtil = require(Chrome.ChromeShared.Service.ViewportUtil)
 local startingSize = SizingUtils.getSize(ViewportUtil.screenSize:get(), false)
 local windowSize = WindowSizeSignal.new(startingSize.X, startingSize.Y)
-local Constants = require(Chrome.Unibar.Constants)
+local Constants = require(Chrome.ChromeShared.Unibar.Constants)
 local ICON_SIZE = UDim2.new(0, Constants.ICON_SIZE, 0, Constants.ICON_SIZE)
 
 local Analytics = require(RobloxGui.Modules.SelfView.Analytics).new()
-local startingWindowPosition = if GetFFlagSelfieViewV4()
-	then UDim2.new(0, TopBarConstants.ScreenSideOffset, 0, Constants.WINDOW_DEFAULT_PADDING)
-	else UDim2.new(1, -95, 0, 165)
+local startingWindowPosition = UDim2.new(0, TopBarConstants.ScreenSideOffset, 0, Constants.WINDOW_DEFAULT_PADDING)
 -- TODO: Add Localizations
 local ID = Constants.SELFIE_VIEW_ID
 local LABEL = "CoreScripts.TopBar.SelfViewLabel"
@@ -64,7 +56,9 @@ end)
 local selfViewVisibleConnection: RBXScriptConnection? = nil
 local selfViewHiddenConnection: RBXScriptConnection? = nil
 
-ChromeService:updateWindowPosition(ID, startingWindowPosition)
+if not GetFFlagChromeTrackWindowPosition() then
+	ChromeService:updateWindowPosition(ID, startingWindowPosition)
+end
 
 local selfieViewChromeIntegration = ChromeService:register({
 	id = ID,
@@ -74,58 +68,32 @@ local selfieViewChromeIntegration = ChromeService:register({
 	-- Relevant ticket: https://roblox.atlassian.net/browse/APPEXP-817
 	-- hotkeyCodes = { Enum.KeyCode.LeftControl, Enum.KeyCode.LeftAlt, Enum.KeyCode.T },
 	windowSize = windowSize,
-	startingWindowPosition = startingWindowPosition,
-	windowDefaultOpen = if GetFFlagSelfieViewV4() then not GetFFlagDisableSelfViewDefaultOpen() else nil,
-	windowAnchorPoint = if GetFFlagSelfieViewV4() then Vector2.new(0, 0) else nil,
+	windowDefaultOpen = false,
 	initialAvailability = AvailabilitySignalState.Unavailable,
+	persistWindowState = GetFFlagChromeTrackWindowPosition() or GetFFlagChromeTrackWindowStatus() or nil,
 	activated = function()
-		if FFlagEnableChromeFTUX then
-			LocalStore.storeForLocalPlayer(ID, true)
-		end
 		ChromeService:toggleWindow(ID)
 	end,
-	isActivated = if GetFFlagAddChromeActivatedEvents()
-		then function()
-			return mappedSelfieWindowOpenSignal:get()
-		end
-		else nil,
+	isActivated = function()
+		return mappedSelfieWindowOpenSignal:get()
+	end,
 	draggable = true,
 	cachePosition = true,
 	components = {
-		Icon = if GetFFlagUseSelfieViewFlatIcon()
-			then function(props)
-				return React.createElement("Frame", {
-					Size = ICON_SIZE,
-					BackgroundTransparency = 1,
-				}, {
-					CommonIcon("icons/controls/selfieOff", "icons/controls/selfie", mappedSelfieWindowOpenSignal),
-					CameraStatusDot = if GetFFlagSelfieViewV4()
-						then if SelfieView.useCameraOn() and not ChromeService:isWindowOpen(ID)
-							then React.createElement(SelfieView.CameraStatusDot, {
-								Position = if GetFFlagSelfieViewRedStatusDot()
-									then UDim2.new(1, -7, 1, -7)
-									else UDim2.fromScale(0.8, 0.7),
-								ZIndex = 2,
-							})
-							else nil
-						else SelfieView.useCameraOn() and React.createElement(SelfieView.CameraStatusDot, {
-							Position = if GetFFlagSelfieViewRedStatusDot()
-								then UDim2.new(1, -7, 1, -7)
-								else UDim2.fromScale(0.8, 0.7),
-							ZIndex = 2,
-						}) or nil,
-				}, {})
-			end
-			else function(_)
-				return if GetFFlagSelfViewVisibilityFix()
-					then React.createElement(SelfieView.Icon, {
-						activatedSignal = activatedSignal,
-						outerContainerFrameName = ID,
-					}, {})
-					else React.createElement(SelfieView.Icon, {
-						activatedSignal = activatedSignal,
-					}, {})
-			end,
+		Icon = function(props)
+			return React.createElement("Frame", {
+				Size = ICON_SIZE,
+				BackgroundTransparency = 1,
+			}, {
+				CommonIcon("icons/controls/selfieOff", "icons/controls/selfie", mappedSelfieWindowOpenSignal),
+				CameraStatusDot = if SelfieView.useCameraOn() and not ChromeService:isWindowOpen(ID)
+					then React.createElement(SelfieView.CameraStatusDot, {
+						Position = UDim2.fromScale(0.8, 0.7),
+						ZIndex = 2,
+					})
+					else nil,
+			}, {})
+		end,
 		Window = function(_)
 			local connectionObject: any = ChromeService:dragConnection(ID)
 			return React.createElement(SelfieView.Window, {
@@ -150,6 +118,10 @@ end, true)
 local updateAvailability = function(): ()
 	local coreGuiEnabled = StarterGui:GetCoreGuiEnabled(Enum.CoreGuiType.SelfView)
 	if not GetFFlagChromeSelfViewIgnoreCoreGui() and not coreGuiEnabled then
+		-- If CoreGuiType disabled while camera is on, turn it off
+		if FFlagDisableCameraOnCoreGuiDisabled and FaceChatUtils.isCameraOn() then
+			FaceChatUtils.toggleVideoAnimation()
+		end
 		selfieViewChromeIntegration.availability:unavailable()
 		return
 	end
@@ -168,25 +140,6 @@ local updateAvailability = function(): ()
 		return
 	end
 
-	local shouldPin
-	if GetFFlagTweakedMicPinning() then
-		if FFlagFixSelfViewPopin then
-			shouldPin = FaceAnimatorService:IsStarted() and FaceAnimatorService.VideoAnimationEnabled
-		else
-			shouldPin = FaceAnimatorService.VideoAnimationEnabled
-		end
-	else
-		shouldPin = if FFlagFixSelfViewPopin
-			then FaceAnimatorService:IsStarted()
-				and (FaceAnimatorService.VideoAnimationEnabled or FaceAnimatorService.AudioAnimationEnabled)
-			else FaceAnimatorService.VideoAnimationEnabled or FaceAnimatorService.AudioAnimationEnabled
-	end
-
-	if shouldPin and not GetFFlagUseSelfieViewFlatIcon() then
-		selfieViewChromeIntegration.availability:pinned()
-		return
-	end
-
 	selfieViewChromeIntegration.availability:available()
 end
 
@@ -194,6 +147,17 @@ local reportSettings = function()
 	local permissions: FaceChatUtils.Permissions = FaceChatUtils.getPermissions()
 	Analytics:reportExperienceSettings(true, permissions.placeCamEnabled, permissions.placeMicEnabled)
 	Analytics:reportUserAccountSettings(permissions.userCamEnabled, permissions.userMicEnabled)
+end
+
+if FFlagChromeSelfieViewUsePolicy then
+	local policy = SelfieViewPolicy.PolicyImplementation.read()
+	local eligibleForSelfieViewFeature = if policy
+		then SelfieViewPolicy.Mapper(policy).eligibleForSelfieViewFeature()
+		else false
+
+	if not eligibleForSelfieViewFeature then
+		selfieViewChromeIntegration.availability:forceUnavailable()
+	end
 end
 
 if GetFFlagSelfieViewEnabled() and game:GetEngineFeature("VideoCaptureService") then

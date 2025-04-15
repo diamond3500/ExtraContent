@@ -1,11 +1,9 @@
 local CorePackages = game:GetService("CorePackages")
-local CoreGui = game:GetService("CoreGui")
 local InspectAndBuyFolder = script.Parent.Parent
-local Roact = require(CorePackages.Roact)
-local RoactRodux = require(CorePackages.RoactRodux)
-local Cryo = require(CorePackages.Cryo)
-local UIBlox = require(CorePackages.UIBlox)
-local VerifiedBadges = require(CorePackages.Workspace.Packages.VerifiedBadges)
+local Roact = require(CorePackages.Packages.Roact)
+local RoactRodux = require(CorePackages.Packages.RoactRodux)
+local Cryo = require(CorePackages.Packages.Cryo)
+local UIBlox = require(CorePackages.Packages.UIBlox)
 local AppFonts = require(CorePackages.Workspace.Packages.Style).AppFonts
 local UIBloxImages = UIBlox.App.ImageSet.Images
 local UIBloxIconSize = UIBlox.App.Constant.IconSize
@@ -14,16 +12,11 @@ local Favorites = require(InspectAndBuyFolder.Components.Favorites)
 local UtilityFunctions = require(InspectAndBuyFolder.UtilityFunctions)
 local Colors = require(InspectAndBuyFolder.Colors)
 local Constants = require(InspectAndBuyFolder.Constants)
-local RobloxTranslator = require(CoreGui.RobloxGui.Modules.RobloxTranslator)
 local getSelectionImageObjectRegular = require(InspectAndBuyFolder.getSelectionImageObjectRegular)
 
 local InspectAndBuyContext = require(InspectAndBuyFolder.Components.InspectAndBuyContext)
 
-local FFlagAttributionInInspectAndBuy = require(InspectAndBuyFolder.Flags.FFlagAttributionInInspectAndBuy)
-
 local PremiumIcon = UIBloxImages["icons/status/premium"]
-local BY_KEY = "InGame.InspectMenu.Label.By"
-local TEXT_SIZE_SMALL = 12
 local TITLE_TEXT_SIZE = 20
 local FAVORITES_SIZE = 16
 local ASSET_NAME_SIZE = 50
@@ -65,7 +58,6 @@ end
 function DetailsText:render()
 	self:setText()
 	local view = self.props.view
-	local locale = self.props.locale
 	local showFavoritesCount = self.props.showFavoritesCount
 	local assetInfo = self.props.assetInfo or {}
 	local partOfBundle = assetInfo.parentBundleId ~= nil
@@ -73,7 +65,6 @@ function DetailsText:render()
 	local multipleBundles = partOfBundle and #assetBundles > 1
 
 	local showPremiumIcon = assetInfo.premiumPricing ~= nil
-	local creatorHasVerifiedBadge = assetInfo.creatorHasVerifiedBadge or false
 	local premiumIconPadding = showPremiumIcon and (UIBloxIconSize.Regular + PREMIUM_ICON_PADDING) or 0
 	-- add notification when inspecting layered clothing asset on R6
 	local layeredClothingOnR6 = Constants.LayeredAssetTypes[assetInfo.assetTypeId] ~= nil
@@ -158,33 +149,6 @@ function DetailsText:render()
 						MaxTextSize = 32,
 					}),
 				}),
-				CreatorLabelContainer = if FFlagAttributionInInspectAndBuy
-					then nil
-					else Roact.createElement("Frame", {
-						BackgroundTransparency = 1,
-						LayoutOrder = 2,
-						Size = UDim2.new(1, 0, 0, CREATOR_SIZE),
-					}, {
-						CreatorLabelWrapper = Roact.createElement(VerifiedBadges.EmojiWrapper, {
-							emoji = if creatorHasVerifiedBadge then VerifiedBadges.emoji.verified else "",
-						}, {
-							CreatorLabel = Roact.createElement("TextLabel", {
-								AutomaticSize = Enum.AutomaticSize.XY,
-								BackgroundTransparency = 1,
-								Text = RobloxTranslator:FormatByKeyForLocale(
-									BY_KEY,
-									locale,
-									{ CREATOR = self.creator }
-								),
-								Font = AppFonts.default:getDefault(),
-								TextScaled = false,
-								TextSize = TEXT_SIZE_SMALL,
-								TextColor3 = Colors.White,
-								TextXAlignment = Enum.TextXAlignment.Left,
-								TextYAlignment = Enum.TextYAlignment.Center,
-							}),
-						}),
-					}),
 				FavoriteContainer = showFavoritesCount and Roact.createElement(Favorites),
 			})
 		end,

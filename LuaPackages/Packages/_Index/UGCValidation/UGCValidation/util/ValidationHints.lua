@@ -3,6 +3,12 @@
 --[[
 	ValidationHints.lua provides functions which give hints for how to change what's being validated so it passes
 
+	preprocessDataAsync()
+		returns the data required for calculateScaleToValidateBoundsAsync() to run
+
+	isPreprocessDataCached()
+		returns whether the data required for calculateScaleToValidateBoundsAsync() is cached
+
 	calculateScaleToValidateBoundsAsync()
 		returns the scale require to uniformally scale the model by so it passes validation bounds checks (and using which proportions type)
 ]]
@@ -15,9 +21,13 @@ local Types = require(root.util.Types)
 local BoundsCalculator = require(root.util.BoundsCalculator)
 local BoundsDataUtils = require(root.util.BoundsDataUtils)
 local ParseContentIds = require(root.util.ParseContentIds)
+local getMeshInfo = require(root.util.getMeshInfo)
+local getMeshVerts = require(root.util.getMeshVerts)
+local calculateMinMax = require(root.util.calculateMinMax)
 
 local getFFlagUGCValidateCalculateScaleToValidateBounds =
 	require(root.flags.getFFlagUGCValidateCalculateScaleToValidateBounds)
+local getFFlagUGCValidateUseMeshSizeProperty = require(root.flags.getFFlagUGCValidateUseMeshSizeProperty)
 
 local ValidationHints = {}
 
@@ -174,11 +184,116 @@ local function createFinalResults(scalingWindow: any): Types.ExtraDataValidateBo
 	return results
 end
 
+function ValidationHints.preprocessDataAsync(
+	allBodyData: Types.AllBodyParts,
+	validationContext: Types.ValidationContext
+): Types.PreprocessDataResult
+	local validateAllMeshPartsSuccess, validateAllMeshPartsErrors = validateAllMeshParts(allBodyData, validationContext)
+	if not validateAllMeshPartsSuccess then
+		return {
+			ok = false,
+			errors = validateAllMeshPartsErrors :: { string },
+		} :: Types.ErrorValidateBoundsResult
+	end
+
+	local meshDataResults = {}
+	for _, assetInfo in Constants.ASSET_TYPE_INFO do
+		if not assetInfo.isBodyPart then
+			continue
+		end
+		for subPartName in assetInfo.subParts do
+			assert(allBodyData[subPartName].ClassName == "MeshPart")
+			local meshPart = allBodyData[subPartName] :: MeshPart
+
+			local success, failureReasons, meshInfoOpt = getMeshInfo(meshPart, validationContext)
+			if not success then
+				return {
+					ok = false,
+					errors = failureReasons :: { string },
+				} :: Types.ErrorValidateBoundsResult
+			end
+			local meshInfo = meshInfoOpt :: Types.MeshInfo
+
+			meshDataResults[meshPart.MeshId] = {}
+			local data = meshDataResults[meshPart.MeshId]
+
+			local vertsOpt
+			success, failureReasons, vertsOpt = getMeshVerts(meshInfo, validationContext)
+			if not success then
+				return {
+					ok = false,
+					errors = failureReasons :: { string },
+				} :: Types.ErrorValidateBoundsResult
+			end
+			data.verts = vertsOpt :: { Vector3 }
+
+			if not getFFlagUGCValidateUseMeshSizeProperty() then
+				local verts = data.verts
+				if not verts or 0 == #verts then
+					return {
+						ok = false,
+						errors = { "Mesh: " .. meshInfo.fullName .. " contains no verts" },
+					} :: Types.ErrorValidateBoundsResult
+				end
+
+				for _, vertPos in verts do
+					data.meshMin, data.meshMax = calculateMinMax(data.meshMin, data.meshMax, vertPos, vertPos)
+				end
+			end
+		end
+	end
+	return {
+		ok = true,
+		cache = { meshData = meshDataResults } :: Types.DataCache,
+	} :: Types.MainPreprocessDataResult
+end
+
+function ValidationHints.isPreprocessDataCached(allBodyData: Types.AllBodyParts, dataCache: Types.DataCache): boolean
+	local meshData = dataCache.meshData
+	for _, assetInfo in Constants.ASSET_TYPE_INFO do
+		if not assetInfo.isBodyPart then
+			continue
+		end
+		for subPartName in pairs(assetInfo.subParts) do
+			local part = allBodyData[subPartName]
+			if not part or part.ClassName ~= "MeshPart" then
+				continue
+			end
+
+			local meshPart = part :: MeshPart
+			if meshPart.MeshId == "" then
+				continue
+			end
+
+			if not meshData then
+				return false
+			end
+
+			local meshDataForPart = meshData[meshPart.MeshId]
+			if not meshDataForPart then
+				return false
+			end
+
+			if not meshDataForPart.verts then
+				return false
+			end
+
+			if not getFFlagUGCValidateUseMeshSizeProperty() then
+				if not meshDataForPart.meshMin or not meshDataForPart.meshMax then
+					return false
+				end
+			end
+		end
+	end
+	return true
+end
+
 local FullBodyName = "FullBody"
 local OverallName = "Overall"
 function ValidationHints.calculateScaleToValidateBoundsAsync(
 	allBodyData: Types.AllBodyParts,
-	validationContext: Types.ValidationContext
+	validationContext: Types.ValidationContext,
+	dataCache: Types.DataCache?
 ): Types.ValidateBoundsResult
 	if not getFFlagUGCValidateCalculateScaleToValidateBounds() then
 		return {
@@ -197,7 +312,7 @@ function ValidationHints.calculateScaleToValidateBoundsAsync(
 
 	-- first we get the bounds data for each part
 	local partsMetricsSuccess, partsMetricsErrors, allPartsMetricsOpt =
-		BoundsCalculator.calculateIndividualFullBodyPartsData(allBodyData, validationContext)
+		BoundsCalculator.calculateIndividualFullBodyPartsData(allBodyData, validationContext, dataCache)
 	if not partsMetricsSuccess then
 		return {
 			ok = false,

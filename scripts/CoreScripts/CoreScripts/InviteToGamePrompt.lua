@@ -23,7 +23,7 @@ local GetFFlagLuaInExperienceCoreScriptsGameInviteUnification =
 	require(Modules.Flags.GetFFlagLuaInExperienceCoreScriptsGameInviteUnification)
 local FFlagLuaEnableGameInviteModalInvitePrompt = game:DefineFastFlag("LuaEnableGameInviteModalInvitePromptV2", false)
 
-local IXPServiceWrapper = require(Modules.Common.IXPServiceWrapper)
+local IXPServiceWrapper = require(CorePackages.Workspace.Packages.IxpServiceWrapper).IXPServiceWrapper
 local Diag = require(CorePackages.Workspace.Packages.Analytics).AnalyticsReporters.Diag
 
 local EventStream = require(CorePackages.Workspace.Packages.Analytics).AnalyticsReporters.EventStream

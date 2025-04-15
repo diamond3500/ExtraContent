@@ -1,7 +1,6 @@
 --!nonstrict
-local CoreGui = game:GetService("CoreGui")
-local RobloxGui = CoreGui:WaitForChild("RobloxGui", math.huge)
-local Constants = require(RobloxGui.Modules.Common.Constants)
+local CorePackages = game:GetService("CorePackages")
+local Constants = require(CorePackages.Workspace.Packages.CoreScriptsCommon).Constants
 local RobloxReplicatedStorage = game:GetService('RobloxReplicatedStorage')
 local FFlagGetJoinDataRemoteFunctionEnabled = game:DefineFastFlag("GetJoinDataRemoteFunctionEnabled", false)
 
@@ -29,10 +28,10 @@ if FFlagGetJoinDataRemoteFunctionEnabled then
     local RemoteFunction_GetJoinData = Instance.new("RemoteFunction")
     RemoteFunction_GetJoinData.Name = "GetJoinData"
     RemoteFunction_GetJoinData.Parent = RobloxReplicatedStorage
-    
+
     local function getJoinData(player)
         return player:GetJoinData()
     end
-    
+
     RemoteFunction_GetJoinData.OnServerInvoke = getJoinData
 end

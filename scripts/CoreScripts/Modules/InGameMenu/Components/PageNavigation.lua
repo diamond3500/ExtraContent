@@ -1,7 +1,7 @@
 --!nonstrict
 local CorePackages = game:GetService("CorePackages")
 
-local InGameMenuDependencies = require(CorePackages.InGameMenuDependencies)
+local InGameMenuDependencies = require(CorePackages.Packages.InGameMenuDependencies)
 local Otter = InGameMenuDependencies.Otter
 local Roact = InGameMenuDependencies.Roact
 local RoactRodux = InGameMenuDependencies.RoactRodux
@@ -55,7 +55,7 @@ function NavigationButton:init(props)
 
 	self.motor = Otter.createGroupMotor({
 		fillProgress = startingFillProgress,
-		hoverTransparency = startingHoverTransparency
+		hoverTransparency = startingHoverTransparency,
 	})
 
 	self.motor:onStep(function(values)
@@ -111,14 +111,20 @@ function NavigationButton:renderWithSelectionCursor(getSelectionCursor)
 					})
 				end,
 				[Roact.Event.InputBegan] = function(_, input)
-					if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+					if
+						input.UserInputType == Enum.UserInputType.MouseButton1
+						or input.UserInputType == Enum.UserInputType.Touch
+					then
 						self:setState({
 							pressing = true,
 						})
 					end
 				end,
 				[Roact.Event.InputEnded] = function(_, input)
-					if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+					if
+						input.UserInputType == Enum.UserInputType.MouseButton1
+						or input.UserInputType == Enum.UserInputType.Touch
+					then
 						self:setState({
 							pressing = false,
 						})
@@ -137,7 +143,10 @@ function NavigationButton:renderWithSelectionCursor(getSelectionCursor)
 						BackgroundTransparency = 1,
 						Image = props.image,
 						ImageColor3 = style.Theme.IconEmphasis.Color,
-						ImageTransparency = divideTransparency(style.Theme.IconEmphasis.Transparency, showPressEffect and 2 or 1),
+						ImageTransparency = divideTransparency(
+							style.Theme.IconEmphasis.Transparency,
+							showPressEffect and 2 or 1
+						),
 						Position = UDim2.new(0, NAV_ICON_LEFT_PADDING, 0.5, 0),
 						Size = UDim2.new(0, NAV_ICON_SIZE, 0, NAV_ICON_SIZE),
 						ZIndex = 3,
@@ -150,7 +159,10 @@ function NavigationButton:renderWithSelectionCursor(getSelectionCursor)
 						Position = UDim2.new(0, NAV_ICON_LEFT_PADDING + NAV_ICON_SIZE + NAV_ICON_TEXT_PADDING, 0.5, 0),
 						Size = UDim2.new(1, -TEXT_SIZE_INSET, 1, 0),
 						Text = localized.text,
-						TextTransparency = divideTransparency(style.Theme.TextEmphasis.Transparency, showPressEffect and 2 or 1),
+						TextTransparency = divideTransparency(
+							style.Theme.TextEmphasis.Transparency,
+							showPressEffect and 2 or 1
+						),
 						TextXAlignment = Enum.TextXAlignment.Left,
 						ZIndex = 3,
 					}),
@@ -188,7 +200,7 @@ local function PageNavigation(props)
 		Layout = Roact.createElement("UIListLayout", {
 			SortOrder = Enum.SortOrder.LayoutOrder,
 			HorizontalAlignment = Enum.HorizontalAlignment.Right,
-		})
+		}),
 	}
 
 	local pageCount = #Pages.pagesByIndex
@@ -212,7 +224,7 @@ local function PageNavigation(props)
 			if index < pageCount then
 				frameChildren["Divider" .. layoutOrder] = Roact.createElement(Divider, {
 					LayoutOrder = layoutOrder,
-					Size = UDim2.new(1, -DIVIDER_INDENT, 0, 1)
+					Size = UDim2.new(1, -DIVIDER_INDENT, 0, 1),
 				})
 
 				layoutOrder = layoutOrder + 1
@@ -236,7 +248,7 @@ end, function(dispatch)
 	return {
 		setCurrentPage = function(pageKey)
 			dispatch(SetCurrentPage(pageKey))
-			SendAnalytics( "open_" .. pageKey .. "_tab", Constants.AnalyticsMenuActionName, {})
+			SendAnalytics("open_" .. pageKey .. "_tab", Constants.AnalyticsMenuActionName, {})
 		end,
 	}
 end)(PageNavigation)

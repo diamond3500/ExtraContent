@@ -3,7 +3,7 @@ local CorePackages = game:GetService("CorePackages")
 
 local LinkingProtocol = require(CorePackages.Workspace.Packages.LinkingProtocol).LinkingProtocol
 
-local InGameMenuDependencies = require(CorePackages.InGameMenuDependencies)
+local InGameMenuDependencies = require(CorePackages.Packages.InGameMenuDependencies)
 local Roact = InGameMenuDependencies.Roact
 local RoactRodux = InGameMenuDependencies.RoactRodux
 local t = InGameMenuDependencies.t
@@ -29,7 +29,7 @@ LeaveToAppPrompt.validateProps = t.strictInterface({
 })
 
 LeaveToAppPrompt.defaultProps = {
-	linkingProtocol = LinkingProtocol.default
+	linkingProtocol = LinkingProtocol.default,
 }
 
 function LeaveToAppPrompt:init()
@@ -38,8 +38,11 @@ function LeaveToAppPrompt:init()
 		-- TODO: deep link into home page
 		-- https://jira.rbx.com/browse/MOBLUAPP-2597
 
-		SendAnalytics(Constants.AnalyticsLeaveToHomeName, Constants.AnalyticsLeaveToHomeName,
-			{confirmed = Constants.AnalyticsLeaveToHomeName})
+		SendAnalytics(
+			Constants.AnalyticsLeaveToHomeName,
+			Constants.AnalyticsLeaveToHomeName,
+			{ confirmed = Constants.AnalyticsLeaveToHomeName }
+		)
 
 		-- Shutting down the game DM on mobile can take a little bit,
 		-- and without this it would look as if the app just froze for a few seconds instead of actually processing the tap.
@@ -71,27 +74,24 @@ function LeaveToAppPrompt:render()
 	end)
 end
 
-return RoactRodux.UNSTABLE_connect2(
-	function(state, props)
-		local canGamepadCaptureFocus = state.menuPage == Constants.LeaveToAppPromptPageKey
-			and state.displayOptions.inputType == Constants.InputType.Gamepad
-			and not state.respawn.dialogOpen
-			and state.currentZone == 1
+return RoactRodux.UNSTABLE_connect2(function(state, props)
+	local canGamepadCaptureFocus = state.menuPage == Constants.LeaveToAppPromptPageKey
+		and state.displayOptions.inputType == Constants.InputType.Gamepad
+		and not state.respawn.dialogOpen
+		and state.currentZone == 1
 
-		local canKeyboardCaptureFocus = state.menuPage == Constants.LeaveToAppPromptPageKey
-			and state.displayOptions.inputType == Constants.InputType.MouseAndKeyboard
-			and not state.respawn.dialogOpen
+	local canKeyboardCaptureFocus = state.menuPage == Constants.LeaveToAppPromptPageKey
+		and state.displayOptions.inputType == Constants.InputType.MouseAndKeyboard
+		and not state.respawn.dialogOpen
 
-		return {
-			canGamepadCaptureFocus = canGamepadCaptureFocus,
-			canKeyboardCaptureFocus = canKeyboardCaptureFocus,
-		}
-	end,
-	function(dispatch)
-		return {
-			closeMenu = function()
-				dispatch(CloseMenu)
-			end,
-		}
-	end
-)(LeaveToAppPrompt)
+	return {
+		canGamepadCaptureFocus = canGamepadCaptureFocus,
+		canKeyboardCaptureFocus = canKeyboardCaptureFocus,
+	}
+end, function(dispatch)
+	return {
+		closeMenu = function()
+			dispatch(CloseMenu)
+		end,
+	}
+end)(LeaveToAppPrompt)

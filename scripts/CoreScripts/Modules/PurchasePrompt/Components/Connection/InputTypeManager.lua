@@ -6,7 +6,7 @@ local Root = script.Parent.Parent.Parent
 local CorePackages = game:GetService("CorePackages")
 local UserInputService = game:GetService("UserInputService")
 
-local PurchasePromptDeps = require(CorePackages.PurchasePromptDeps)
+local PurchasePromptDeps = require(CorePackages.Workspace.Packages.PurchasePromptDeps)
 local Roact = PurchasePromptDeps.Roact
 
 local MouseIconOverrideService = require(CorePackages.InGameServices.MouseIconOverrideService)
@@ -16,6 +16,8 @@ local PromptState = require(Root.Enums.PromptState)
 local connectToStore = require(Root.connectToStore)
 
 local ExternalEventConnection = require(script.Parent.ExternalEventConnection)
+
+local FFlagFilterPurchasePromptInputDispatch = game:DefineFastFlag("FilterPurchasePromptInputDispatch", false)
 
 local CURSOR_OVERRIDE_KEY = "PurchasePromptOverrideKey"
 
@@ -39,6 +41,11 @@ function InputTypeManager:init()
 			newEnabledStatus = false
 		end
 
+		if FFlagFilterPurchasePromptInputDispatch then
+			if newEnabledStatus == self.props.gamepadEnabled then
+				return
+			end
+		end
 		setGamepadEnabled(newEnabledStatus)
 	end
 
@@ -53,15 +60,12 @@ function InputTypeManager:render()
 end
 
 function InputTypeManager:didUpdate(prevProps, prevState)
-	local didShow = prevProps.promptState == PromptState.None
-		and self.props.promptState ~= PromptState.None
-	local didHide = prevProps.promptState ~= PromptState.None
-		and self.props.promptState == PromptState.None
+	local didShow = prevProps.promptState == PromptState.None and self.props.promptState ~= PromptState.None
+	local didHide = prevProps.promptState ~= PromptState.None and self.props.promptState == PromptState.None
 
 	local isShown = self.props.promptState ~= PromptState.None
 
-	local overrideStatus = self.props.gamepadEnabled
-		and Enum.OverrideMouseIconBehavior.ForceHide
+	local overrideStatus = self.props.gamepadEnabled and Enum.OverrideMouseIconBehavior.ForceHide
 		or Enum.OverrideMouseIconBehavior.ForceShow
 
 	-- If we're already showing the prompt and the gamepad status changed
@@ -97,9 +101,6 @@ local function mapDispatchToProps(dispatch)
 	}
 end
 
-InputTypeManager = connectToStore(
-	mapStateToProps,
-	mapDispatchToProps
-)(InputTypeManager)
+InputTypeManager = connectToStore(mapStateToProps, mapDispatchToProps)(InputTypeManager)
 
 return InputTypeManager

@@ -1,4 +1,3 @@
-local CoreGui = game:GetService("CoreGui")
 local HttpRbxApiService = game:GetService("HttpRbxApiService")
 local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
@@ -6,8 +5,8 @@ local RobloxReplicatedStorage = game:GetService("RobloxReplicatedStorage")
 local SocialService = game:GetService("SocialService")
 local TeleportService = game:GetService("TeleportService")
 
-local RobloxGui = CoreGui:WaitForChild("RobloxGui")
-local Url = require(RobloxGui.Modules.Common.Url)
+local CorePackages = game:GetService("CorePackages")
+local Url = require(CorePackages.Workspace.Packages.CoreScriptsCommon).Url
 
 local RemoteInvokeIrisInvite = Instance.new("RemoteEvent")
 RemoteInvokeIrisInvite.Name = "ContactListInvokeIrisInvite"

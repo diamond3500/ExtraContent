@@ -7,11 +7,11 @@ local CorePackages = game:GetService("CorePackages")
 local CoreGui = game:GetService("CoreGui")
 local UserInputService = game:GetService("UserInputService")
 
-local Roact = require(CorePackages.Roact)
-local RoactRodux = require(CorePackages.RoactRodux)
+local Roact = require(CorePackages.Packages.Roact)
+local RoactRodux = require(CorePackages.Packages.RoactRodux)
 local RoactGamepad = require(CorePackages.Packages.RoactGamepad)
 local t = require(CorePackages.Packages.t)
-local UIBlox = require(CorePackages.UIBlox)
+local UIBlox = require(CorePackages.Packages.UIBlox)
 
 local InteractiveAlert = UIBlox.App.Dialog.Alert.InteractiveAlert
 local ButtonType = UIBlox.App.Button.Enum.ButtonType
@@ -21,7 +21,7 @@ local withStyle = UIBlox.Style.withStyle
 local Images = UIBlox.App.ImageSet.Images
 
 local RobloxGui = CoreGui:WaitForChild("RobloxGui")
-local RobloxTranslator = require(RobloxGui.Modules.RobloxTranslator)
+local RobloxTranslator = require(CorePackages.Workspace.Packages.RobloxTranslator)
 
 local ExternalEventConnection = require(CorePackages.Workspace.Packages.RoactUtils).ExternalEventConnection
 
@@ -126,7 +126,9 @@ function PromptWithTextField:renderAlertMiddleContent()
 					Font = font.Header2.Font,
 					TextSize = font.BaseSize * font.CaptionBody.RelativeSize,
 					PlaceholderColor3 = theme.TextDefault.Color,
-					PlaceholderText = RobloxTranslator:FormatByKey("CoreScripts.AvatarEditorPrompts.OutfitNamePlaceholder"),
+					PlaceholderText = RobloxTranslator:FormatByKey(
+						"CoreScripts.AvatarEditorPrompts.OutfitNamePlaceholder"
+					),
 					Position = UDim2.new(0, 6, 0, 0),
 					Size = UDim2.new(1, -12, 1, 0),
 					TextColor3 = theme.TextEmphasis.Color,
@@ -138,7 +140,7 @@ function PromptWithTextField:renderAlertMiddleContent()
 					[Roact.Change.Text] = self.textUpdated,
 
 					[Roact.Ref] = self.textBoxRef,
-				})
+				}),
 			}),
 		})
 	end)

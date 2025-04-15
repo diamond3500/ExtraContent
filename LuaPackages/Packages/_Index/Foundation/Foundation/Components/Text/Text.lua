@@ -48,11 +48,11 @@ local defaultProps = {
 	isDisabled = false,
 }
 
-local defaultTags = "gui-object-defaults text-defaults text-size-defaults text-color-defaults"
+local DEFAULT_TAGS = "gui-object-defaults text-defaults text-size-defaults text-color-defaults"
 
 local function Text(textProps: TextProps, ref: React.Ref<GuiObject>?)
 	local defaultPropsWithStyles = if Flags.FoundationStylingPolyfill
-		then useStyledDefaults("Text", textProps.tag, defaultTags, defaultProps)
+		then useStyledDefaults("Text", textProps.tag, DEFAULT_TAGS, defaultProps)
 		else nil
 	local props = withDefaults(
 		textProps,
@@ -61,6 +61,15 @@ local function Text(textProps: TextProps, ref: React.Ref<GuiObject>?)
 
 	local isInteractable = props.onStateChanged ~= nil or props.onActivated ~= nil
 
+	local defaultTags = DEFAULT_TAGS
+	if Flags.FoundationMigrateStylingV2 then
+		local transparency = if props.backgroundStyle ~= nil
+			then indexBindable(props.backgroundStyle, "Transparency") :: any
+			else nil
+		if transparency == 0 then
+			defaultTags ..= " x-default-transparency"
+		end
+	end
 	local tagsWithDefaults = useDefaultTags(props.tag, defaultTags)
 	local tag = useStyleTags(tagsWithDefaults)
 
@@ -144,7 +153,9 @@ local function Text(textProps: TextProps, ref: React.Ref<GuiObject>?)
 			component = engineComponent,
 			onActivated = props.onActivated,
 			onStateChanged = props.onStateChanged,
-			stateLayer = if props.onStateChanged then props.stateLayer else { affordance = StateLayerAffordance.None },
+			stateLayer = if Flags.FoundationTextStateLayer
+				then props.stateLayer
+				else if props.onStateChanged then props.stateLayer else { affordance = StateLayerAffordance.None },
 			isDisabled = props.isDisabled,
 		})
 		else engineComponentProps

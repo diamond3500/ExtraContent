@@ -1,13 +1,11 @@
 local CorePackages = game:GetService("CorePackages")
-local Cryo = require(CorePackages.Cryo)
+local Cryo = require(CorePackages.Packages.Cryo)
 local Roact = require(CorePackages.Packages.Roact)
 
-local function AudioDeviceInputDebugger(
-	props: {
-		instances: { [AudioDeviceInput]: boolean },
-		mutedPlayers: { [number]: boolean },
-	}
-)
+local function AudioDeviceInputDebugger(props: {
+	instances: { [AudioDeviceInput]: boolean },
+	mutedPlayers: { [number]: boolean },
+})
 	local instances = props.instances
 	local mutedPlayers = props.mutedPlayers
 	local height = 25

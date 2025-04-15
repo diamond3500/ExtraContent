@@ -4,8 +4,8 @@ local RbxAnalyticsService = game:GetService("RbxAnalyticsService")
 
 local Modules = CoreGui.RobloxGui.Modules
 
-local Roact = require(CorePackages.Roact)
-local RoactRodux = require(CorePackages.RoactRodux)
+local Roact = require(CorePackages.Packages.Roact)
+local RoactRodux = require(CorePackages.Packages.RoactRodux)
 local RoactAppPolicy = require(CorePackages.Workspace.Packages.UniversalAppPolicy).RoactAppPolicy
 
 local ShareGame = Modules.Settings.Pages.ShareGame

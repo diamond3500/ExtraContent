@@ -1,5 +1,5 @@
 local CorePackages = game:GetService("CorePackages")
-local Roact = require(CorePackages.Roact)
+local Roact = require(CorePackages.Packages.Roact)
 
 local Constants = require(script.Parent.Parent.Constants)
 local FRAME_HEIGHT = Constants.UtilityBarFormatting.FrameHeight
@@ -14,7 +14,7 @@ local FullScreenDropDownButton = require(script.Parent.FullScreenDropDownButton)
 local DropDown = require(script.Parent.DropDown)
 
 local BUTTON_SIZE = UDim2.new(0, CS_BUTTON_WIDTH, 0, FRAME_HEIGHT)
-local CLIENT_SERVER_NAMES = {"Client", "Server"}
+local CLIENT_SERVER_NAMES = { "Client", "Server" }
 
 local ClientServerButton = Roact.Component:extend("ClientServerButton")
 
@@ -52,7 +52,6 @@ function ClientServerButton:render()
 			onSelection = self.dropDownCallback,
 			layoutOrder = layoutOrder,
 		})
-
 	elseif useDropDown then
 		return Roact.createElement(DropDown, {
 			buttonSize = UDim2.new(0, SMALL_CS_BUTTON_WIDTH, 0, SMALL_FRAME_HEIGHT),
@@ -67,7 +66,7 @@ function ClientServerButton:render()
 			BackgroundTransparency = 1,
 			LayoutOrder = layoutOrder,
 		}, {
-			ClientButton = Roact.createElement('TextButton', {
+			ClientButton = Roact.createElement("TextButton", {
 				Text = CLIENT_SERVER_NAMES[1],
 				TextSize = FONT_SIZE,
 				TextColor3 = FONT_COLOR,
@@ -80,7 +79,7 @@ function ClientServerButton:render()
 
 				[Roact.Event.Activated] = onClientButton,
 			}),
-			ServerButton = Roact.createElement('TextButton', {
+			ServerButton = Roact.createElement("TextButton", {
 				Text = CLIENT_SERVER_NAMES[2],
 				TextSize = FONT_SIZE,
 				TextColor3 = FONT_COLOR,
@@ -93,7 +92,7 @@ function ClientServerButton:render()
 				LayoutOrder = 2,
 
 				[Roact.Event.Activated] = onServerButton,
-			})
+			}),
 		})
 	end
 end

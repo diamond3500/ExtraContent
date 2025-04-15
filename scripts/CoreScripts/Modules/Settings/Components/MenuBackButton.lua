@@ -3,8 +3,8 @@ local CorePackages = game:GetService("CorePackages")
 local CoreGui = game:GetService("CoreGui")
 local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 
-local Roact = require(CorePackages.Roact)
-local UIBlox = require(CorePackages.UIBlox)
+local Roact = require(CorePackages.Packages.Roact)
+local UIBlox = require(CorePackages.Packages.UIBlox)
 local t = require(CorePackages.Packages.t)
 local Images = UIBlox.App.ImageSet.Images
 local ImageSetLabel = UIBlox.Core.ImageSet.ImageSetLabel
@@ -23,6 +23,7 @@ MenuBackButton.validateProps = t.strictInterface({
 	HubBar = t.instanceOf("ImageLabel"),
 	backEnabled = t.boolean,
 	BackBarRef = t.optional(t.table),
+	LayoutOrder = t.optional(t.integer),
 })
 
 MenuBackButton.defaultProps = {
@@ -61,7 +62,7 @@ function MenuBackButton:updateViewport()
 	if utility:IsSmallTouchScreen() then
 		textSize = Theme.textSize(18)
 	elseif isTenFootInterface then
-		textSize =Theme.textSize(36)
+		textSize = Theme.textSize(36)
 	end
 
 	self.updateTextSizeConstraintBinding(textSize)
@@ -96,8 +97,9 @@ function MenuBackButton:render()
 	return Roact.createElement("Frame", {
 		BorderSizePixel = 0,
 		BackgroundTransparency = 1,
-		AnchorPoint = Vector2.new(0.5, 0),
-		LayoutOrder = -1,
+		AnchorPoint = Vector2.new(0, 0),
+		Position = UDim2.new(0, 0, 0, 0),
+		LayoutOrder = self.props.LayoutOrder,
 		Visible = Roact.joinBindings({ self.state.text, self.visibleBinding }):map(function(value)
 			return self.props.backEnabled and value[1] ~= nil and value[2]
 		end),
@@ -105,7 +107,9 @@ function MenuBackButton:render()
 			local size: any = value[1]
 			local buttonHeight: number = value[2]
 			if size and buttonHeight then
-				return UDim2.new(size.X, UDim.new(0, buttonHeight + yPadding))
+				return UDim2.new(
+				UDim.new(size.X.Scale * 0.5, size.X.Offset * 0.5),
+				UDim.new(0, (buttonHeight + yPadding)))
 			else
 				return UDim2.new()
 			end
@@ -135,7 +139,9 @@ function MenuBackButton:render()
 			PaddingTop = if Theme.UIBloxThemeEnabled then UDim.new(0, 10) else UDim.new(0, 0),
 		}),
 		ImageButton = Roact.createElement("ImageButton", {
-			Image = if Theme.UIBloxThemeEnabled then "" else "rbxasset://textures/ui/Settings/MenuBarAssets/MenuButton.png",
+			Image = if Theme.UIBloxThemeEnabled
+				then ""
+				else "rbxasset://textures/ui/Settings/MenuBarAssets/MenuButton.png",
 			BorderSizePixel = 0,
 			BackgroundColor3 = Theme.color(backgroundColor),
 			BackgroundTransparency = Theme.transparency(backgroundColor, 1),

@@ -2,7 +2,7 @@ local CorePackages = game:GetService("CorePackages")
 local React = require(CorePackages.Packages.React)
 
 local Modules = game:GetService("CoreGui").RobloxGui.Modules
-local Colors = require(Modules.Common.Constants).COLORS
+local Colors = require(CorePackages.Workspace.Packages.CoreScriptsCommon).Constants.COLORS
 local Constants = require(Modules.Settings.Pages.ShareGame.Constants)
 local UserLib = require(CorePackages.Workspace.Packages.UserLib)
 local UserLibConstants = UserLib.Utils.Constants

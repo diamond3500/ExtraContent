@@ -3,8 +3,6 @@ local Chrome = script:FindFirstAncestor("Chrome")
 local CorePackages = game:GetService("CorePackages")
 local Players = game:GetService("Players")
 local CrossExperienceVoice = require(CorePackages.Workspace.Packages.CrossExperienceVoice)
-local GetFFlagEnablePartyMicIconInChrome =
-	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagEnablePartyMicIconInChrome
 local GetFFlagEnableCrossExpVoice = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagEnableCrossExpVoice
 
 local ChromeService = require(Chrome.Service)
@@ -31,7 +29,7 @@ end)
 
 local integration = nil
 
-if GetFFlagEnablePartyMicIconInChrome() and GetFFlagEnableCrossExpVoice() then
+if GetFFlagEnableCrossExpVoice() then
 	integration = ChromeService:register({
 		id = Constants.TOGGLE_MIC_INTEGRATION_ID,
 		label = "CoreScripts.TopBar.ToggleMic",

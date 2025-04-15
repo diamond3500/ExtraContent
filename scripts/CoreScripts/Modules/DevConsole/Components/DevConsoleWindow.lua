@@ -6,8 +6,8 @@ local UserInputService = game:GetService("UserInputService")
 
 local setMouseVisibility = require(script.Parent.Parent.Util.setMouseVisibility)
 
-local Roact = require(CorePackages.Roact)
-local RoactRodux = require(CorePackages.RoactRodux)
+local Roact = require(CorePackages.Packages.Roact)
+local RoactRodux = require(CorePackages.Packages.RoactRodux)
 local DevConsole = script.Parent.Parent
 
 local Constants = require(DevConsole.Constants)
@@ -42,11 +42,10 @@ function DevConsoleWindow:onCloseClicked()
 		self.props.onCloseCallback(false)
 	end
 	self.props.dispatchSetDevConsolVisibility(false)
-
 end
 
 function DevConsoleWindow:init()
-	self.setDevConsoleSize = function (self, topLeft, bottomRight)
+	self.setDevConsoleSize = function(self, topLeft, bottomRight)
 		local x = bottomRight.X - topLeft.X
 		local y = bottomRight.Y - topLeft.Y
 
@@ -98,7 +97,7 @@ function DevConsoleWindow:didMount()
 	-- we need to run this delay before grabbing the size of the frame
 	-- because the DevconsoleWindow is mounted before the ScreenGui
 	-- is resized to the correct screen size.
-	delay(0, function ()
+	delay(0, function()
 		if self.ref.current then
 			local absPos1 = self.ref.current.AbsolutePosition
 			local absPos2 = self.ref.current.ResizeButton.AbsolutePosition
@@ -123,9 +122,7 @@ function DevConsoleWindow:didUpdate(previousProps, previousState)
 
 	if self.props.isMinimized and (GuiService.SelectedCoreObject == self.ref.current) then
 		GuiService.SelectedCoreObject = nil
-
-	elseif self.props.isVisible ~= previousProps.isVisible or
-		self.props.currTabIndex ~= previousProps.currTabIndex then
+	elseif self.props.isVisible ~= previousProps.isVisible or self.props.currTabIndex ~= previousProps.currTabIndex then
 		local inputTypeEnum = UserInputService:GetLastInputType()
 		local isGamepad = (Enum.UserInputType.Gamepad1 == inputTypeEnum)
 
@@ -155,7 +152,6 @@ function DevConsoleWindow:render()
 
 	local elements = {}
 	local borderSizePixel = BORDER_SIZE
-
 
 	if formFactor ~= Constants.FormFactor.Large then
 		-- none desktop/Large are full screen devconsoles
@@ -227,11 +223,10 @@ function DevConsoleWindow:render()
 		local mainViewSizeOffset = UDim2.new(0, 0, 0, TopSectionHeight)
 		mainViewSize = mainViewSize - mainViewSizeOffset
 
-
 		if self.ref.current and isVisible and tabList then
 			local targetTab = tabList[currTabIndex]
 			if targetTab then
-				elements["MainView"] = Roact.createElement( targetTab.tab, {
+				elements["MainView"] = Roact.createElement(targetTab.tab, {
 					size = mainViewSize,
 					formFactor = formFactor,
 					isDeveloperView = isDeveloperView,
@@ -258,10 +253,10 @@ function DevConsoleWindow:render()
 				Size = windowSize,
 				Position = windowPos,
 				BackgroundTransparency = 1,
-			},elements),
+			}, elements),
 
-			ResizeButton = 	Roact.createElement("ImageButton", {
-				Position =  UDim2.new(1, 0, 1, 0),
+			ResizeButton = Roact.createElement("ImageButton", {
+				Position = UDim2.new(1, 0, 1, 0),
 				Size = UDim2.new(0, borderSizePixel, 0, borderSizePixel),
 				BackgroundColor3 = Color3.new(0, 0, 0),
 				Modal = true,
@@ -286,13 +281,13 @@ end
 
 local function mapDispatchToProps(dispatch)
 	return {
-		dispatchChangeDevConsoleSize = function (size)
+		dispatchChangeDevConsoleSize = function(size)
 			dispatch(ChangeDevConsoleSize(size))
 		end,
-		dispatchSetDevConsolVisibility = function (isVisible)
+		dispatchSetDevConsolVisibility = function(isVisible)
 			dispatch(SetDevConsoleVisibility(isVisible))
 		end,
-		dispatchSetDevConsoleMinimized = function (isMinimized)
+		dispatchSetDevConsoleMinimized = function(isMinimized)
 			dispatch(SetDevConsoleMinimized(isMinimized))
 		end,
 	}

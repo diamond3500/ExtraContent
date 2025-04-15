@@ -35,6 +35,7 @@ local Constants = require(root.Constants)
 local Thumbnailer = require(root.util.Thumbnailer)
 local setupTransparentPartSize = require(root.util.setupTransparentPartSize)
 local floatEquals = require(root.util.floatEquals)
+local Types = require(root.util.Types)
 
 local CAMERA_FOV: number = 70
 local IMAGE_SIZE: number = 100
@@ -184,7 +185,12 @@ local function calculateMaxAspectRatio(assetTypeEnum: Enum.AssetType): number
 	return math.max(maxX, maxZ) / minY
 end
 
-return function(inst: Instance?, assetTypeEnum: Enum.AssetType, isServerNullable: boolean?): (boolean, { string }?)
+return function(
+	inst: Instance?,
+	assetTypeEnum: Enum.AssetType,
+	isServerNullable: boolean?,
+	validationContext: Types.ValidationContext
+): (boolean, { string }?)
 	if not inst then
 		return true
 	end
@@ -211,7 +217,8 @@ return function(inst: Instance?, assetTypeEnum: Enum.AssetType, isServerNullable
 	local instClone: Instance = (inst :: Instance):Clone()
 	local transparentPart: MeshPart = Instance.new("MeshPart") :: MeshPart
 
-	local transparentPartSucc: boolean = setupTransparentPartSize(transparentPart, instClone, assetTypeEnum)
+	local transparentPartSucc: boolean =
+		setupTransparentPartSize(transparentPart, instClone, inst, assetTypeEnum, validationContext)
 	if not transparentPartSucc then
 		return false, { "Error getting part sizes " }
 	end

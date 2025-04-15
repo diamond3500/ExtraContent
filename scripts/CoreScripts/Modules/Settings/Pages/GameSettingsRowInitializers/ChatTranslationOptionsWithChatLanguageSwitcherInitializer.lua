@@ -10,7 +10,7 @@ local HttpService = game:GetService('HttpService')
 local CoreGui = game:GetService("CoreGui")
 local CorePackages = game:GetService("CorePackages")
 local RobloxGui = CoreGui:WaitForChild("RobloxGui")
-local Url = require(RobloxGui.Modules.Common.Url)
+local Url = require(CorePackages.Workspace.Packages.CoreScriptsCommon).Url
 local Settings = UserSettings()
 local GameSettings = Settings.GameSettings
 local Players = game:GetService("Players")
@@ -22,7 +22,6 @@ local log = require(CorePackages.Workspace.Packages.CoreScriptsInitializer).Core
 local FFlagFixChatLanguageSwitcherLabel = game:DefineFastFlag("FixChatLanguageSwitcherLabel", false)
 local GetFStringChatTranslationEnabledLocales = require(RobloxGui.Modules.Flags.GetFStringChatTranslationEnabledLocales)
 local ChatTranslationSettingsMoved = game:GetEngineFeature("TextChatServiceSettingsSaved")
-local FFlagInExperienceSettingsRefactorAnalytics = require(RobloxGui.Modules.Flags.FFlagInExperienceSettingsRefactorAnalytics)
 
 return function(menu, layoutOrderTable, reportSettingsChangeForAnalyticsFunc)
     -- English is set up as a special case since we always need an option representing English to be available. Otherwise supported languages are determined via fast string
@@ -124,19 +123,12 @@ return function(menu, layoutOrderTable, reportSettingsChangeForAnalyticsFunc)
         menu.ChatLanguageSelectorFrame.LayoutOrder = layoutOrderTable["ChatLanguageSelectorFrame"]
 
         local function onChatSelectionIndexUpdated(newIndex)
-			if FFlagInExperienceSettingsRefactorAnalytics then
-				local old_locale = GameSettings.ChatTranslationLocale
-				local new_locale = indexToLocaleMapping[newIndex]
-				GameSettings.ChatTranslationLocale = new_locale
-				LocalPlayer:SetChatTranslationSettingsLocaleId(new_locale)
-				chatLocaleToReport = new_locale
-				reportSettingsChangeForAnalyticsFunc('chat_translation_locale', old_locale, new_locale)
-			else
-				GameSettings.ChatTranslationLocale = indexToLocaleMapping[newIndex]
-				LocalPlayer:SetChatTranslationSettingsLocaleId(indexToLocaleMapping[newIndex])
-				chatLocaleToReport = indexToLocaleMapping[newIndex]
-			end
-           
+			local old_locale = GameSettings.ChatTranslationLocale
+			local new_locale = indexToLocaleMapping[newIndex]
+			GameSettings.ChatTranslationLocale = new_locale
+			LocalPlayer:SetChatTranslationSettingsLocaleId(new_locale)
+			chatLocaleToReport = new_locale
+			reportSettingsChangeForAnalyticsFunc('chat_translation_locale', old_locale, new_locale)
         end
 
         menu.ChatLanguageSelectorMode.IndexChanged:connect(

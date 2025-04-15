@@ -10,10 +10,20 @@ local getEngineFeatureUGCValidateMeshInsideMesh = require(root.flags.getEngineFe
 local getEngineFeatureEngineUGCValidateLCCagingRelevancy =
 	require(root.flags.getEngineFeatureEngineUGCValidateLCCagingRelevancy)
 local getFStringLCCageQualityDocumentationLink = require(root.flags.getFStringLCCageQualityDocumentationLink)
+local getEngineFeatureUGCValidateCageMeshDistance = require(root.flags.getEngineFeatureUGCValidateCageMeshDistance)
+local getFFlagUGCValidateImportOrigin = require(root.flags.getFFlagUGCValidateImportOrigin)
+local getFIntUGCValidateImportOriginMax = require(root.flags.getFIntUGCValidateImportOriginMax)
+
+local getEngineFeatureEngineUGCValidationCageUVDuplicates =
+	require(root.flags.getEngineFeatureEngineUGCValidationCageUVDuplicates)
+local getEngineFeatureUGCValidateExtraShoesTests = require(root.flags.getEngineFeatureUGCValidateExtraShoesTests)
 
 local validateVerticesSimilarity = require(root.validation.validateVerticesSimilarity)
 local validateLCCagingRelevancy = require(root.validation.validateLCCagingRelevancy)
 local validateRenderMeshInsideOuterCageMesh = require(root.validation.validateRenderMeshInsideOuterCageMesh)
+local validateCageMeshDistance = require(root.validation.validateCageMeshDistance)
+local validateCageUVDuplicates = require(root.validation.validateCageUVDuplicates)
+local ValidateModifiedCageArea = require(root.validation.ValidateModifiedCageArea)
 
 local Types = require(root.util.Types)
 
@@ -74,6 +84,61 @@ local function validateLCCageQuality(
 	if getEngineFeatureUGCValidateMeshInsideMesh() then
 		local success: boolean, failedReason: { string }? =
 			validateRenderMeshInsideOuterCageMesh(wrapLayer, outerCage, meshInfoRenderMesh, validationContext)
+		if not success then
+			table.insert(issues, table.concat(failedReason :: { string }, "\n"))
+			validationResult = false
+		end
+	end
+
+	if getFFlagUGCValidateImportOrigin() then
+		local importOriginMagnitude = wrapLayer.ImportOrigin.Position.Magnitude
+		local importOriginMax = getFIntUGCValidateImportOriginMax() / 100
+		if importOriginMagnitude > importOriginMax then
+			table.insert(
+				issues,
+				string.format(
+					"WrapLayer ImportOrigin.Position is %.2f from the origin. The max is %.2f. You should move the Position closer to the origin",
+					importOriginMagnitude,
+					importOriginMax
+				)
+			)
+			validationResult = false
+		end
+	end
+
+	if getEngineFeatureUGCValidateCageMeshDistance() then
+		local success: boolean, failedReason: { string }? = validateCageMeshDistance(
+			innerCage,
+			outerCage,
+			meshInfoRenderMesh,
+			wrapLayer.ReferenceOrigin,
+			wrapLayer.CageOrigin,
+			validationContext
+		)
+		if not success then
+			table.insert(issues, table.concat(failedReason :: { string }, "\n"))
+			validationResult = false
+		end
+	end
+
+	if getEngineFeatureEngineUGCValidationCageUVDuplicates() then
+		local success: boolean, failedReason: { string }? =
+			validateCageUVDuplicates(innerCage, outerCage, meshInfoRenderMesh, validationContext)
+		if not success then
+			table.insert(issues, table.concat(failedReason :: { string }, "\n"))
+			validationResult = false
+		end
+	end
+
+	if getEngineFeatureUGCValidateExtraShoesTests() then
+		local success, failedReason = ValidateModifiedCageArea.validate(
+			innerCage,
+			wrapLayer.ReferenceOrigin,
+			outerCage,
+			wrapLayer.CageOrigin,
+			meshInfoRenderMesh,
+			validationContext
+		)
 		if not success then
 			table.insert(issues, table.concat(failedReason :: { string }, "\n"))
 			validationResult = false

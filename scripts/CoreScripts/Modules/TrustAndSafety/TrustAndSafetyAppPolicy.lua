@@ -1,5 +1,5 @@
 local CorePackages = game:GetService("CorePackages")
-local PolicyProvider = require(CorePackages.PolicyProvider)
+local PolicyProvider = require(CorePackages.Packages.PolicyProvider)
 
 local implementation = PolicyProvider.GetPolicyImplementations.MemStorageService("app-policy")
 local TrustAndSafetyAppPolicy = PolicyProvider.withGetPolicyImplementation(implementation)

@@ -1,8 +1,8 @@
 --!nonstrict
 local CorePackages = game:GetService("CorePackages")
 
-local Rodux = require(CorePackages.Rodux)
-local Cryo = require(CorePackages.Cryo)
+local Rodux = require(CorePackages.Packages.Rodux)
+local Cryo = require(CorePackages.Packages.Cryo)
 
 local Reducer = script.Parent
 local AvatarEditorPrompts = Reducer.Parent
@@ -25,7 +25,7 @@ local initialInfo = {
 	isFavorited = nil,
 
 	queue = {},
-	infoQueue = {}
+	infoQueue = {},
 }
 
 local PromptInfo = Rodux.createReducer(initialInfo, {
@@ -52,8 +52,8 @@ local PromptInfo = Rodux.createReducer(initialInfo, {
 		end
 
 		return Cryo.Dictionary.join(state, {
-			queue = Cryo.List.join(state.queue, {action.promptType}),
-			infoQueue = Cryo.List.join(state.infoQueue, {action.promptInfo})
+			queue = Cryo.List.join(state.queue, { action.promptType }),
+			infoQueue = Cryo.List.join(state.infoQueue, { action.promptInfo }),
 		})
 	end,
 

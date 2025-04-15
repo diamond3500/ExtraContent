@@ -18,7 +18,8 @@ local FFlagUseAudioInstanceAdded = game:DefineFastFlag("VoiceDefaultUseAudioInst
 	and game:GetEngineFeature("AudioInstanceAddedApiEnabled")
 local FFlagUseGetAudioInstances = game:DefineFastFlag("VoiceDefaultUseGetAudioInstances", false)
 local FFlagUseAudioDeviceRemoving = game:DefineFastFlag("VoiceDefaultUseAudioDeviceRemoving", false)
-local FFlagStopVoiceDefaultIfNotVoiceEnabled = game:DefineFastFlag("StopVoiceDefaultIfNotVoiceEnabled", false)
+
+local FFlagUseOldVoiceCurves = game:DefineFastFlag("UseOldVoiceCurvesLua", false)
 
 local function log(...)
 	if FFlagDebugLogVoiceDefault then
@@ -26,7 +27,18 @@ local function log(...)
 	end
 end
 
-if GetFFlagAvatarChatServiceEnabled() and FFlagStopVoiceDefaultIfNotVoiceEnabled then
+local legacyVoiceCurve = {}
+if FFlagUseOldVoiceCurves then
+    local MIN_DISTANCE = 7
+    local MAX_DISTANCE = 80
+    local CURVE_STEP_SIZE = 2
+    for i = MIN_DISTANCE, MAX_DISTANCE, CURVE_STEP_SIZE do
+        legacyVoiceCurve[i] = ((i - MIN_DISTANCE) - (MAX_DISTANCE - MIN_DISTANCE))^2 / (MAX_DISTANCE - MIN_DISTANCE)^2
+    end
+    legacyVoiceCurve[MAX_DISTANCE] = 0
+end
+
+if GetFFlagAvatarChatServiceEnabled() then
 	local ok: boolean, serverFeatures: number = pcall(AvatarChatService.GetServerFeaturesAsync, AvatarChatService)
 
 	if not ok then
@@ -70,6 +82,10 @@ local function addEmitterToHead(character): Instance
 	emitter.Parent = parent
 	emitter:AddTag("RbxDefaultVoiceEmitter")
 	log("Adding emitter", emitter, " to ", parent)
+
+	if FFlagUseOldVoiceCurves and VoiceChatService.DefaultDistanceAttenuation == Enum.VoiceChatDistanceAttenuationType.Legacy then
+	    emitter:SetDistanceAttenuation(legacyVoiceCurve :: any)
+	end
 	return emitter
 end
 
@@ -139,9 +155,13 @@ local function trackDevice(device: AudioDeviceInput)
 	audioDevices[device] = connections :: AudioDeviceConnections
 	if FFlagUseAudioDeviceRemoving then
 		if FFlagFixNewPlayerCheck then
-			device.Destroying:Connect(function() untrackDeviceForPlayer(device, device.Player) end)
+			device.Destroying:Connect(function()
+				untrackDeviceForPlayer(device, device.Player)
+			end)
 		else
-			device.Destroying:Connect(function() untrackDevice(device) end)
+			device.Destroying:Connect(function()
+				untrackDevice(device)
+			end)
 		end
 	end
 end

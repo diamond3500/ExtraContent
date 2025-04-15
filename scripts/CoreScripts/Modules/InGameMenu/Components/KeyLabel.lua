@@ -3,7 +3,7 @@ local TextService = game:GetService("TextService")
 local UserInputService = game:GetService("UserInputService")
 local CorePackages = game:GetService("CorePackages")
 
-local InGameMenuDependencies = require(CorePackages.InGameMenuDependencies)
+local InGameMenuDependencies = require(CorePackages.Packages.InGameMenuDependencies)
 local Roact = InGameMenuDependencies.Roact
 local UIBlox = InGameMenuDependencies.UIBlox
 local t = InGameMenuDependencies.t
@@ -35,24 +35,24 @@ local DEFAULT_BORDER_THEME = "UIEmphasis"
 local DEFAULT_TEXT_THEME = "TextEmphasis"
 
 local CONTENT_OVERRIDE_MAP = {
-	[Enum.KeyCode.Escape] = {text = "ESC", fontKey = SMALL, width = 36},
-	[Enum.KeyCode.Space] = {text = "Space", width = 92},
-	[Enum.KeyCode.LeftShift] = {text = "Shift", width = 66, alignment = Enum.TextXAlignment.Left},
-	[Enum.KeyCode.LeftControl] = {text = "Ctrl", width = 66, alignment = Enum.TextXAlignment.Left},
+	[Enum.KeyCode.Escape] = { text = "ESC", fontKey = SMALL, width = 36 },
+	[Enum.KeyCode.Space] = { text = "Space", width = 92 },
+	[Enum.KeyCode.LeftShift] = { text = "Shift", width = 66, alignment = Enum.TextXAlignment.Left },
+	[Enum.KeyCode.LeftControl] = { text = "Ctrl", width = 66, alignment = Enum.TextXAlignment.Left },
 
-	[Enum.KeyCode.LeftSuper] = {text = "Command"},
-	[Enum.KeyCode.LeftMeta] = {text = "fn"},
-	[Enum.KeyCode.LeftAlt] = {text = "Opt"},
+	[Enum.KeyCode.LeftSuper] = { text = "Command" },
+	[Enum.KeyCode.LeftMeta] = { text = "fn" },
+	[Enum.KeyCode.LeftAlt] = { text = "Opt" },
 
-	[Enum.KeyCode.Tilde] = {text = "~", fontKey = BIG},
+	[Enum.KeyCode.Tilde] = { text = "~", fontKey = BIG },
 
-	[Enum.KeyCode.F10] = {fontKey = BIG, width = 36},
-	[Enum.KeyCode.F11] = {fontKey = BIG, width = 36},
+	[Enum.KeyCode.F10] = { fontKey = BIG, width = 36 },
+	[Enum.KeyCode.F11] = { fontKey = BIG, width = 36 },
 
-	[Enum.KeyCode.Up] = {image = Assets.Images.UpArrow},
-	[Enum.KeyCode.Down] = {image = Assets.Images.DownArrow},
-	[Enum.KeyCode.Left] = {image = Assets.Images.LeftArrow},
-	[Enum.KeyCode.Right] = {image = Assets.Images.RightArrow},
+	[Enum.KeyCode.Up] = { image = Assets.Images.UpArrow },
+	[Enum.KeyCode.Down] = { image = Assets.Images.DownArrow },
+	[Enum.KeyCode.Left] = { image = Assets.Images.LeftArrow },
+	[Enum.KeyCode.Right] = { image = Assets.Images.RightArrow },
 }
 
 local validateProps = t.strictInterface({
@@ -85,7 +85,8 @@ local function getLabelWidthAndContent(input, style, textThemeKey)
 
 		return width, content
 	else
-		local text, fontKey, width, alignment do
+		local text, fontKey, width, alignment
+		do
 			local keyString = UserInputService:GetStringForKeyCode(input)
 
 			if override and override.text then
@@ -114,12 +115,7 @@ local function getLabelWidthAndContent(input, style, textThemeKey)
 				local textSize = fontStyle.RelativeSize * style.Font.BaseSize
 				local fontType = fontStyle.Font
 
-				local textWidth = TextService:GetTextSize(
-					text,
-					textSize,
-					fontType,
-					Vector2.new(math.huge, 36)
-				).X
+				local textWidth = TextService:GetTextSize(text, textSize, fontType, Vector2.new(math.huge, 36)).X
 
 				width = textWidth + CENTERED_EXTRA_WIDTH
 			end
@@ -151,11 +147,7 @@ local function KeyLabel(props)
 	return withStyle(function(style)
 		local borderTheme = style.Theme[props.borderThemeKey or DEFAULT_BORDER_THEME]
 
-		local width, content, alignment = getLabelWidthAndContent(
-			props.input,
-			style,
-			props.textThemeKey
-		)
+		local width, content, alignment = getLabelWidthAndContent(props.input, style, props.textThemeKey)
 
 		local padding
 		if alignment then
@@ -181,9 +173,9 @@ local function KeyLabel(props)
 		}, {
 			Padding = padding and Roact.createElement("UIPadding", {
 				PaddingLeft = UDim.new(0, padding),
-				PaddingRight = UDim.new(0, padding)
+				PaddingRight = UDim.new(0, padding),
 			}),
-			LabelContent = content
+			LabelContent = content,
 		})
 	end)
 end

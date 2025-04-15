@@ -7,9 +7,9 @@
 local TextService = game:GetService("TextService")
 local CorePackages = game:GetService("CorePackages")
 
-local Cryo = require(CorePackages.Cryo)
-local Roact = require(CorePackages.Roact)
-local UIBlox = require(CorePackages.UIBlox)
+local Cryo = require(CorePackages.Packages.Cryo)
+local Roact = require(CorePackages.Packages.Roact)
+local UIBlox = require(CorePackages.Packages.UIBlox)
 local t = require(CorePackages.Packages.t)
 
 local FeedbackModule = script.Parent.Parent

@@ -9,9 +9,7 @@ local DEPRECATED_ChatSendMessage
 
 local DEPRECATED_ChatStartOneToOneConversation = Requests.DEPRECATED_ChatStartOneToOneConversation
 
-local CoreGui = game:GetService("CoreGui")
-local RobloxGui = CoreGui.RobloxGui
-local RobloxTranslator = require(RobloxGui.Modules.RobloxTranslator)
+local RobloxTranslator = require(CorePackages.Workspace.Packages.RobloxTranslator)
 
 
 local DEPRECATED_ChatSendGameLinkMessage = Requests.DEPRECATED_ChatSendGameLinkMessage

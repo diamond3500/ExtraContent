@@ -6,8 +6,8 @@ local UserInputService = game:GetService("UserInputService")
 local ExternalContentSharingProtocol =
 	require(CorePackages.Workspace.Packages.ExternalContentSharingProtocol).ExternalContentSharingProtocol.default
 
-local Roact = require(CorePackages.Roact)
-local RoactRodux = require(CorePackages.RoactRodux)
+local Roact = require(CorePackages.Packages.Roact)
+local RoactRodux = require(CorePackages.Packages.RoactRodux)
 
 local ShareGame = RobloxGui.Modules.Settings.Pages.ShareGame
 local dependencies = require(CorePackages.Workspace.Packages.NotificationsCommon).ReducerDependencies
@@ -18,19 +18,20 @@ local RobloxTranslator = getTranslator()
 local mapDispatchToProps = require(ShareGame.Components.ShareInviteLinkMapDispatchToProps)
 local mapStateToProps = require(ShareGame.Components.ShareInviteLinkMapStateToProps)
 local RoduxShareLinks = dependencies.RoduxShareLinks
+local ShareLinksRodux = dependencies.ShareLinksRodux
 local RoduxNetworking = dependencies.RoduxNetworking
 local NetworkStatus = RoduxNetworking.Enum.NetworkStatus
 local Theme = require(RobloxGui.Modules.Settings.Theme)
 
+local FFlagEnableLuaAppsShareLinksPackages = require(CorePackages.Workspace.Packages.SharedFlags).FFlagEnableLuaAppsShareLinksPackages
 local GetFFlagEnableNewInviteMenu = require(RobloxGui.Modules.Flags.GetFFlagEnableNewInviteMenu)
-local GetFFlagInviteFriendsDesignUpdates = require(RobloxGui.Modules.Settings.Flags.GetFFlagInviteFriendsDesignUpdates)
 
 local ShareInviteLink = Roact.PureComponent:extend("ShareInviteLink")
 
 local CONTENTS_LEFT_RIGHT_PADDING = 12
 local CONTENTS_TOP_BOTTOM_PADDING = 8
 local SHARE_BUTTON_WIDTH = 69
-if GetFFlagInviteFriendsDesignUpdates() and GetFFlagEnableNewInviteMenu() then
+if GetFFlagEnableNewInviteMenu() then
 	CONTENTS_LEFT_RIGHT_PADDING = 16
 	CONTENTS_TOP_BOTTOM_PADDING = 12
 	SHARE_BUTTON_WIDTH = 66
@@ -92,7 +93,7 @@ function ShareInviteLink:didUpdate(oldProps: InternalProps)
 	local props: InternalProps = self.props
 
 	if oldProps.shareInviteLink == nil and self.props.shareInviteLink ~= nil then
-		local linkType = RoduxShareLinks.Enums.LinkType.ExperienceInvite.rawValue()
+		local linkType = if FFlagEnableLuaAppsShareLinksPackages then (ShareLinksRodux :: any).Enums.LinkType.ExperienceInvite.rawValue() else RoduxShareLinks.Enums.LinkType.ExperienceInvite.rawValue() -- Remove any cast with FFlagEnableLuaAppsShareLinksPackages
 		local linkId = self.props.shareInviteLink.linkId
 
 		self.props.analytics:linkGenerated({ linkType = linkType, linkId = linkId })

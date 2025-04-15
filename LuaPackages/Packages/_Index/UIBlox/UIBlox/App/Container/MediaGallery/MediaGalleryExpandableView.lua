@@ -1,4 +1,5 @@
 --!strict
+-- moving this file to LuaApps, please replicate any changes in the LuaApps file as well
 local UIBlox = script:FindFirstAncestor("UIBlox")
 local Packages = UIBlox.Parent
 local React = require(Packages.React)
@@ -228,4 +229,4 @@ local function MediaGalleryExpandableView(providedProps: Props)
 	})
 end
 
-return MediaGalleryExpandableView
+return if UIBloxConfig.moveMediaGalleryToLuaApps then nil else MediaGalleryExpandableView

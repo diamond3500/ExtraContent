@@ -5,7 +5,7 @@ local Dash = require(Packages.Dash)
 
 local Button = require(Foundation.Components.Button)
 local View = require(Foundation.Components.View)
-local ButtonSize = require(Foundation.Enums.ButtonSize)
+local InputSize = require(Foundation.Enums.InputSize)
 local ButtonVariant = require(Foundation.Enums.ButtonVariant)
 local FillBehavior = require(Foundation.Enums.FillBehavior)
 type FillBehavior = FillBehavior.FillBehavior
@@ -50,7 +50,7 @@ return {
 	end,
 	controls = {
 		text = "Click me!",
-		size = Dash.values(ButtonSize),
+		size = Dash.values(InputSize),
 		fillBehavior = {
 			FillBehavior.Fit,
 			FillBehavior.Fill,

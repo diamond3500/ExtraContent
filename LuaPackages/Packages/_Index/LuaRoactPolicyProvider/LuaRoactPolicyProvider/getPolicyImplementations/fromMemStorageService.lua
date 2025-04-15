@@ -5,6 +5,8 @@ local DefaultPlayersService = game:GetService("Players")
 local GetFFlagFixAppPolicyDefaultUserId = require(script.Parent.Parent.Flags.GetFFlagFixAppPolicyDefaultUserId)
 local FFlagLogFirstGuacRead = game:DefineFastFlag("FFlagLogFirstGuacRead", false)
 local FFlagLogAllGuacRead = game:DefineFastFlag("FFlagLogAllGuacRead", false)
+local FFlagCacheReadParsePolicy = game:DefineFastFlag("CacheReadParsePolicy", false)
+
 local CorePackages
 local LoggingProtocol
 if FFlagLogFirstGuacRead then
@@ -53,6 +55,25 @@ return function(dependencies)
 
 		local onPolicyChangedEvent = Instance.new("BindableEvent")
 
+		if FFlagCacheReadParsePolicy then
+			-- since storeKey uses player ID, let's make sure we invalidate if it ever changes
+			local userIdConn
+			local function localPlayerChanged()
+				if userIdConn then
+					userIdConn:Disconnect()
+					userIdConn = nil
+				end
+				if PlayersService.LocalPlayer then
+					userIdConn = PlayersService.LocalPlayer:GetPropertyChangedSignal("UserId"):Connect(function()
+						previouslyReadPolicy = nil
+					end)
+				end
+				previouslyReadPolicy = nil
+			end
+			PlayersService:GetPropertyChangedSignal("LocalPlayer"):Connect(localPlayerChanged)
+			localPlayerChanged()
+		end
+
 		local function onPolicyUpdated(newPolicyData)
 			-- MemStorageService will not de-duplicate the same item from storage
 			if newPolicyData ~= previouslyReadJsonValue then
@@ -72,6 +93,9 @@ return function(dependencies)
 
 		return {
 			read = function()
+				if FFlagCacheReadParsePolicy and previouslyReadPolicy then
+					return previouslyReadPolicy
+				end
 				local storeKey = getStoreKey()
 				local policyData = MemStorageService:GetItem(storeKey)
 				if policyData and #policyData > 0 then

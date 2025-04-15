@@ -1,6 +1,5 @@
-local CoreGui = game:GetService("CoreGui")
-local RobloxGui = CoreGui:WaitForChild("RobloxGui")
-local IXPServiceWrapper = require(RobloxGui.Modules.Common.IXPServiceWrapper)
+local CorePackages = game:GetService("CorePackages")
+local IXPServiceWrapper = require(CorePackages.Workspace.Packages.IxpServiceWrapper).IXPServiceWrapper
 local Players = game:GetService("Players")
 
 local config = {

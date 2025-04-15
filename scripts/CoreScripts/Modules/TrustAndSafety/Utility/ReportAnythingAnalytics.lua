@@ -1,7 +1,7 @@
 local CorePackages = game:GetService("CorePackages")
 local EventIngestService = game:GetService("EventIngestService")
 
-local Cryo = require(CorePackages.Cryo)
+local Cryo = require(CorePackages.Packages.Cryo)
 local AvatarIdentificationModule = require(CorePackages.Workspace.Packages.TnSAvatarIdentification)
 local EventIngest = require(CorePackages.Workspace.Packages.Analytics).AnalyticsReporters.EventIngest
 
@@ -22,8 +22,8 @@ local Constants = {
 		AvatarsIdentified = "ReportAnythingAvatarsIdentified",
 	},
 	Context = {
-		LegacyMenu = "ReportAbuseLegacyMenu"
-	}
+		LegacyMenu = "ReportAbuseLegacyMenu",
+	},
 }
 
 local createZeroAccumulatedParameters = function(): AccumulatedParameters
@@ -34,7 +34,7 @@ local createZeroAccumulatedParameters = function(): AccumulatedParameters
 		annotationUndoCount = 0,
 		annotationRedoCount = 0,
 		abandonedForRetake = false,
-		isPortraitMode = false
+		isPortraitMode = false,
 	}
 end
 
@@ -76,7 +76,7 @@ return {
 	end,
 	emitAvatarsIdentifiedStats = function(avatarIDStats: AvatarIDStats)
 		local statsWithMicroseconds = Cryo.Dictionary.join(avatarIDStats, {
-			duration = avatarIDStats.duration * 1e6
+			duration = avatarIDStats.duration * 1e6,
 		})
 		getEventIngest():sendEventDeferred(
 			Constants.Context.LegacyMenu,
@@ -86,5 +86,5 @@ return {
 	end,
 	clear = function()
 		accumulatedParameters = createZeroAccumulatedParameters()
-	end
+	end,
 }

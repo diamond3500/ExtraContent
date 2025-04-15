@@ -1,6 +1,6 @@
 local CorePackages = game:GetService("CorePackages")
 local React = require(CorePackages.Packages.React)
-local Roact = require(CorePackages.Roact)
+local Roact = require(CorePackages.Packages.Roact)
 
 local Constants = require(script.Parent.Parent.Constants)
 local TEXT_SIZE = Constants.DefaultFontSize.MainWindow
@@ -42,7 +42,7 @@ local function CellCheckbox(props: Props)
 
 	local onActivated = React.useCallback(function()
 		props.OnCheckBoxClicked(props.name, not isSelected)
-	end, {props.OnCheckBoxClicked, props.name, isSelected} :: {any})
+	end, { props.OnCheckBoxClicked, props.name, isSelected } :: { any })
 
 	return Roact.createElement("ImageButton", {
 		Size = size,
@@ -55,7 +55,7 @@ local function CellCheckbox(props: Props)
 		Icon = Roact.createElement("ImageLabel", {
 			Image = image,
 			Size = UDim2.new(0, CHECK_BOX_HEIGHT, 0, CHECK_BOX_HEIGHT),
-			Position = UDim2.new(0, 0, .5, -CHECK_BOX_HEIGHT / 2),
+			Position = UDim2.new(0, 0, 0.5, -CHECK_BOX_HEIGHT / 2),
 			BackgroundColor3 = backgroundColor,
 			BackgroundTransparency = 0,
 			BorderColor3 = Constants.Color.Text,

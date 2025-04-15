@@ -2,7 +2,7 @@ local Root = script.Parent.Parent.Parent
 local GuiService = game:GetService("GuiService")
 
 local CorePackages = game:GetService("CorePackages")
-local PurchasePromptDeps = require(CorePackages.PurchasePromptDeps)
+local PurchasePromptDeps = require(CorePackages.Workspace.Packages.PurchasePromptDeps)
 local Roact = PurchasePromptDeps.Roact
 local React = require(CorePackages.Packages.React)
 local ToastRodux = require(CorePackages.Workspace.Packages.ToastRodux)
@@ -10,8 +10,9 @@ local ToastRodux = require(CorePackages.Workspace.Packages.ToastRodux)
 local CoreGui = game:GetService("CoreGui")
 local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 local CoreScriptsRootProvider = require(CorePackages.Workspace.Packages.CoreScriptsRoactCommon).CoreScriptsRootProvider
-local FocusNavigationEffects = require(RobloxGui.Modules.Common.FocusNavigationEffectsWrapper)
 local FocusNavigationUtils = require(CorePackages.Workspace.Packages.FocusNavigationUtils)
+local FocusNavigationCoreScriptsWrapper = FocusNavigationUtils.FocusNavigationCoreScriptsWrapper
+local FocusRoot = FocusNavigationUtils.FocusRoot
 local FocusNavigableSurfaceIdentifierEnum = FocusNavigationUtils.FocusNavigableSurfaceIdentifierEnum
 
 local RequestType = require(Root.Enums.RequestType)
@@ -31,8 +32,8 @@ local SubscriptionPurchaseContainer = Roact.Component:extend(script.Name)
 local SELECTION_GROUP_NAME = "SubscriptionPurchaseContainer"
 
 local GetFFlagFixPlayerGuiSelectionBugOnPromptExit = require(Root.Flags.GetFFlagFixPlayerGuiSelectionBugOnPromptExit)
-local GetFFlagEnableRobloxCreditPurchase = require(Root.Flags.GetFFlagEnableRobloxCreditPurchase)
 local GetFFlagEnableSubscriptionPurchaseToast = require(Root.Flags.GetFFlagEnableSubscriptionPurchaseToast)
+local FFlagCSFocusWrapperRefactor = require(CorePackages.Workspace.Packages.SharedFlags).FFlagCSFocusWrapperRefactor
 
 function SubscriptionPurchaseContainer:init()
 	self.state = {
@@ -86,7 +87,7 @@ function SubscriptionPurchaseContainer:createElement()
 	local primaryPaymentMethod = nil
 	local secondaryPaymentMethod = nil
 	local info = props.subscriptionPurchaseInfo
-	if GetFFlagEnableRobloxCreditPurchase() and info ~= nil then
+	if info ~= nil then
 		primaryPaymentMethod = info.PrimaryPaymentProviderType
 		secondaryPaymentMethod = if info.AllPaymentProviderTypes then info.AllPaymentProviderTypes[2] else nil
 	end
@@ -146,12 +147,22 @@ function SubscriptionPurchaseContainer:render()
 		return nil
 	end
 	return Roact.createElement(CoreScriptsRootProvider, {}, {
-		FocusNavigationEffects = React.createElement(FocusNavigationEffects, {
-			selectionGroupName = SELECTION_GROUP_NAME,
-			focusNavigableSurfaceIdentifier = FocusNavigableSurfaceIdentifierEnum.CentralOverlay,
-		}, {
-			SubscriptionPurchaseContainer = self:createElement(),
-		}),
+		FocusNavigationCoreScriptsWrapper = React.createElement(
+			if FFlagCSFocusWrapperRefactor then FocusRoot else FocusNavigationCoreScriptsWrapper,
+			if FFlagCSFocusWrapperRefactor
+				then {
+					surfaceIdentifier = FocusNavigableSurfaceIdentifierEnum.CentralOverlay,
+					isIsolated = true,
+					isAutoFocusRoot = true,
+				}
+				else {
+					selectionGroupName = SELECTION_GROUP_NAME,
+					focusNavigableSurfaceIdentifier = FocusNavigableSurfaceIdentifierEnum.CentralOverlay,
+				},
+			{
+				SubscriptionPurchaseContainer = self:createElement(),
+			}
+		),
 	})
 end
 
@@ -179,9 +190,9 @@ end, function(dispatch)
 		end,
 		setCurrentToastMessage = if GetFFlagEnableSubscriptionPurchaseToast()
 			then function(toastMessage)
-				dispatch(SetCurrentToastMessage(toastMessage)) 
+				dispatch(SetCurrentToastMessage(toastMessage))
 			end
-			else nil
+			else nil,
 	}
 end)(SubscriptionPurchaseContainer)
 

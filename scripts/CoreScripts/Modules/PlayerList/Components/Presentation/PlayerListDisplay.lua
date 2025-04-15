@@ -4,11 +4,11 @@ local CoreGui = game:GetService("CoreGui")
 local GuiService = game:GetService("GuiService")
 local UserInputService = game:GetService("UserInputService")
 
-local Roact = require(CorePackages.Roact)
-local RoactRodux = require(CorePackages.RoactRodux)
-local UIBlox = require(CorePackages.UIBlox)
+local Roact = require(CorePackages.Packages.Roact)
+local RoactRodux = require(CorePackages.Packages.RoactRodux)
+local UIBlox = require(CorePackages.Packages.UIBlox)
 local t = require(CorePackages.Packages.t)
-local Otter = require(CorePackages.Otter)
+local Otter = require(CorePackages.Packages.Otter)
 
 local withStyle = UIBlox.Style.withStyle
 local IconButton = UIBlox.App.Button.IconButton
@@ -77,18 +77,24 @@ PlayerListDisplay.validateProps = t.strictInterface({
 		priority = t.number,
 	})),
 
-	playerIconInfo = t.map(t.integer, t.strictInterface({
-		isPlaceOwner = t.boolean,
-		avatarIcon = t.optional(t.table),
-		specialGroupIcon = t.optional(t.table),
-	})),
+	playerIconInfo = t.map(
+		t.integer,
+		t.strictInterface({
+			isPlaceOwner = t.boolean,
+			avatarIcon = t.optional(t.table),
+			specialGroupIcon = t.optional(t.table),
+		})
+	),
 
-	playerRelationship = t.map(t.integer, t.strictInterface({
-		isBlocked = t.boolean,
-		friendStatus = t.enum(Enum.FriendStatus),
-		isFollowing = t.boolean,
-		isFollower = t.boolean,
-	})),
+	playerRelationship = t.map(
+		t.integer,
+		t.strictInterface({
+			isBlocked = t.boolean,
+			friendStatus = t.enum(Enum.FriendStatus),
+			isFollowing = t.boolean,
+			isFollower = t.boolean,
+		})
+	),
 
 	dropDownPlayer = t.optional(t.instanceIsA("Player")),
 	dropDownVisible = t.boolean,
@@ -115,7 +121,7 @@ function PlayerListDisplay:init()
 
 	self.canvasPositionChanged = function(rbx)
 		self:setState({
-			lastCanvasPosition = rbx.CanvasPosition
+			lastCanvasPosition = rbx.CanvasPosition,
 		})
 	end
 
@@ -195,7 +201,7 @@ function PlayerListDisplay:render()
 								leaderstats = self.props.teamScores[sortedTeam.team],
 								gameStats = self.props.gameStats,
 								entrySize = self.props.entrySize,
-							})
+							}),
 						})
 					end
 					addedEntriesCount = addedEntriesCount + 1
@@ -232,7 +238,7 @@ function PlayerListDisplay:render()
 									entrySize = self.props.entrySize,
 
 									[Roact.Ref] = firstPlayer and self.firstPlayerRef or nil,
-								})
+								}),
 							})
 						end
 						firstPlayer = false
@@ -265,7 +271,7 @@ function PlayerListDisplay:render()
 								entrySize = self.props.entrySize,
 
 								[Roact.Ref] = i == 1 and self.firstPlayerRef or nil,
-							})
+							}),
 						})
 					end
 
@@ -277,8 +283,8 @@ function PlayerListDisplay:render()
 				end
 			end
 
-			local absDropDownPosition, canvasPositionOverride = self:calculateDropDownAbsPosition(
-				dropDownPosition, playerEntrySizeY)
+			local absDropDownPosition, canvasPositionOverride =
+				self:calculateDropDownAbsPosition(dropDownPosition, playerEntrySizeY)
 
 			if layoutValues.IsTenFoot then
 				return Roact.createElement("Frame", {
@@ -299,7 +305,8 @@ function PlayerListDisplay:render()
 						ScrollBarThickness = 6,
 						ScrollingEnabled = not self.props.dropDownVisible,
 						Selectable = false,
-						CanvasPosition = self.props.dropDownVisible and canvasPositionOverride or self.state.lastCanvasPosition,
+						CanvasPosition = self.props.dropDownVisible and canvasPositionOverride
+							or self.state.lastCanvasPosition,
 
 						[Roact.Change.CanvasPosition] = self.canvasPositionChanged,
 
@@ -317,7 +324,8 @@ function PlayerListDisplay:render()
 					else style.Theme.BackgroundContrast.Color
 
 				local transparencyBinding = self.minimizedBinding:map(function(value)
-					local defaultTransparency = layoutValues.OverrideBackgroundTransparency * style.Settings.PreferredTransparency
+					local defaultTransparency = layoutValues.OverrideBackgroundTransparency
+						* style.Settings.PreferredTransparency
 					local fadedTransparency = layoutValues.FadedBackgroundTransparency
 					local delta = fadedTransparency - defaultTransparency
 					return defaultTransparency + (delta * value)
@@ -366,11 +374,11 @@ function PlayerListDisplay:render()
 							else Roact.createElement("Frame", {
 								LayoutOrder = 1,
 								ClipsDescendants = true,
-								Size = UDim2.new(1, 0, 0, SmallIconSize+2),
+								Size = UDim2.new(1, 0, 0, SmallIconSize + 2),
 								BackgroundTransparency = 1,
 							}, {
 								DismissIconFrame = Roact.createElement("Frame", {
-									Size = UDim2.new(1, 0, 0, (SmallIconSize+2)*2),
+									Size = UDim2.new(1, 0, 0, (SmallIconSize + 2) * 2),
 									BackgroundColor3 = backgroundColor,
 									BackgroundTransparency = transparencyBinding,
 								}, {
@@ -385,7 +393,6 @@ function PlayerListDisplay:render()
 									}),
 								}),
 							}),
-
 
 						TitleBar = #self.props.gameStats > 0 and Roact.createElement(TitleBar, {
 							LayoutOrder = 2,
@@ -410,9 +417,13 @@ function PlayerListDisplay:render()
 								contentsVisible = dropDownContentsVisible,
 								selectedPlayer = self.props.dropDownPlayer,
 								positionY = absDropDownPosition,
-								minPositionBoundY = -self.state.scrollingFramePositionY + layoutValues.DropDownScreenSidePadding,
-								maxPositionBoundY = (self.props.screenSizeY -
-									self.state.scrollingFramePositionY - layoutValues.DropDownScreenSidePadding),
+								minPositionBoundY = -self.state.scrollingFramePositionY
+									+ layoutValues.DropDownScreenSidePadding,
+								maxPositionBoundY = (
+									self.props.screenSizeY
+									- self.state.scrollingFramePositionY
+									- layoutValues.DropDownScreenSidePadding
+								),
 							}),
 
 							ScrollingFrameClippingFrame = Roact.createElement("Frame", {
@@ -473,8 +484,8 @@ function PlayerListDisplay:render()
 								BorderSizePixel = 0,
 							}, {
 								Roact.createElement("Frame", {
-									Position = UDim2.new(0, 0, 0, -TopBottomCornerRadius-1),
-									Size = UDim2.new(1, 0, 0, TopBottomCornerRadius*2),
+									Position = UDim2.new(0, 0, 0, -TopBottomCornerRadius - 1),
+									Size = UDim2.new(1, 0, 0, TopBottomCornerRadius * 2),
 									BackgroundColor3 = backgroundColor,
 									BackgroundTransparency = transparencyBinding,
 									BorderSizePixel = 0,
@@ -503,8 +514,10 @@ function PlayerListDisplay:didUpdate(prevProps)
 			if self.props.isTenFootInterface and self.props.isUsingGamepad then
 				UserInputService.OverrideMouseIconBehavior = Enum.OverrideMouseIconBehavior.None
 			end
-			if GuiService.SelectedCoreObject and
-				GuiService.SelectedCoreObject:IsDescendantOf(self.scrollingFrameRef.current) then
+			if
+				GuiService.SelectedCoreObject
+				and GuiService.SelectedCoreObject:IsDescendantOf(self.scrollingFrameRef.current)
+			then
 				GuiService.SelectedCoreObject = nil
 			end
 			GuiService:RemoveSelectionGroup("PlayerlistGuiSelection")

@@ -3,9 +3,10 @@
 	When changing tabs, the SearchBar is updated with the last known search term
 	of the new target tab. It is also updated with the appropriate callback to
 	start a search
-]]--
+]]
+--
 local CorePackages = game:GetService("CorePackages")
-local Roact = require(CorePackages.Roact)
+local Roact = require(CorePackages.Packages.Roact)
 
 local ScrollingTextBox = require(script.Parent.ScrollingTextBox)
 
@@ -27,7 +28,7 @@ function SearchBar:render()
 	local visible = self.props.visible
 	local showClear = self.props.showClear
 
-	local iconHeight = frameHeight * .6
+	local iconHeight = frameHeight * 0.6
 
 	return Roact.createElement("Frame", {
 		Size = size,
@@ -40,14 +41,14 @@ function SearchBar:render()
 		SearchImage = Roact.createElement("ImageLabel", {
 			Name = "SearchIcon",
 			Size = UDim2.new(0, iconHeight, 0, iconHeight),
-			Position = UDim2.new(0, ICON_OFFSET, .5, -iconHeight / 2),
+			Position = UDim2.new(0, ICON_OFFSET, 0.5, -iconHeight / 2),
 			BackgroundTransparency = 1,
 			Image = Constants.Image.Search,
 		}),
 
 		ClearButton = showClear and Roact.createElement("ImageButton", {
 			Size = UDim2.new(0, -iconHeight, 0, iconHeight),
-			Position = UDim2.new(1, -ICON_OFFSET, .5, -iconHeight / 2),
+			Position = UDim2.new(1, -ICON_OFFSET, 0.5, -iconHeight / 2),
 			BackgroundTransparency = 1,
 			Image = Constants.Image.Clear,
 
@@ -58,7 +59,7 @@ function SearchBar:render()
 			Text = searchTerm and searchTerm or "",
 			TextSize = textSize,
 			Font = font,
-			Size = UDim2.new(1, - (2 * frameHeight), 1, 0),
+			Size = UDim2.new(1, -(2 * frameHeight), 1, 0),
 			Position = UDim2.new(0, ICON_OFFSET * 2 + iconHeight, 0, 0),
 			ShowNativeInput = true,
 			TextColor3 = Constants.Color.Text,

@@ -27,6 +27,7 @@ return {
 
 	isSourceAsset = require(script.isSourceAsset),
 
+	calculatePotentialAudibility = require(script.audio.calculatePotentialAudibility),
 	getAudibleVolume = require(script.audio.getAudibleVolume),
 	isAudible = require(script.audio.isAudible),
 }

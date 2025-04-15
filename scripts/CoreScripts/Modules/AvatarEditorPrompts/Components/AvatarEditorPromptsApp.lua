@@ -4,8 +4,8 @@ local GuiService = game:GetService("GuiService")
 local UserInputService = game:GetService("UserInputService")
 local Players = game:GetService("Players")
 
-local Roact = require(CorePackages.Roact)
-local RoactRodux = require(CorePackages.RoactRodux)
+local Roact = require(CorePackages.Packages.Roact)
+local RoactRodux = require(CorePackages.Packages.RoactRodux)
 local RoactGamepad = require(CorePackages.Packages.RoactGamepad)
 local t = require(CorePackages.Packages.t)
 local ExternalEventConnection = require(CorePackages.Workspace.Packages.RoactUtils).ExternalEventConnection
@@ -67,7 +67,7 @@ AvatarEditorPromptsApp.validateProps = t.strictInterface({
 
 function AvatarEditorPromptsApp:init()
 	self:setState({
-		isGamepad = GAMEPAD_INPUT_TYPES[UserInputService:GetLastInputType()] or false
+		isGamepad = GAMEPAD_INPUT_TYPES[UserInputService:GetLastInputType()] or false,
 	})
 
 	self.absoluteSizeChanged = function(rbx)
@@ -105,7 +105,7 @@ function AvatarEditorPromptsApp:render()
 			event = UserInputService.LastInputTypeChanged :: RBXScriptSignal,
 			callback = function(lastInputType)
 				self:setState({
-					isGamepad = GAMEPAD_INPUT_TYPES[lastInputType] or false
+					isGamepad = GAMEPAD_INPUT_TYPES[lastInputType] or false,
 				})
 			end,
 		}) or nil,
@@ -175,6 +175,5 @@ local function mapDispatchToProps(dispatch)
 		end,
 	}
 end
-
 
 return RoactRodux.connect(mapStateToProps, mapDispatchToProps)(AvatarEditorPromptsApp)

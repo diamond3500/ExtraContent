@@ -5,7 +5,7 @@ local HttpRbxApiService = game:GetService("HttpRbxApiService")
 
 local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 
-local Promise = require(CorePackages.Promise)
+local Promise = require(CorePackages.Packages.Promise)
 
 local httpRequest = require(RobloxGui.Modules.Common.httpRequest)
 
@@ -26,8 +26,7 @@ return function(store)
 		store:dispatch(SetGameName(result.Name))
 
 		return result.Name
-	end,
-	function()
+	end, function()
 		warn("Unable to get game name for Gamepad Menu")
 		return Promise.reject()
 	end)

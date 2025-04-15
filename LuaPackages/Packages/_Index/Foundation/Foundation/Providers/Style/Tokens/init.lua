@@ -17,12 +17,12 @@ local function getPlatformScale(device: Device)
 	return 1
 end
 
-local function getTokens(device: Device, theme: Theme, useFoundationColors: boolean?)
+local function getTokens(device: Device, theme: Theme)
 	local generators = RbxDesignFoundations.Tokens
 	local scale = getPlatformScale(device)
 	local themeTokens: typeof(generators.UIBloxDark) = if theme == Theme.Dark
-		then if useFoundationColors then generators.FoundationDark else generators.UIBloxDark
-		else if useFoundationColors then generators.FoundationLight else generators.UIBloxLight
+		then generators.FoundationDark
+		else generators.FoundationLight
 
 	local tokens = themeTokens(scale)
 
@@ -53,7 +53,7 @@ local function getTokens(device: Device, theme: Theme, useFoundationColors: bool
 	return filteredTokens
 end
 
-export type Tokens = typeof(getTokens(Device.Desktop, Theme.Dark, false))
+export type Tokens = typeof(getTokens(Device.Desktop, Theme.Dark))
 
 return {
 	getTokens = getTokens,

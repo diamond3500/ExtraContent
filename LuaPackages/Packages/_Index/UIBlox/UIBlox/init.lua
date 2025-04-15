@@ -113,9 +113,7 @@ local function initializeLibrary(configs)
 			useStyle = require(script.Core.Style.useStyle),
 			useTextSizeOffset = require(script.Core.Style.useTextSizeOffset),
 			withTextSizeOffset = require(script.Core.Style.withTextSizeOffset),
-			useStyleMetadata = if configs.enableUseStyleMetadata
-				then require(script.Core.Style.useStyleMetadata)
-				else nil,
+			useStyleMetadata = require(script.Core.Style.useStyleMetadata),
 		}),
 
 		VR = strict({
@@ -303,6 +301,9 @@ local function initializeLibrary(configs)
 			HorizontalPageMargin = lazify(function()
 				return require(script.App.Container.HorizontalPageMargin)
 			end),
+
+			-- remove when cleaning up moveMediaGalleryToLuaApps as true
+			-- start
 			calcMediaGallerySizesFromWidth = require(script.App.Container.MediaGallery.calcMediaGallerySizesFromWidth),
 			MediaGalleryPreview = lazify(function()
 				return require(script.App.Container.MediaGallery.MediaGalleryPreview)
@@ -319,6 +320,7 @@ local function initializeLibrary(configs)
 			CrossFadeAnimatedView = lazify(function()
 				return require(script.App.Container.MediaGallery.CrossFadeAnimatedView)
 			end),
+			--end
 		}),
 
 		Slider = strict({
@@ -453,12 +455,8 @@ local function initializeLibrary(configs)
 			Colors = require(script.App.Style.Colors),
 			Constants = require(script.App.Style.Constants),
 			Themes = {
-				DarkTheme = if configs.useNewThemeColorPalettes
-					then require(script.App.Style.Themes.DarkThemeNew)
-					else require(script.App.Style.Themes.DarkTheme),
-				LightTheme = if configs.useNewThemeColorPalettes
-					then require(script.App.Style.Themes.LightThemeNew)
-					else require(script.App.Style.Themes.LightTheme),
+				DarkTheme = require(script.App.Style.Themes.DarkTheme),
+				LightTheme = require(script.App.Style.Themes.LightTheme),
 			},
 			Tokens = require(script.App.Style.Tokens),
 		}),
@@ -549,6 +547,9 @@ local function initializeLibrary(configs)
 			NavigationBar = lazify(function()
 				return require(script.App.Navigation.NavigationBar)
 			end),
+			NavigationBarV2 = lazify(function()
+				return require(script.App.Navigation.NavigationBarV2)
+			end),
 			NavigationRail = lazify(function()
 				return require(script.App.Navigation.NavigationRail)
 			end),
@@ -587,6 +588,7 @@ local function initializeLibrary(configs)
 			CursorType = require(script.App.SelectionCursor.CursorType),
 		}),
 
+		-- remove when cleaning up moveDetailsPageToLuaApps as true
 		Template = strict({
 			DetailsPage = {
 				Enum = {
@@ -640,9 +642,7 @@ local function initializeLibrary(configs)
 			validateFont = require(script.App.Style.Validator.validateFont),
 			validateFontInfo = require(script.Core.Style.Validator.validateFontInfo),
 			validateTypographyInfo = require(script.Core.Style.Validator.validateTypographyInfo),
-			validateTheme = if configs.useNewThemeColorPalettes
-				then require(script.App.Style.Validator.validateThemeNew)
-				else require(script.App.Style.Validator.validateTheme),
+			validateTheme = require(script.App.Style.Validator.validateTheme),
 			validateColorInfo = require(script.Core.Style.Validator.validateColorInfo),
 			validateColorToken = require(script.Core.Style.Validator.validateColorToken),
 		},

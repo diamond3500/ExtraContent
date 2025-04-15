@@ -1,6 +1,6 @@
 local CorePackages = game:GetService("CorePackages")
 local React = require(CorePackages.Packages.React)
-local Roact = require(CorePackages.Roact)
+local Roact = require(CorePackages.Packages.Roact)
 
 local Constants = require(script.Parent.Parent.Constants)
 local FONT = Constants.Font.MainWindowHeader
@@ -24,7 +24,7 @@ local function BoxButton(props: Props)
 	-- LUAU FIXME: CLI-58211
 	local onActivated = React.useCallback(function()
 		props.onClicked(props.text)
-	end, {props.onClicked, props.text}::{any})
+	end, { props.onClicked, props.text } :: { any })
 
 	return Roact.createElement("TextButton", {
 		Text = text,

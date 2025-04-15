@@ -32,22 +32,17 @@ local function DropdownReportMenuItem(props: any)
 		dimensions.LeftWidth + dimensions.RightWidth
 	)
 
-	local labelTextHeight, setLabelTextHeight = React.useState(Constants.MenuItemHeight)
+	local labelTextHeight, setLabelTextHeight = React.useState(style.Tokens.Global.Size_500)
 	React.useEffect(function()
-		setLabelTextHeight(
-			math.max(
-				Constants.MenuItemHeight,
-				TextService:GetTextSize(
-					props.label,
-					dimensions.TextSize,
-					AppFonts.default:getMedium(),
-					Vector2.new(
-						if props.isSmallPortraitViewport then containerWidth else dimensions.LeftWidth,
-						math.huge
-					)
-				).Y
-			)
-		)
+		setLabelTextHeight(math.max(
+			style.Tokens.Global.Size_500, -- 40 for desktop, 60 for console
+			TextService:GetTextSize(
+				props.label,
+				dimensions.TextSize,
+				AppFonts.default:getMedium(),
+				Vector2.new(if props.isSmallPortraitViewport then containerWidth else dimensions.LeftWidth, math.huge)
+			).Y
+		))
 	end, {})
 
 	-- Base children components. When isSmallPortraitViewport is true, lay out vertically.

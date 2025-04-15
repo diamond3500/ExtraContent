@@ -3,7 +3,7 @@ local CorePackages = game:GetService("CorePackages")
 local GameSettings = (settings() :: any):WaitForChild("Game Options") -- TODO: we should migrate the APIs from here to CoreGui
 
 local InGameMenu = script.Parent.Parent.Parent
-local InGameMenuDependencies = require(CorePackages.InGameMenuDependencies)
+local InGameMenuDependencies = require(CorePackages.Packages.InGameMenuDependencies)
 local Roact = InGameMenuDependencies.Roact
 local RoactRodux = InGameMenuDependencies.RoactRodux
 
@@ -19,15 +19,15 @@ end
 function VideoRecordConnector:render()
 	return Roact.createElement(ExternalEventConnection, {
 		event = GameSettings:GetPropertyChangedSignal("VideoRecording"),
-        callback = function ()
+		callback = function()
 			self.props.setVideoRecording(GameSettings.VideoRecording)
 		end,
 	})
 end
 
-return RoactRodux.UNSTABLE_connect2(nil, function (dispatch)
+return RoactRodux.UNSTABLE_connect2(nil, function(dispatch)
 	return {
-        setVideoRecording = function (state)
+		setVideoRecording = function(state)
 			return dispatch(SetVideoRecording(state))
 		end,
 	}

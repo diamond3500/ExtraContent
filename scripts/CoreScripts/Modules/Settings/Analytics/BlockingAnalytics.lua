@@ -1,5 +1,5 @@
 local CorePackages = game:GetService("CorePackages")
-local Cryo = require(CorePackages.Cryo)
+local Cryo = require(CorePackages.Packages.Cryo)
 
 local BlockingAnalytics = {}
 BlockingAnalytics.__index = BlockingAnalytics

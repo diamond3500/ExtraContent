@@ -1,7 +1,13 @@
 local CorePackages = game:GetService("CorePackages")
 local dependencies = require(CorePackages.Workspace.Packages.NotificationsCommon).ReducerDependencies
+
+local FFlagEnableLuaAppsShareLinksPackages = require(CorePackages.Workspace.Packages.SharedFlags).FFlagEnableLuaAppsShareLinksPackages
+
 local NetworkingShareLinks = dependencies.NetworkingShareLinks
 local RoduxShareLinks = dependencies.RoduxShareLinks
+local ShareLinksNetworking = dependencies.ShareLinksNetworking
+local ShareLinksRodux = dependencies.ShareLinksRodux
+
 
 local mapStateToProps = function(state)
 	return {
@@ -9,7 +15,9 @@ local mapStateToProps = function(state)
 			shortUrl: string?,
 			linkId: string?,
 		},
-		fetchShareInviteLinkNetworkStatus = NetworkingShareLinks.GenerateLink.getStatus(state, { linkType = RoduxShareLinks.Enums.LinkType.ExperienceInvite.rawValue() }) :: string,
+		fetchShareInviteLinkNetworkStatus = if FFlagEnableLuaAppsShareLinksPackages then
+			(ShareLinksNetworking :: any).GenerateLink.getStatus(state, { linkType = (ShareLinksRodux :: any).Enums.LinkType.ExperienceInvite.rawValue() }) :: string -- Remove any cast with FFlagEnableLuaAppsShareLinksPackages
+			else NetworkingShareLinks.GenerateLink.getStatus(state, { linkType = RoduxShareLinks.Enums.LinkType.ExperienceInvite.rawValue() }) :: string,
 	}
 end
 

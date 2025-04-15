@@ -2,8 +2,8 @@
 -- This component displays the snapshot list and a table tab group where each tab displays different aspects of the selected snapshot
 local CorePackages = game:GetService("CorePackages")
 
-local Roact = require(CorePackages.Roact)
-local RoactRodux = require(CorePackages.RoactRodux)
+local Roact = require(CorePackages.Packages.Roact)
+local RoactRodux = require(CorePackages.Packages.RoactRodux)
 
 local Components = script.Parent.Parent.Parent.Components
 local HeaderButton = require(Components.HeaderButton)
@@ -58,8 +58,8 @@ local contentByType = {
 	},
 	["memcat"] = {
 		hint = [[Memory separated by the category at the time of allocation.
-		By default, memory category is assigned to a subset of scripts.
-		Custom memory category can be created using 'debug.setmemorycategory' API.]],
+		Memory category is assigned to the thread performing the allocation, not the script.
+		Default value is based on the script name. Custom value can be assigned using 'debug.setmemorycategory' API.]],
 		headers = { "Name", "Size", "Count" },
 
 		initFragmentSource = function(view)

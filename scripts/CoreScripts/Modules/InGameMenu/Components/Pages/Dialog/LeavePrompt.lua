@@ -4,7 +4,7 @@ local GuiService = game:GetService("GuiService")
 local ContextActionService = game:GetService("ContextActionService")
 local RobloxGui = game:GetService("CoreGui"):WaitForChild("RobloxGui")
 
-local InGameMenuDependencies = require(CorePackages.InGameMenuDependencies)
+local InGameMenuDependencies = require(CorePackages.Packages.InGameMenuDependencies)
 local Roact = InGameMenuDependencies.Roact
 local UIBlox = InGameMenuDependencies.UIBlox
 local t = InGameMenuDependencies.t
@@ -139,14 +139,13 @@ function LeavePrompt:render()
 			KeyboardFocusHandler = Roact.createElement(FocusHandler, {
 				isFocused = self.props.canKeyboardCaptureFocus,
 				didFocus = function()
-					ContextActionService:BindCoreAction(
-						LEAVE_CONFIRM_ACTION, function(actionName, inputState)
-							if inputState == Enum.UserInputState.End then
-								self.props.onConfirm()
-								return Enum.ContextActionResult.Sink
-							end
-							return Enum.ContextActionResult.Pass
-						end, false, Enum.KeyCode.Return)
+					ContextActionService:BindCoreAction(LEAVE_CONFIRM_ACTION, function(actionName, inputState)
+						if inputState == Enum.UserInputState.End then
+							self.props.onConfirm()
+							return Enum.ContextActionResult.Sink
+						end
+						return Enum.ContextActionResult.Pass
+					end, false, Enum.KeyCode.Return)
 				end,
 
 				didBlur = function()

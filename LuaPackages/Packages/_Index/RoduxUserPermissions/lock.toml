@@ -6,6 +6,6 @@ dependencies = [
     "Dash Dash 0.1.9 registry",
     "NetworkingAccountInformation NetworkingAccountInformation 0.6.3 registry",
     "NetworkingUserSettings NetworkingUserSettings 0.7.0 registry",
-    "Rodux <patched> Rodux 3.2.0 registry",
+    "Rodux <patched> Rodux 3.3.0 registry",
     "RoduxNetworking RoduxNetworking 3.4.1 registry",
 ]

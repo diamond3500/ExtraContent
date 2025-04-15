@@ -3,7 +3,7 @@ local CorePackages = game:GetService("CorePackages")
 local Cryo = require(CorePackages.Packages.Cryo)
 local Roact = require(CorePackages.Packages.Roact)
 local RoactRodux = require(CorePackages.Packages.RoactRodux)
-local UIBlox = require(CorePackages.UIBlox)
+local UIBlox = require(CorePackages.Packages.UIBlox)
 UIBlox.init(require(CorePackages.Workspace.Packages.RobloxAppUIBloxConfig))
 
 local StoryStore = require(script.Parent.Helpers.StoryStore)

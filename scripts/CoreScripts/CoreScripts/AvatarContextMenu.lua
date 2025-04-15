@@ -68,15 +68,15 @@ local ThemeHandler = require(AvatarMenuModules.ThemeHandler)
 local Backpack = require(CoreGuiModules.BackpackScript)
 local EmotesMenuMaster = require(CoreGuiModules.EmotesMenu.EmotesMenuMaster)
 
-local BlockingUtility = require(CoreGuiModules.BlockingUtility)
+local BlockingUtility = require(CorePackages.Workspace.Packages.BlockingUtility)
 
 --- FLAGS
 local FFlagAvatarContextMenuItemsChatButtonRefactor = require(CoreGuiModules.Flags.FFlagAvatarContextMenuItemsChatButtonRefactor)
 
-local success, FFlagUserRaycastPerformanceImprovements = pcall(function()
-	return UserSettings():IsUserFeatureEnabled("UserRaycastPerformanceImprovements")
+local success, FFlagUserRaycastUpdateAPI = pcall(function()
+	return UserSettings():IsUserFeatureEnabled("UserRaycastUpdateAPI")
 end)
-FFlagUserRaycastPerformanceImprovements = success and FFlagUserRaycastPerformanceImprovements
+FFlagUserRaycastUpdateAPI = success and FFlagUserRaycastUpdateAPI
 
 --- VARIABLES
 
@@ -306,7 +306,7 @@ function clickedOnPoint(screenPoint)
 
 	local ray = camera:ScreenPointToRay(screenPoint.X, screenPoint.Y)
 	
-	if FFlagUserRaycastPerformanceImprovements then
+	if FFlagUserRaycastUpdateAPI then
 		excludeParams.FilterDescendantsInstances = if shouldIgnoreLocalCharacter() then {LocalPlayer.Character} else {}
 		local raycastResult = workspace:Raycast(ray.Origin, ray.Direction * MAX_CONTEXT_MENU_DISTANCE, excludeParams)
 

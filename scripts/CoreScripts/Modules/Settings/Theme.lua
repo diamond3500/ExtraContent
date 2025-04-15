@@ -1,13 +1,13 @@
 local CorePackages = game:GetService("CorePackages")
 local UserInputService = game:GetService("UserInputService")
-local CoreGui = game:GetService('CoreGui')
+local CoreGui = game:GetService("CoreGui")
 local GuiService = game:GetService("GuiService")
-local RobloxGui = CoreGui:WaitForChild('RobloxGui')
+local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 
 local isTenFootInterface = require(RobloxGui.Modules.TenFootInterface):IsEnabled()
 local AppFonts = require(CorePackages.Workspace.Packages.Style).AppFonts
 local DarkTheme = require(CorePackages.Workspace.Packages.Style).Themes.DarkTheme
-local UIBlox = require(CorePackages.UIBlox)
+local UIBlox = require(CorePackages.Packages.UIBlox)
 local UIBloxImages = UIBlox.App.ImageSet.Images
 local getIconSize = UIBlox.App.ImageSet.getIconSize
 local IconSize = UIBlox.App.ImageSet.Enum.IconSize
@@ -29,14 +29,14 @@ local topCornerInset, _ = GuiService:GetGuiInset()
 
 -- roughly maps SourceSans font size to Gotham/Builder using nominalSizeFactor, rounding down
 local fontSizeMap = {
-	[ Enum.FontSize.Size14 ] = Enum.FontSize.Size11,
-	[ Enum.FontSize.Size18 ]  = Enum.FontSize.Size14,
-	[ Enum.FontSize.Size24 ]  = Enum.FontSize.Size18,
-	[ Enum.FontSize.Size36 ]  = Enum.FontSize.Size28,
-	[ Enum.FontSize.Size48 ]  = Enum.FontSize.Size36,
+	[Enum.FontSize.Size14] = Enum.FontSize.Size11,
+	[Enum.FontSize.Size18] = Enum.FontSize.Size14,
+	[Enum.FontSize.Size24] = Enum.FontSize.Size18,
+	[Enum.FontSize.Size36] = Enum.FontSize.Size28,
+	[Enum.FontSize.Size48] = Enum.FontSize.Size36,
 }
 
-local nullColor = Color3.fromRGB(0, 0, 0);
+local nullColor = Color3.fromRGB(0, 0, 0)
 local nullFont: any? = AppFonts.default:getDefault()
 local nullFontSize: any? = fontSizeMap[Enum.FontSize.Size24]
 local nullTextSize: any? = 19
@@ -55,14 +55,14 @@ local AppTheme = {
 		Transparency = 0,
 	},
 	IGM_Background = {
-		Color = Color3.fromRGB(0,0,0),
+		Color = Color3.fromRGB(0, 0, 0),
 		Transparency = 1,
 	},
 	IGM_Button = {
-		Color = Color3.fromRGB(0,0,0),
+		Color = Color3.fromRGB(0, 0, 0),
 		Transparency = 1.0,
 	},
-	IGM_ButtonNonInteractable ={
+	IGM_ButtonNonInteractable = {
 		Color = Color3.fromRGB(100, 100, 100),
 		Transparency = 0.0,
 	},
@@ -79,9 +79,9 @@ local AppTheme = {
 		Transparency = 0.0,
 	},
 	Player_RowSelection = {
-		Color = Color3.new(.396, 0.4, 0.408),
+		Color = Color3.new(0.396, 0.4, 0.408),
 		Transparency = 0.9,
-	}
+	},
 }
 
 local AppFont = {
@@ -96,7 +96,9 @@ local AppFont = {
 		TextSize = 22 * nominalSizeFactor,
 	},
 	Username = {
-		RelativeSize = if UseBiggerText or isTenFootInterface then fontSizeMap[Enum.FontSize.Size24] else fontSizeMap[Enum.FontSize.Size18],
+		RelativeSize = if UseBiggerText or isTenFootInterface
+			then fontSizeMap[Enum.FontSize.Size24]
+			else fontSizeMap[Enum.FontSize.Size18],
 	},
 	DisplayName = {
 		RelativeSize = if isTenFootInterface then Enum.FontSize.Size24 else Enum.FontSize.Size18,
@@ -143,7 +145,9 @@ local AppFont = {
 	},
 	Utility_Row_Font = {
 		Font = AppFonts.default:getMedium(),
-		TextSize = if (FFlagIncreaseUtilityRowTextSizeConsole and isTenFootInterface) then 24 * nominalSizeFactor else 16 * nominalSizeFactor,
+		TextSize = if (FFlagIncreaseUtilityRowTextSizeConsole and isTenFootInterface)
+			then 24 * nominalSizeFactor
+			else 16 * nominalSizeFactor,
 	},
 	Back_Button_Font = {
 		Font = AppFonts.default:getSemibold(),
@@ -154,14 +158,13 @@ local AppFont = {
 	},
 	Bold_Font = {
 		Font = AppFonts.default:getMedium(),
-	}
+	},
 }
 
-setmetatable(AppTheme,
-{
-    __index=function(self,key)
-        return DarkTheme[key]
-    end
+setmetatable(AppTheme, {
+	__index = function(self, key)
+		return DarkTheme[key]
+	end,
 })
 
 local ComponentThemeKeys = {
@@ -236,10 +239,7 @@ local ComponentThemeKeys = {
 	ButtonNonInteractable = "IGM_ButtonNonInteractable",
 }
 
-
-
-
-local function getViewportSize():any
+local function getViewportSize(): any
 	if _G.__TESTEZ_RUNNING_TEST__ then
 		--Return fake value here for unit tests
 		return Vector2.new(1024, 1024)
@@ -249,8 +249,10 @@ local function getViewportSize():any
 		return nil
 	end
 
-	if (workspace.CurrentCamera :: Camera).ViewportSize == Vector2.new(0,0) or
-		(workspace.CurrentCamera :: Camera).ViewportSize == Vector2.new(1,1) then
+	if
+		(workspace.CurrentCamera :: Camera).ViewportSize == Vector2.new(0, 0)
+		or (workspace.CurrentCamera :: Camera).ViewportSize == Vector2.new(1, 1)
+	then
 		return nil
 	end
 
@@ -263,7 +265,9 @@ local function isPortrait()
 end
 
 local viewportSize = getViewportSize()
-local IsSmallTouchScreen = viewportSize and UserInputService.TouchEnabled and (viewportSize.Y < 500 or viewportSize.X < 700)
+local IsSmallTouchScreen = viewportSize
+	and UserInputService.TouchEnabled
+	and (viewportSize.Y < 500 or viewportSize.X < 700)
 local UseStickyBar = function()
 	local currentViewportSize = getViewportSize()
 	local isSmallScreen = currentViewportSize and (currentViewportSize.Y < 500 or currentViewportSize.X < 700)
@@ -280,7 +284,7 @@ local HubPaddingMobile = {
 	PaddingTop = UDim.new(0, 0),
 	PaddingLeft = UDim.new(0, 12),
 	PaddingRight = UDim.new(0, 12),
-	PaddingBottom = UDim.new(0,12),
+	PaddingBottom = UDim.new(0, 12),
 }
 
 local MenuContainerPositionOld = {
@@ -318,9 +322,7 @@ local MenuContainerPositionMobileWithStickyBar = {
 	AutomaticSize = Enum.AutomaticSize.Y,
 }
 
-
 if ThemeEnabled then
-
 	return {
 		DefaultScrollBarThickness = 1,
 		DefaultCornerRadius = UDim.new(0, 8),
@@ -353,7 +355,7 @@ if ThemeEnabled then
 		UseInspectAndBuyPanel = function()
 			return IsSmallTouchScreen
 		end,
-		HubPadding =  function()
+		HubPadding = function()
 			if IsSmallTouchScreen then
 				return HubPaddingMobile
 			else
@@ -378,47 +380,51 @@ if ThemeEnabled then
 		Images = UIBloxImages,
 		getIconSize = getIconSize,
 		IconSize = IconSize,
-		SHIELD_INACTIVE_POSITION = UDim2.new(0,0,1,36),
+		SHIELD_INACTIVE_POSITION = UDim2.new(0, 0, 1, 36),
 		viewportResized = function()
 			viewportSize = getViewportSize()
-			IsSmallTouchScreen = viewportSize and UserInputService.TouchEnabled and (viewportSize.Y < 500 or viewportSize.X < 700)
+			IsSmallTouchScreen = viewportSize
+				and UserInputService.TouchEnabled
+				and (viewportSize.Y < 500 or viewportSize.X < 700)
 		end,
-		color = function(key:string, nonThemeColor:Color3?)
-			key = ComponentThemeKeys[key] or key;
+		color = function(key: string, nonThemeColor: Color3?)
+			key = ComponentThemeKeys[key] or key
 			return if AppTheme[key] then AppTheme[key].Color else nonThemeColor or nullColor
 		end,
-		transparency = function(key:string, nonThemeTransparency:number?)
-			key = ComponentThemeKeys[key] or key;
+		transparency = function(key: string, nonThemeTransparency: number?)
+			key = ComponentThemeKeys[key] or key
 			return if AppTheme[key] then AppTheme[key].Transparency else nonThemeTransparency or 0
 		end,
-		font = function(nonThemeFont:any?, key:string?)
+		font = function(nonThemeFont: any?, key: string?)
 			if not key then
 				return nullFont
 			end
-			key = ComponentThemeKeys[key] or key;
+			key = ComponentThemeKeys[key] or key
 			return if AppFont[key] then AppFont[key].Font else nonThemeFont or nullFont
 		end,
-		fontSize = function(nonThemeFontSize:Enum.FontSize, key:string?)
+		fontSize = function(nonThemeFontSize: Enum.FontSize, key: string?)
 			if not key then
 				return fontSizeMap[nonThemeFontSize]
 			end
-			key = ComponentThemeKeys[key] or key;
+			key = ComponentThemeKeys[key] or key
 			return if AppFont[key] then AppFont[key].RelativeSize else nonThemeFontSize or nullFontSize
 		end,
-		textSize = function(nonThemeTextSize:number, key:string?)
+		textSize = function(nonThemeTextSize: number, key: string?)
 			if not key then
 				return nonThemeTextSize * nominalSizeFactor or nullTextSize
 			end
 			if IsSmallTouchScreen and key == "UtilityRow" then
 				key = "UtilityRowSmall"
 			elseif IsSmallTouchScreen and key == "UtilityText" then
-					key = "UtilityTextSmall"
+				key = "UtilityTextSmall"
 			end
-			key = ComponentThemeKeys[key] or key;
-			return if AppFont[key] and AppFont[key].TextSize then AppFont[key].TextSize else nonThemeTextSize * nominalSizeFactor or nullTextSize
+			key = ComponentThemeKeys[key] or key
+			return if AppFont[key] and AppFont[key].TextSize
+				then AppFont[key].TextSize
+				else nonThemeTextSize * nominalSizeFactor or nullTextSize
 		end,
-		hydrateLabel = function(instance:any, colorStyle:string, fontStyle:string)
-			colorStyle = ComponentThemeKeys[colorStyle] or colorStyle;
+		hydrateLabel = function(instance: any, colorStyle: string, fontStyle: string)
+			colorStyle = ComponentThemeKeys[colorStyle] or colorStyle
 			if AppTheme[colorStyle] then
 				local color = AppTheme[colorStyle]
 				instance.TextColor3 = color.Color
@@ -449,13 +455,15 @@ else
 		DefaultStokeThickness = 1,
 		ShowHomeButton = true,
 		UseBiggerText = false,
-		UseStickyBar = function() return false end,
+		UseStickyBar = function()
+			return false
+		end,
 		EnableDarkenBackground = false,
 		TabHeaderIconPadding = 0,
 		UseInspectAndBuyPanel = function()
 			return false
 		end,
-		HubPadding =  function()
+		HubPadding = function()
 			if IsSmallTouchScreen then
 				return HubPaddingMobile
 			else
@@ -476,25 +484,24 @@ else
 		Images = UIBloxImages,
 		getIconSize = getIconSize,
 		IconSize = IconSize,
-		SHIELD_INACTIVE_POSITION = UDim2.new(0,0,-1,-36),
-		viewportResized = function()
-		end,
-		color = function(_:string, nonThemeColor:Color3?)
+		SHIELD_INACTIVE_POSITION = UDim2.new(0, 0, -1, -36),
+		viewportResized = function() end,
+		color = function(_: string, nonThemeColor: Color3?)
 			return nonThemeColor or nullColor
 		end,
-		transparency = function(_:string, nonThemeTransparency:number?)
+		transparency = function(_: string, nonThemeTransparency: number?)
 			return nonThemeTransparency or 0
 		end,
-		font = function(nonThemeFont:any?, _:string?)
+		font = function(nonThemeFont: any?, _: string?)
 			return nonThemeFont
 		end,
-		fontSize = function(nonThemeFontSize:Enum.FontSize, _:string?)
+		fontSize = function(nonThemeFontSize: Enum.FontSize, _: string?)
 			return nonThemeFontSize
 		end,
-		textSize = function(nonThemeTextSize:number, _:string?)
+		textSize = function(nonThemeTextSize: number, _: string?)
 			return nonThemeTextSize
 		end,
-		hydrateLabel = function(instance:any, colorStyle:string, fontStyle:string)
+		hydrateLabel = function(instance: any, colorStyle: string, fontStyle: string)
 			-- noop
 		end,
 		platformNameTextSize = 18,

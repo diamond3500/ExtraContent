@@ -1,6 +1,6 @@
 --!nonstrict
 local CorePackages = game:GetService("CorePackages")
-local Roact = require(CorePackages.Roact)
+local Roact = require(CorePackages.Packages.Roact)
 
 local LinkingProtocol = require(CorePackages.Workspace.Packages.LinkingProtocol).LinkingProtocol
 
@@ -41,34 +41,42 @@ local entryCellSize = {}
 
 currOffset = currOffset / 2
 table.insert(cellOffset, UDim2.fromOffset(CELL_PADDING, 0))
-table.insert(headerCellSize, UDim2.new(.5, currOffset - CELL_PADDING, 0, HEADER_HEIGHT))
-table.insert(entryCellSize, UDim2.new(.5, currOffset - CELL_PADDING, 0, ENTRY_HEIGHT))
+table.insert(headerCellSize, UDim2.new(0.5, currOffset - CELL_PADDING, 0, HEADER_HEIGHT))
+table.insert(entryCellSize, UDim2.new(0.5, currOffset - CELL_PADDING, 0, ENTRY_HEIGHT))
 
 for _, cellWidth in ipairs(CELL_WIDTHS) do
-	table.insert(cellOffset,UDim2.new(.5, currOffset + CELL_PADDING, 0, 0))
+	table.insert(cellOffset, UDim2.new(0.5, currOffset + CELL_PADDING, 0, 0))
 	table.insert(headerCellSize, UDim2.fromOffset(cellWidth - CELL_PADDING, HEADER_HEIGHT))
 	table.insert(entryCellSize, UDim2.fromOffset(cellWidth - CELL_PADDING, ENTRY_HEIGHT))
 	currOffset = currOffset + cellWidth
 end
 
-table.insert(cellOffset,UDim2.new(.5, currOffset + CELL_PADDING, 0, 0))
-table.insert(headerCellSize, UDim2.new(.5, (-totalCellWidth / 2) - CELL_PADDING, 0, HEADER_HEIGHT))
-table.insert(entryCellSize, UDim2.new(.5, (-totalCellWidth / 2) - CELL_PADDING, 0, ENTRY_HEIGHT))
+table.insert(cellOffset, UDim2.new(0.5, currOffset + CELL_PADDING, 0, 0))
+table.insert(headerCellSize, UDim2.new(0.5, (-totalCellWidth / 2) - CELL_PADDING, 0, HEADER_HEIGHT))
+table.insert(entryCellSize, UDim2.new(0.5, (-totalCellWidth / 2) - CELL_PADDING, 0, ENTRY_HEIGHT))
 
 -- Update this if adding / removing columns
 local expectedColumnCount = 4
-assert(#CELL_WIDTHS == 2, "DebugVisualizationsChart expected DebugVisualizationsFormatting CELL_WIDTHS to have a length of 2")
-assert(#cellOffset == expectedColumnCount, "DebugVisualizationsChart expected cellOffset to have length " .. expectedColumnCount)
-assert(#headerCellSize == expectedColumnCount, "DebugVisualizationsChart expected headerCellSize to have length " .. expectedColumnCount)
-assert(#entryCellSize == expectedColumnCount, "DebugVisualizationsChart expected entryCellSize to have length " .. expectedColumnCount)
+assert(
+	#CELL_WIDTHS == 2,
+	"DebugVisualizationsChart expected DebugVisualizationsFormatting CELL_WIDTHS to have a length of 2"
+)
+assert(
+	#cellOffset == expectedColumnCount,
+	"DebugVisualizationsChart expected cellOffset to have length " .. expectedColumnCount
+)
+assert(
+	#headerCellSize == expectedColumnCount,
+	"DebugVisualizationsChart expected headerCellSize to have length " .. expectedColumnCount
+)
+assert(
+	#entryCellSize == expectedColumnCount,
+	"DebugVisualizationsChart expected entryCellSize to have length " .. expectedColumnCount
+)
 
 local verticalOffsets = {}
 for i, offset in ipairs(cellOffset) do
-	verticalOffsets[i] = UDim2.new(
-		offset.X.Scale,
-		offset.X.Offset - CELL_PADDING,
-		offset.Y.Scale,
-		offset.Y.Offset)
+	verticalOffsets[i] = UDim2.new(offset.X.Scale, offset.X.Offset - CELL_PADDING, offset.Y.Scale, offset.Y.Offset)
 end
 
 local DebugVisualizationsChart = Roact.Component:extend("DebugVisualizationsChart")
@@ -100,7 +108,7 @@ local function constructHeader(onSortChanged, width)
 	})
 
 	for ind = 2, #verticalOffsets do
-		local key = string.format("VerticalLine_%d",ind)
+		local key = string.format("VerticalLine_%d", ind)
 		header[key] = Roact.createElement("Frame", {
 			Size = UDim2.new(0, LINE_WIDTH, 1, 0),
 			Position = verticalOffsets[ind],
@@ -125,10 +133,10 @@ local function constructEntry(entry, width, frameHeight, layoutOrder, isExpanded
 	local enumStr = tostring(settingInfo["Name"])
 
 	local row = {}
-	for i = 2,#verticalOffsets do
-		local key = string.format("line_%d",i)
+	for i = 2, #verticalOffsets do
+		local key = string.format("line_%d", i)
 		row[key] = Roact.createElement("Frame", {
-			Size = UDim2.new(0,LINE_WIDTH,1,0),
+			Size = UDim2.new(0, LINE_WIDTH, 1, 0),
 			Position = verticalOffsets[i],
 			BackgroundColor3 = LINE_COLOR,
 			BorderSizePixel = 0,
@@ -169,7 +177,7 @@ local function constructEntry(entry, width, frameHeight, layoutOrder, isExpanded
 	})
 
 	return Roact.createElement("Frame", {
-		Size = UDim2.new(0, width,  0, frameHeight),
+		Size = UDim2.new(0, width, 0, frameHeight),
 		BackgroundTransparency = 1,
 		LayoutOrder = layoutOrder,
 	}, {
@@ -178,7 +186,7 @@ local function constructEntry(entry, width, frameHeight, layoutOrder, isExpanded
 			pos = UDim2.new(),
 			isExpanded = isExpanded,
 
-			onButtonPress = expandCallback(name)
+			onButtonPress = expandCallback(name),
 		}, row),
 
 		DescriptionText = isExpanded and Roact.createElement(CellLabel, {
@@ -195,8 +203,18 @@ local function constructEntry(entry, width, frameHeight, layoutOrder, isExpanded
 	})
 end
 
-function populateEntries(searchTerm, typeFilters, entryList, reverseSort, canvasPos, absScrollSize, frameWidth,
-		expandedEntry, getOnButtonPress, getLearnMorePress)
+function populateEntries(
+	searchTerm,
+	typeFilters,
+	entryList,
+	reverseSort,
+	canvasPos,
+	absScrollSize,
+	frameWidth,
+	expandedEntry,
+	getOnButtonPress,
+	getLearnMorePress
+)
 	local entries = {}
 
 	entries["UIListLayout"] = Roact.createElement("UIListLayout", {
@@ -249,13 +267,15 @@ function populateEntries(searchTerm, typeFilters, entryList, reverseSort, canvas
 				if canvasHeight + ENTRY_HEIGHT >= canvasPos.Y then
 					if usedFrameSpace < absScrollSize.Y then
 						local entryLayoutOrder = reverseSort and (totalEntries - ind) or ind
-						entries[ind] = constructEntry(entry,
+						entries[ind] = constructEntry(
+							entry,
 							frameWidth,
 							frameHeight,
 							entryLayoutOrder + 1,
 							isExpanded,
 							getOnButtonPress,
-							getLearnMorePress)
+							getLearnMorePress
+						)
 					end
 					if paddingHeight < 0 then
 						paddingHeight = canvasHeight
@@ -295,7 +315,7 @@ function DebugVisualizationsChart:init(props)
 	self.getOnButtonPress = function(name)
 		return function(rbx, input)
 			self:setState({
-				expandedEntry = self.state.expandedEntry ~= name and name
+				expandedEntry = self.state.expandedEntry ~= name and name,
 			})
 		end
 	end
@@ -324,7 +344,6 @@ function DebugVisualizationsChart:init(props)
 				reverseSort = false,
 			})
 		end
-
 	end
 
 	self.onCanvasPosChanged = function()
@@ -358,7 +377,7 @@ end
 function DebugVisualizationsChart:didMount()
 	self.visualizationsUpdated = self.props.DebugVisualizationsData:Signal():Connect(function(visualizationData)
 		self:setState({
-			visualizationEntries = visualizationData
+			visualizationEntries = visualizationData,
 		})
 	end)
 
@@ -384,7 +403,8 @@ function DebugVisualizationsChart:render()
 	local absScrollSize = self.state.absScrollSize
 	local frameWidth = absScrollSize and math.max(absScrollSize.X, MIN_FRAME_WIDTH) or MIN_FRAME_WIDTH
 
-	local entries, canvasHeight = populateEntries(self.props.searchTerm,
+	local entries, canvasHeight = populateEntries(
+		self.props.searchTerm,
 		self.props.typeFilters,
 		self.state.visualizationEntries,
 		self.state.reverseSort,
@@ -393,7 +413,8 @@ function DebugVisualizationsChart:render()
 		frameWidth,
 		self.state.expandedEntry,
 		self.getOnButtonPress,
-		self.getLearnMorePress)
+		self.getLearnMorePress
+	)
 
 	local size = self.props.size
 	local layoutOrder = self.props.layoutOrder
@@ -407,13 +428,13 @@ function DebugVisualizationsChart:render()
 		Header = constructHeader(self.onSortChanged, frameWidth),
 		MainChart = Roact.createElement("ScrollingFrame", {
 			Position = UDim2.fromOffset(0, HEADER_HEIGHT),
-			Size = UDim2.new(1, 0, 1, - HEADER_HEIGHT),
+			Size = UDim2.new(1, 0, 1, -HEADER_HEIGHT),
 			CanvasSize = UDim2.fromOffset(frameWidth, canvasHeight),
 			ScrollBarThickness = 6,
 			BackgroundColor3 = Constants.Color.BaseGray,
 			BackgroundTransparency = 1,
 
-			[Roact.Ref] = self.scrollingRef
+			[Roact.Ref] = self.scrollingRef,
 		}, entries),
 	})
 end

@@ -1,10 +1,9 @@
 local CorePackages = game:GetService("CorePackages")
-local CoreGui = game:GetService("CoreGui")
 local GuiService = game:GetService("GuiService")
 local Players = game:GetService("Players")
 local InspectAndBuyFolder = script.Parent.Parent
-local Roact = require(CorePackages.Roact)
-local RoactRodux = require(CorePackages.RoactRodux)
+local Roact = require(CorePackages.Packages.Roact)
+local RoactRodux = require(CorePackages.Packages.RoactRodux)
 local Constants = require(InspectAndBuyFolder.Constants)
 local UtilityFunctions = require(InspectAndBuyFolder.UtilityFunctions)
 local FavoritesButton = require(InspectAndBuyFolder.Components.FavoritesButton)
@@ -12,11 +11,10 @@ local TryOnButton = require(InspectAndBuyFolder.Components.TryOnButton)
 local BuyButton = require(InspectAndBuyFolder.Components.BuyButton)
 local InspectAndBuyControllerBar = require(InspectAndBuyFolder.Components.InspectAndBuyControllerBar)
 local GetIsFavorite = require(InspectAndBuyFolder.Selectors.GetIsFavorite)
-local RobloxTranslator = require(CoreGui.RobloxGui.Modules.RobloxTranslator)
-local tutils = require(CorePackages.tutils)
+local RobloxTranslator = require(CorePackages.Workspace.Packages.RobloxTranslator)
+local tutils = require(CorePackages.Packages.tutils)
 
 local FFlagEnableFavoriteButtonForUgc = require(InspectAndBuyFolder.Flags.FFlagEnableFavoriteButtonForUgc)
-local FFlagAttributionInInspectAndBuy = require(InspectAndBuyFolder.Flags.FFlagAttributionInInspectAndBuy)
 local GetFFlagIBGateUGC4ACollectibleAssetsBundles =
 	require(InspectAndBuyFolder.Flags.GetFFlagIBGateUGC4ACollectibleAssetsBundles)
 local GetFFlagIBEnableCollectiblesSystemSupport =
@@ -122,12 +120,10 @@ function DetailsButtons:didUpdate(prevProps)
 	end
 
 	-- If an overlay was closed, break out of Roact Gamepad and back to regular gamepad usage.
-	if FFlagAttributionInInspectAndBuy then
-		local overlay = self.props.overlay
-		local prevOverlay = prevProps.overlay
-		if gamepadEnabled and overlay and overlay.overlay == nil and prevOverlay and prevOverlay.overlay ~= nil then
-			GuiService.SelectedCoreObject = self.tryOnButtonRef.current
-		end
+	local overlay = self.props.overlay
+	local prevOverlay = prevProps.overlay
+	if gamepadEnabled and overlay and overlay.overlay == nil and prevOverlay and prevOverlay.overlay ~= nil then
+		GuiService.SelectedCoreObject = self.tryOnButtonRef.current
 	end
 end
 
@@ -355,6 +351,6 @@ return RoactRodux.UNSTABLE_connect2(function(state, props)
 		isFavorited = isFavorited,
 		tryingOn = state.tryingOnInfo.tryingOn,
 		resellableInstances = state.collectibleResellableInstances,
-		overlay = if FFlagAttributionInInspectAndBuy then state.overlay else nil,
+		overlay = state.overlay,
 	}
 end)(DetailsButtons)

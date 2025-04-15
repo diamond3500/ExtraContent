@@ -1,7 +1,6 @@
 --!nonstrict
 local App = script:FindFirstAncestor("App")
 local UIBlox = App.Parent
-local UIBloxConfig = require(UIBlox.UIBloxConfig)
 
 local Core = UIBlox.Core
 local Packages = UIBlox.Parent
@@ -303,7 +302,7 @@ function PlayerTile:render()
 				footerTopPadding = footerTopPadding,
 				name = title,
 				nameTextColor = tokens.Semantic.Color.Text.Emphasis.Color3,
-				titleRichText = if UIBloxConfig.enableRichTextPlayerTileName then true else nil,
+				titleRichText = true,
 				titleFontStyle = tokens.Semantic.Typography.Subheader,
 				hasVerifiedBadge = self.props.hasVerifiedBadge,
 				titleTextLineCount = 1,

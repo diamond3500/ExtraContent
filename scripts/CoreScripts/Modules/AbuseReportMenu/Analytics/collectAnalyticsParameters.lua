@@ -48,6 +48,7 @@ local _getCommonParameters = function(
 			else INTERACTION_TYPE_ABANDON,
 
 		typeofabuseSelection = analyticsState.typeofabuseSelection, -- will be overwritten
+		memoryRequirementMet = analyticsState.memoryRequirementMet,
 	} :: Types.AnalyticsArguments -- Cryo will add the rest below
 
 	parameters = Cryo.Dictionary.join(parameters, reportAnythingAnalyticsParameters)

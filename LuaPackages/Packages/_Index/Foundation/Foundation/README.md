@@ -59,6 +59,24 @@ When you create a PR, Foundation CI will publish your changes to a place develop
 
 When a PR is merged, Foundation CI will publish the latest main to [this Roblox place](https://www.roblox.com/games/18428583948/Foundation) via [this GHA job](https://github.com/Roblox/foundation/actions/workflows/place-publish.yml).
 
+## Adding new components
+
+Average component consists of 6 files
+- `init.lua` - reexport of the component for cleaner inputs. Don't forget to reexport the types needed.
+- `Component.bench.lua` - standard benchmarks to detect performance degradation.
+- `Component.lua` - main code of the component. Feel free to create subcomponent in separate files.
+- `Component.md` - documentation that will be displayed on the documentation site.
+- `Component.story.lua`
+- `Component.tests.lua`
+
+To simplify setup of the new component there is an [init_component.py](scripts/init_component.py) script that will create 
+the files described above with the basic working component setup. The script requires two parameters: **component name**: `string`, the name of the component, and **category**: `"Display", "Inputs", "Layout", "Media", "Actions"`, the category the components is in as it will be shown in the docs site.
+
+e.g. to create boilerplate for an `AvatarGroup` component you would run:
+```shell
+python scripts/init_component.py AvatarGroup --category Media
+```
+
 ## Running Tests
 After installing lest, simply run `lest` from the command line to run all tests within all test suites. You may use the `-t` argument to filter which tests to run. The `-e` argument can be used to determine which test suite to run. `lest env list` will list out all available test suites.
 
@@ -71,7 +89,7 @@ Reach out to the [Foundation team in Slack](https://rbx.enterprise.slack.com/arc
 [LuaApps](https://github.com/Roblox/lua-apps) is the main consumer of Foundation.
 
 #### Merging to LuaApps
-Once the the next version of Foudnation is released, it will be updated in [LuaApps](https://github.com/Roblox/lua-apps).
+Once the next version of Foundation is released, it will be updated in [LuaApps](https://github.com/Roblox/lua-apps).
 
 - Create a branch for your upgrade PR for [LuaApps](https://github.com/Roblox/lua-apps) repo
 - Navigate to `content/LuaPackages` in your [LuaApps](https://github.com/Roblox/lua-apps) repo

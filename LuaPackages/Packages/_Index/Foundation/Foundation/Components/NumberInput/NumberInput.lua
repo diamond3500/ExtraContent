@@ -7,11 +7,17 @@ local Components = Foundation.Components
 local withDefaults = require(Foundation.Utility.withDefaults)
 local withCommonProps = require(Foundation.Utility.withCommonProps)
 
+local InputSize = require(Foundation.Enums.InputSize)
+type InputSize = InputSize.InputSize
+
 local InputLabelSize = require(Foundation.Enums.InputLabelSize)
 type InputLabelSize = InputLabelSize.InputLabelSize
 
 local InternalTextInput = require(Components.InternalTextInput)
 local InputField = require(Components.InputField)
+local getInputTextSize = require(Foundation.Utility.getInputTextSize)
+local useTokens = require(Foundation.Providers.Style.useTokens)
+local useTextInputVariants = require(Components.TextInput.useTextInputVariants)
 local Types = require(Components.Types)
 
 local NumberInputControls = require(script.Parent.NumberInputControls)
@@ -24,6 +30,10 @@ end
 export type Props = {
 	-- Input number value
 	value: number?,
+	-- Whether the input is in an error state
+	hasError: boolean?,
+	-- Size of the number input
+	size: InputSize?,
 	-- Whether the input is disabled
 	isDisabled: boolean?,
 	-- Whether the input is required, true for "*", false for " (optional)", nil for nothing
@@ -52,6 +62,7 @@ local function defaultFormatAsString(value: number)
 end
 
 local defaultProps = {
+	size = InputSize.Large,
 	minimum = -math.huge,
 	maximum = math.huge,
 	step = 1,
@@ -63,7 +74,9 @@ local defaultProps = {
 
 local function NumberInput(numberInputProps: Props, ref: React.Ref<GuiObject>?)
 	local props = withDefaults(numberInputProps, defaultProps) :: {
+		hasError: boolean?,
 		isDisabled: boolean?,
+		size: InputSize,
 		step: number,
 		maximum: number,
 		minimum: number,
@@ -76,11 +89,12 @@ local function NumberInput(numberInputProps: Props, ref: React.Ref<GuiObject>?)
 		hint: string?,
 		width: UDim,
 	} & Types.CommonProps
+
+	local tokens = useTokens()
+	local variantProps = useTextInputVariants(tokens, props.size)
+
 	local focused, setFocused = React.useState(false)
-	local isDisabledUp
-	local isDisabledDown
-	local upValue
-	local downValue
+	local isDisabledUp, isDisabledDown, upValue, downValue
 
 	if not focused then
 		upValue = round(props.value + props.step, props.precision)
@@ -109,50 +123,58 @@ local function NumberInput(numberInputProps: Props, ref: React.Ref<GuiObject>?)
 		end
 		local n = tonumber(text)
 		if n == nil then
-			--Prohibit new values that are not numbers
+			-- Prohibit new values that are not numbers
 			return
 		end
 		props.onChanged(n :: number)
 	end, { focused :: unknown, props.onChanged })
+
+	local trailingElement = React.createElement(NumberInputControls, {
+		size = props.size,
+		up = {
+			isDisabled = props.isDisabled or isDisabledUp,
+			onClick = function()
+				if props.isDisabled or isDisabledUp then
+					return
+				end
+				props.onChanged(upValue)
+			end,
+		},
+		down = {
+			isDisabled = props.isDisabled or isDisabledDown,
+			onClick = function()
+				if props.isDisabled or isDisabledDown then
+					return
+				end
+				props.onChanged(downValue)
+			end,
+		},
+	})
 
 	return React.createElement(
 		InputField,
 		withCommonProps(props, {
 			width = props.width,
 			ref = ref,
+			hasError = props.hasError,
 			label = props.label,
-			size = InputLabelSize.Small,
+			size = getInputTextSize(props.size, false),
 			isRequired = props.isRequired,
 			hint = props.hint,
 			input = function(inputRef)
 				return React.createElement(InternalTextInput, {
 					text = currentText,
+					hasError = props.hasError,
+					size = props.size,
+					padding = {
+						left = variantProps.innerContainer.padding.left,
+					},
 					onChanged = onChanged,
 					onFocusLost = onFocusLost,
 					onFocus = onFocus,
 					ref = inputRef,
-					trailingElement = React.createElement(NumberInputControls, {
-						up = {
-							isDisabled = props.isDisabled or isDisabledUp,
-							onClick = function()
-								if props.isDisabled or isDisabledUp then
-									return
-								end
-								props.onChanged(upValue)
-							end,
-						},
-						down = {
-							isDisabled = props.isDisabled or isDisabledDown,
-							onClick = function()
-								if props.isDisabled or isDisabledDown then
-									return
-								end
-								props.onChanged(downValue)
-							end,
-						},
-					}),
+					trailingElement = trailingElement,
 					isDisabled = props.isDisabled,
-					tag = "padding-x-medium",
 				})
 			end,
 		})

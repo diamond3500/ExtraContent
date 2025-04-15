@@ -1,10 +1,10 @@
 --!nonstrict
 local CorePackages = game:GetService("CorePackages")
 
-local Roact = require(CorePackages.Roact)
-local RoactRodux = require(CorePackages.RoactRodux)
+local Roact = require(CorePackages.Packages.Roact)
+local RoactRodux = require(CorePackages.Packages.RoactRodux)
 local t = require(CorePackages.Packages.t)
-local UIBlox = require(CorePackages.UIBlox)
+local UIBlox = require(CorePackages.Packages.UIBlox)
 
 local withStyle = UIBlox.Style.withStyle
 
@@ -65,7 +65,7 @@ function DropDownButton:getColorBackgroundAnimation(layoutValues)
 
 	local growSize = self.state.sizeX - layoutValues.DropDownRightOptionSize
 	animateSize = animateSize + (growSize * self.props.animatingPercentage)
-	animatePosition = animatePosition - (growSize * self.props.animatingPercentage * .5)
+	animatePosition = animatePosition - (growSize * self.props.animatingPercentage * 0.5)
 
 	if animatePosition + animateSize > self.state.sizeX then
 		animatePosition = animatePosition - (animatePosition + animateSize - self.state.sizeX)
@@ -82,7 +82,7 @@ function DropDownButton:render()
 
 			local backgroundStyle = {
 				Color = backgroundColor,
-				Transparency = layoutValues.OverrideBackgroundTransparency * style.Settings.PreferredTransparency 
+				Transparency = layoutValues.OverrideBackgroundTransparency * style.Settings.PreferredTransparency,
 			}
 			local overlayStyle = {
 				Transparency = 1,
@@ -101,7 +101,8 @@ function DropDownButton:render()
 
 			local confirmButtonVisible = self.props.onActivated ~= nil or self.props.animatingAccept
 			local declineButtonVisible = self.props.onDecline ~= nil or self.props.animatingDecline
-			local rightButtonsVisible = self.props.onDecline ~= nil or self.props.animatingPercentage ~= nil
+			local rightButtonsVisible = self.props.onDecline ~= nil
+				or self.props.animatingPercentage ~= nil
 				or self.props.forceShowOptions
 
 			local colorBackgroundPosition, colorBackgroundSize = self:getColorBackgroundAnimation(layoutValues)
@@ -193,7 +194,8 @@ function DropDownButton:render()
 					ImageTransparency = self.props.lastButton and layoutValues.IconButtonBackgroundTransparency or 1,
 					ImageColor3 = colorBackgroundColor,
 
-					BackgroundTransparency = self.props.lastButton and 1 or layoutValues.IconButtonBackgroundTransparency,
+					BackgroundTransparency = self.props.lastButton and 1
+						or layoutValues.IconButtonBackgroundTransparency,
 					BackgroundColor3 = colorBackgroundColor,
 					BorderSizePixel = 0,
 				}),
@@ -268,7 +270,7 @@ function DropDownButton:render()
 							showBackground = self.props.animatingPercentage == nil,
 							onActivated = self.props.onDecline,
 						}) or nil,
-					})
+					}),
 				}),
 
 				DismissInputHandler = Roact.createElement("ImageButton", {

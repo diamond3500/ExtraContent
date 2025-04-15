@@ -12,7 +12,4 @@ return {
 	getReportAnythingExperienceEnabled = function()
 		return TrustAndSafetyIXPManager:getReportAnythingExperienceEnabled()
 	end,
-	getSelectInSceneEnabled = function()
-		return TrustAndSafetyIXPManager:getSelectInSceneEnabled()
-	end,
 }

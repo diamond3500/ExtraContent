@@ -1,9 +1,11 @@
+-- moving this file to LuaApps, please replicate any changes in the LuaApps file as well
 local MediaGallery = script.Parent
 local Container = MediaGallery.Parent
 local App = Container.Parent
 local UIBlox = App.Parent
 local Packages = UIBlox.Parent
 local Cryo = require(Packages.Cryo)
+local UIBloxConfig = require(UIBlox.UIBloxConfig)
 
 local function getShowItems(props)
 	local videoItems = {}
@@ -40,4 +42,4 @@ local function getShowItems(props)
 	return newItems, #videoItems, #imageItems
 end
 
-return getShowItems
+return (if UIBloxConfig.moveMediaGalleryToLuaApps then nil else getShowItems) :: typeof(getShowItems)

@@ -1,7 +1,7 @@
 --!nonstrict
 local CorePackages = game:GetService("CorePackages")
 local TextService = game:GetService("TextService")
-local Roact = require(CorePackages.Roact)
+local Roact = require(CorePackages.Packages.Roact)
 
 local Constants = require(script.Parent.Parent.Parent.Constants)
 local FONT_SIZE = Constants.DefaultFontSize.MainWindow
@@ -10,7 +10,8 @@ local ICON_PADDING = Constants.LogFormatting.IconHeight
 local ARROW_OFFSET = Constants.LogFormatting.TextFrameHeight -- reuse this value for offset needed for the "<" char
 local LINE_PADDING = Constants.LogFormatting.TextFramePadding
 local MAX_STRING_SIZE = Constants.LogFormatting.MaxStringSize
-local MAX_STR_MSG = " -- Could not display entire %d character message because message exceeds max displayable length of %d"
+local MAX_STR_MSG =
+	" -- Could not display entire %d character message because message exceeds max displayable length of %d"
 
 local FFlagDevConsoleLogTextLabelSizingFix = game:DefineFastFlag("DevConsoleLogTextLabelSizingFix", false)
 
@@ -24,9 +25,7 @@ function LogOutput:init(props)
 		if current then
 			local canvasPos = current.CanvasPosition
 			local absSize = current.AbsoluteSize
-			if self.state.canvasPos ~= canvasPos or
-				self.state.absSize ~= absSize then
-
+			if self.state.canvasPos ~= canvasPos or self.state.absSize ~= absSize then
 				local yTotal = current.CanvasPosition.Y + current.AbsoluteSize.Y
 				local yCanvasSize = current.CanvasSize.Y.Offset
 				local autoScroll = yTotal == yCanvasSize
@@ -63,7 +62,10 @@ function LogOutput:didUpdate()
 	if self.state.autoScroll then
 		local current = self.ref.current
 		if current then
-			local newPos = Vector2.new(current.CanvasPosition.X, self.ref.current.CanvasSize.Y.Offset + self.ref.current.AbsoluteSize.Y)
+			local newPos = Vector2.new(
+				current.CanvasPosition.X,
+				self.ref.current.CanvasSize.Y.Offset + self.ref.current.AbsoluteSize.Y
+			)
 			current.CanvasPosition = newPos
 		end
 	end
@@ -71,8 +73,7 @@ end
 
 function LogOutput:didMount()
 	self.logConnector = self.props.targetSignal:Connect(function(data)
-		if not self.state.autoScroll and
-			data:getSize() == data:getMaxSize() then
+		if not self.state.autoScroll and data:getSize() == data:getMaxSize() then
 			local canvasPos = self.state.canvasPos
 			local canvasPosY = canvasPos.Y
 			local newestMsg = data:back()
@@ -98,7 +99,7 @@ function LogOutput:didMount()
 			})
 		else
 			self:setState({
-				logData = data
+				logData = data,
 			})
 		end
 	end)
@@ -185,8 +186,8 @@ function LogOutput:render()
 					}, {
 						image = Roact.createElement("ImageLabel", {
 							Image = image,
-							Size = UDim2.new(0, ICON_PADDING , 0, ICON_PADDING),
-							Position = UDim2.new(0, ICON_PADDING / 4, .5, -ICON_PADDING / 2),
+							Size = UDim2.new(0, ICON_PADDING, 0, ICON_PADDING),
+							Position = UDim2.new(0, ICON_PADDING / 4, 0.5, -ICON_PADDING / 2),
 							BackgroundTransparency = 1,
 						}),
 						msg = Roact.createElement("TextLabel", {
@@ -202,7 +203,7 @@ function LogOutput:render()
 
 							Position = UDim2.new(0, ARROW_OFFSET, 0, 0),
 							BackgroundTransparency = 1,
-						})
+						}),
 					})
 				end
 
@@ -223,7 +224,7 @@ function LogOutput:render()
 					Message = maxStrMsg,
 					CharCount = #maxStrMsg,
 					Type = message.Type,
-					Dims = TextService:GetTextSize(maxStrMsg, FONT_SIZE, FONT, Vector2.new())
+					Dims = TextService:GetTextSize(maxStrMsg, FONT_SIZE, FONT, Vector2.new()),
 				}
 			end
 		end

@@ -1,6 +1,6 @@
 [package]
 name = "UIBlox"
-version = "0.2.17"
+version = "0.2.74"
 readme = "README.md"
 content_root = "src"
 files = [
@@ -8,6 +8,8 @@ files = [
     "!*.spec.lua",
     "!Stories/*",
     "!TestUtils/*",
+    "!.robloxrc",
+    "!*.csv",
 ]
 publish = true
 authors = ["Roblox"]
@@ -20,9 +22,11 @@ target = "https://github.com/roblox/roact-fit-components"
 package = "RoactFitComponents"
 version = "^2.0.0"
 
+[dependencies.Foundation]
+version = "^1.18.0"
+
 [dependencies.FoundationImages]
-target = "https://github.com/roblox/foundation-images"
-version = "^1.0.1"
+version = "^1.20.0"
 
 [dependencies.LazyRequire]
 target = "https://github.com/roblox/lua-lazy-require"
@@ -95,7 +99,7 @@ version = "^1.0.0"
 
 [dependencies.t]
 target = "https://github.com/roblox/t"
-version = "^1.2.5"
+version = "^1.2.6"
 [dev_dependencies.CollisionMatchers2D]
 target = "https://github.com/roblox/collision-matchers-2d"
 version = "^1.1.0"

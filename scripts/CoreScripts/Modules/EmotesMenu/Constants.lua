@@ -1,7 +1,7 @@
 --!nonstrict
 local CorePackages = game:GetService("CorePackages")
 
-local enumerate = require(CorePackages.enumerate)
+local enumerate = require(CorePackages.Packages.enumerate)
 
 local EmotesMenu = script.Parent
 local Layouts = EmotesMenu.Layouts
@@ -38,7 +38,7 @@ local Constants = {
 		SwitchToR15 = "SwitchToR15",
 		NoMatchingEmote = "NoMatchingEmote",
 		TemporarilyUnavailable = "TemporarilyUnavailable",
-		AnimationPlaying = "AnimationPlaying"
+		AnimationPlaying = "AnimationPlaying",
 	},
 
 	EmotesImage = "rbxthumb://type=Asset&id=%d&w=420&h=420",
@@ -167,12 +167,11 @@ Constants.Layouts = {
 
 local function makeTableConstant(name, tbl)
 	setmetatable(tbl, {
-		__newindex = function()
-		end,
+		__newindex = function() end,
 
 		__index = function(t, index)
-			error(name.. " table has no index: " ..tostring(index), 2)
-		end
+			error(name .. " table has no index: " .. tostring(index), 2)
+		end,
 	})
 end
 

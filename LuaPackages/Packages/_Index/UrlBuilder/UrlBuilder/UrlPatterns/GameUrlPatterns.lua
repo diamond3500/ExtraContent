@@ -12,7 +12,7 @@ return function(UrlBuilder)
 		badges = UrlBuilder.fromString("www:games/badges-section/{universeId}"),
 		servers = UrlBuilder.fromString("www:games/servers-section/{universeId}"),
 		serversPreopenCreateVip = UrlBuilder.fromString("www:games/servers-section-preopen-create-vip/{universeId}"),
-		group = UrlBuilder.fromString("www:groups/{creatorId}"),
+		group = UrlBuilder.fromString("www:communities/{creatorId}"),
 		user = UrlBuilder.fromString("www:users/{creatorId}/profile"),
 		pass = UrlBuilder.fromString("www:game-pass/{passId}"),
 		-- {creatorType=Group|User, creatorId}

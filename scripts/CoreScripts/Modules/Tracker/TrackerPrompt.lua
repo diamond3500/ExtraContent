@@ -4,20 +4,22 @@ local HttpService = game:GetService("HttpService")
 local GuiService = game:GetService("GuiService")
 local ContentProvider = game:GetService("ContentProvider")
 
-local UIBlox = require(CorePackages.UIBlox)
+local UIBlox = require(CorePackages.Packages.UIBlox)
 local Images = UIBlox.App.ImageSet.Images
 local SlideFromTopToast = UIBlox.App.Dialog.Toast
 local RobloxGui = CoreGui:WaitForChild("RobloxGui")
-local RobloxTranslator = require(RobloxGui.Modules.RobloxTranslator)
+local RobloxTranslator = require(CorePackages.Workspace.Packages.RobloxTranslator)
 local renderWithCoreScriptsStyleProvider = require(RobloxGui.Modules.Common.renderWithCoreScriptsStyleProvider)
 
-local Roact = require(CorePackages.Roact)
+local Roact = require(CorePackages.Packages.Roact)
 local t = require(CorePackages.Packages.t)
 
 local TrackerPromptType = require(RobloxGui.Modules.Tracker.TrackerPromptType)
 
-local FFlagTrackerPromptNewCopyForCameraPerformanceEnabled = game:DefineFastFlag("TrackerPromptNewCopyForCameraPerformanceEnabled", false)
-local FStringCameraUnavailableUrl = game:DefineFastString("CameraUnavailableUrl", "https://help.roblox.com/hc/articles/17877687557396")
+local FFlagTrackerPromptNewCopyForCameraPerformanceEnabled =
+	game:DefineFastFlag("TrackerPromptNewCopyForCameraPerformanceEnabled", false)
+local FStringCameraUnavailableUrl =
+	game:DefineFastString("CameraUnavailableUrl", "https://help.roblox.com/hc/articles/17877687557396")
 
 local TOAST_DURATION = 8
 local PROMPT_DISPLAY_ORDER = 10
@@ -30,27 +32,41 @@ TrackerPrompt.validateProps = t.strictInterface({
 
 local PromptTitle = {
 	[TrackerPromptType.None] = "",
-	[TrackerPromptType.VideoNoPermission] = RobloxTranslator:FormatByKey("Feature.FaceChat.Heading.UnableToAccessCamera"),
+	[TrackerPromptType.VideoNoPermission] = RobloxTranslator:FormatByKey(
+		"Feature.FaceChat.Heading.UnableToAccessCamera"
+	),
 	[TrackerPromptType.NotAvailable] = RobloxTranslator:FormatByKey("Feature.FaceChat.Heading.NotAvailable"),
 	[TrackerPromptType.FeatureDisabled] = RobloxTranslator:FormatByKey("Feature.FaceChat.Heading.FacialAnimation"),
 	[TrackerPromptType.LODCameraRecommendDisable] = if FFlagTrackerPromptNewCopyForCameraPerformanceEnabled
 		then RobloxTranslator:FormatByKey("Feature.FaceChat.Heading.LowPerformanceDetected")
 		else RobloxTranslator:FormatByKey("Feature.FaceChat.Heading.VideoPerformancePromptDisable"),
-	[TrackerPromptType.NoDynamicHeadEquipped] = RobloxTranslator:FormatByKey("Feature.FaceChat.Heading.PromptNoDynamicHeadEquipped"),
+	[TrackerPromptType.NoDynamicHeadEquipped] = RobloxTranslator:FormatByKey(
+		"Feature.FaceChat.Heading.PromptNoDynamicHeadEquipped"
+	),
 	[TrackerPromptType.VideoUnsupported] = RobloxTranslator:FormatByKey("Feature.FaceChat.Heading.VideoUnsupported"),
 	[TrackerPromptType.UnsupportedDevice] = RobloxTranslator:FormatByKey("Feature.FaceChat.Heading.NotAvailable"),
-	[TrackerPromptType.CameraUnavailable] = RobloxTranslator:FormatByKey("Feature.SettingsHub.Prompt.CameraUnavailable"),
+	[TrackerPromptType.CameraUnavailable] = RobloxTranslator:FormatByKey(
+		"Feature.SettingsHub.Prompt.CameraUnavailable"
+	),
 }
 local PromptSubTitle = {
 	[TrackerPromptType.None] = "",
-	[TrackerPromptType.VideoNoPermission] = RobloxTranslator:FormatByKey("Feature.FaceChat.Subtitle.UnableToAccessCamera"),
+	[TrackerPromptType.VideoNoPermission] = RobloxTranslator:FormatByKey(
+		"Feature.FaceChat.Subtitle.UnableToAccessCamera"
+	),
 	[TrackerPromptType.NotAvailable] = RobloxTranslator:FormatByKey("Feature.FaceChat.Subtitle.NotAvailable"),
 	[TrackerPromptType.FeatureDisabled] = RobloxTranslator:FormatByKey("Feature.FaceChat.Subtitle.FeatureDisabled"),
-	[TrackerPromptType.LODCameraRecommendDisable] = RobloxTranslator:FormatByKey("Feature.FaceChat.Subtitle.VideoPerformancePromptDisable"),
-	[TrackerPromptType.NoDynamicHeadEquipped] = RobloxTranslator:FormatByKey("Feature.FaceChat.Subtitle.PromptNoDynamicHeadEquipped"),
+	[TrackerPromptType.LODCameraRecommendDisable] = RobloxTranslator:FormatByKey(
+		"Feature.FaceChat.Subtitle.VideoPerformancePromptDisable"
+	),
+	[TrackerPromptType.NoDynamicHeadEquipped] = RobloxTranslator:FormatByKey(
+		"Feature.FaceChat.Subtitle.PromptNoDynamicHeadEquipped"
+	),
 	[TrackerPromptType.VideoUnsupported] = RobloxTranslator:FormatByKey("Feature.FaceChat.Subtitle.VideoUnsupported"),
 	[TrackerPromptType.UnsupportedDevice] = RobloxTranslator:FormatByKey("Feature.FaceChat.Subtitle.UnsupportedDevice"),
-	[TrackerPromptType.CameraUnavailable] = RobloxTranslator:FormatByKey("Feature.SettingsHub.Prompt.Subtitle.CameraUnavailable"),
+	[TrackerPromptType.CameraUnavailable] = RobloxTranslator:FormatByKey(
+		"Feature.SettingsHub.Prompt.Subtitle.CameraUnavailable"
+	),
 }
 
 local CustomWebviewType: { [string]: number } = {
@@ -60,7 +76,9 @@ local CustomWebviewType: { [string]: number } = {
 local OPEN_CUSTOM_WEBVIEW = 20
 local function openWebview(url)
 	local notificationData = HttpService:JSONEncode({
-		title = if game:GetEngineFeature("SetWebViewTitle") then RobloxTranslator:FormatByKey("Feature.SettingsHub.Prompt.CameraUnavailable") else nil,
+		title = if game:GetEngineFeature("SetWebViewTitle")
+			then RobloxTranslator:FormatByKey("Feature.SettingsHub.Prompt.CameraUnavailable")
+			else nil,
 		presentationStyle = CustomWebviewType.FormSheet,
 		visible = true,
 		url = url,

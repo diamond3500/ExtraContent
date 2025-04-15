@@ -2,7 +2,7 @@ local AvatarEditorService = game:GetService("AvatarEditorService")
 local CorePackages = game:GetService("CorePackages")
 local MarketplaceService = game:GetService("MarketplaceService")
 
-local Promise = require(CorePackages.Promise)
+local Promise = require(CorePackages.Packages.Promise)
 
 local AvatarEditorPrompts = script.Parent.Parent
 local OpenPrompt = require(AvatarEditorPrompts.Actions.OpenPrompt)

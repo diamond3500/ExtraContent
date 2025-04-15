@@ -1,6 +1,7 @@
 local Control = script.Parent
 local Foundation = script:FindFirstAncestor("Foundation")
 local Packages = Foundation.Parent
+local Flags = require(Foundation.Utility.Flags)
 
 local React = require(Packages.React)
 
@@ -25,13 +26,15 @@ local function useGuiControlStateWithBinding(
 
 	local wrappedRef, guiStateTable = useGuiControlState(guiObjectRef, onGuiControlStateChanged, true)
 
-	React.useEffect(function()
-		if isDisabled then
-			guiStateTable.events.Disabled()
-		else
-			guiStateTable.events.Enabled()
-		end
-	end, { isDisabled :: any, guiStateTable })
+	if not Flags.FoundationInteractableUseGuiState then
+		React.useEffect(function()
+			if isDisabled then
+				guiStateTable.events.Disabled()
+			else
+				guiStateTable.events.Enabled()
+			end
+		end, { isDisabled :: any, guiStateTable })
+	end
 
 	return wrappedRef, controlState
 end

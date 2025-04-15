@@ -1,7 +1,7 @@
 local CorePackages = game:GetService("CorePackages")
 local CoreGui = game:GetService("CoreGui")
 local RobloxGui = CoreGui:WaitForChild("RobloxGui")
-local UIBlox = require(CorePackages.UIBlox)
+local UIBlox = require(CorePackages.Packages.UIBlox)
 local React = require(CorePackages.Packages.React)
 local TnsModule = script.Parent.Parent.Parent
 local GetFIntRAMaxAnnotationCount = require(TnsModule.Flags.GetFIntRAMaxAnnotationCount)
@@ -21,7 +21,6 @@ export type Props = {
 	setAspectRatioDimensions: ((number, number) -> ()),
 }
 
-
 local function ScreenshotHighlighter(props: Props)
 	-- Using a fraction of screen size to determine annotation circle size
 	local sizeData = RobloxGui.AbsoluteSize
@@ -36,7 +35,9 @@ local function ScreenshotHighlighter(props: Props)
 		local positionVec2 = Vector2.new(newPointVec3.X, newPointVec3.Y) - instance.AbsolutePosition
 		positionVec2 = positionVec2 / instance.AbsoluteSize
 		table.insert(props.annotationPoints, positionVec2)
-		local size = if instance.AbsoluteSize.X > instance.AbsoluteSize.Y then instance.AbsoluteSize.X else instance.AbsoluteSize.Y
+		local size = if instance.AbsoluteSize.X > instance.AbsoluteSize.Y
+			then instance.AbsoluteSize.X
+			else instance.AbsoluteSize.Y
 		props.setAnnotationCircleRadius(annotationCircleSize * 0.5 / size)
 		props.setAspectRatioDimensions(instance.AbsoluteSize.X, instance.AbsoluteSize.Y)
 		props.handleAnnotationPoints(props.annotationPoints)

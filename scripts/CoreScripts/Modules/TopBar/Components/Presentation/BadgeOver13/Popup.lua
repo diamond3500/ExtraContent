@@ -3,39 +3,40 @@ local CorePackages = game:GetService("CorePackages")
 local React = require(CorePackages.Packages.React)
 local e = React.createElement
 
-local UIBlox = require(CorePackages.UIBlox)
+local UIBlox = require(CorePackages.Packages.UIBlox)
 local useStyle = UIBlox.Core.Style.useStyle
 local LinkButton = UIBlox.App.Button.LinkButton
 local Interactable = UIBlox.Core.Control.Interactable
 local ControlState = UIBlox.Core.Control.Enum.ControlState
 
 local useLocalization = require(CorePackages.Workspace.Packages.Localization).Hooks.useLocalization
-local List = require(CorePackages.Cryo).List
+local List = require(CorePackages.Packages.Cryo).List
 
 local useAnalytics = require(script.Parent.useAnalytics)
 
 local PADDING = Vector2.new(8, 8)
 
 local function Paragraph(props)
-    -- We have to manually calculate the text bounds height since AutomaticSize will clamp our
-    -- element height to the containing TopBar height (~36px) otherwise.
-    local text = props.text
-    local textSize = TextService:GetTextSize(text, props.textSize, props.font, Vector2.new(300 - (PADDING.X * 2), math.huge))
+	-- We have to manually calculate the text bounds height since AutomaticSize will clamp our
+	-- element height to the containing TopBar height (~36px) otherwise.
+	local text = props.text
+	local textSize =
+		TextService:GetTextSize(text, props.textSize, props.font, Vector2.new(300 - (PADDING.X * 2), math.huge))
 
-    return e("TextLabel", {
-        AutomaticSize = Enum.AutomaticSize.X,
-        Size = UDim2.fromOffset(0, textSize.Y),
-        BackgroundTransparency = 1,
-        Text = text,
-        TextWrapped = true,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        TextYAlignment = Enum.TextYAlignment.Top,
-        Font = props.font,
-        TextSize = props.textSize,
-        TextColor3 = props.textColor3,
-        TextTransparency = props.textTransparency,
+	return e("TextLabel", {
+		AutomaticSize = Enum.AutomaticSize.X,
+		Size = UDim2.fromOffset(0, textSize.Y),
+		BackgroundTransparency = 1,
+		Text = text,
+		TextWrapped = true,
+		TextXAlignment = Enum.TextXAlignment.Left,
+		TextYAlignment = Enum.TextYAlignment.Top,
+		Font = props.font,
+		TextSize = props.textSize,
+		TextColor3 = props.textColor3,
+		TextTransparency = props.textTransparency,
 		LayoutOrder = props.layoutOrder,
-    })
+	})
 end
 
 type Props = {
@@ -50,7 +51,7 @@ type Props = {
 return function(props: Props)
 	local style = useStyle()
 	local fontStyle = style.Font.Footer
-    local bodyText: { string } = props.bodyText
+	local bodyText: { string } = props.bodyText
 
 	local analytics = useAnalytics()
 	React.useEffect(function()
@@ -83,16 +84,20 @@ return function(props: Props)
 		shape = e("UICorner", {
 			CornerRadius = UDim.new(0, 8),
 		}),
-		body = e(React.Fragment, nil, List.map(bodyText, function(text, index)
-            return e(Paragraph, {
-				layoutOrder = index,
-                text = text,
-                font = fontStyle.Font,
-                textSize = style.Font.BaseSize * fontStyle.RelativeSize,
-                textColor3 = style.Theme.TextEmphasis.Color,
-                textTransparency = style.Theme.TextEmphasis.Transparency,
-            })
-        end)),
+		body = e(
+			React.Fragment,
+			nil,
+			List.map(bodyText, function(text, index)
+				return e(Paragraph, {
+					layoutOrder = index,
+					text = text,
+					font = fontStyle.Font,
+					textSize = style.Font.BaseSize * fontStyle.RelativeSize,
+					textColor3 = style.Theme.TextEmphasis.Color,
+					textTransparency = style.Theme.TextEmphasis.Transparency,
+				})
+			end)
+		),
 		link = e(LinkButton, {
 			text = props.linkText,
 			fontStyle = "Footer",
@@ -114,7 +119,7 @@ return function(props: Props)
 						input = "learn_more",
 					})
 				end
-			end)
-		})
+			end),
+		}),
 	})
 end

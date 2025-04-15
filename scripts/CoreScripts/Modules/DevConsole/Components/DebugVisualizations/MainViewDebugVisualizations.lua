@@ -1,6 +1,6 @@
 local CorePackages = game:GetService("CorePackages")
-local Roact = require(CorePackages.Roact)
-local RoactRodux = require(CorePackages.RoactRodux)
+local Roact = require(CorePackages.Packages.Roact)
+local RoactRodux = require(CorePackages.Packages.RoactRodux)
 
 local Components = script.Parent.Parent.Parent.Components
 local DebugVisualizationsChart = require(Components.DebugVisualizations.DebugVisualizationsChart)
@@ -26,7 +26,7 @@ local MainViewDebugVisualizations = Roact.Component:extend("MainViewDebugVisuali
 function MainViewDebugVisualizations:init()
 	self.onUtilTabHeightChanged = function(utilTabHeight)
 		self:setState({
-			utilTabHeight = utilTabHeight
+			utilTabHeight = utilTabHeight,
 		})
 	end
 
@@ -43,14 +43,14 @@ function MainViewDebugVisualizations:init()
 	self.utilRef = Roact.createRef()
 
 	self.state = {
-		utilTabHeight = 0
+		utilTabHeight = 0,
 	}
 end
 
 function MainViewDebugVisualizations:didMount()
 	local utilSize = self.utilRef.current.Size
 	self:setState({
-		utilTabHeight = utilSize.Y.Offset
+		utilTabHeight = utilSize.Y.Offset,
 	})
 end
 
@@ -58,7 +58,7 @@ function MainViewDebugVisualizations:didUpdate()
 	local utilSize = self.utilRef.current.Size
 	if utilSize.Y.Offset ~= self.state.utilTabHeight then
 		self:setState({
-			utilTabHeight = utilSize.Y.Offset
+			utilTabHeight = utilSize.Y.Offset,
 		})
 	end
 end
@@ -80,7 +80,7 @@ function MainViewDebugVisualizations:render()
 		end
 		initBoxState[i] = {
 			name = name,
-			state =  boxState,
+			state = boxState,
 		}
 	end
 
@@ -109,7 +109,7 @@ function MainViewDebugVisualizations:render()
 			onSearchTermChanged = self.onSearchTermChanged,
 		}),
 
-		DebugVisualizations = utilTabHeight > 0  and Roact.createElement(DebugVisualizationsChart, {
+		DebugVisualizations = utilTabHeight > 0 and Roact.createElement(DebugVisualizationsChart, {
 			size = UDim2.new(1, 0, 1, -utilTabHeight),
 			searchTerm = searchTerm,
 			typeFilters = typeFilters,
@@ -129,7 +129,7 @@ local function mapDispatchToProps(dispatch)
 	return {
 		dispatchDebugVisualizationsUpdateSearchFilter = function(searchTerm, filters)
 			dispatch(DebugVisualizationsUpdateSearchFilter(searchTerm, filters))
-		end
+		end,
 	}
 end
 

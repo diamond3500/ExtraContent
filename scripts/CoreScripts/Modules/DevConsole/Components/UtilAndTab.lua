@@ -1,6 +1,6 @@
 local CorePackages = game:GetService("CorePackages")
 local TextService = game:GetService("TextService")
-local Roact = require(CorePackages.Roact)
+local Roact = require(CorePackages.Packages.Roact)
 
 local Constants = require(script.Parent.Parent.Constants)
 local TAB_HEIGHT = Constants.TabRowFormatting.FrameHeight
@@ -22,7 +22,7 @@ local Components = script.Parent
 local ClientServerButton = require(Components.ClientServerButton)
 local CheckBoxContainer = require(Components.CheckBoxContainer)
 local TabRowContainer = require(Components.TabRowContainer)
-local SearchBar =  require(Components.SearchBar)
+local SearchBar = require(Components.SearchBar)
 
 local UtilAndTab = Roact.Component:extend("UtilAndTab")
 
@@ -31,13 +31,9 @@ function UtilAndTab:init()
 	local totalTabWidth = 0
 	local tabCount = 0
 
-	for name,_ in pairs(tabList) do
-		local textVector = TextService:GetTextSize(
-			name,
-			Constants.DefaultFontSize.TabBar,
-			Constants.Font.TabBar,
-			Vector2.new(0, 0)
-		)
+	for name, _ in pairs(tabList) do
+		local textVector =
+			TextService:GetTextSize(name, Constants.DefaultFontSize.TabBar, Constants.Font.TabBar, Vector2.new(0, 0))
 		totalTabWidth = totalTabWidth + textVector.X
 		tabCount = tabCount + 1
 	end
@@ -49,9 +45,10 @@ function UtilAndTab:init()
 	end
 
 	self.cancelInput = function(rbx, input)
-		if input.UserInputType == Enum.UserInputType.MouseButton1 or
-			(input.UserInputType == Enum.UserInputType.Touch and
-			input.UserInputState == Enum.UserInputState.End) then
+		if
+			input.UserInputType == Enum.UserInputType.MouseButton1
+			or (input.UserInputType == Enum.UserInputType.Touch and input.UserInputState == Enum.UserInputState.End)
+		then
 			if self.searchRef.current then
 				self.searchRef.current.Text = ""
 			end
@@ -63,7 +60,7 @@ function UtilAndTab:init()
 
 			-- the clear button displays based on if the
 			self:setState({
-				activeSearchTerm = false
+				activeSearchTerm = false,
 			})
 		end
 	end
@@ -112,12 +109,11 @@ function UtilAndTab:render()
 	local totalTabCount = self.state.totalTabCount
 	local activeSearchTerm = self.state.activeSearchTerm
 
-	local tabOverLap = (windowWidth - totalTabWidth)  / totalTabCount
+	local tabOverLap = (windowWidth - totalTabWidth) / totalTabCount
 
 	local useDropDown = tabOverLap < TAB_OVERALAP_THESHOLD and windowWidth > 0
 
 	local buttons = nil
-
 
 	local height = formFactor == Constants.FormFactor.Small and SMALL_UTIL_HEIGHT or UTIL_HEIGHT
 	local leftOffset = formFactor == Constants.FormFactor.Small and 6 or 7
@@ -125,7 +121,7 @@ function UtilAndTab:render()
 
 	buttons = Roact.createElement("Frame", {
 		Position = UDim2.new(1, -leftOffset * CS_BUTTON_WIDTH - PADDING, 0, 0),
-		Size = UDim2.new(0, 5*CS_BUTTON_WIDTH, 0, height * numButtonRows),
+		Size = UDim2.new(0, 5 * CS_BUTTON_WIDTH, 0, height * numButtonRows),
 		BackgroundTransparency = 1.0,
 	}, {
 		Layout = Roact.createElement("UIGridLayout", {
@@ -136,12 +132,10 @@ function UtilAndTab:render()
 			VerticalAlignment = Enum.VerticalAlignment.Top,
 			FillDirectionMaxCells = 5,
 		}),
-		unpack(self.props[Roact.Children] or {})
+		unpack(self.props[Roact.Children] or {}),
 	})
 
-
-	if (formFactor == Constants.FormFactor.Small) or
-		useDropDown then
+	if (formFactor == Constants.FormFactor.Small) or useDropDown then
 		local frameHeight = (SMALL_UTIL_HEIGHT * numButtonRows) + SMALL_PADDING
 		if activeSearchTerm then
 			frameHeight = frameHeight + SMALL_UTIL_HEIGHT + SMALL_PADDING
@@ -169,7 +163,7 @@ function UtilAndTab:render()
 			BackgroundTransparency = 1,
 			LayoutOrder = layoutOrder,
 
-			[Roact.Ref] = self.props.refForParent
+			[Roact.Ref] = self.props.refForParent,
 		}, {
 			MainFrame = Roact.createElement("Frame", {
 				Size = UDim2.new(1, 0, 0, SMALL_UTIL_HEIGHT),
@@ -177,7 +171,7 @@ function UtilAndTab:render()
 				[Roact.Ref] = self.utilRef,
 			}, {
 				MainRow = Roact.createElement("Frame", {
-					Size = UDim2.new(1,0,1,0),
+					Size = UDim2.new(1, 0, 1, 0),
 					BackgroundTransparency = 1,
 				}, {
 					UIListLayout = Roact.createElement("UIListLayout", {
@@ -185,7 +179,7 @@ function UtilAndTab:render()
 						SortOrder = Enum.SortOrder.LayoutOrder,
 						VerticalAlignment = Enum.VerticalAlignment.Top,
 						FillDirection = Enum.FillDirection.Horizontal,
-						Padding = UDim.new(0,SMALL_PADDING),
+						Padding = UDim.new(0, SMALL_PADDING),
 					}),
 
 					Tabs = Roact.createElement(TabRowContainer, {
@@ -208,9 +202,9 @@ function UtilAndTab:render()
 
 					FilterCheckBoxes = onCheckBoxChanged and Roact.createElement(CheckBoxContainer, {
 						orderedCheckBoxState = orderedCheckBoxState,
-						frameWidth  = endFrameWidth,
-						frameHeight =  SMALL_UTIL_HEIGHT,
-						pos = UDim2.new(0, 2 * (CS_BUTTON_WIDTH) + PADDING, 0, 0),
+						frameWidth = endFrameWidth,
+						frameHeight = SMALL_UTIL_HEIGHT,
+						pos = UDim2.new(0, 2 * CS_BUTTON_WIDTH + PADDING, 0, 0),
 						layoutOrder = 3,
 						onCheckBoxChanged = onCheckBoxChanged,
 					}),
@@ -218,7 +212,7 @@ function UtilAndTab:render()
 
 				SearchButton = Roact.createElement("ImageButton", {
 					Size = UDim2.new(0, SMALL_UTIL_HEIGHT, 0, SMALL_UTIL_HEIGHT),
-					Position = UDim2.new(1,-SMALL_UTIL_HEIGHT, 0, 0),
+					Position = UDim2.new(1, -SMALL_UTIL_HEIGHT, 0, 0),
 					BackgroundTransparency = 1,
 					Image = Constants.Image.Search,
 					Visible = not activeSearchTerm,
@@ -235,10 +229,9 @@ function UtilAndTab:render()
 				Visible = activeSearchTerm,
 				BorderSizePixel = 0,
 				BackgroundTransparency = 1,
-
 			}, {
 				SearchBar = Roact.createElement(SearchBar, {
-					size = UDim2.new(1, -cancelButtonWidth , 0, SMALL_UTIL_HEIGHT),
+					size = UDim2.new(1, -cancelButtonWidth, 0, SMALL_UTIL_HEIGHT),
 					searchTerm = searchTerm,
 					showClear = activeSearchTerm,
 					textSize = Constants.DefaultFontSize.Search,
@@ -261,8 +254,8 @@ function UtilAndTab:render()
 					BackgroundTransparency = 1,
 
 					[Roact.Event.Activated] = self.cancelInput,
-				})
-			})
+				}),
+			}),
 		})
 	else
 		local useCSButton = onClientButton and onServerButton
@@ -295,7 +288,7 @@ function UtilAndTab:render()
 				[Roact.Ref] = self.utilRef,
 			}, {
 				MainRow = Roact.createElement("Frame", {
-					Size = UDim2.new(1,0,1,0),
+					Size = UDim2.new(1, 0, 1, 0),
 					BackgroundTransparency = 1,
 				}, {
 					UIListLayout = Roact.createElement("UIListLayout", {
@@ -303,7 +296,7 @@ function UtilAndTab:render()
 						SortOrder = Enum.SortOrder.LayoutOrder,
 						VerticalAlignment = Enum.VerticalAlignment.Top,
 						FillDirection = Enum.FillDirection.Horizontal,
-						Padding = UDim.new(0,SMALL_PADDING),
+						Padding = UDim.new(0, SMALL_PADDING),
 					}),
 
 					ClientServerButton = useCSButton and Roact.createElement(ClientServerButton, {
@@ -315,12 +308,11 @@ function UtilAndTab:render()
 
 					FilterCheckBoxes = onCheckBoxChanged and Roact.createElement(CheckBoxContainer, {
 						orderedCheckBoxState = orderedCheckBoxState,
-						frameWidth  = endFrameWidth,
-						frameHeight =  UTIL_HEIGHT,
-						pos = UDim2.new(0, 2 * (CS_BUTTON_WIDTH) + PADDING, 0, 0),
+						frameWidth = endFrameWidth,
+						frameHeight = UTIL_HEIGHT,
+						pos = UDim2.new(0, 2 * CS_BUTTON_WIDTH + PADDING, 0, 0),
 						onCheckBoxChanged = onCheckBoxChanged,
 					}),
-
 				}),
 
 				SearchBar = onSearchTermChanged and Roact.createElement(SearchBar, {
@@ -337,12 +329,10 @@ function UtilAndTab:render()
 					focusLost = self.focusLost,
 				}),
 
-				Buttons = buttons
+				Buttons = buttons,
 			}),
 		})
 	end
-
-
 end
 
 return UtilAndTab

@@ -3,14 +3,12 @@
 	so that a player sees the result of their publish attempt
 ]]
 local CorePackages = game:GetService("CorePackages")
-local CoreGui = game:GetService("CoreGui")
 
-local UIBlox = require(CorePackages.UIBlox)
+local UIBlox = require(CorePackages.Packages.UIBlox)
 local ButtonType = UIBlox.App.Button.Enum.ButtonType
 local InteractiveAlert = UIBlox.App.Dialog.Alert.InteractiveAlert
 local Overlay = UIBlox.App.Dialog.Overlay
-local RobloxGui = CoreGui:WaitForChild("RobloxGui")
-local RobloxTranslator = require(RobloxGui.Modules.RobloxTranslator)
+local RobloxTranslator = require(CorePackages.Workspace.Packages.RobloxTranslator)
 local Images = UIBlox.App.ImageSet.Images
 local XBOX_A_ICON = Images["icons/controls/keys/xboxA"]
 local RoactUtils = require(CorePackages.Workspace.Packages.RoactUtils)

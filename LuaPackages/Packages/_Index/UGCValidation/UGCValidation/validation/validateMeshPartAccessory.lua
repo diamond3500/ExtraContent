@@ -17,12 +17,12 @@ local validateProperties = require(root.validation.validateProperties)
 local validateAttributes = require(root.validation.validateAttributes)
 local validateMeshVertColors = require(root.validation.validateMeshVertColors)
 local validateSingleInstance = require(root.validation.validateSingleInstance)
-local validateCanLoad = require(root.validation.validateCanLoad)
 local validateThumbnailConfiguration = require(root.validation.validateThumbnailConfiguration)
 local validateAccessoryName = require(root.validation.validateAccessoryName)
 local validateSurfaceAppearances = require(root.validation.validateSurfaceAppearances)
 local validateScaleType = require(root.validation.validateScaleType)
 local validateTotalSurfaceArea = require(root.validation.validateTotalSurfaceArea)
+local validateRigidMeshNotSkinned = require(root.validation.validateRigidMeshNotSkinned)
 
 local createMeshPartAccessorySchema = require(root.util.createMeshPartAccessorySchema)
 local getAttachment = require(root.util.getAttachment)
@@ -38,11 +38,11 @@ local getFFlagUGCValidateCoplanarTriTestAccessory = require(root.flags.getFFlagU
 local getFFlagUGCValidateMeshVertColors = require(root.flags.getFFlagUGCValidateMeshVertColors)
 local getFFlagUGCValidateThumbnailConfiguration = require(root.flags.getFFlagUGCValidateThumbnailConfiguration)
 local getFFlagUGCValidationNameCheck = require(root.flags.getFFlagUGCValidationNameCheck)
-local getFFlagUGCValidationShouldYield = require(root.flags.getFFlagUGCValidationShouldYield)
-local getEngineFeatureUGCValidateEditableMeshAndImage =
-	require(root.flags.getEngineFeatureUGCValidateEditableMeshAndImage)
 local getFFlagUGCValidateTotalSurfaceAreaTestAccessory =
 	require(root.flags.getFFlagUGCValidateTotalSurfaceAreaTestAccessory)
+
+local getEngineFeatureEngineUGCValidateRigidNonSkinned =
+	require(root.flags.getEngineFeatureEngineUGCValidateRigidNonSkinned)
 
 local function validateMeshPartAccessory(validationContext: Types.ValidationContext): (boolean, { string }?)
 	assert(
@@ -73,7 +73,7 @@ local function validateMeshPartAccessory(validationContext: Types.ValidationCont
 	end
 
 	if getFFlagUGCValidationNameCheck() and isServer then
-		success, reasons = validateAccessoryName(instance)
+		success, reasons = validateAccessoryName(instance, validationContext)
 		if not success then
 			return false, reasons
 		end
@@ -90,33 +90,35 @@ local function validateMeshPartAccessory(validationContext: Types.ValidationCont
 	local reasonsAccumulator = FailureReasonsAccumulator.new()
 
 	local hasMeshContent = meshInfo.contentId ~= nil and meshInfo.contentId ~= ""
-	if getEngineFeatureUGCValidateEditableMeshAndImage() then
-		local getEditableMeshSuccess, editableMesh = getEditableMeshFromContext(handle, "MeshId", validationContext)
-		if not getEditableMeshSuccess then
-			if not meshInfo.contentId then
-				hasMeshContent = false
-				Analytics.reportFailure(Analytics.ErrorType.validateMeshPartAccessory_NoMeshId)
-				reasonsAccumulator:updateReasons(false, {
+	local getEditableMeshSuccess, editableMesh = getEditableMeshFromContext(handle, "MeshId", validationContext)
+	if not getEditableMeshSuccess then
+		if not meshInfo.contentId then
+			hasMeshContent = false
+			Analytics.reportFailure(Analytics.ErrorType.validateMeshPartAccessory_NoMeshId, nil, validationContext)
+			reasonsAccumulator:updateReasons(false, {
+				string.format(
+					"Accessory MeshPart '%s' must contain a valid meshId. Make sure the mesh referred to by the meshId exists and try again.",
+					handle:GetFullName()
+				),
+			})
+		else
+			Analytics.reportFailure(
+				Analytics.ErrorType.validateMeshPartAccessory_FailedToLoadMesh,
+				nil,
+				validationContext
+			)
+			return false,
+				{
 					string.format(
-						"Accessory MeshPart '%s' must contain a valid meshId. Make sure the mesh referred to by the meshId exists and try again.",
-						handle:GetFullName()
+						"Failed to load mesh for accessory '%s'. Make sure mesh exists and try again.",
+						instance.Name
 					),
-				})
-			else
-				Analytics.reportFailure(Analytics.ErrorType.validateMeshPartAccessory_FailedToLoadMesh)
-				return false,
-					{
-						string.format(
-							"Failed to load mesh for accessory '%s'. Make sure mesh exists and try again.",
-							instance.Name
-						),
-					}
-			end
+				}
 		end
-
-		meshInfo.editableMesh = editableMesh
-		hasMeshContent = true
 	end
+
+	meshInfo.editableMesh = editableMesh :: EditableMesh
+	hasMeshContent = true
 
 	local textureId = handle.TextureID
 	local textureInfo = {
@@ -125,53 +127,25 @@ local function validateMeshPartAccessory(validationContext: Types.ValidationCont
 		contentId = textureId,
 	} :: Types.TextureInfo
 
-	if getEngineFeatureUGCValidateEditableMeshAndImage() then
-		local getEditableImageSuccess, editableImage =
-			getEditableImageFromContext(handle, "TextureID", validationContext)
-		if not getEditableImageSuccess then
-			return false,
-				{
-					string.format(
-						"Failed to load texture for accessory '%s'. Make sure texture exists and try again.",
-						instance.Name
-					),
-				}
-		end
-
-		textureInfo.editableImage = editableImage
-	else
-		if isServer then
-			local textureSuccess = true
-			local meshSuccess
-			local _canLoadFailedReason: any = {}
-			if textureId ~= "" then
-				textureSuccess, _canLoadFailedReason = validateCanLoad(textureId)
-			end
-			meshSuccess, _canLoadFailedReason = validateCanLoad(handle.MeshId)
-			if not textureSuccess or not meshSuccess then
-				-- Failure to load assets should be treated as "inconclusive".
-				-- Validation didn't succeed or fail, we simply couldn't run validation because the assets couldn't be loaded.
-				error(
-					string.format(
-						"Failed to load children assets (Meshes, Textures, etc.) for '%s'. Make sure the assets exist and try again.",
-						instance.Name
-					)
-				)
-			end
-		end
+	local getEditableImageSuccess, editableImage = getEditableImageFromContext(handle, "TextureID", validationContext)
+	if not getEditableImageSuccess then
+		return false,
+			{
+				string.format(
+					"Failed to load texture for accessory '%s'. Make sure texture exists and try again.",
+					instance.Name
+				),
+			}
 	end
 
-	local meshSizeSuccess, meshSize
-	if getFFlagUGCValidationShouldYield() then
-		meshSizeSuccess, meshSize = pcallDeferred(function()
-			return getMeshSize(meshInfo)
-		end, validationContext)
-	else
-		meshSizeSuccess, meshSize = pcall(getMeshSize, meshInfo)
-	end
+	textureInfo.editableImage = editableImage :: EditableImage
+
+	local meshSizeSuccess, meshSize = pcallDeferred(function()
+		return getMeshSize(meshInfo)
+	end, validationContext)
 
 	if not meshSizeSuccess then
-		Analytics.reportFailure(Analytics.ErrorType.validateMeshPartAccessory_FailedToLoadMesh)
+		Analytics.reportFailure(Analytics.ErrorType.validateMeshPartAccessory_FailedToLoadMesh, nil, validationContext)
 		return false,
 			{
 				string.format(
@@ -181,23 +155,18 @@ local function validateMeshPartAccessory(validationContext: Types.ValidationCont
 			}
 	end
 
-	local meshScale
-	if getEngineFeatureUGCValidateEditableMeshAndImage() then
-		meshScale = getExpectedPartSize(handle, validationContext) / meshSize
-	else
-		meshScale = handle.Size / meshSize
-	end
+	local meshScale = getExpectedPartSize(handle, validationContext) / meshSize
 
 	local attachment = getAttachment(handle, assetInfo.attachmentNames)
 	assert(attachment)
 
 	local boundsInfo = assert(assetInfo.bounds[attachment.Name], "Could not find bounds for " .. attachment.Name)
 
-	reasonsAccumulator:updateReasons(validateMaterials(instance))
+	reasonsAccumulator:updateReasons(validateMaterials(instance, validationContext))
 
-	reasonsAccumulator:updateReasons(validateProperties(instance))
+	reasonsAccumulator:updateReasons(validateProperties(instance, nil, validationContext))
 
-	reasonsAccumulator:updateReasons(validateTags(instance))
+	reasonsAccumulator:updateReasons(validateTags(instance, validationContext))
 
 	reasonsAccumulator:updateReasons(validateAttributes(instance, validationContext))
 
@@ -206,7 +175,9 @@ local function validateMeshPartAccessory(validationContext: Types.ValidationCont
 	)
 
 	if getFFlagUGCValidateThumbnailConfiguration() then
-		reasonsAccumulator:updateReasons(validateThumbnailConfiguration(instance, handle, meshInfo, meshScale))
+		reasonsAccumulator:updateReasons(
+			validateThumbnailConfiguration(instance, handle, meshInfo, meshScale, validationContext)
+		)
 	end
 
 	local checkModeration = not isServer
@@ -249,9 +220,13 @@ local function validateMeshPartAccessory(validationContext: Types.ValidationCont
 		reasonsAccumulator:updateReasons(validateSurfaceAppearances(instance, validationContext))
 	end
 
+	if getEngineFeatureEngineUGCValidateRigidNonSkinned() and not validationContext.allowEditableInstances then
+		reasonsAccumulator:updateReasons(validateRigidMeshNotSkinned(meshInfo.contentId, validationContext))
+	end
+
 	local partScaleType = handle:FindFirstChild("AvatarPartScaleType")
 	if partScaleType and partScaleType:IsA("StringValue") then
-		reasonsAccumulator:updateReasons(validateScaleType(partScaleType))
+		reasonsAccumulator:updateReasons(validateScaleType(partScaleType, validationContext))
 	end
 
 	return reasonsAccumulator:getFinalResults()

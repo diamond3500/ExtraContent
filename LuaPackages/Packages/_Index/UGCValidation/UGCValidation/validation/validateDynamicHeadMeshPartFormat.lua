@@ -4,6 +4,7 @@ local root = script.Parent.Parent
 
 local getFFlagUGCValidateDynamicHeadMoodClient = require(root.flags.getFFlagUGCValidateDynamicHeadMoodClient)
 local getFFlagUGCValidateDynamicHeadMoodRCC = require(root.flags.getFFlagUGCValidateDynamicHeadMoodRCC)
+local getFFlagValidateFacialBounds = require(root.flags.getFFlagValidateFacialBounds)
 
 local Analytics = require(root.Analytics)
 
@@ -38,19 +39,20 @@ local function validateDynamicHeadMeshPartFormat(validationContext: Types.Valida
 		return false, failureReasons
 	end
 
-	if
-		(
-			(isServer and getFFlagUGCValidateDynamicHeadMoodRCC())
-			or (not isServer and getFFlagUGCValidateDynamicHeadMoodClient())
-		) and not skipSnapshot
-	then
-		-- TODO: refactor to take in a context table after FFlagUseThumbnailerUtil is cleaned up
-		local startTime = tick()
-		result, failureReasons =
-			validateDynamicHeadMood(inst :: MeshPart, if nil ~= isServer then isServer :: boolean else false)
-		Analytics.recordScriptTime("validateDynamicHeadMood", startTime, validationContext)
-		if not result then
-			return false, failureReasons
+	if not getFFlagValidateFacialBounds() then
+		if
+			(
+				(isServer and getFFlagUGCValidateDynamicHeadMoodRCC())
+				or (not isServer and getFFlagUGCValidateDynamicHeadMoodClient())
+			) and not skipSnapshot
+		then
+			local startTime = tick()
+			result, failureReasons =
+				validateDynamicHeadMood(inst :: MeshPart, if nil ~= isServer then isServer :: boolean else false)
+			Analytics.recordScriptTime("validateDynamicHeadMood", startTime, validationContext)
+			if not result then
+				return false, failureReasons
+			end
 		end
 	end
 

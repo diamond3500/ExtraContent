@@ -21,11 +21,13 @@ local Images = UIBlox.App.ImageSet.Images
 local CoreScriptsRootProvider = require(CorePackages.Workspace.Packages.CoreScriptsRoactCommon).CoreScriptsRootProvider
 local FocusNavigationUtils = require(CorePackages.Workspace.Packages.FocusNavigationUtils)
 local FocusNavigationCoreScriptsWrapper = FocusNavigationUtils.FocusNavigationCoreScriptsWrapper
+local FocusRoot = FocusNavigationUtils.FocusRoot
 local FocusNavigableSurfaceIdentifierEnum = FocusNavigationUtils.FocusNavigableSurfaceIdentifierEnum
 
+local SharedFlags = require(CorePackages.Workspace.Packages.SharedFlags)
+local FFlagCSFocusWrapperRefactor = SharedFlags.FFlagCSFocusWrapperRefactor
 local GetFFlagModalSelectorCloseButton = require(root.Flags.GetFFlagModalSelectorCloseButton)
-local GetFFlagLuaAppEnableOpenTypeSupport =
-	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagLuaAppEnableOpenTypeSupport
+local GetFFlagLuaAppEnableOpenTypeSupport = SharedFlags.GetFFlagLuaAppEnableOpenTypeSupport
 
 type Props = {
 	isShown: boolean,
@@ -46,12 +48,12 @@ type Props = {
 
 local TABLE_CELL_HEIGHT = 40
 local MODAL_PADDING = 12
-local HEADER_HIGHT = 40
 
 local function ModalBaseSelectorDialog(props: Props)
 	local style = useStyle()
 	local theme = style.Theme
 
+	local HEADER_HEIGHT = style.Tokens.Global.Space_500 -- 40 for desktop, 60 for console
 	local listTableHeight = math.min(#props.cellData * TABLE_CELL_HEIGHT, props.viewportHeight - 80 - MODAL_PADDING * 2)
 
 	local modalContentHeight = listTableHeight + MODAL_PADDING * 2
@@ -69,7 +71,7 @@ local function ModalBaseSelectorDialog(props: Props)
 
 	if GetFFlagModalSelectorCloseButton() then
 		-- Adding an extra header with a close button for an alternative to close the modal
-		modalContentHeight = listTableHeight + MODAL_PADDING * 4 + HEADER_HIGHT
+		modalContentHeight = listTableHeight + MODAL_PADDING * 4 + HEADER_HEIGHT
 		listTablePaddingTop = MODAL_PADDING
 		selectorFrameOffset = -MODAL_PADDING * 3
 		modalContentChildren = Cryo.Dictionary.join(modalContentChildren, {
@@ -79,7 +81,7 @@ local function ModalBaseSelectorDialog(props: Props)
 				HorizontalAlignment = 0,
 			}),
 			Header = React.createElement("Frame", {
-				Size = UDim2.new(1, 0, 0, HEADER_HIGHT),
+				Size = UDim2.new(1, 0, 0, HEADER_HEIGHT),
 				BackgroundTransparency = 1,
 				LayoutOrder = 1,
 			}, {
@@ -189,13 +191,22 @@ end
 
 function DialogWrapper(props)
 	return React.createElement(CoreScriptsRootProvider, {}, {
-		FocusNavigationCoreScriptsWrapper = React.createElement(FocusNavigationCoreScriptsWrapper, {
-			selectionGroupName = Constants.ModalBaseSelectorDialogRootName,
-			focusNavigableSurfaceIdentifier = FocusNavigableSurfaceIdentifierEnum.CentralOverlay,
-		}, {
-
-			DialogContainer = React.createElement(ModalBaseSelectorDialog, props),
-		}),
+		FocusNavigationCoreScriptsWrapper = React.createElement(
+			if FFlagCSFocusWrapperRefactor then FocusRoot else FocusNavigationCoreScriptsWrapper,
+			if FFlagCSFocusWrapperRefactor
+				then {
+					surfaceIdentifier = FocusNavigableSurfaceIdentifierEnum.CentralOverlay,
+					isIsolated = true,
+					isAutoFocusRoot = true,
+				}
+				else {
+					selectionGroupName = Constants.ModalBaseSelectorDialogRootName,
+					focusNavigableSurfaceIdentifier = FocusNavigableSurfaceIdentifierEnum.CentralOverlay,
+				},
+			{
+				DialogContainer = React.createElement(ModalBaseSelectorDialog, props),
+			}
+		),
 	})
 end
 

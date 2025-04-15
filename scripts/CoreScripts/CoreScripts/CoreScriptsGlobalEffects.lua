@@ -40,6 +40,8 @@ local function CoreScriptsGlobalEffects(props)
 		deviceType = DeviceTypeEnum.Console,
 	}
 
+	-- This is the singular root provider. It includes a global style provider, which should
+	-- be accessible to all CoreScripts components and places a Foundation style link at the root
 	return React.createElement(CoreScriptsRootProvider, {
 		styleOverride = styleOverride,
 	}, {

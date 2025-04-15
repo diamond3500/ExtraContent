@@ -15,13 +15,6 @@ if ChatLocalization == nil then ChatLocalization = { Get = function(self, key, f
 
 local LocalPlayer = Players.LocalPlayer
 
-local UserPlayEmoteChatTextUpdates do
-	local success, value = pcall(function()
-		return UserSettings():IsUserFeatureEnabled("UserPlayEmoteChatTextUpdates")
-	end)
-	UserPlayEmoteChatTextUpdates = success and value
-end
-
 local LegacyDefaultEmotes = {
 	wave = true,
 	point = true,
@@ -112,11 +105,7 @@ local function ProcessMessage(message, ChatWindow, ChatSettings)
 	end
 
 	if humanoid.RigType ~= Enum.HumanoidRigType.R15 then
-		if UserPlayEmoteChatTextUpdates then
-			sendErrorMessage(channelObj, LocalizationKeys.SwitchToR15)
-		else
-			sendErrorMessage(channelObj, LocalizationKeys.R15Only)
-		end
+		sendErrorMessage(channelObj, LocalizationKeys.R15Only)
 		return true
 	end
 
@@ -157,11 +146,7 @@ local function ProcessMessage(message, ChatWindow, ChatSettings)
 		if not ok then
 			sendErrorMessage(channelObj, LocalizationKeys.NotSupported)
 		elseif not didPlay then
-			if UserPlayEmoteChatTextUpdates then
-				sendErrorMessage(channelObj, LocalizationKeys.AnimationPlaying)
-			else
-				sendErrorMessage(channelObj, LocalizationKeys.TemporarilyUnavailable)
-			end
+			sendErrorMessage(channelObj, LocalizationKeys.TemporarilyUnavailable)
 		end
 	end)
 

@@ -2,7 +2,8 @@
 --[[
 	BottomBar quick access menu
 	Roblox VR 2022, @MetaVars
-]]--
+]]
+--
 
 local AnalyticsService = game:GetService("RbxAnalyticsService")
 local CorePackages = game:GetService("CorePackages")
@@ -13,12 +14,12 @@ local RunService = game:GetService("RunService")
 local StarterGui = game:GetService("StarterGui")
 local VRService = game:GetService("VRService")
 
-local Cryo = require(CorePackages.Cryo)
-local Otter = require(CorePackages.Otter)
+local Cryo = require(CorePackages.Packages.Cryo)
+local Otter = require(CorePackages.Packages.Otter)
 local React = require(CorePackages.Packages.React)
-local Roact = require(CorePackages.Roact)
-local RoactRodux = require(CorePackages.RoactRodux)
-local UIBlox = require(CorePackages.UIBlox)
+local Roact = require(CorePackages.Packages.Roact)
+local RoactRodux = require(CorePackages.Packages.RoactRodux)
+local UIBlox = require(CorePackages.Packages.UIBlox)
 local BaseMenu = UIBlox.App.Menu.BaseMenu
 local SystemBar = UIBlox.App.Navigation.SystemBar
 local Placement = UIBlox.App.Navigation.Enum.Placement
@@ -28,11 +29,31 @@ local ImageSetLabel = UIBlox.Core.ImageSet.ImageSetLabel
 local withStyle = UIBlox.Core.Style.withStyle
 
 local RobloxGui = CoreGui:WaitForChild("RobloxGui")
-local RobloxTranslator = require(RobloxGui.Modules.RobloxTranslator)
+local RobloxTranslator = require(CorePackages.Workspace.Packages.RobloxTranslator)
 local VRHub = require(RobloxGui.Modules.VR.VRHub)
 local VRUtil = require(CorePackages.Workspace.Packages.VrCommon).VRUtil
 
 local ExternalEventConnection = require(CorePackages.Workspace.Packages.RoactUtils).ExternalEventConnection
+
+local FFlagEnableUIManagerPackgify = require(CorePackages.Workspace.Packages.SharedFlags).FFlagEnableUIManagerPackgify
+local PanelType
+local registerRoactPanel
+local UIManager
+local UIManagerConstants
+if FFlagEnableUIManagerPackgify then
+	local VrSpatialUi = require(CorePackages.Workspace.Packages.VrSpatialUi)
+	UIManagerConstants = VrSpatialUi.Constants
+	PanelType = UIManagerConstants.PanelType
+	registerRoactPanel = VrSpatialUi.registerRoactPanel
+	UIManager = VrSpatialUi.UIManager
+else
+	local CoreGuiModules = RobloxGui:WaitForChild("Modules")
+	local UIManagerFolder = CoreGuiModules:WaitForChild("UIManager")
+	PanelType = require(UIManagerFolder.Constants).PanelType
+	registerRoactPanel = require(UIManagerFolder.registerRoactPanel)
+	UIManager = require(UIManagerFolder.UIManager)
+	UIManagerConstants = require(UIManagerFolder.Constants)
+end
 
 -- accessors
 local InGameMenuConstants = require(RobloxGui.Modules.InGameMenuConstants)
@@ -53,10 +74,13 @@ local EngineFeatureEnableVRBottomBarWorksBehindObjects = game:GetEngineFeature("
 
 local FFlagVRMoveVoiceIndicatorToBottomBar = require(RobloxGui.Modules.Flags.FFlagVRMoveVoiceIndicatorToBottomBar)
 local FFlagVRBottomBarDebugPositionConfig = require(RobloxGui.Modules.Flags.FFlagVRBottomBarDebugPositionConfig)
-local FIntVRBottomBarPositionOffsetVerticalNumber = require(RobloxGui.Modules.Flags.FIntVRBottomBarPositionOffsetVerticalNumber)
-local FIntVRBottomBarPositionOffsetDepthNumber = require(RobloxGui.Modules.Flags.FIntVRBottomBarPositionOffsetDepthNumber)
-local FFlagVRBottomBarHighlightedLeaveGameIcon = require(RobloxGui.Modules.Flags.FFlagVRBottomBarHighlightedLeaveGameIcon)
-local FFlagVRBottomBarNoCurvature = game:DefineFastFlag("VRBottomBarNoCurvature", false)
+local FIntVRBottomBarPositionOffsetVerticalNumber =
+	require(RobloxGui.Modules.Flags.FIntVRBottomBarPositionOffsetVerticalNumber)
+local FIntVRBottomBarPositionOffsetDepthNumber =
+	require(RobloxGui.Modules.Flags.FIntVRBottomBarPositionOffsetDepthNumber)
+local FFlagVRBottomBarHighlightedLeaveGameIcon =
+	require(RobloxGui.Modules.Flags.FFlagVRBottomBarHighlightedLeaveGameIcon)
+local IsSpatialRobloxGuiEnabled = require(RobloxGui.Modules.VR.IsSpatialRobloxGuiEnabled)
 
 local SplashScreenManager = require(CorePackages.Workspace.Packages.SplashScreenManager).SplashScreenManager
 
@@ -77,11 +101,11 @@ end
 local LOOKAWAY_Y_THRESHOLD = -0.2
 
 local OFFSET = {
-	Y = FIntVRBottomBarPositionOffsetVerticalNumber/100,
-	Z = FIntVRBottomBarPositionOffsetDepthNumber/100
+	Y = FIntVRBottomBarPositionOffsetVerticalNumber / 100,
+	Z = FIntVRBottomBarPositionOffsetDepthNumber / 100,
 }
 
-local BASE_PART_SIZE = 0.2 + OFFSET.Z/10
+local BASE_PART_SIZE = 0.2 + OFFSET.Z / 10
 
 local PANEL3D_SIZE_Z = 0.05 -- Defined in Panel3D
 
@@ -97,8 +121,7 @@ local SpringOptions = {
 }
 
 -- each individual icon can either be definied as a table entry with icon and onActivate, or as a item component
-local MainMenu =
-{
+local MainMenu = {
 	iconOn = "rbxasset://textures/ui/MenuBar/icon_menu.png",
 	iconOff = "rbxasset://textures/ui/MenuBar/icon_menu.png",
 	onActivated = function()
@@ -114,8 +137,7 @@ local MainMenu =
 	end,
 }
 
-local ToggleGui =
-{
+local ToggleGui = {
 	iconOn = "rbxasset://textures/ui/MenuBar/icon_maximize.png",
 	iconOff = "rbxasset://textures/ui/MenuBar/icon_minimize.png",
 	onActivated = function()
@@ -131,8 +153,7 @@ local ToggleGui =
 	end,
 }
 
-local BackpackIcon =
-{
+local BackpackIcon = {
 	iconOn = "rbxasset://textures/ui/MenuBar/icon__backpack.png",
 	iconOff = "rbxasset://textures/ui/MenuBar/icon__backpack.png",
 	onActivated = function()
@@ -150,8 +171,7 @@ local BackpackIcon =
 	end,
 }
 
-local PlayerList =
-{
+local PlayerList = {
 	iconOn = "rbxasset://textures/ui/MenuBar/icon_leaderboard.png",
 	iconOff = "rbxasset://textures/ui/MenuBar/icon_leaderboard.png",
 	onActivated = function()
@@ -169,8 +189,7 @@ local PlayerList =
 	end,
 }
 
-local Emotes =
-{
+local Emotes = {
 	iconOn = "rbxasset://textures/ui/MenuBar/icon_emote.png",
 	iconOff = "rbxasset://textures/ui/MenuBar/icon_emote.png",
 	onActivated = function()
@@ -192,8 +211,7 @@ local Emotes =
 	end,
 }
 
-local Chat =
-{
+local Chat = {
 	iconOn = "rbxasset://textures/ui/MenuBar/icon_chat.png",
 	iconOff = "rbxasset://textures/ui/MenuBar/icon_chat.png",
 	onActivated = function()
@@ -213,8 +231,7 @@ local Chat =
 	end,
 }
 
-local SafetyOn =
-{
+local SafetyOn = {
 	iconOn = "rbxasset://textures/ui/MenuBar/icon_safety_on.png",
 	iconOff = "rbxasset://textures/ui/MenuBar/icon_safety_on.png",
 	onActivated = function()
@@ -224,8 +241,7 @@ local SafetyOn =
 	end,
 }
 
-local SafetyOff =
-{
+local SafetyOff = {
 	iconOn = "rbxasset://textures/ui/MenuBar/icon_safety_off.png",
 	iconOff = "rbxasset://textures/ui/MenuBar/icon_safety_off.png",
 	onActivated = function()
@@ -235,8 +251,7 @@ local SafetyOff =
 	end,
 }
 
-local LeaveGame =
-{
+local LeaveGame = {
 	iconOn = "rbxasset://textures/ui/MenuBar/icon_leave.png",
 	iconOff = "rbxasset://textures/ui/MenuBar/icon_leave.png",
 	onActivated = function()
@@ -254,15 +269,13 @@ local LeaveGame =
 	end,
 }
 
-local LeaveGameHighlighted =
-{
+local LeaveGameHighlighted = {
 	iconOn = "rbxasset://textures/ui/MenuBar/icon_leave_highlighted.png",
 	iconOff = "rbxasset://textures/ui/MenuBar/icon_leave_highlighted.png",
 	onActivated = LeaveGame.onActivated,
 }
 
-local MoreButton =
-{
+local MoreButton = {
 	iconOn = "rbxasset://textures/ui/MenuBar/icon_more.png",
 	iconOff = "rbxasset://textures/ui/MenuBar/icon_more.png",
 	onActivated = function()
@@ -272,14 +285,12 @@ local MoreButton =
 	end,
 }
 
-local SeparatorIcon =
-{
+local SeparatorIcon = {
 	iconComponent = VRBarSeparator,
 	itemSize = UDim2.new(0, 28, 0, 44),
 }
 
-local MoreEmotes =
-{
+local MoreEmotes = {
 	icon = "rbxasset://textures/ui/MenuBar/icon_emote.png",
 	text = RobloxTranslator:FormatByKey("CoreScripts.TopBar.Emotes"),
 	onActivated = function()
@@ -288,8 +299,7 @@ local MoreEmotes =
 	end,
 }
 
-local MoreLeaderboard =
-{
+local MoreLeaderboard = {
 	icon = "rbxasset://textures/ui/MenuBar/icon_leaderboard.png",
 	text = RobloxTranslator:FormatByKey("CoreScripts.TopBar.Leaderboard"),
 	onActivated = function()
@@ -298,8 +308,7 @@ local MoreLeaderboard =
 	end,
 }
 
-local MoreInventory =
-{
+local MoreInventory = {
 	icon = "rbxasset://textures/ui/MenuBar/icon__backpack.png",
 	text = RobloxTranslator:FormatByKey("CoreScripts.TopBar.Inventory"),
 	onActivated = function()
@@ -310,7 +319,7 @@ local MoreInventory =
 
 -- Remove when remove FFlagVRBottomBarDebugPositionConfig
 local function roundOffset(x)
-	return x >= 0 and math.floor(x * 10 + 0.5)/10 or math.ceil(x * 10 - 0.5)/10
+	return x >= 0 and math.floor(x * 10 + 0.5) / 10 or math.ceil(x * 10 - 0.5) / 10
 end
 
 -- default bar init
@@ -329,21 +338,24 @@ function VRBottomBar:init()
 	self.emotesLoaded = false
 
 	self.onTargetFPSSTateChange = function(isFPSAtTarget)
-		self:setState({hidden = not isFPSAtTarget})
+		self:setState({ hidden = not isFPSAtTarget })
 	end
 	SplashScreenManager.addStatusChangeListener(self.onTargetFPSSTateChange)
 
 	self.getVoiceIcon = function()
 		return {
 			iconImageComponent = function(props)
-				return React.createElement(VRBarVoiceIcon, Cryo.Dictionary.join(props, {
-					userId = tostring((Players.LocalPlayer :: Player).UserId),
-					iconStyle = "MicLight",
-				}))
+				return React.createElement(
+					VRBarVoiceIcon,
+					Cryo.Dictionary.join(props, {
+						userId = tostring((Players.LocalPlayer :: Player).UserId),
+						iconStyle = "MicLight",
+					})
+				)
 			end,
 			onActivated = function()
 				-- Make sure VoiceChatState exists since it's not available in the test runner
-				if self.props.voiceState == (Enum::any).VoiceChatState.Failed then
+				if self.props.voiceState == (Enum :: any).VoiceChatState.Failed then
 					self.props.voiceChatServiceManager:RejoinPreviousChannel()
 				else
 					self.props.voiceChatServiceManager:ToggleMic("VRBottomBar")
@@ -412,14 +424,14 @@ function VRBottomBar:init()
 			iconComponent = function(props)
 				local yOffset = roundOffset(self.state.yOffset)
 				local zOffset = roundOffset(self.state.zOffset)
-				local text = "Y "..yOffset..", Z "..zOffset
+				local text = "Y " .. yOffset .. ", Z " .. zOffset
 				return Roact.createElement("TextLabel", {
 					BackgroundTransparency = 1,
 					Text = text,
 					TextColor3 = Color3.new(1, 1, 1),
 					TextWrapped = true,
 					TextScaled = true,
-					Size = UDim2.fromScale(1,1),
+					Size = UDim2.fromScale(1, 1),
 					[Roact.Children] = props[Roact.Children],
 				})
 			end,
@@ -428,11 +440,14 @@ function VRBottomBar:init()
 	end
 
 	self:setState({
-		itemList = { MainMenu, SeparatorIcon, ToggleGui, SeparatorIcon, LeaveGame},
+		itemList = { MainMenu, SeparatorIcon, ToggleGui, SeparatorIcon, LeaveGame },
 		moreItemList = {},
 	})
 
 	self.onShowTopBarChanged = function()
+		if IsSpatialRobloxGuiEnabled then
+			return
+		end
 		if not VRHub.ShowTopBar then
 			VRHub:SetShowMoreMenu(false)
 		end
@@ -451,7 +466,7 @@ function VRBottomBar:init()
 		local activeItems, moreItems = self:updateItems()
 		self:setState({
 			itemList = activeItems,
-			moreItemList = moreItems
+			moreItemList = moreItems,
 		})
 	end
 
@@ -478,7 +493,7 @@ function VRBottomBar:init()
 
 	self.onVREnabledChanged = function()
 		self:setState({
-			userGui = VRService.VREnabled and safeRequire(RobloxGui.Modules.VR.UserGui) or Roact.None
+			userGui = VRService.VREnabled and safeRequire(RobloxGui.Modules.VR.UserGui) or Roact.None,
 		})
 	end
 
@@ -501,7 +516,7 @@ function VRBottomBar:init()
 		local userGuiPanel = if self.state.userGui then self.state.userGui:getPanel() else nil
 		local userGuiPanelPart = userGuiPanel and userGuiPanel:GetPart()
 		local shouldAlignToPanel = userGuiPanelPart
-			and userGuiPanel:IsPositionLockedType()
+			and (userGuiPanel:IsPositionLockedType() or userGuiPanel:IsUIManagerManagedType())
 			and (userGuiPanel:IsVisible() or userGuiPanel.alwaysUpdatePosition)
 		if shouldAlignToPanel then
 			return userGuiPanelPart
@@ -546,11 +561,13 @@ function VRBottomBar:init()
 
 			local xOffset = FFlagVRBottomBarDebugPositionConfig and (#self.state.itemList - 3) / 2 * basePartSize
 				or (#self.state.itemList - 2.5) / 2 * basePartSize
-			local bottomBarOffsetCFrame = CFrame.new(-xOffset * cameraHeadScale, basePartSize/2 * cameraHeadScale, -PANEL3D_SIZE_Z/2)
+			local bottomBarOffsetCFrame =
+				CFrame.new(-xOffset * cameraHeadScale, basePartSize / 2 * cameraHeadScale, -PANEL3D_SIZE_Z / 2)
 			local panelCFrame = bottomBarCFrame:ToWorldSpace(bottomBarOffsetCFrame) -- Move in bottomBar object space
 
 			panelCFrame = CFrame.new(panelCFrame.Position) * userGuiPanelPart.CFrame.Rotation
-			local moreMenuOffsetCFrame = CFrame.new(0, #self.state.moreItemList * basePartSize/2 * cameraHeadScale, PANEL3D_SIZE_Z/2)
+			local moreMenuOffsetCFrame =
+				CFrame.new(0, #self.state.moreItemList * basePartSize / 2 * cameraHeadScale, PANEL3D_SIZE_Z / 2)
 			panelCFrame = panelCFrame:ToWorldSpace(moreMenuOffsetCFrame) -- Move in moreMenu object space
 			finalPosition = panelCFrame.Position
 		end
@@ -582,20 +599,39 @@ function VRBottomBar:updateItems()
 	local chatEnabled = StarterGui:GetCoreGuiEnabled(Enum.CoreGuiType.Chat)
 	local playerListEnabled = StarterGui:GetCoreGuiEnabled(Enum.CoreGuiType.PlayerList)
 
-	local enabledItems = { MainMenu, SeparatorIcon, ToggleGui }
+	local enabledItems
 
-	if FFlagVRBottomBarDebugPositionConfig then
-		enabledItems = {
-			self.getDebugYOffsetUp(),
-			self.getDebugYOffsetDown(),
-			self.getDebugZOffsetUp(),
-			self.getDebugZOffsetDown(),
-			self.getDebugTextLabel(),
-			SeparatorIcon,
-			MainMenu,
-			SeparatorIcon,
-			ToggleGui
-		}
+	if IsSpatialRobloxGuiEnabled then
+		enabledItems = { MainMenu, SeparatorIcon }
+
+		if FFlagVRBottomBarDebugPositionConfig then
+			enabledItems = {
+				self.getDebugYOffsetUp(),
+				self.getDebugYOffsetDown(),
+				self.getDebugZOffsetUp(),
+				self.getDebugZOffsetDown(),
+				self.getDebugTextLabel(),
+				SeparatorIcon,
+				MainMenu,
+				SeparatorIcon,
+			}
+		end
+	else
+		enabledItems = { MainMenu, SeparatorIcon, ToggleGui }
+
+		if FFlagVRBottomBarDebugPositionConfig then
+			enabledItems = {
+				self.getDebugYOffsetUp(),
+				self.getDebugYOffsetDown(),
+				self.getDebugZOffsetUp(),
+				self.getDebugZOffsetDown(),
+				self.getDebugTextLabel(),
+				SeparatorIcon,
+				MainMenu,
+				SeparatorIcon,
+				ToggleGui,
+			}
+		end
 	end
 
 	local showEmotesIcon = emotesEnabled and not (StarterPlayer.UserEmotesEnabled and self.emotesLoaded == false)
@@ -646,7 +682,7 @@ end
 
 -- VRBottomBar implements two UIBlox components
 function VRBottomBar:renderWithStyle(style)
-	local basePartSize = 0.2 + self.state.zOffset/10  -- Use constant when remove FFlagVRBottomBarDebugPositionConfig
+	local basePartSize = 0.2 + self.state.zOffset / 10 -- Use constant when remove FFlagVRBottomBarDebugPositionConfig
 	basePartSize = basePartSize * scaleGuiDistance
 
 	local itemList = self.state.itemList
@@ -662,21 +698,37 @@ function VRBottomBar:renderWithStyle(style)
 	return Roact.createFragment({
 		BottomBarPanel3D = Roact.createElement(Panel3D, {
 			panelName = "BottomBar",
-			partSize = Vector2.new((#itemList - 1) * basePartSize, basePartSize),
+			partSize = if IsSpatialRobloxGuiEnabled
+				then Vector2.new(
+					(#itemList - 1) * UIManagerConstants.BOTTOM_BAR_BASE_PART_SIZE * (workspace.CurrentCamera :: Camera).HeadScale, 
+					UIManagerConstants.BOTTOM_BAR_BASE_PART_SIZE * (workspace.CurrentCamera :: Camera).HeadScale
+				)
+				else Vector2.new((#itemList - 1) * basePartSize, basePartSize),
 			virtualScreenSize = Vector2.new((#itemList - 1) * 50, 50),
 			offset = self.state.vrMenuOpen and CFrame.new(0, 0, 0) or CFrame.new(0, -0.5, 0),
 			offsetCallback = self.bottomBarPanelOffsetCallback,
 			lerp = true,
 			tilt = 0,
-			anchoring = VRConstants.AnchoringTypes.Head,
+			anchoring = if IsSpatialRobloxGuiEnabled
+				then VRConstants.AnchoringTypes.PanelManaged
+				else VRConstants.AnchoringTypes.Head,
 			faceCamera = true,
-			curvature = if FFlagVRBottomBarNoCurvature or game:GetEngineFeature("EnableMaquettesSupport") then 0 else nil,
+			curvature = 0,
 			alwaysOnTop = EngineFeatureEnableVRBottomBarWorksBehindObjects and true or nil,
 			parent = EngineFeatureEnableVRBottomBarWorksBehindObjects and GuiService.CoreGuiFolder or nil,
 			zOffset = 1,
+			connectPanelManagerFunction = if IsSpatialRobloxGuiEnabled
+				then function(surfaceGui)
+					if surfaceGui then
+						registerRoactPanel(surfaceGui, PanelType.BottomBar)
+					else
+						UIManager.getInstance():removeRoactPanel(PanelType.BottomBar)
+					end
+				end
+				else nil,
 		}, {
 			CanvasGroup = Roact.createElement("CanvasGroup", {
-				BackgroundTransparency =  1,
+				BackgroundTransparency = 1,
 				BorderSizePixel = 0,
 				GroupTransparency = self.fadeTransparency,
 				Size = UDim2.new(1, 0, 1, 0),
@@ -699,17 +751,33 @@ function VRBottomBar:renderWithStyle(style)
 		}),
 		MoreMenuPanel3D = self.state.moreMenuOpen and Roact.createElement(Panel3D, {
 			panelName = "MoreMenu",
-			partSize = Vector2.new(5 * basePartSize, #moreItemList * basePartSize),
+			partSize = if IsSpatialRobloxGuiEnabled
+				then Vector2.new(
+					5 * UIManagerConstants.BOTTOM_BAR_BASE_PART_SIZE * (workspace.CurrentCamera :: Camera).HeadScale,
+					#moreItemList * UIManagerConstants.BOTTOM_BAR_BASE_PART_SIZE * (workspace.CurrentCamera :: Camera).HeadScale
+				)
+				else Vector2.new(5 * basePartSize, #moreItemList * basePartSize),
 			virtualScreenSize = Vector2.new(250, (#moreItemList * 56 + 8)),
 			offset = self.state.vrMenuOpen and CFrame.new(0, 0, 0) or CFrame.new(0, -0.5, 0),
 			offsetCallback = self.moreMenuPanelOffsetCallback,
 			lerp = true,
 			tilt = 0,
 			tiltCallback = self.moreMenuPanelTiltCallback,
-			anchoring = VRConstants.AnchoringTypes.Head,
+			anchoring = if IsSpatialRobloxGuiEnabled
+				then VRConstants.AnchoringTypes.PanelManaged
+				else VRConstants.AnchoringTypes.Head,
 			faceCamera = true,
 			alwaysOnTop = EngineFeatureEnableVRBottomBarWorksBehindObjects and true or nil,
 			parent = EngineFeatureEnableVRBottomBarWorksBehindObjects and GuiService.CoreGuiFolder or nil,
+			connectPanelManagerFunction = if IsSpatialRobloxGuiEnabled
+				then function(surfaceGui)
+					if surfaceGui then
+						registerRoactPanel(surfaceGui, PanelType.MoreMenu)
+					else
+						UIManager.getInstance():removeRoactPanel(PanelType.MoreMenu)
+					end
+				end
+				else nil,
 			zOffset = 2,
 		}, {
 			Content = Roact.createElement("Frame", {
@@ -730,13 +798,14 @@ function VRBottomBar:renderWithStyle(style)
 					Position = UDim2.new(0.5, 0, 1, 0),
 					Size = UDim2.new(0, 24, 0, 10),
 				}),
-			})
+			}),
 		}),
 
-		ShowHighlightedLeaveGameIconToggled = FFlagVRBottomBarHighlightedLeaveGameIcon and Roact.createElement(ExternalEventConnection, {
-			event = VRHub.ShowHighlightedLeaveGameIconToggled.Event,
-			callback = self.updateItemListState,
-		}),
+		ShowHighlightedLeaveGameIconToggled = FFlagVRBottomBarHighlightedLeaveGameIcon
+			and Roact.createElement(ExternalEventConnection, {
+				event = VRHub.ShowHighlightedLeaveGameIconToggled.Event,
+				callback = self.updateItemListState,
+			}),
 		ShowTopBarChanged = Roact.createElement(ExternalEventConnection, {
 			event = VRHub.ShowTopBarChanged.Event,
 			callback = self.onShowTopBarChanged,

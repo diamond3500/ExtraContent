@@ -1,8 +1,8 @@
 local CorePackages = game:GetService("CorePackages")
 
-local Roact = require(CorePackages.Roact)
-local Rodux = require(CorePackages.Rodux)
-local UIBlox = require(CorePackages.UIBlox)
+local Roact = require(CorePackages.Packages.Roact)
+local Rodux = require(CorePackages.Packages.Rodux)
+local UIBlox = require(CorePackages.Packages.UIBlox)
 local Dash = require(CorePackages.Packages.Dash)
 local RoactRodux = require(CorePackages.Packages.RoactRodux)
 local Localization = require(CorePackages.Workspace.Packages.InExperienceLocales).Localization

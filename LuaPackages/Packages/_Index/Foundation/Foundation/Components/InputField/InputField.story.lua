@@ -1,10 +1,14 @@
 local Foundation = script:FindFirstAncestor("Foundation")
 local Packages = Foundation.Parent
 local React = require(Packages.React)
+local Dash = require(Packages.Dash)
 
-local InputField = require(Foundation.Components.InputField)
+local InputSize = require(Foundation.Enums.InputSize)
+local InputLabelSize = require(Foundation.Enums.InputLabelSize)
 local InternalTextInput = require(Foundation.Components.InternalTextInput)
 local View = require(Foundation.Components.View)
+
+local InputField = require(Foundation.Components.InputField)
 
 local function Story(props)
 	local controls = props.controls
@@ -20,6 +24,7 @@ local function Story(props)
 	}, {
 		React.createElement(InputField, {
 			label = controls.label,
+			size = controls.labelSize,
 			hint = controls.hint,
 			input = function(ref)
 				return React.createElement(InternalTextInput, {
@@ -27,6 +32,7 @@ local function Story(props)
 					text = text,
 					hasError = controls.hasError,
 					isDisabled = controls.isDisabled,
+					size = controls.size,
 					onChanged = handleChange,
 					placeholder = controls.placeholder,
 				})
@@ -43,6 +49,8 @@ return {
 		hint = "Hint",
 		hasError = false,
 		isDisabled = false,
+		size = Dash.values(InputSize),
+		labelSize = Dash.values(InputLabelSize),
 		placeholder = "Placeholder text",
 	},
 }

@@ -1,19 +1,25 @@
 local Foundation = script:FindFirstAncestor("Foundation")
 local Packages = Foundation.Parent
 local React = require(Packages.React)
+local Dash = require(Packages.Dash)
 
-local TextInput = require(Foundation.Components.TextInput)
 local View = require(Foundation.Components.View)
 local Text = require(Foundation.Components.Text)
+local useTokens = require(Foundation.Providers.Style.useTokens)
 
 local Button = require(Foundation.Components.Button)
+
 local ButtonVariant = require(Foundation.Enums.ButtonVariant)
-type ButtonVariant = ButtonVariant.ButtonVariant
+local InputSize = require(Foundation.Enums.InputSize)
+
+local TextInput = require(Foundation.Components.TextInput)
 
 local function Story(props)
 	local controls = props.controls
 
 	local text, setText = React.useState("")
+	local numReturnPressed, setNumReturnPressed = React.useState(0)
+	local tokens = useTokens()
 
 	local ref = React.useRef(nil)
 
@@ -31,6 +37,17 @@ local function Story(props)
 		end
 	end
 
+	local function onFocusGained()
+		print("focus gained!")
+	end
+
+	local function onReturnPressed()
+		print("Return pressed!")
+		setNumReturnPressed(function(numPressed)
+			return numPressed + 1
+		end)
+	end
+
 	return React.createElement(View, {
 		tag = "col gap-large auto-xy padding-xlarge",
 	}, {
@@ -42,7 +59,10 @@ local function Story(props)
 			isDisabled = controls.isDisabled,
 			isRequired = controls.isRequired,
 			onChanged = handleChange,
+			onFocusGained = onFocusGained,
+			onReturnPressed = onReturnPressed,
 			label = controls.input,
+			size = controls.size,
 			hint = if controls.hint == "" then nil else controls.hint,
 			placeholder = controls.placeholder,
 			iconLeading = if controls.iconLeading == React.None then nil else controls.iconLeading,
@@ -60,9 +80,7 @@ local function Story(props)
 		Output = React.createElement(Text, {
 			LayoutOrder = 2,
 			Text = text,
-			textStyle = {
-				Color3 = Color3.new(1, 0, 0.5),
-			},
+			textStyle = tokens.Color.System.Alert,
 
 			tag = "auto-xy",
 		}),
@@ -72,6 +90,14 @@ local function Story(props)
 			text = "Focus TextInput",
 			onActivated = gainFocus,
 			variant = ButtonVariant.Standard,
+		}),
+
+		NumReturnPressed = React.createElement(Text, {
+			LayoutOrder = 4,
+			Text = "Num return pressed: " .. tostring(numReturnPressed),
+			textStyle = tokens.Color.Content.Emphasis,
+
+			tag = "auto-xy",
 		}),
 	})
 end
@@ -89,6 +115,7 @@ return {
 			Enum.TextInputType.Password,
 			Enum.TextInputType.Number,
 		},
+		size = Dash.values(InputSize),
 		input = "Input Label",
 		hint = "Helper text goes here",
 		placeholder = "Placeholder text",

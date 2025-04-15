@@ -1,6 +1,6 @@
 local CorePackages = game:GetService("CorePackages")
 
-local InGameMenuDependencies = require(CorePackages.InGameMenuDependencies)
+local InGameMenuDependencies = require(CorePackages.Packages.InGameMenuDependencies)
 local Roact = InGameMenuDependencies.Roact
 local RoactRodux = InGameMenuDependencies.RoactRodux
 local UIBlox = InGameMenuDependencies.UIBlox
@@ -15,7 +15,7 @@ local Constants = require(InGameMenu.Resources.Constants)
 local GlobalConfig = require(InGameMenu.GlobalConfig)
 local CloseMenu = require(InGameMenu.Thunks.CloseMenu)
 
-local VECTOR2_ZERO = Vector2.new(0,0)
+local VECTOR2_ZERO = Vector2.new(0, 0)
 
 local validateProps = t.strictInterface({
 	currentPage = t.string,
@@ -52,7 +52,7 @@ local function ViewportOverlay(props)
 				Size = UDim2.new(1, -props.occupiedWidth, 1, 0),
 				Text = "",
 				[Roact.Event.Activated] = props.onActivated,
-			})
+			}),
 		})
 	end)
 end

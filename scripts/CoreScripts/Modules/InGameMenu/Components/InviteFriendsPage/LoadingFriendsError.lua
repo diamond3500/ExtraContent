@@ -3,7 +3,7 @@ local CorePackages = game:GetService("CorePackages")
 local TextService = game:GetService("TextService")
 local GuiService = game:GetService("GuiService")
 
-local InGameMenuDependencies = require(CorePackages.InGameMenuDependencies)
+local InGameMenuDependencies = require(CorePackages.Packages.InGameMenuDependencies)
 local Roact = InGameMenuDependencies.Roact
 local t = InGameMenuDependencies.t
 local UIBlox = InGameMenuDependencies.UIBlox
@@ -21,6 +21,9 @@ local Assets = require(InGameMenu.Resources.Assets)
 local ThemedTextLabel = require(InGameMenu.Components.ThemedTextLabel)
 local FocusHandler = require(InGameMenu.Components.Connection.FocusHandler)
 local RootedConnection = require(InGameMenu.Components.Connection.RootedConnection)
+
+local FFlagUIBloxUseFoundationButton =
+	require(CorePackages.Workspace.Packages.SharedFlags).UIBlox.GetFFlagUIBloxUseFoundationButton()
 
 local ImageSetLabel = UIBlox.Core.ImageSet.ImageSetLabel
 local ControlState = UIBlox.Core.Control.Enum.ControlState
@@ -40,7 +43,7 @@ function LoadingFriendsError:init()
 	self.buttonRef = Roact.createRef()
 
 	self.state = {
-		buttonIsInitialized = false,
+		buttonIsInitialized = if FFlagUIBloxUseFoundationButton then true else false,
 	}
 end
 
@@ -96,35 +99,38 @@ function LoadingFriendsError:render()
 						Size = UDim2.new(1, 0, 1, -totalTextPadding),
 						TextXAlignment = Enum.TextXAlignment.Center,
 						TextWrapped = true,
-					})
+					}),
 				}),
 
 				RootedConnection = Roact.createElement(RootedConnection, {
 					render = function(isRooted)
 						return Roact.createElement(FocusHandler, {
-							isFocused = props.canCaptureFocus
-								and self.state.buttonIsInitialized
-								and isRooted,
+							isFocused = props.canCaptureFocus and self.state.buttonIsInitialized and isRooted,
 
 							didFocus = function()
 								GuiService.SelectedCoreObject = self.buttonRef:getValue()
 							end,
 						}, {
-							RetryButton = isRooted and Roact.createElement(Button, {
-								buttonType = ButtonType.Secondary,
-								layoutOrder = 3,
-								size = UDim2.new(1, 0, 0, 48),
-								icon = Assets.Images.RetryIcon,
-								onActivated = props.onRetry,
-								buttonRef = self.buttonRef,
-								onStateChanged = function(_, newState)
-									if not self.state.buttonIsInitialized and newState ~= ControlState.Initialize then
-										self:setState({
-											buttonIsInitialized = true,
-										})
-									end
-								end,
-							}) or nil,
+							RetryButton = isRooted
+									and Roact.createElement(Button, {
+										buttonType = ButtonType.Secondary,
+										layoutOrder = 3,
+										size = UDim2.new(1, 0, 0, 48),
+										icon = Assets.Images.RetryIcon,
+										onActivated = props.onRetry,
+										buttonRef = self.buttonRef,
+										onStateChanged = function(_, newState)
+											if
+												not self.state.buttonIsInitialized
+												and newState ~= ControlState.Initialize
+											then
+												self:setState({
+													buttonIsInitialized = true,
+												})
+											end
+										end,
+									})
+								or nil,
 						})
 					end,
 				}),

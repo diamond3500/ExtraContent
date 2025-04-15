@@ -15,6 +15,7 @@ local Shared = require(Packages.Shared)
 local console = Shared.console
 local errorToString = Shared.errorToString
 local describeError = Shared.describeError
+local SafeFlags = require(Packages.SafeFlags)
 
 -- ROBLOX deviation: getCurrentTime will always map to `tick` in Luau
 local getCurrentTime = function()
@@ -35,12 +36,93 @@ local isMessageLoopRunning = false
 local scheduledHostCallback: ((boolean, number) -> boolean) | nil = nil
 local taskTimeoutID = Object.None
 
+local GetFIntReactSchedulerYieldInterval =
+	SafeFlags.createGetFInt("ReactSchedulerYieldInterval2", 15)
+local FIntReactSchedulerDesiredFrameRate =
+	SafeFlags.createGetFInt("ReactSchedulerDesiredFrameRate", 60)()
+local FIntReactSchedulerMinimumFrameRate =
+	SafeFlags.createGetFInt("ReactSchedulerMinFrameRate", 30)()
+local FFlagReactSchedulerEnableDeferredWork =
+	SafeFlags.createGetFFlag("ReactSchedulerEnableDeferredWork")()
+local FFlagReactSchedulerSetFrameMarkerOnHeartbeatEnd =
+	SafeFlags.createGetFFlag("ReactSchedulerSetFrameMarkerOnHeartbeatEnd")()
+local FFlagReactSchedulerSetTargetMsByHeartbeatDelta =
+	SafeFlags.createGetFFlag("ReactSchedulerSetTargetMsByHeartbeatDelta")()
+
+-- ROBLOX deviation: support deferred re-entrants before yielding to the next frame
+local isDeferred = false
+local frameStartTime = 0
+local desiredMillisecondsPerFrame = 1000 / FIntReactSchedulerDesiredFrameRate
+local maxMillisecondsPerFrame = 1000 / FIntReactSchedulerMinimumFrameRate
+local targetMillisecondsPerFrame = desiredMillisecondsPerFrame
+
+local heartbeatConection: RBXScriptConnection? = nil
+
+local function createHeartbeatConnection()
+	if heartbeatConection then
+		heartbeatConection:Disconnect()
+	end
+	heartbeatConection = game:GetService("RunService").Heartbeat
+		:Connect(function(step: number)
+			targetMillisecondsPerFrame = math.clamp(
+				step * 1000,
+				desiredMillisecondsPerFrame,
+				maxMillisecondsPerFrame
+			)
+		end)
+end
+
+if FFlagReactSchedulerSetTargetMsByHeartbeatDelta then
+	createHeartbeatConnection()
+end
+
+local function setFrameMarker()
+	frameStartTime = getCurrentTime()
+end
+
 -- Scheduler periodically yields in case there is other work on the main
 -- thread, like user events. By default, it yields multiple times per frame.
 -- It does not attempt to align with frame boundaries, since most tasks don't
 -- need to be frame aligned; for those that do, use requestAnimationFrame.
-local yieldInterval = 15
+local yieldInterval = GetFIntReactSchedulerYieldInterval()
 local deadline = 0
+
+type schedulerFlags = {
+	yieldInterval: number?,
+	deferredWork: boolean?,
+	heartbeatFrameMarker: boolean?,
+	targetMsByHeartbeatDelta: boolean?,
+}
+
+local function setSchedulerFlags(flags: schedulerFlags)
+	if flags.yieldInterval ~= nil then
+		yieldInterval = flags.yieldInterval
+	end
+	if flags.deferredWork ~= nil then
+		FFlagReactSchedulerEnableDeferredWork = flags.deferredWork
+	end
+	if flags.heartbeatFrameMarker ~= nil then
+		FFlagReactSchedulerSetFrameMarkerOnHeartbeatEnd = flags.heartbeatFrameMarker
+	end
+	if flags.targetMsByHeartbeatDelta ~= nil then
+		FFlagReactSchedulerSetTargetMsByHeartbeatDelta = flags.targetMsByHeartbeatDelta
+		if flags.targetMsByHeartbeatDelta then
+			createHeartbeatConnection()
+		else
+			if heartbeatConection then
+				heartbeatConection:Disconnect()
+				heartbeatConection = nil
+				targetMillisecondsPerFrame = desiredMillisecondsPerFrame -- reset to default
+			end
+		end
+	end
+end
+
+local function doesBudgetRemain(): boolean
+	local timeElapsed = getCurrentTime() - frameStartTime
+	local budget = targetMillisecondsPerFrame - timeElapsed
+	return budget > yieldInterval
+end
 
 -- ROBLOX deviation: Removed some logic around browser functionality that's not
 -- present in the roblox engine
@@ -76,6 +158,26 @@ local function performWorkUntilDeadline()
 		deadline = currentTime + yieldInterval
 		local hasTimeRemaining = true
 
+		if
+			FFlagReactSchedulerEnableDeferredWork
+			and not FFlagReactSchedulerSetFrameMarkerOnHeartbeatEnd
+		then
+			if not isDeferred then
+				frameStartTime = currentTime
+			end
+		end
+
+		if FFlagReactSchedulerSetFrameMarkerOnHeartbeatEnd then
+			-- We only want to set no time remaining if we are deferring work
+			-- This ensures we run React at least once per frame if there's work
+			-- While this helps avoid starving React, it doesn't guarantee it will
+			if isDeferred then
+				if not doesBudgetRemain() then
+					hasTimeRemaining = false
+				end
+			end
+		end
+
 		local ok, result
 		local function doWork()
 			local hasMoreWork = (scheduledHostCallback :: any)(
@@ -94,9 +196,22 @@ local function performWorkUntilDeadline()
 				-- more work, either yield and defer till later this frame, or
 				-- delay work till next frame
 
-				-- ROBLOX FIXME: What's the proper combination of task.defer and
-				-- task.delay that makes this optimal?
-				task.delay(0, performWorkUntilDeadline)
+				if FFlagReactSchedulerEnableDeferredWork then
+					if doesBudgetRemain() then
+						-- Budget remains for more work this frame, defer
+						isDeferred = true
+						task.defer(performWorkUntilDeadline)
+					else
+						-- No budget remains for more work this frame, delay to next frame
+						isDeferred = false
+						task.delay(0, performWorkUntilDeadline)
+						if FFlagReactSchedulerSetFrameMarkerOnHeartbeatEnd then
+							task.defer(setFrameMarker)
+						end
+					end
+				else
+					task.delay(0, performWorkUntilDeadline)
+				end
 			end
 			return nil
 		end
@@ -111,6 +226,9 @@ local function performWorkUntilDeadline()
 			-- If a scheduler task throws, exit the current coroutine so the
 			-- error can be observed.
 			task.delay(0, performWorkUntilDeadline)
+			if FFlagReactSchedulerSetFrameMarkerOnHeartbeatEnd then
+				task.defer(setFrameMarker)
+			end
 
 			-- ROBLOX FIXME: the top-level Luau VM handler doesn't deal with
 			-- non-string errors, so massage it until VM support lands
@@ -149,6 +267,9 @@ local function requestHostCallback(callback)
 		isMessageLoopRunning = true
 
 		task.delay(0, performWorkUntilDeadline)
+		if FFlagReactSchedulerSetFrameMarkerOnHeartbeatEnd then
+			task.defer(setFrameMarker)
+		end
 	end
 end
 
@@ -176,4 +297,5 @@ return {
 	requestPaint = requestPaint,
 	getCurrentTime = getCurrentTime,
 	forceFrameRate = forceFrameRate,
+	setSchedulerFlags = setSchedulerFlags,
 }

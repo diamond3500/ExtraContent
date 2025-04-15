@@ -1,8 +1,6 @@
 --!nonstrict
-local CoreGui = game:GetService("CoreGui")
-local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 local CorePackages = game:GetService("CorePackages")
-local UIBlox = require(CorePackages.UIBlox)
+local UIBlox = require(CorePackages.Packages.UIBlox)
 local React = require(CorePackages.Packages.React)
 
 local ButtonStack = UIBlox.App.Button.ButtonStack
@@ -22,7 +20,7 @@ local Assets = require(TnsModule.Resources.Assets)
 local Dependencies = require(TnsModule.Dependencies)
 local RestartScreenshotDialog = require(TnsModule.Components.ReportAnything.RestartScreenshotDialog)
 local ReportAnythingAnalytics = require(TnsModule.Utility.ReportAnythingAnalytics)
-local RobloxTranslator = require(RobloxGui.Modules.RobloxTranslator)
+local RobloxTranslator = require(CorePackages.Workspace.Packages.RobloxTranslator)
 local GetFFlagReportAnythingLocalizationEnabled = require(TnsModule.Flags.GetFFlagReportAnythingLocalizationEnabled)
 
 local Divider = require(Dependencies.Divider)
@@ -35,7 +33,7 @@ export type Props = {
 	screenshot: string,
 	imageAspectRatio: number,
 	viewportHeight: number,
-	viewportWidth: number;
+	viewportWidth: number,
 	isSmallPortraitMode: boolean,
 	onBack: () -> (),
 	onRestart: () -> (),
@@ -85,8 +83,8 @@ local function ScreenshotReviewDialogSmallPortraitModeHeaderRight(props)
 			fitContent = true,
 			standardSize = StandardButtonSize.XSmall,
 			onActivated = onActivatedCallback,
-			[React.Change.AbsoluteSize] = retakeButtonWidthChangedCallback
-		})
+			[React.Change.AbsoluteSize] = retakeButtonWidthChangedCallback,
+		}),
 	})
 end
 
@@ -98,7 +96,7 @@ local function ScreenshotReviewDialog(props: Props)
 	end, {})
 
 	local footerHeight = FOOTER_HEIGHT
-	if (GetFFlagReportAnythingLocalizationEnabled() and props.isSmallPortraitMode) then
+	if GetFFlagReportAnythingLocalizationEnabled() and props.isSmallPortraitMode then
 		footerHeight = (FOOTER_HEIGHT - 12) * 2 + 8 -- buttons have 8px between them, not 12 (normal padding)
 	end
 
@@ -208,10 +206,10 @@ local function ScreenshotReviewDialog(props: Props)
 										setShowRestartDialog = setShowRestartDialog,
 										font = font,
 										theme = theme,
-										viewportWidth = props.viewportWidth
+										viewportWidth = props.viewportWidth,
 									})
 								end
-								local retakeButtonWidth = if props.isSmallPortraitMode then 72 else 120 
+								local retakeButtonWidth = if props.isSmallPortraitMode then 72 else 120
 
 								local retakeButtonHeight = if props.isSmallPortraitMode then 28 else 36
 								return React.createElement(Button, {
@@ -338,7 +336,9 @@ local function ScreenshotReviewDialog(props: Props)
 							PaddingRight = UDim.new(0, 16),
 						}),
 						ActionButtons = React.createElement(ButtonStack, {
-							forcedFillDirection = if (GetFFlagReportAnythingLocalizationEnabled() and props.isSmallPortraitMode)
+							forcedFillDirection = if (
+									GetFFlagReportAnythingLocalizationEnabled() and props.isSmallPortraitMode
+								)
 								then Enum.FillDirection.Vertical
 								else nil,
 							marginBetween = 8,
@@ -348,7 +348,9 @@ local function ScreenshotReviewDialog(props: Props)
 									props = {
 										onActivated = props.onSkip,
 										text = if GetFFlagReportAnythingLocalizationEnabled()
-											then RobloxTranslator:FormatByKey("Feature.ReportAbuse.Action.AttachScreenshot")
+											then RobloxTranslator:FormatByKey(
+												"Feature.ReportAbuse.Action.AttachScreenshot"
+											)
 											else "Attach Screenshot",
 									},
 								},
@@ -359,7 +361,9 @@ local function ScreenshotReviewDialog(props: Props)
 											props.onNextPage()
 										end,
 										text = if GetFFlagReportAnythingLocalizationEnabled()
-											then RobloxTranslator:FormatByKey("Feature.ReportAbuse.Action.HighlightScene")
+											then RobloxTranslator:FormatByKey(
+												"Feature.ReportAbuse.Action.HighlightScene"
+											)
 											else "Highlight Scene",
 									},
 								},

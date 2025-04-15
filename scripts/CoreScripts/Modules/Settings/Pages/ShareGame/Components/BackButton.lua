@@ -7,7 +7,7 @@ local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 local ShareGame = RobloxGui.Modules.Settings.Pages.ShareGame
 local RectangleButton = require(ShareGame.Components.RectangleButton)
 local IconButton = require(ShareGame.Components.IconButton)
-local Roact = require(CorePackages.Roact)
+local Roact = require(CorePackages.Packages.Roact)
 
 local Constants = require(ShareGame.Constants)
 local ShareGameIcons = require(RobloxGui.Modules.Settings.Pages.ShareGame.Spritesheets.ShareGameIcons)
@@ -32,7 +32,6 @@ local ICON_TYPE_TO_ICON_NAME = {
 	[BackButton.IconType.Arrow] = "back",
 	[BackButton.IconType.Cross] = "cross",
 }
-
 
 local createIconButton = function(props)
 	local iconType = props.iconType
@@ -62,7 +61,6 @@ local createIconButton = function(props)
 	end
 	return
 end
-
 
 function BackButton:render()
 	local iconType = self.props.iconType

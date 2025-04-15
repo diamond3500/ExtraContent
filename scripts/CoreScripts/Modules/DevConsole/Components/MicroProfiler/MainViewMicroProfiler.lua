@@ -4,7 +4,7 @@ local AnalyticsService = game:GetService("RbxAnalyticsService")
 local Settings = UserSettings()
 local GameSettings = Settings.GameSettings
 
-local Roact = require(CorePackages.Roact)
+local Roact = require(CorePackages.Packages.Roact)
 
 local Components = script.Parent.Parent.Parent.Components
 local UtilAndTab = require(Components.UtilAndTab)
@@ -22,16 +22,16 @@ local BUTTON_SELECTED = Constants.Color.SelectedBlue
 local BUTTON_COLOR = Constants.Color.UnselectedGray
 
 local ROW_HEIGHT = 30
-local OFFSET = .10
-local ROW_VALUE_WIDTH = .8
-local MICROPROFILER_PRESSED_COUNTERNAME ="MicroprofilerDevConsolePressed"
+local OFFSET = 0.10
+local ROW_VALUE_WIDTH = 0.8
+local MICROPROFILER_PRESSED_COUNTERNAME = "MicroprofilerDevConsolePressed"
 
 local MainViewProfiler = Roact.Component:extend("MainViewProfiler")
 
 function MainViewProfiler:init()
 	self.onUtilTabHeightChanged = function(utilTabHeight)
 		self:setState({
-			utilTabHeight = utilTabHeight
+			utilTabHeight = utilTabHeight,
 		})
 	end
 
@@ -39,7 +39,7 @@ function MainViewProfiler:init()
 		return function()
 			GameSettings.OnScreenProfilerEnabled = screenProfilerEnabled
 			self:setState({
-				clientProfilerEnabled = screenProfilerEnabled
+				clientProfilerEnabled = screenProfilerEnabled,
 			})
 
 			AnalyticsService:ReportCounter(MICROPROFILER_PRESSED_COUNTERNAME)
@@ -49,10 +49,9 @@ function MainViewProfiler:init()
 	local microProfilerChangedSignal = GameSettings:GetPropertyChangedSignal("OnScreenProfilerEnabled")
 	self.microProfilerChangedConnection = microProfilerChangedSignal:Connect(function()
 		self:setState({
-			clientProfilerEnabled = GameSettings.OnScreenProfilerEnabled
+			clientProfilerEnabled = GameSettings.OnScreenProfilerEnabled,
 		})
 	end)
-
 
 	self.utilRef = Roact.createRef()
 
@@ -65,7 +64,7 @@ function MainViewProfiler:didMount()
 	local utilSize = self.utilRef.current.Size
 
 	self:setState({
-		utilTabHeight = utilSize.Y.Offset
+		utilTabHeight = utilSize.Y.Offset,
 	})
 end
 
@@ -80,7 +79,7 @@ function MainViewProfiler:didUpdate()
 	local utilSize = self.utilRef.current.Size
 	if utilSize.Y.Offset ~= self.state.utilTabHeight then
 		self:setState({
-			utilTabHeight = utilSize.Y.Offset
+			utilTabHeight = utilSize.Y.Offset,
 		})
 	end
 end
@@ -105,7 +104,7 @@ function MainViewProfiler:render()
 		Size = size,
 		BackgroundColor3 = Constants.Color.BaseGray,
 		BackgroundTransparency = 1,
-		LayoutOrder = 3
+		LayoutOrder = 3,
 	}, {
 		UIListLayout = Roact.createElement("UIListLayout", {
 			Padding = UDim.new(0, PADDING),
@@ -123,7 +122,7 @@ function MainViewProfiler:render()
 			onHeightChanged = self.onUtilTabHeightChanged,
 		}),
 
-		MainFrame = Roact.createElement("ScrollingFrame",{
+		MainFrame = Roact.createElement("ScrollingFrame", {
 			Size = UDim2.new(1, 0, 1, -utilTabHeight),
 			CanvasSize = UDim2.new(1, 0, 1, -utilTabHeight),
 			BackgroundTransparency = 1,
@@ -159,11 +158,11 @@ function MainViewProfiler:render()
 
 				ToggleButton = Roact.createElement("TextLabel", {
 					Size = UDim2.new(ROW_VALUE_WIDTH, -BUTTON_WIDTH, 0, ROW_HEIGHT),
-					Position = UDim2.new((1 - ROW_VALUE_WIDTH)/2, BUTTON_WIDTH, 0, ROW_HEIGHT * 1.25),
+					Position = UDim2.new((1 - ROW_VALUE_WIDTH) / 2, BUTTON_WIDTH, 0, ROW_HEIGHT * 1.25),
 					BackgroundTransparency = 1,
 				}, {
 					OffButton = Roact.createElement("TextButton", {
-						Size = UDim2.new(.5, 0, 1, 0),
+						Size = UDim2.new(0.5, 0, 1, 0),
 						Text = "Off",
 						Font = HEADER_FONT,
 						TextSize = TEXT_SIZE,
@@ -176,8 +175,8 @@ function MainViewProfiler:render()
 					}),
 
 					ClientButton = Roact.createElement("TextButton", {
-						Size = UDim2.new(.5, 0, 1, 0),
-						Position = UDim2.new(.5, 0, 0, 0),
+						Size = UDim2.new(0.5, 0, 1, 0),
+						Position = UDim2.new(0.5, 0, 0, 0),
 						Text = "Client",
 						Font = HEADER_FONT,
 						TextSize = TEXT_SIZE,
@@ -192,9 +191,9 @@ function MainViewProfiler:render()
 			}),
 
 			HorizontalLine = Roact.createElement("Frame", {
-				Size = UDim2.new(1,0,0,PADDING),
+				Size = UDim2.new(1, 0, 0, PADDING),
 				BackgroundTransparency = 1,
-				LayoutOrder = 3
+				LayoutOrder = 3,
 			}),
 
 			ServerProfiler = Roact.createElement(ServerProfilerInterface, {
@@ -202,7 +201,7 @@ function MainViewProfiler:render()
 				BackgroundTransparency = 1,
 				LayoutOrder = 4,
 			}),
-		})
+		}),
 	})
 end
 

@@ -5,7 +5,7 @@ local GuiService = game:GetService("GuiService")
 local ContextActionService = game:GetService("ContextActionService")
 local RunService = game:GetService("RunService")
 
-local InGameMenuDependencies = require(CorePackages.InGameMenuDependencies)
+local InGameMenuDependencies = require(CorePackages.Packages.InGameMenuDependencies)
 local Roact = InGameMenuDependencies.Roact
 local UIBlox = InGameMenuDependencies.UIBlox
 local t = InGameMenuDependencies.t
@@ -75,53 +75,55 @@ local function getInputObjects()
 end
 
 local Slider = Roact.PureComponent:extend("Slider")
-Slider.validateProps = t.intersection(t.strictInterface({
-	-- The minimum value of the slider.
-	min = t.number,
-	-- The maximum value of the slider.
-	max = t.number,
-	-- How big the chunks that the slider bar is split up into are.
-	stepInterval = t.numberPositive,
-	-- The current value of the slider.
-	value = t.number,
-	-- A callback function that is invoked whenever the slider value changes.
-	valueChanged = t.callback,
-	-- Whether the slider is enabled or not.
-	disabled = t.optional(t.boolean),
+Slider.validateProps = t.intersection(
+	t.strictInterface({
+		-- The minimum value of the slider.
+		min = t.number,
+		-- The maximum value of the slider.
+		max = t.number,
+		-- How big the chunks that the slider bar is split up into are.
+		stepInterval = t.numberPositive,
+		-- The current value of the slider.
+		value = t.number,
+		-- A callback function that is invoked whenever the slider value changes.
+		valueChanged = t.callback,
+		-- Whether the slider is enabled or not.
+		disabled = t.optional(t.boolean),
 
-	-- The width of the slider. The slider's height is fixed, but the width can
-	-- be adjusted. Defaults to UDim.new(1, 0).
-	width = t.optional(t.UDim),
-	-- The anchor point of the slider.
-	AnchorPoint = t.optional(t.Vector2),
-	-- The layout order of the slider.
-	LayoutOrder = t.optional(t.integer),
-	-- The position of the slider.
-	Position = t.optional(t.UDim2),
-	-- Whether slider can capture gamepad selection focus (false if dialog is open, for example)
-	canCaptureFocus = t.optional(t.boolean),
-	-- isMenuOpen for when menu is closed in middle of entryMode
-	isMenuOpen = t.optional(t.boolean),
-	-- Callback for when slider dot selection lost
-	onSelectionLost = t.optional(t.callback),
-	-- Callback for when slider dot selection gained
-	onSelectionGained = t.optional(t.callback),
-	-- Instance to set as next selection right of slider dot
-	NextSelectionRight = t.optional(t.table),
-	-- Roact.Ref to the slider dot
-	sliderDotRef = t.optional(t.union(t.callback, t.table)),
+		-- The width of the slider. The slider's height is fixed, but the width can
+		-- be adjusted. Defaults to UDim.new(1, 0).
+		width = t.optional(t.UDim),
+		-- The anchor point of the slider.
+		AnchorPoint = t.optional(t.Vector2),
+		-- The layout order of the slider.
+		LayoutOrder = t.optional(t.integer),
+		-- The position of the slider.
+		Position = t.optional(t.UDim2),
+		-- Whether slider can capture gamepad selection focus (false if dialog is open, for example)
+		canCaptureFocus = t.optional(t.boolean),
+		-- isMenuOpen for when menu is closed in middle of entryMode
+		isMenuOpen = t.optional(t.boolean),
+		-- Callback for when slider dot selection lost
+		onSelectionLost = t.optional(t.callback),
+		-- Callback for when slider dot selection gained
+		onSelectionGained = t.optional(t.callback),
+		-- Instance to set as next selection right of slider dot
+		NextSelectionRight = t.optional(t.table),
+		-- Roact.Ref to the slider dot
+		sliderDotRef = t.optional(t.union(t.callback, t.table)),
+	}),
+	function(props)
+		if props.min > props.max then
+			return false, "min must be less than or equal to max"
+		end
 
-}), function(props)
-	if props.min > props.max then
-		return false, "min must be less than or equal to max"
+		if props.value > props.max or props.value < props.min then
+			return false, "value must be within min and max"
+		end
+
+		return true
 	end
-
-	if props.value > props.max or props.value < props.min then
-		return false, "value must be within min and max"
-	end
-
-	return true
-end)
+)
 
 Slider.defaultProps = {
 	width = UDim.new(1, 0),
@@ -187,7 +189,7 @@ function Slider:renderFocusHandler()
 			-- and reverts value when the 'B' button is pressed on the gamepad
 			ContextActionService:BindCoreAction("LeaveEntryMode", function(actionName, inputState)
 				if inputState == Enum.UserInputState.End then
-					self:setState({entryMode = false})
+					self:setState({ entryMode = false })
 					self.props.valueChanged(oldSliderValue)
 					return Enum.ContextActionResult.Sink
 				end
@@ -199,7 +201,7 @@ function Slider:renderFocusHandler()
 			self.joystickListener:Disconnect()
 			GuiService.CoreGuiNavigationEnabled = true
 			ContextActionService:UnbindCoreAction("LeaveEntryMode") -- unbind this action once we've called it once
-			self:setState({entryMode = false})
+			self:setState({ entryMode = false })
 		end,
 	}) or nil
 end
@@ -225,7 +227,7 @@ function Slider:renderWithSelectionCursor(getSelectionCursor)
 			Size = UDim2.new(self.props.width.Scale, self.props.width.Offset, 0, SLIDER_HEIGHT),
 			[Roact.Ref] = self.rootButtonRef,
 			[Roact.Event.InputBegan] = self.onInputBegan,
-			Selectable = false
+			Selectable = false,
 		}, {
 			FocusHandler = self:renderFocusHandler(),
 			Gutter = Roact.createElement(AssetImage.Label, {
@@ -244,7 +246,8 @@ function Slider:renderWithSelectionCursor(getSelectionCursor)
 					ImageColor3 = style.Theme.ContextualPrimaryDefault.Color,
 					ImageTransparency = divideTransparency(
 						style.Theme.ContextualPrimaryDefault.Transparency,
-						self.props.disabled and 2 or 1),
+						self.props.disabled and 2 or 1
+					),
 					Position = UDim2.new(filledPosition, 0, 0.5, 0),
 					Size = UDim2.new(filledSize, 0, 1, 0),
 				}),
@@ -265,11 +268,13 @@ function Slider:renderWithSelectionCursor(getSelectionCursor)
 					Size = UDim2.new(0, KNOB_HEIGHT, 0, KNOB_HEIGHT),
 					ImageTransparency = self.props.disabled and 0.5 or 0,
 					ZIndex = 2,
-					SelectionImageObject = getSelectionCursor(isFocused and CursorKind.SelectedKnob or CursorKind.UnselectedKnob),
+					SelectionImageObject = getSelectionCursor(
+						isFocused and CursorKind.SelectedKnob or CursorKind.UnselectedKnob
+					),
 					[Roact.Event.Activated] = function(rbx, inputObject)
 						if inputObject.KeyCode == Enum.KeyCode.ButtonA then
 							self:setState({
-								entryMode = not self.state.entryMode
+								entryMode = not self.state.entryMode,
 							})
 						end
 					end,
@@ -536,7 +541,8 @@ function Slider:onMoveStep(delta, inputObjects)
 		speed = STICK_SPEED
 	else
 		local leftMovement = inputObjects[Enum.KeyCode.DPadLeft].UserInputState == Enum.UserInputState.Begin and -1 or 0
-		local rightMovement = inputObjects[Enum.KeyCode.DPadRight].UserInputState == Enum.UserInputState.Begin and 1 or 0
+		local rightMovement = inputObjects[Enum.KeyCode.DPadRight].UserInputState == Enum.UserInputState.Begin and 1
+			or 0
 		moveDirection = leftMovement + rightMovement
 		initialMoveInterval = DPAD_INITIAL_MOVE_INTERVAL
 		speed = DPAD_SPEED

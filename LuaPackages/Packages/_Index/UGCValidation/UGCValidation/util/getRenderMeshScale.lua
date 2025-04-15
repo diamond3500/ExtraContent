@@ -11,9 +11,6 @@ local getMeshInfo = require(root.util.getMeshInfo)
 local getMeshMinMax = require(root.util.getMeshMinMax)
 local getExpectedPartSize = require(root.util.getExpectedPartSize)
 
-local getEngineFeatureUGCValidateEditableMeshAndImage =
-	require(root.flags.getEngineFeatureUGCValidateEditableMeshAndImage)
-
 local function getRenderMeshScale(
 	meshPart: MeshPart,
 	validationContext: Types.ValidationContext
@@ -30,9 +27,7 @@ local function getRenderMeshScale(
 		return success, failureReasons
 	end
 	local meshBounds = (meshMaxOpt :: Vector3) - (meshMinOpt :: Vector3)
-	local partSize = if getEngineFeatureUGCValidateEditableMeshAndImage()
-		then getExpectedPartSize(meshPart, validationContext)
-		else meshPart.Size
+	local partSize = getExpectedPartSize(meshPart, validationContext)
 	local scale = partSize / meshBounds
 
 	return true, nil, scale

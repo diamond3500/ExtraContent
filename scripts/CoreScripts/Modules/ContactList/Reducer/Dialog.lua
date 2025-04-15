@@ -1,6 +1,6 @@
 local CorePackages = game:GetService("CorePackages")
-local Cryo = require(CorePackages.Cryo)
-local Rodux = require(CorePackages.Rodux)
+local Cryo = require(CorePackages.Packages.Cryo)
+local Rodux = require(CorePackages.Packages.Rodux)
 
 local OpenOrUpdateDialog = require(script.Parent.Parent.Actions.OpenOrUpdateDialog)
 local CloseDialog = require(script.Parent.Parent.Actions.CloseDialog)

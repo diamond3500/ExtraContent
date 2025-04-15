@@ -1,7 +1,5 @@
-
 local CorePackages = game:GetService("CorePackages")
-local Roact = require(CorePackages.Roact)
-
+local Roact = require(CorePackages.Packages.Roact)
 
 local IconButton = Roact.PureComponent:extend("IconButton")
 
@@ -36,39 +34,39 @@ function IconButton:render()
 	size = UDim2.new(size.X.Scale, size.X.Offset + horizontalInset, size.Y.Scale, size.Y.Offset)
 
 	return Roact.createElement("ImageButton", {
-			Visible = visible,
+		Visible = visible,
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		AnchorPoint = anchorPoint,
+		Position = position,
+		Size = size,
+		ZIndex = zIndex,
+		[Roact.Event.Activated] = onClick,
+	}, {
+		IconLayout = Roact.createElement("UIListLayout", {
+			HorizontalAlignment = iconHorizontalAlignment,
+			VerticalAlignment = iconVerticalAlignment,
+			FillDirection = Enum.FillDirection.Horizontal,
+			SortOrder = Enum.SortOrder.LayoutOrder,
+		}),
+		Offset = Roact.createElement("Frame", {
+			BorderSizePixel = 0,
+
+			LayoutOrder = offsetLayoutOrder,
+			Size = UDim2.new(0, horizontalInset, 0, 0),
+		}),
+		BackIcon = Roact.createElement("ImageLabel", {
 			BackgroundTransparency = 1,
 			BorderSizePixel = 0,
-			AnchorPoint = anchorPoint,
-			Position = position,
-			Size = size,
+			Size = UDim2.new(0, iconSpriteFrame.size.X, 0, iconSpriteFrame.size.Y),
+
+			Image = iconSpritePath,
+			ImageRectOffset = iconSpriteFrame.offset,
+			ImageRectSize = iconSpriteFrame.size,
 			ZIndex = zIndex,
-			[Roact.Event.Activated] = onClick,
-		}, {
-			IconLayout = Roact.createElement("UIListLayout", {
-				HorizontalAlignment = iconHorizontalAlignment,
-				VerticalAlignment = iconVerticalAlignment,
-				FillDirection = Enum.FillDirection.Horizontal,
-				SortOrder = Enum.SortOrder.LayoutOrder,
-			}),
-			Offset = Roact.createElement("Frame", {
-				BorderSizePixel = 0,
-
-				LayoutOrder = offsetLayoutOrder,
-				Size = UDim2.new(0, horizontalInset, 0, 0),
-			}),
-			BackIcon = Roact.createElement("ImageLabel", {
-				BackgroundTransparency = 1,
-				BorderSizePixel = 0,
-				Size = UDim2.new(0, iconSpriteFrame.size.X, 0, iconSpriteFrame.size.Y),
-
-				Image = iconSpritePath,
-				ImageRectOffset = iconSpriteFrame.offset,
-				ImageRectSize = iconSpriteFrame.size,
-				ZIndex = zIndex,
-				LayoutOrder = iconLayoutOrder,
-			}),
-		})
+			LayoutOrder = iconLayoutOrder,
+		}),
+	})
 end
 
 return IconButton

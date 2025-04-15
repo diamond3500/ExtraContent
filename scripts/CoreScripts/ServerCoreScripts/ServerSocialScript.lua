@@ -16,14 +16,15 @@ local Players = game:GetService('Players')
 local RobloxReplicatedStorage = game:GetService('RobloxReplicatedStorage')
 local RunService = game:GetService('RunService')
 local Chat = game:GetService("Chat")
+local TextChatService = game:GetService("TextChatService")
 local CoreGui = game:GetService("CoreGui")
 local CorePackages = game:GetService("CorePackages")
 local RobloxGui = CoreGui:WaitForChild("RobloxGui")
-local Url = require(RobloxGui.Modules.Common.Url)
+local Url = require(CorePackages.Workspace.Packages.CoreScriptsCommon).Url
 game:DefineFastFlag("EnableSetUserBlocklistInitialized", false)
-local FFlagFetchBlockListFromServer = require(CorePackages.Workspace.Packages.SharedFlags).FFlagFetchBlockListFromServer
 local FFlagInExperienceUserProfileSettingsEnabled = require(RobloxGui.Modules.Common.Flags.FFlagInExperienceUserProfileSettingsEnabled)
 local FStringRccInExperienceNameEnabledAllowList = require(RobloxGui.Modules.Common.Flags.FStringRccInExperienceNameEnabledAllowList)
+local FFlagUseNewDirectChatAPI = game:DefineFastFlag("UseNewDirectChatAPI", false)
 
 local GET_MULTI_FOLLOW = "user/multi-following-exists"
 
@@ -52,6 +53,9 @@ local PlayerToGroupDetailsMap = {}
 
 -- Map of player to if they can manage the current place.
 local PlayerToCanManageMap = {}
+
+-- Map of player to if in experience name setting is enabled.
+local PlayerToInExperienceNameEnabledMap = {}
 
 game:DefineFastInt("MaxBlockListSize", 500)
 
@@ -138,14 +142,25 @@ local function sendCanChatWith(newPlayer)
 	local newPlayerCanChatWithPacket = {}
 
 	for _, player in ipairs(Players:GetPlayers()) do
-		local success, canChat = pcall(function()
-			return Chat:CanUsersChatAsync(newPlayer.UserId, player.UserId)
-		end)
+		if FFlagUseNewDirectChatAPI then
+			local success, usersCanChat = pcall(function()
+				return TextChatService:CanUsersDirectChatAsync(newPlayer.UserId, { player.UserId })
+			end)
 
-		newPlayerCanChatWithPacket[player.userId] = success and canChat
-		RemoteEvent_CanChatWith:FireClient(player, {
-			[newPlayer.userId] = success and canChat,
-		})
+			newPlayerCanChatWithPacket[player.UserId] = success and #usersCanChat > 0
+			RemoteEvent_CanChatWith:FireClient(player, {
+				[newPlayer.UserId] = success and #usersCanChat > 0,
+			})
+		else
+			local success, canChat = pcall(function()
+				return Chat:CanUsersChatAsync(newPlayer.UserId, player.UserId)
+			end)
+
+			newPlayerCanChatWithPacket[player.userId] = success and canChat
+			RemoteEvent_CanChatWith:FireClient(player, {
+				[newPlayer.userId] = success and canChat,
+			})
+		end
 	end
 
 	RemoteEvent_CanChatWith:FireClient(newPlayer, newPlayerCanChatWithPacket)
@@ -255,6 +270,12 @@ local function sendPlayerBlockList(player)
 	RemoteEvent_SendPlayerBlockList:FireClient(player, blockedUserSet)
 end
 
+local function sendPlayerAllInExperienceNameEnabled(player)
+	for userId, isInExperienceNameEnabled in pairs(PlayerToInExperienceNameEnabledMap) do
+		RemoteEvent_SendPlayerProfileSettings:FireClient(player, userId, { isInExperienceNameEnabled = isInExperienceNameEnabled })
+	end
+end
+
 local fetchPlayerProfileSettings = function(player)
 	return pcall(function()
 		local apiPath = `user-profile-api/v1/user/profiles/rcc/settings?userId={player.UserId}`
@@ -279,18 +300,18 @@ local sendPlayerProfileSettings = function(player)
 	end
 
 	local userIdStr = tostring(player.UserId)
+	PlayerToInExperienceNameEnabledMap[userIdStr] = isInExperienceNameEnabled
 	RemoteEvent_SendPlayerProfileSettings:FireAllClients(userIdStr, { isInExperienceNameEnabled = isInExperienceNameEnabled })
 end
 
 local function onPlayerAdded(newPlayer)
-	if FFlagFetchBlockListFromServer then
-		coroutine.wrap(sendPlayerBlockList)(newPlayer)
-	end
+	coroutine.wrap(sendPlayerBlockList)(newPlayer)
 	sendPlayerAllGroupDetails(newPlayer)
 	if newPlayer.UserId > 0 then
 		coroutine.wrap(getPlayerGroupDetails)(newPlayer)
 	end
 	if FFlagInExperienceUserProfileSettingsEnabled then
+		sendPlayerAllInExperienceNameEnabled(newPlayer)
 		coroutine.wrap(sendPlayerProfileSettings)(newPlayer)
 	end
 
@@ -335,6 +356,9 @@ Players.PlayerRemoving:connect(function(prevPlayer)
 	end
 	if PlayerToCanManageMap[uid] ~= nil then
 		PlayerToCanManageMap[uid] = nil
+	end
+	if PlayerToInExperienceNameEnabledMap[uid] ~= nil then
+		PlayerToInExperienceNameEnabledMap[uid] = nil
 	end
 end)
 

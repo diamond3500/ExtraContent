@@ -1,6 +1,6 @@
 local CorePackages = game:GetService("CorePackages")
-local Roact = require(CorePackages.Roact)
-local RoactRodux = require(CorePackages.RoactRodux)
+local Roact = require(CorePackages.Packages.Roact)
+local RoactRodux = require(CorePackages.Packages.RoactRodux)
 
 local Components = script.Parent.Parent.Parent.Components
 local ServerStatsChart = require(Components.ServerStats.ServerStatsChart)
@@ -17,7 +17,7 @@ local MainViewServerStats = Roact.Component:extend("MainViewServerStats")
 function MainViewServerStats:init()
 	self.onUtilTabHeightChanged = function(utilTabHeight)
 		self:setState({
-			utilTabHeight = utilTabHeight
+			utilTabHeight = utilTabHeight,
 		})
 	end
 
@@ -28,14 +28,14 @@ function MainViewServerStats:init()
 	self.utilRef = Roact.createRef()
 
 	self.state = {
-		utilTabHeight = 0
+		utilTabHeight = 0,
 	}
 end
 
 function MainViewServerStats:didMount()
 	local utilSize = self.utilRef.current.Size
 	self:setState({
-		utilTabHeight = utilSize.Y.Offset
+		utilTabHeight = utilSize.Y.Offset,
 	})
 end
 
@@ -43,7 +43,7 @@ function MainViewServerStats:didUpdate()
 	local utilSize = self.utilRef.current.Size
 	if utilSize.Y.Offset ~= self.state.utilTabHeight then
 		self:setState({
-			utilTabHeight = utilSize.Y.Offset
+			utilTabHeight = utilSize.Y.Offset,
 		})
 	end
 end
@@ -80,11 +80,11 @@ function MainViewServerStats:render()
 			onSearchTermChanged = self.onSearchTermChanged,
 		}),
 
-		ServerStats = utilTabHeight > 0  and Roact.createElement(ServerStatsChart, {
+		ServerStats = utilTabHeight > 0 and Roact.createElement(ServerStatsChart, {
 			size = UDim2.new(1, 0, 1, -utilTabHeight),
 			searchTerm = searchTerm,
 			layoutOrder = 2,
-		})
+		}),
 	})
 end
 

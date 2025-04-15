@@ -5,8 +5,8 @@ local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 
 local Modules = CoreGui.RobloxGui.Modules
 
-local Roact = require(CorePackages.Roact)
-local RoactRodux = require(CorePackages.RoactRodux)
+local Roact = require(CorePackages.Packages.Roact)
+local RoactRodux = require(CorePackages.Packages.RoactRodux)
 
 local ShareGame = Modules.Settings.Pages.ShareGame
 local Constants = require(ShareGame.Constants)
@@ -31,8 +31,7 @@ local HEADER_PADDING = 10
 local CONVERSATION_ENTRY_HEIGHT = 62
 local CONVERSATION_ENTRY_PADDING = 18
 
-local CLAMP_TO_FIVE_HALF_ENTRIES = (HEADER_HEIGHT)
-	+ ((CONVERSATION_ENTRY_HEIGHT + CONVERSATION_ENTRY_PADDING) * 5.5)
+local CLAMP_TO_FIVE_HALF_ENTRIES = HEADER_HEIGHT + ((CONVERSATION_ENTRY_HEIGHT + CONVERSATION_ENTRY_PADDING) * 5.5)
 
 local MAX_MODAL_WIDTH = UDim.new(0.8, 320)
 local MAX_MODAL_HEIGHT = UDim.new(0.7, CLAMP_TO_FIVE_HALF_ENTRIES)
@@ -62,8 +61,9 @@ function ModalShareGamePageFrame:init()
 		local promptMessage = self.props.promptMessage
 		local promptTextSize = Theme.textSize(layoutSpecific.PAGE_TITLE_TEXT_SIZE)
 		self:setState({
-			promptMessageFitsFrame = promptMessage and
-				Text.GetTextWidth(promptMessage, Theme.font(Enum.Font.SourceSans), promptTextSize) < rbx.AbsoluteSize.X
+			promptMessageFitsFrame = promptMessage
+				and Text.GetTextWidth(promptMessage, Theme.font(Enum.Font.SourceSans), promptTextSize)
+					< rbx.AbsoluteSize.X,
 		})
 	end
 	self.customTextAreaRef = Roact.createRef()
@@ -101,9 +101,9 @@ function ModalShareGamePageFrame:render()
 	local isNewUI = GetFFlagEnableNewInviteMenu()
 	local modalWidth = if isNewUI then NEW_MAX_MODAL_WIDTH else MAX_MODAL_WIDTH
 
-	local useMobileLandscapeLayout = isNewUI and
-		self.props.deviceInfo and
-		self.props.deviceInfo.DeviceLayout == Constants.DeviceLayout.PHONE_LANDSCAPE
+	local useMobileLandscapeLayout = isNewUI
+		and self.props.deviceInfo
+		and self.props.deviceInfo.DeviceLayout == Constants.DeviceLayout.PHONE_LANDSCAPE
 
 	local anchorPoint = Vector2.new(0.5, 0.5)
 	local size = UDim2.new(modalWidth.Scale, 0, MAX_MODAL_HEIGHT.Scale, 0)
@@ -163,9 +163,11 @@ function ModalShareGamePageFrame:render()
 				SortOrder = Enum.SortOrder.LayoutOrder,
 			}),
 
-			Padding = if isNewUI then Roact.createElement("UIPadding", {
-				PaddingTop = UDim.new(0, HEADER_PADDING),
-			}) else nil,
+			Padding = if isNewUI
+				then Roact.createElement("UIPadding", {
+					PaddingTop = UDim.new(0, HEADER_PADDING),
+				})
+				else nil,
 
 			Header = Roact.createElement(Header, {
 				deviceLayout = deviceLayout,
@@ -201,14 +203,14 @@ function ModalShareGamePageFrame:render()
 				trigger = Constants.Triggers.DeveloperMultiple,
 				inviteMessageId = self.props.inviteMessageId,
 				launchData = self.props.launchData,
-			})
-		})
+			}),
+		}),
 	})
 end
 
 ModalShareGamePageFrame = RoactRodux.connect(function(state)
 	return {
-		deviceInfo = state.DeviceInfo
+		deviceInfo = state.DeviceInfo,
 	}
 end)(ModalShareGamePageFrame)
 

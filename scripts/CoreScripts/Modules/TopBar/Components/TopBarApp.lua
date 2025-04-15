@@ -6,10 +6,14 @@ local Players = game:GetService("Players")
 local VRService = game:GetService("VRService")
 local TextChatService = game:GetService("TextChatService")
 
-local Roact = require(CorePackages.Roact)
-local RoactRodux = require(CorePackages.RoactRodux)
+local SharedFlags = require(CorePackages.Workspace.Packages.SharedFlags)
+local FFlagAdaptUnibarAndTiltSizing = SharedFlags.GetFFlagAdaptUnibarAndTiltSizing()
+
+local Roact = require(CorePackages.Packages.Roact)
+local React = require(CorePackages.Packages.React)
+local RoactRodux = require(CorePackages.Packages.RoactRodux)
 local t = require(CorePackages.Packages.t)
-local UIBlox = require(CorePackages.UIBlox)
+local UIBlox = require(CorePackages.Packages.UIBlox)
 local Interactable = UIBlox.Core.Control.Interactable
 local ControlState = UIBlox.Core.Control.Enum.ControlState
 local Analytics = require(CorePackages.Workspace.Packages.Analytics).Analytics
@@ -19,9 +23,7 @@ local Images = UIBlox.App.ImageSet.Images
 local SelectionCursorProvider = UIBlox.App.SelectionImage.SelectionCursorProvider
 local Songbird = require(CorePackages.Workspace.Packages.Songbird)
 
-local GetFFlagFixChromeReferences = require(RobloxGui.Modules.Flags.GetFFlagFixChromeReferences)
-local GetFFlagChromePeekArchitecture = require(RobloxGui.Modules.Flags.GetFFlagChromePeekArchitecture)
-local GetFFlagFixUnibarVirtualCursor = require(RobloxGui.Modules.Flags.GetFFlagFixUnibarVirtualCursor)
+local GetFFlagFixChromeReferences = SharedFlags.GetFFlagFixChromeReferences
 
 local Presentation = script.Parent.Presentation
 local MenuIcon = require(Presentation.MenuIcon)
@@ -30,7 +32,6 @@ local ConnectIcon = require(Presentation.ConnectIcon)
 local MoreMenu = require(Presentation.MoreMenu)
 local HealthBar = require(Presentation.HealthBar)
 local HurtOverlay = require(Presentation.HurtOverlay)
-local GamepadMenu = require(Presentation.GamepadMenu)
 local GamepadNavigationDialog = require(Presentation.GamepadNavigationDialog)
 local HeadsetMenu = require(Presentation.HeadsetMenu)
 local VoiceBetaBadge = require(Presentation.VoiceBetaBadge)
@@ -38,38 +39,29 @@ local BadgeOver13 = require(Presentation.BadgeOver13)
 
 local Chrome = script.Parent.Parent.Parent.Chrome
 
-local ExperienceMenuABTestManager = require(script.Parent.Parent.Parent.ExperienceMenuABTestManager)
-local IsExperienceMenuABTestEnabled = require(script.Parent.Parent.Parent.IsExperienceMenuABTestEnabled)
 local ChromeEnabled = require(Chrome.Enabled)
-local OnboardingTooltip = if not GetFFlagFixChromeReferences() or ChromeEnabled()
-	then require(Chrome.Onboarding.OnboardingTooltip)
-	else nil
-local UnibarConstants = require(Chrome.Unibar.Constants)
+local GetShouldShowPlatformChatBasedOnPolicy = require(Chrome.Flags.GetShouldShowPlatformChatBasedOnPolicy)
 local PeekConstants = require(Chrome.Integrations.MusicUtility.Constants)
 
-local FFlagEnableChromeAnalytics = require(Chrome.Flags.GetFFlagEnableChromeAnalytics)()
+local FFlagEnableChromeAnalytics = SharedFlags.GetFFlagEnableChromeAnalytics()
 
-local SharedFlags = require(CorePackages.Workspace.Packages.SharedFlags)
-local GetFFlagPeekUseUpdatedDesign = SharedFlags.GetFFlagPeekUseUpdatedDesign
-local GetFFlagReenableTextChatForTenFootInterfaces = SharedFlags.GetFFlagReenableTextChatForTenFootInterfaces
-local GetFFlagEnableSceneAnalysisPerformanceTest = SharedFlags.GetFFlagEnableSceneAnalysisPerformanceTest
-local GetFFlagSongbirdUseReportAudioModal = SharedFlags.GetFFlagSongbirdUseReportAudioModal
+local FFlagConnectGamepadChrome = SharedFlags.GetFFlagConnectGamepadChrome()
+local FFlagTiltIconUnibarFocusNav = SharedFlags.FFlagTiltIconUnibarFocusNav
+local FFlagHideTopBarConsole = SharedFlags.FFlagHideTopBarConsole
+
+local SocialExperiments = require(CorePackages.Workspace.Packages.SocialExperiments)
+local TenFootInterfaceExpChatExperimentation = SocialExperiments.TenFootInterfaceExpChatExperimentation
 
 local Unibar
-local Peek
 local KeepOutAreasHandler
 local ChromeAnalytics
 if ChromeEnabled() then
-	Unibar = require(Chrome.Unibar)
-
-	if GetFFlagChromePeekArchitecture() then
-		Peek = require(Chrome.Peek)
-	end
+	Unibar = require(Chrome.ChromeShared.Unibar)
 end
 if game:GetEngineFeature("InGameChromeSignalAPI") then
-	KeepOutAreasHandler = require(Chrome.Service.KeepOutAreasHandler)
+	KeepOutAreasHandler = require(Chrome.ChromeShared.Service.KeepOutAreasHandler)
 	if FFlagEnableChromeAnalytics and (not GetFFlagFixChromeReferences() or ChromeEnabled()) then
-		ChromeAnalytics = require(Chrome.Analytics)
+		ChromeAnalytics = require(Chrome.ChromeShared.Analytics)
 	end
 end
 
@@ -78,13 +70,26 @@ local Connection = require(script.Parent.Connection)
 local TopBar = Presentation.Parent.Parent
 local Constants = require(TopBar.Constants)
 local GetFFlagChangeTopbarHeightCalculation = require(TopBar.Flags.GetFFlagChangeTopbarHeightCalculation)
-local GetFFlagFixDupeBetaBadge = require(TopBar.Flags.GetFFlagFixDupeBetaBadge)
 local FFlagEnableChromeBackwardsSignalAPI = require(TopBar.Flags.GetFFlagEnableChromeBackwardsSignalAPI)()
+local FFlagUnibarMenuIconLayoutFix = require(TopBar.Flags.FFlagUnibarMenuIconLayoutFix)
 local SetScreenSize = require(TopBar.Actions.SetScreenSize)
 local SetKeepOutArea = require(TopBar.Actions.SetKeepOutArea)
 local RemoveKeepOutArea = require(TopBar.Actions.RemoveKeepOutArea)
+local MenuIconContext = if ChromeEnabled() and FFlagTiltIconUnibarFocusNav
+	then require(script.Parent.MenuIconContext)
+	else nil :: never
+local GamepadMenu = nil
+local GamepadConnector = nil
+local FFlagAddMenuNavigationToggleDialog = nil
+local MenuNavigationToggleDialog = nil
+if ChromeEnabled() and FFlagConnectGamepadChrome then
+	GamepadConnector = require(script.Parent.GamepadConnector)
+	FFlagAddMenuNavigationToggleDialog = SharedFlags.FFlagAddMenuNavigationToggleDialog
+	MenuNavigationToggleDialog = require(Presentation.GamepadMenu.MenuNavigationToggleDialog)
+else
+	GamepadMenu = require(Presentation.GamepadMenu)
+end
 
-local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 local TenFootInterface = require(RobloxGui.Modules.TenFootInterface)
 local isNewInGameMenuEnabled = require(RobloxGui.Modules.isNewInGameMenuEnabled)
 local isNewTiltIconEnabled = require(RobloxGui.Modules.isNewTiltIconEnabled)
@@ -92,26 +97,34 @@ local GetFFlagBetaBadge = require(RobloxGui.Modules.Flags.GetFFlagBetaBadge)
 local FFlagTopBarUseNewBadge = game:DefineFastFlag("TopBarUseNewBadge", false)
 local FFlagControlBetaBadgeWithGuac = game:DefineFastFlag("ControlBetaBadgeWithGuac", false)
 local FFlagVRMoveVoiceIndicatorToBottomBar = require(RobloxGui.Modules.Flags.FFlagVRMoveVoiceIndicatorToBottomBar)
-local GetFFlagEnableChromeFTUX = require(script.Parent.Parent.Parent.Chrome.Flags.GetFFlagEnableChromeFTUX)
 local FFlagGamepadNavigationDialogABTest = require(TopBar.Flags.FFlagGamepadNavigationDialogABTest)
-local GetFFlagEnableCrossExpVoice = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagEnableCrossExpVoice
-local GetFFlagEnablePartyIconInNonChrome = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagEnablePartyIconInNonChrome
-local GetFFlagEnablePartyMicIconInChrome = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagEnablePartyMicIconInChrome
-local GetFFlagPeekUseFixedHeight = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagPeekUseFixedHeight
+local GetFFlagEnableCrossExpVoice = SharedFlags.GetFFlagEnableCrossExpVoice
+local GetFFlagEnablePartyIconInNonChrome = SharedFlags.GetFFlagEnablePartyIconInNonChrome
 
 local PartyMicBinder = require(script.Parent.Parent.Parent.Chrome.Integrations.Party.PartyMicBinder)
+
+local GetFFlagFixSeamlessVoiceIntegrationWithPrivateVoice =
+	SharedFlags.GetFFlagFixSeamlessVoiceIntegrationWithPrivateVoice
+local GetFFlagEnableJoinVoiceOnUnibar = SharedFlags.GetFFlagEnableJoinVoiceOnUnibar
+
+local JoinVoiceBinder
+if
+	game:GetEngineFeature("VoiceChatSupported")
+	and GetFFlagEnableJoinVoiceOnUnibar()
+	and GetFFlagFixSeamlessVoiceIntegrationWithPrivateVoice()
+	and ChromeEnabled()
+then
+	JoinVoiceBinder = require(script.Parent.Parent.Parent.Chrome.Integrations.JoinVoiceBinder)
+end
 
 local VoiceChatServiceManager = require(RobloxGui.Modules.VoiceChat.VoiceChatServiceManager).default
 local VoiceStateContext = require(RobloxGui.Modules.VoiceChat.VoiceStateContext)
 local TopBarAppPolicy = require(script.Parent.Parent.TopBarAppPolicy)
 
-local GetFFlagUpdateHealthBar = require(RobloxGui.Modules.Flags.GetFFlagUpdateHealthBar)
-local UseUpdatedHealthBar = GetFFlagUpdateHealthBar() and ChromeEnabled()
+local UseUpdatedHealthBar = ChromeEnabled()
 
 -- vr bottom bar
 local VRBottomBar = require(RobloxGui.Modules.VR.VRBottomBar.VRBottomBar)
-
-local CLOSE_MENU_ICON_SIZE = if isNewTiltIconEnabled() then (Constants.TopBarHeight - 4) else 30
 
 local function selectMenuOpen(state)
 	return state.displayOptions.menuOpen or state.displayOptions.inspectMenuOpen
@@ -142,9 +155,23 @@ function TopBarApp:init()
 		self:setState({
 			unibarAlignment = ChromeService:orderAlignment():get(),
 		})
+
+		if FFlagConnectGamepadChrome then
+			if FFlagHideTopBarConsole then
+				-- in flag cleanup, replace `self.GamepadConnector` with just `GamepadConnector`
+				self.GamepadConnector = GamepadConnector
+			else
+				self.GamepadConnector = GamepadConnector.new()
+			end
+		end
+
+		if FFlagTiltIconUnibarFocusNav then
+			self.unibarMenuRef = React.createRef()
+			self.menuIconRef = Roact.createRef()
+		end
 	end
 
-	if GetFFlagReenableTextChatForTenFootInterfaces() then
+	if TenFootInterfaceExpChatExperimentation.getIsEnabled() then
 		-- This chatVersion may be inaccurate if the game isn't loaded
 		self:setState({
 			chatVersion = TextChatService.ChatVersion,
@@ -154,7 +181,7 @@ function TopBarApp:init()
 		if not game:IsLoaded() then
 			game.Loaded:Connect(function()
 				self:setState({
-					chatVersion = TextChatService.ChatVersion
+					chatVersion = TextChatService.ChatVersion,
 				})
 			end)
 		end
@@ -169,6 +196,10 @@ function TopBarApp:didMount()
 				unibarAlignment = ChromeService:orderAlignment():get(),
 			})
 		end)
+
+		if FFlagConnectGamepadChrome then
+			self.GamepadConnector:connectToTopbar()
+		end
 	end
 end
 
@@ -177,6 +208,10 @@ function TopBarApp:willUnmount()
 		if self.orderAlignmentConnection then
 			self.orderAlignmentConnection:disconnect()
 			self.orderAlignmentConnection = nil
+		end
+
+		if FFlagConnectGamepadChrome then
+			self.GamepadConnector:disconnectFromTopbar()
 		end
 	end
 end
@@ -192,11 +227,7 @@ function TopBarApp:renderWithStyle(style)
 	local showBetaBadge = GetFFlagBetaBadge() and not chromeEnabled
 	local policyAllowsBetaBadge
 	if FFlagControlBetaBadgeWithGuac then
-		if GetFFlagFixDupeBetaBadge() then
-			policyAllowsBetaBadge = self.props.displayBetaBadge
-		else
-			showBetaBadge = self.props.displayBetaBadge
-		end
+		policyAllowsBetaBadge = self.props.displayBetaBadge
 	end
 
 	local unibarAlignment = Enum.HorizontalAlignment.Right
@@ -211,8 +242,10 @@ function TopBarApp:renderWithStyle(style)
 	end
 
 	if TenFootInterface:IsEnabled() then
-		screenSideOffset = Constants.ScreenSideOffsetTenFoot
-		topBarHeight = Constants.TopBarHeightTenFoot
+		if not FFlagUnibarMenuIconLayoutFix or not ChromeEnabled() then
+			screenSideOffset = Constants.ScreenSideOffsetTenFoot
+			topBarHeight = Constants.TopBarHeightTenFoot
+		end
 	end
 	local isTopBarVisible = not (self.props.menuOpen or self.props.inspectMenuOpen)
 	local topBarFramePosition =
@@ -239,12 +272,12 @@ function TopBarApp:renderWithStyle(style)
 		iconScale = if self.props.menuOpen then 1.25 else 1,
 		layoutOrder = 1,
 		showBadgeOver12 = self.props.showBadgeOver12,
+		menuIconRef = if chromeEnabled and FFlagTiltIconUnibarFocusNav then self.menuIconRef else nil :: never,
+		unibarMenuRef = if chromeEnabled and FFlagTiltIconUnibarFocusNav then self.unibarMenuRef else nil :: never,
 	})
-	if GetFFlagFixUnibarVirtualCursor() then 
-		newMenuIcon = Roact.createElement(SelectionCursorProvider, {}, {
-			Icon = newMenuIcon 
-		})
-	end
+	newMenuIcon = Roact.createElement(SelectionCursorProvider, {}, {
+		Icon = newMenuIcon,
+	})
 
 	return Roact.createElement("ScreenGui", {
 		IgnoreGuiInset = true,
@@ -257,11 +290,21 @@ function TopBarApp:renderWithStyle(style)
 		end,
 	}, {
 		Connection = Roact.createElement(Connection),
-		GamepadMenu = if GetFFlagReenableTextChatForTenFootInterfaces()
-			then Roact.createElement(GamepadMenu, {
-				chatVersion = self.state.chatVersion,
+		GamepadMenu = if not FFlagConnectGamepadChrome
+			then if TenFootInterfaceExpChatExperimentation.getIsEnabled()
+				then Roact.createElement(GamepadMenu, {
+					chatVersion = self.state.chatVersion,
+				})
+				else Roact.createElement(GamepadMenu)
+			else nil,
+		MenuNavigationToggleDialog = if chromeEnabled
+				and FFlagAddMenuNavigationToggleDialog
+				and FFlagConnectGamepadChrome
+			then Roact.createElement(MenuNavigationToggleDialog, {
+				Position = UDim2.fromScale(0.5, 0.1),
+				GamepadConnector = if FFlagTiltIconUnibarFocusNav then self.GamepadConnector else nil :: never,
 			})
-			else Roact.createElement(GamepadMenu),
+			else nil,
 		GamepadNavigationDialog = if FFlagGamepadNavigationDialogABTest
 			then Roact.createElement(GamepadNavigationDialog)
 			else nil,
@@ -311,7 +354,7 @@ function TopBarApp:renderWithStyle(style)
 				BackgroundTransparency = style.Theme.Overlay.Transparency,
 				Position = closeMenuButtonPosition,
 				AnchorPoint = Vector2.new(0, 0.5),
-				Size = UDim2.new(0, CLOSE_MENU_ICON_SIZE, 0, CLOSE_MENU_ICON_SIZE),
+				Size = UDim2.new(0, Constants.LegacyCloseMenuIconSize, 0, Constants.LegacyCloseMenuIconSize),
 				BackgroundColor3 = style.Theme.Overlay.Color,
 				[Roact.Event.Activated] = function()
 					local SettingsHub = require(RobloxGui.Modules.Settings.SettingsHub)
@@ -375,7 +418,7 @@ function TopBarApp:renderWithStyle(style)
 				BackgroundTransparency = 1,
 				Position = closeMenuButtonPosition,
 				AnchorPoint = Vector2.new(0, 0.5),
-				Size = UDim2.new(0, CLOSE_MENU_ICON_SIZE, 0, CLOSE_MENU_ICON_SIZE),
+				Size = UDim2.new(0, Constants.LegacyCloseMenuIconSize, 0, Constants.LegacyCloseMenuIconSize),
 				Image = Images["icons/controls/close-ingame"],
 
 				[Roact.Event.Activated] = function()
@@ -385,31 +428,16 @@ function TopBarApp:renderWithStyle(style)
 			}) or nil,
 		}),
 
-		SongbirdPerformanceExperiment = if GetFFlagEnableSceneAnalysisPerformanceTest()
-			then Roact.createElement(Songbird.PerformanceExperiment)
-			else nil,
+		SongbirdDebugAudio = Roact.createElement(Songbird.DebugAudioEmitters),
 
-		PeekFrame = ChromeEnabled() and GetFFlagChromePeekArchitecture() and Roact.createElement("Frame", {
-			BackgroundTransparency = 1,
-			Size = UDim2.new(1, 0, 0, if GetFFlagPeekUseFixedHeight() then PeekConstants.PEEK_CONTAINER_HEIGHT else topBarFrameHeight),
-			Position = if GetFFlagPeekUseFixedHeight() then PeekConstants.getPeekContainerPosition(style) else topBarFramePosition,
-		}, {
-			Peek = Roact.createElement(Peek)
-		}),
-
-		SongbirdReportAudioFrame = ChromeEnabled() and GetFFlagSongbirdUseReportAudioModal() and Roact.createElement("Frame", {
+		SongbirdReportAudioFrame = ChromeEnabled() and Roact.createElement("Frame", {
 			AnchorPoint = Vector2.new(0.5, 0.5),
 			BackgroundTransparency = 1,
 			Position = UDim2.fromScale(0.5, 0.5),
-			Size = UDim2.new(1,0,0, PeekConstants.AUDIO_REPORTING_WINDOW_MIN_HEIGHT),
+			Size = UDim2.new(1, 0, 0, PeekConstants.AUDIO_REPORTING_WINDOW_MIN_HEIGHT),
 		}, {
-			ReportAudioPopup = Roact.createElement(Songbird.ReportAudioPopup)
+			ReportAudioPopup = Roact.createElement(Songbird.ReportAudioPopup),
 		}),
-
-		UnibarOnboarding = if GetFFlagEnableChromeFTUX()
-				and (not GetFFlagFixChromeReferences() or ChromeEnabled())
-			then Roact.createElement(OnboardingTooltip)
-			else nil,
 
 		UnibarLeftFrame = Unibar
 				and unibarAlignment == Enum.HorizontalAlignment.Left
@@ -426,24 +454,46 @@ function TopBarApp:renderWithStyle(style)
 						else topBarRightFramePosition,
 					AnchorPoint = Vector2.new(1, 0),
 				}, {
-					PartyMicBinder = if chromeEnabled and GetFFlagEnablePartyMicIconInChrome() and GetFFlagEnableCrossExpVoice() then Roact.createElement(PartyMicBinder) else nil,
+					JoinVoiceBinder = if chromeEnabled and JoinVoiceBinder
+						then Roact.createElement(JoinVoiceBinder)
+						else nil,
+					PartyMicBinder = if chromeEnabled and GetFFlagEnableCrossExpVoice()
+						then Roact.createElement(PartyMicBinder)
+						else nil,
 					ChromeAnalytics = if ChromeAnalytics then Roact.createElement(ChromeAnalytics) else nil,
 					KeepOutAreasHandler = if not FFlagEnableChromeBackwardsSignalAPI and KeepOutAreasHandler
 						then Roact.createElement(KeepOutAreasHandler)
 						else nil,
 					Padding = Roact.createElement("UIPadding", {
-						PaddingTop = UDim.new(0, 2),
-						PaddingBottom = UDim.new(0, 2),
-						PaddingLeft = UDim.new(0, screenSideOffset + Constants.Padding + Constants.TopBarHeight + 2),
+						PaddingTop = UDim.new(0, Constants.UnibarFrame.PaddingTop),
+						PaddingBottom = UDim.new(0, Constants.UnibarFrame.PaddingBottom),
+						PaddingLeft = UDim.new(0, Constants.UnibarFrame.PaddingLeft),
 					}),
 
-					Unibar =  Roact.createElement(Unibar, {
-						layoutOrder = 1,
-						onAreaChanged = self.props.setKeepOutArea,
-						onMinWidthChanged = function(width: number)
-							self.setUnibarRightSidePosition(UDim2.new(0, width, 0, 0))
-						end,
-					}),
+					Unibar = if FFlagTiltIconUnibarFocusNav
+						then React.createElement(MenuIconContext.Provider, {
+							value = {
+								menuIconRef = self.menuIconRef,
+							},
+						}, {
+							React.createElement(Unibar, {
+								layoutOrder = 1,
+								onAreaChanged = self.props.setKeepOutArea,
+								onMinWidthChanged = function(width: number)
+									self.setUnibarRightSidePosition(UDim2.new(0, width, 0, 0))
+								end,
+								menuRef = if chromeEnabled and FFlagTiltIconUnibarFocusNav
+									then self.unibarMenuRef
+									else nil :: never,
+							}),
+						})
+						else Roact.createElement(Unibar, {
+							layoutOrder = 1,
+							onAreaChanged = self.props.setKeepOutArea,
+							onMinWidthChanged = function(width: number)
+								self.setUnibarRightSidePosition(UDim2.new(0, width, 0, 0))
+							end,
+						}),
 
 					HealthBar = if UseUpdatedHealthBar then Roact.createElement(HealthBar, {}) else nil,
 
@@ -453,19 +503,21 @@ function TopBarApp:renderWithStyle(style)
 						Size = UDim2.new(1, 0, 1, 0),
 					}, {
 						Padding = Roact.createElement("UIPadding", {
-							PaddingLeft = UDim.new(0, Constants.Padding),
+							PaddingLeft = UDim.new(0, Constants.TopBarPadding),
 						}),
 						Layout = Roact.createElement("UIListLayout", {
-							Padding = UDim.new(0, Constants.Padding),
+							Padding = UDim.new(0, Constants.TopBarPadding),
 							FillDirection = Enum.FillDirection.Horizontal,
 							HorizontalAlignment = Enum.HorizontalAlignment.Left,
 							VerticalAlignment = Enum.VerticalAlignment.Top,
 							SortOrder = Enum.SortOrder.LayoutOrder,
 						}),
 
-						HealthBar = if UseUpdatedHealthBar then nil else Roact.createElement(HealthBar, {
-							layoutOrder = 10,
-						}),
+						HealthBar = if UseUpdatedHealthBar
+							then nil
+							else Roact.createElement(HealthBar, {
+								layoutOrder = 10,
+							}),
 
 						CenterBadgeOver13 = if FFlagTopBarUseNewBadge
 							then Roact.createElement("Frame", {
@@ -492,8 +544,7 @@ function TopBarApp:renderWithStyle(style)
 							})
 							else nil,
 
-						VoiceBetaBadge = if GetFFlagBetaBadge()
-								and (not GetFFlagFixDupeBetaBadge() or policyAllowsBetaBadge)
+						VoiceBetaBadge = if GetFFlagBetaBadge() and policyAllowsBetaBadge
 							then Roact.createElement(VoiceBetaBadge, {
 								layoutOrder = 6,
 								Analytics = Analytics.new(),
@@ -523,11 +574,11 @@ function TopBarApp:renderWithStyle(style)
 						then Roact.createElement(KeepOutAreasHandler)
 						else nil,
 					Padding = Roact.createElement("UIPadding", {
-						PaddingTop = UDim.new(0, 2),
-						PaddingBottom = UDim.new(0, 2),
+						PaddingTop = UDim.new(0, Constants.UnibarFrame.PaddingTop),
+						PaddingBottom = UDim.new(0, Constants.UnibarFrame.PaddingBottom),
 					}),
 					Layout = Roact.createElement("UIListLayout", {
-						Padding = UDim.new(0, Constants.Padding),
+						Padding = UDim.new(0, Constants.TopBarPadding),
 						FillDirection = Enum.FillDirection.Horizontal,
 						HorizontalAlignment = Enum.HorizontalAlignment.Right,
 						VerticalAlignment = Enum.VerticalAlignment.Top,
@@ -538,11 +589,10 @@ function TopBarApp:renderWithStyle(style)
 						layoutOrder = 1,
 					}),
 
-					Unibar =  Roact.createElement(Unibar, {
+					Unibar = Roact.createElement(Unibar, {
 						onAreaChanged = self.props.setKeepOutArea,
 						layoutOrder = 2,
 					}),
-
 				})
 			or nil,
 
@@ -557,60 +607,65 @@ function TopBarApp:renderWithStyle(style)
 			Visible = isTopBarVisible,
 			Position = topBarFramePosition,
 		}, {
-			LeftFrame = not TenFootInterface:IsEnabled() and Roact.createElement("Frame", {
-				BackgroundTransparency = 1,
-				Size = UDim2.new(0.5, -screenSideOffset, 1, 0),
-				Position = topBarLeftFramePosition,
-			}, {
-				Layout = Roact.createElement("UIListLayout", {
-					Padding = UDim.new(0, Constants.Padding),
-					FillDirection = Enum.FillDirection.Horizontal,
-					HorizontalAlignment = Enum.HorizontalAlignment.Left,
-					VerticalAlignment = if FFlagTopBarUseNewBadge
-						then Enum.VerticalAlignment.Center
-						else Enum.VerticalAlignment.Top,
-					SortOrder = Enum.SortOrder.LayoutOrder,
-				}),
-
-				Blank = chromeEnabled and Roact.createElement("Frame", {
-					LayoutOrder = 1,
-					Size = UDim2.new(0, (Constants.TopBarHeight - 4), 0, 1),
+			LeftFrame = (chromeEnabled and FFlagAdaptUnibarAndTiltSizing or not TenFootInterface:IsEnabled())
+				and Roact.createElement("Frame", {
 					BackgroundTransparency = 1,
+					Size = UDim2.new(0.5, -screenSideOffset, 1, 0),
+					Position = topBarLeftFramePosition,
+				}, {
+					Layout = Roact.createElement("UIListLayout", {
+						Padding = UDim.new(0, Constants.TopBarPadding),
+						FillDirection = Enum.FillDirection.Horizontal,
+						HorizontalAlignment = Enum.HorizontalAlignment.Left,
+						VerticalAlignment = if FFlagTopBarUseNewBadge
+							then Enum.VerticalAlignment.Center
+							else Enum.VerticalAlignment.Top,
+						SortOrder = Enum.SortOrder.LayoutOrder,
+					}),
+
+					Blank = chromeEnabled and Roact.createElement("Frame", {
+						LayoutOrder = 1,
+						Size = UDim2.new(0, Constants.UnibarFrame.ExtendedSize, 0, 1),
+						BackgroundTransparency = 1,
+					}),
+
+					MenuIcon = not isNewTiltIconEnabled() and Roact.createElement(MenuIcon, {
+						layoutOrder = 1,
+						showBadgeOver12 = self.props.showBadgeOver12,
+					}),
+
+					ConnectIcon = not chromeEnabled
+							and GetFFlagEnablePartyIconInNonChrome()
+							and GetShouldShowPlatformChatBasedOnPolicy()
+							and Roact.createElement(ConnectIcon, {
+								setKeepOutArea = self.props.setKeepOutArea,
+								removeKeepOutArea = self.props.removeKeepOutArea,
+								layoutOrder = 2,
+							})
+						or nil,
+
+					ChatIcon = not chromeEnabled and Roact.createElement(ChatIcon, {
+						layoutOrder = 3,
+					}) or nil,
+
+					BadgeOver13 = if FFlagTopBarUseNewBadge and not chromeEnabled
+						then Roact.createElement(BadgeOver13, {
+							layoutOrder = 4,
+							analytics = Analytics.new(),
+							player = Players.LocalPlayer,
+							voiceChatServiceManager = VoiceChatServiceManager,
+							VRService = game:GetService("VRService"),
+							visibilityChanged = nil,
+						})
+						else nil,
+
+					VoiceBetaBadge = if showBetaBadge and policyAllowsBetaBadge
+						then Roact.createElement(VoiceBetaBadge, {
+							layoutOrder = 4,
+							Analytics = Analytics.new(),
+						})
+						else nil,
 				}),
-
-				MenuIcon = not isNewTiltIconEnabled() and Roact.createElement(MenuIcon, {
-					layoutOrder = 1,
-					showBadgeOver12 = self.props.showBadgeOver12,
-				}),
-
-				ConnectIcon = not chromeEnabled and GetFFlagEnablePartyIconInNonChrome() and Roact.createElement(ConnectIcon, {
-					setKeepOutArea = self.props.setKeepOutArea,
-					removeKeepOutArea = self.props.removeKeepOutArea,
-					layoutOrder = 2,
-				}) or nil,
-
-				ChatIcon = not chromeEnabled and Roact.createElement(ChatIcon, {
-					layoutOrder = 3,
-				}) or nil,
-
-				BadgeOver13 = if FFlagTopBarUseNewBadge and not chromeEnabled
-					then Roact.createElement(BadgeOver13, {
-						layoutOrder = 4,
-						analytics = Analytics.new(),
-						player = Players.LocalPlayer,
-						voiceChatServiceManager = VoiceChatServiceManager,
-						VRService = game:GetService("VRService"),
-						visibilityChanged = nil,
-					})
-					else nil,
-
-				VoiceBetaBadge = if showBetaBadge and (not GetFFlagFixDupeBetaBadge() or policyAllowsBetaBadge)
-					then Roact.createElement(VoiceBetaBadge, {
-						layoutOrder = 4,
-						Analytics = Analytics.new(),
-					})
-					else nil,
-			}),
 
 			RightFrame = not Unibar and Roact.createElement("Frame", {
 				BackgroundTransparency = 1,
@@ -619,7 +674,7 @@ function TopBarApp:renderWithStyle(style)
 				AnchorPoint = Vector2.new(1, 0),
 			}, {
 				Layout = Roact.createElement("UIListLayout", {
-					Padding = UDim.new(0, Constants.Padding),
+					Padding = UDim.new(0, Constants.TopBarPadding),
 					FillDirection = Enum.FillDirection.Horizontal,
 					HorizontalAlignment = Enum.HorizontalAlignment.Right,
 					VerticalAlignment = Enum.VerticalAlignment.Center,

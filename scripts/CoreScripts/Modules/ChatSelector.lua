@@ -26,10 +26,18 @@ local BubbleChatEnabled = Players.BubbleChat
 local VRService = game:GetService("VRService")
 
 local SharedFlags = require(CorePackages.Workspace.Packages.SharedFlags)
-local GetFFlagReenableTextChatForTenFootInterfaces = SharedFlags.GetFFlagReenableTextChatForTenFootInterfaces
+local getFFlagAppChatCoreUIConflictFix = SharedFlags.getFFlagAppChatCoreUIConflictFix
+local GetFFlagChatActiveChangedSignal = SharedFlags.GetFFlagChatActiveChangedSignal
+local getFFlagExposeChatWindowToggled = SharedFlags.getFFlagExposeChatWindowToggled
+local FFlagConsoleChatOnExpControls = SharedFlags.FFlagConsoleChatOnExpControls
+
+local SocialExperiments = require(CorePackages.Workspace.Packages.SocialExperiments)
+local TenFootInterfaceExpChatExperimentation = SocialExperiments.TenFootInterfaceExpChatExperimentation
 
 local useModule = nil
 
+local visibilityBeforeTempKeyAdded = nil
+local hideTempKeys = if getFFlagAppChatCoreUIConflictFix() then {} else nil :: never
 local state = {Visible = not VRService.VREnabled}
 local interface = {}
 do
@@ -52,6 +60,14 @@ do
 	function interface:FocusChatBar()
 		if (useModule) then
 			useModule:FocusChatBar()
+		end
+	end
+
+	function interface:FocusSelectChatBar(onSelectionLost: ()->()?, keybinds: {Enum.KeyCode}?)
+		if (useModule) then
+			if FFlagConsoleChatOnExpControls and TenFootInterfaceExpChatExperimentation.getIsEnabled() then
+				useModule:FocusSelectChatBar(onSelectionLost, keybinds)
+			end
 		end
 	end
 
@@ -113,7 +129,37 @@ do
 		return not (BubbleChatEnabled or ClassicChatEnabled)
 	end
 
+	if getFFlagAppChatCoreUIConflictFix() then
+		function interface:HideTemp(key: string, hidden: boolean)
+			local function isHideTempKeysEmpty()
+				return next(hideTempKeys) == nil
+			end
+
+			if isHideTempKeysEmpty() then
+				visibilityBeforeTempKeyAdded = interface:GetVisibility()
+			end
+
+			if hidden then
+				hideTempKeys[key] = hidden
+			else
+				hideTempKeys[key] = nil
+			end
+
+			interface:SetVisible(visibilityBeforeTempKeyAdded and isHideTempKeysEmpty())
+		end
+	end
+
+
 	interface.ChatBarFocusChanged = Util.Signal()
+	if getFFlagExposeChatWindowToggled() then
+		interface.ChatWindowToggled = Util.Signal()
+	end
+	if GetFFlagChatActiveChangedSignal() then
+		interface.ChatActiveChanged = Util.Signal()
+		interface.ChatActiveChanged:connect(function(visible)
+			 interface:SetVisible(visible)
+		end)
+	end
 	interface.VisibilityStateChanged = Util.Signal()
 	interface.MessagesChanged = Util.Signal()
 
@@ -143,7 +189,11 @@ StarterGui:RegisterGetCore("ChatActive", function()
 	return interface:GetVisibility()
 end)
 StarterGui:RegisterSetCore("ChatActive", function(visible)
-	return interface:SetVisible(visible)
+	if GetFFlagChatActiveChangedSignal() then
+		interface.ChatActiveChanged:fire(visible)
+	else
+		return interface:SetVisible(visible)
+	end
 end)
 
 
@@ -156,12 +206,18 @@ end
 
 local isConsole = GuiService:IsTenFootInterface() or FORCE_IS_CONSOLE
 
-if GetFFlagReenableTextChatForTenFootInterfaces() or (not isConsole) then
+if TenFootInterfaceExpChatExperimentation.getIsEnabled() or (not isConsole) then
 	coroutine.wrap(function()
 		useModule = require(RobloxGui.Modules.NewChat)
 
 		ConnectSignals(useModule, interface, "ChatBarFocusChanged")
 		ConnectSignals(useModule, interface, "VisibilityStateChanged")
+		if getFFlagExposeChatWindowToggled() then
+			ConnectSignals(useModule, interface, "ChatWindowToggled")
+		end
+		if GetFFlagChatActiveChangedSignal() then
+			ConnectSignals(useModule, interface, "ChatActiveChanged")
+		end
 		ConnectSignals(useModule, interface, "BubbleChatOnlySet")
 		ConnectSignals(useModule, interface, "ChatDisabled")
 

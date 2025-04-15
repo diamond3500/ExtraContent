@@ -1,7 +1,7 @@
 --!strict
 local CorePackages = game:GetService("CorePackages")
-local Roact = require(CorePackages.Roact)
-local RoactRodux = require(CorePackages.RoactRodux)
+local Roact = require(CorePackages.Packages.Roact)
+local RoactRodux = require(CorePackages.Packages.RoactRodux)
 
 local ScriptContext = game:GetService("ScriptContext")
 local ScriptProfiler = game:GetService("ScriptProfilerService")

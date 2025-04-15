@@ -1,3 +1,4 @@
+--# selene: allow(denylist_filter)
 local AnalyticsService = game:GetService("RbxAnalyticsService")
 local CorePackages = game:GetService("CorePackages")
 local Players = game:GetService("Players")

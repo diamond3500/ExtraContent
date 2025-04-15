@@ -13,7 +13,7 @@ export type ReactConsumer<T> = Package.ReactConsumer<T>
 export type ReactProvider<T> = Package.ReactProvider<T> 
 export type ReactContext<T> = Package.ReactContext<T> 
 export type ReactPortal = Package.ReactPortal
-export type RefObject = Package.RefObject
+export type RefObject<T = any> = Package.RefObject<T > 
 export type EventPriority = Package.EventPriority
 export type ReactFundamentalComponentInstance<C, H> =
 Package.ReactFundamentalComponentInstance<C, H> 

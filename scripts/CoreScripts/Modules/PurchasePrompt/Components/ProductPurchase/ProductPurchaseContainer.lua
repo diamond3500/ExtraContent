@@ -5,23 +5,23 @@ local ContextActionService = game:GetService("ContextActionService")
 local AssetService = game:GetService("AssetService")
 
 local CorePackages = game:GetService("CorePackages")
-local PurchasePromptDeps = require(CorePackages.PurchasePromptDeps)
+local PurchasePromptDeps = require(CorePackages.Workspace.Packages.PurchasePromptDeps)
 local Roact = PurchasePromptDeps.Roact
 
 local CoreGui = game:GetService("CoreGui")
 local Players = game:GetService("Players")
 local RobloxGui = CoreGui:WaitForChild("RobloxGui")
-local PolicyService = require(RobloxGui.Modules.Common:WaitForChild("PolicyService"))
-local RobloxTranslator = require(RobloxGui.Modules.RobloxTranslator)
+local CachedPolicyService = require(CorePackages.Workspace.Packages.CachedPolicyService)
+local RobloxTranslator = require(CorePackages.Workspace.Packages.RobloxTranslator)
 
 local UIBlox = PurchasePromptDeps.UIBlox
 local InteractiveAlert = UIBlox.App.Dialog.Alert.InteractiveAlert
 local ButtonType = UIBlox.App.Button.Enum.ButtonType
 local Images = UIBlox.App.ImageSet.Images
 
-local IAPExperience = require(CorePackages.IAPExperience)
-local ProductPurchase =  IAPExperience.ProductPurchase
-local ProductPurchaseRobuxUpsell =  IAPExperience.ProductPurchaseRobuxUpsell
+local IAPExperience = require(CorePackages.Workspace.Packages.IAPExperience)
+local ProductPurchase = IAPExperience.ProductPurchase
+local ProductPurchaseRobuxUpsell = IAPExperience.ProductPurchaseRobuxUpsell
 local LeaveRobloxAlert = IAPExperience.LeaveRobloxAlert
 local IAPAnimator = IAPExperience.Animator
 
@@ -48,15 +48,19 @@ local MultiTextLocalizer = require(Root.Components.Connection.MultiTextLocalizer
 local LocalizationService = require(Root.Localization.LocalizationService)
 local getPlayerPrice = require(Root.Utils.getPlayerPrice)
 local isGenericChallengeResponse = require(Root.Utils.isGenericChallengeResponse)
-local FFlagPublishAvatarPromptEnabled = require(RobloxGui.Modules.PublishAssetPrompt.FFlagPublishAvatarPromptEnabled)
-local FFlagCoreScriptPublishAssetAnalytics = require(RobloxGui.Modules.Flags.FFlagCoreScriptPublishAssetAnalytics)
 
 local initiateUserPurchaseSettingsPrecheck = require(Root.Thunks.initiateUserPurchaseSettingsPrecheck)
-local GetFFlagEnableTexasU18VPCForInExperienceBundleRobuxUpsellFlow = require(Root.Flags.GetFFlagEnableTexasU18VPCForInExperienceBundleRobuxUpsellFlow)
+local GetFFlagEnableTexasU18VPCForInExperienceBundleRobuxUpsellFlow =
+	require(Root.Flags.GetFFlagEnableTexasU18VPCForInExperienceBundleRobuxUpsellFlow)
 local VerifiedParentalConsentDialog = require(CorePackages.Workspace.Packages.VerifiedParentalConsentDialog)
 local VPCModal = VerifiedParentalConsentDialog.VerifiedParentalConsentDialog
 local VPCModalType = require(Root.Enums.VPCModalType)
 local Animator = require(script.Parent.Animator)
+local FFlagAddCursorProviderToPurchasePromptApp = require(Root.Flags.FFlagAddCursorProviderToPurchasePromptApp)
+
+-- Imports needed for analytics
+local HttpService = game:GetService("HttpService")
+local FFlagEnableAnalyticEventV1UpsellFlow = require(Root.Flags.FFlagEnableAnalyticEventV1UpsellFlow)
 
 local ProductPurchaseContainer = Roact.Component:extend(script.Name)
 
@@ -96,22 +100,61 @@ local function isRelevantRequestType(requestType, purchaseFlow)
 		or requestType == RequestType.Bundle
 		or requestType == RequestType.GamePass
 		or requestType == RequestType.Product
-		or (FFlagPublishAvatarPromptEnabled and requestType == RequestType.AvatarCreationFee)
+		or requestType == RequestType.AvatarCreationFee
+end
+
+-- Since we're mimicking RobuxUpsellFlow, we need to map our prompt state to that component's state
+local function promptStateToViewName(promptState): string
+	local switch = {
+		[PromptState.RobuxUpsell] = "PurchaseModal",
+		[PromptState.UpsellInProgress] = "RobuxPurchasePending",
+	}
+	return switch[promptState]
 end
 
 function ProductPurchaseContainer:init()
 	self.state = {
 		screenSize = Vector2.new(0, 0),
 		isLuobu = false,
+		analyticId = if FFlagEnableAnalyticEventV1UpsellFlow then HttpService:GenerateGUID(false) else nil,
 	}
 
 	coroutine.wrap(function()
-		if PolicyService:IsSubjectToChinaPolicies() then
+		if CachedPolicyService:IsSubjectToChinaPolicies() then
 			self:setState({
 				isLuobu = true,
 			})
 		end
 	end)()
+
+	-- Desktop in game upsell follows a different flow than all other upsells
+	-- We're mimicking the events emitted in the following componenet here:
+	-- modules/economy/in-app-purchasing/iap-experience/src/PurchaseFlow/RobuxUpsell/RobuxUpsellFlow.lua
+	if FFlagEnableAnalyticEventV1UpsellFlow then
+		self.emitPurchaseFlowEvent = function(eventType, inputType)
+			-- If view name not explicitly set, don't emit event
+			local viewName = promptStateToViewName(self.props.promptState)
+			if not viewName then
+				return
+			end
+			local data = {
+				purchase_flow_uuid = self.state.analyticId,
+				purchase_flow = "InGameRobuxUpsell",
+				view_name = viewName,
+				purchase_event_type = eventType,
+				input_type = inputType,
+				event_metadata = HttpService:JSONEncode({
+					universe_id = tostring(game.GameId),
+					item_product_id = tostring(self.props.productInfo.productId),
+					item_name = self.props.productInfo.name,
+					price = tostring(self.props.productInfo.price),
+					user_balance = tostring(self.props.accountInfo.balance) or nil,
+					package_robux_amount = tostring(self.props.nativeUpsell.robuxPurchaseAmount) or nil,
+				}),
+			}
+			self.props.onAnalyticEvent("UserPurchaseFlow", data)
+		end
+	end
 
 	self.changeScreenSize = function(rbx)
 		if self.state.screenSize ~= rbx.AbsoluteSize then
@@ -168,20 +211,22 @@ function ProductPurchaseContainer:init()
 	self.getConfirmButtonAction = function(promptState, requestType, purchaseError)
 		if promptState == PromptState.None or not isRelevantRequestType(requestType) then
 			return nil
-		elseif promptState == PromptState.PromptPurchase
-				or promptState == PromptState.PurchaseInProgress then
+		elseif promptState == PromptState.PromptPurchase or promptState == PromptState.PurchaseInProgress then
 			return self.props.onBuy
-		elseif promptState == PromptState.RobuxUpsell
-				or promptState == PromptState.UpsellInProgress
-				or promptState == PromptState.LeaveRobloxWarning then
+		elseif
+			promptState == PromptState.RobuxUpsell
+			or promptState == PromptState.UpsellInProgress
+			or promptState == PromptState.LeaveRobloxWarning
+		then
 			return self.props.onRobuxUpsell
-		elseif promptState == PromptState.U13PaymentModal
-				or promptState == PromptState.U13MonthlyThreshold1Modal
-				or promptState == PromptState.U13MonthlyThreshold2Modal
-				or promptState == PromptState.ParentalConsentWarningPaymentModal13To17 then
+		elseif
+			promptState == PromptState.U13PaymentModal
+			or promptState == PromptState.U13MonthlyThreshold1Modal
+			or promptState == PromptState.U13MonthlyThreshold2Modal
+			or promptState == PromptState.ParentalConsentWarningPaymentModal13To17
+		then
 			return self.props.onScaryModalConfirm
-		elseif promptState == PromptState.Error
-				and purchaseError == PurchaseError.TwoFactorNeededSettings then
+		elseif promptState == PromptState.Error and purchaseError == PurchaseError.TwoFactorNeededSettings then
 			return self.props.onOpenSecuritySettings
 		elseif isGenericChallengeResponse(purchaseError) then
 			return function()
@@ -202,27 +247,30 @@ function ProductPurchaseContainer:init()
 
 	self.confirmButtonPressed = function()
 		if
-			FFlagCoreScriptPublishAssetAnalytics
-			and self.props.requestType == RequestType.AvatarCreationFee
+			self.props.requestType == RequestType.AvatarCreationFee
 			and self.props.promptState == PromptState.PromptPurchase
 		then
-			PublishAssetAnalytics.sendButtonClicked(PublishAssetAnalytics.Section.BuyItemModal, PublishAssetAnalytics.Element.Buy)
+			PublishAssetAnalytics.sendButtonClicked(
+				PublishAssetAnalytics.Section.BuyItemModal,
+				PublishAssetAnalytics.Element.Buy
+			)
 		end
-		local confirmButtonAction = self.getConfirmButtonAction(self.props.promptState,
-			self.props.requestType, self.props.purchaseError)
+		local confirmButtonAction =
+			self.getConfirmButtonAction(self.props.promptState, self.props.requestType, self.props.purchaseError)
 		if confirmButtonAction ~= nil and self.canConfirmInput() then
 			confirmButtonAction()
 		end
-
 	end
 
 	self.cancelButtonPressed = function()
 		if
-			FFlagCoreScriptPublishAssetAnalytics
-			and self.props.requestType == RequestType.AvatarCreationFee
+			self.props.requestType == RequestType.AvatarCreationFee
 			and self.props.promptState == PromptState.PromptPurchase
 		then
-			PublishAssetAnalytics.sendButtonClicked(PublishAssetAnalytics.Section.BuyItemModal, PublishAssetAnalytics.Element.Cancel)
+			PublishAssetAnalytics.sendButtonClicked(
+				PublishAssetAnalytics.Section.BuyItemModal,
+				PublishAssetAnalytics.Element.Cancel
+			)
 		end
 		local cancelButtonAction = self.getCancelButtonAction(self.props.promptState, self.props.requestType)
 		if cancelButtonAction ~= nil then
@@ -230,24 +278,19 @@ function ProductPurchaseContainer:init()
 		end
 	end
 
-
 	-- Setup on prop change + init, handles both cases where this modal can persist forever or not
 	self.configContextActionService = function(windowState)
 		if windowState == WindowState.Shown then
-			ContextActionService:BindCoreAction(
-				CONFIRM_BUTTON_BIND,
-				function(actionName, inputState, inputObj)
-					if inputState == Enum.UserInputState.Begin then
-						self.confirmButtonPressed()
-					end
-				end, false, Enum.KeyCode.ButtonA)
-			ContextActionService:BindCoreAction(
-				CANCEL_BUTTON_BIND,
-				function(actionName, inputState, inputObj)
-					if inputState == Enum.UserInputState.Begin then
-						self.cancelButtonPressed()
-					end
-				end, false, Enum.KeyCode.ButtonB)
+			ContextActionService:BindCoreAction(CONFIRM_BUTTON_BIND, function(actionName, inputState, inputObj)
+				if inputState == Enum.UserInputState.Begin then
+					self.confirmButtonPressed()
+				end
+			end, false, Enum.KeyCode.ButtonA)
+			ContextActionService:BindCoreAction(CANCEL_BUTTON_BIND, function(actionName, inputState, inputObj)
+				if inputState == Enum.UserInputState.Begin then
+					self.cancelButtonPressed()
+				end
+			end, false, Enum.KeyCode.ButtonB)
 		else
 			ContextActionService:UnbindCoreAction(CONFIRM_BUTTON_BIND)
 			ContextActionService:UnbindCoreAction(CANCEL_BUTTON_BIND)
@@ -260,7 +303,6 @@ function ProductPurchaseContainer:init()
 		end
 		return VPCModalType.toRawValue(VPCModalType.None)
 	end
-
 end
 
 function ProductPurchaseContainer:didMount()
@@ -278,9 +320,9 @@ function ProductPurchaseContainer:didMount()
 end
 
 function ProductPurchaseContainer:willUpdate(nextProps)
-    if self.props.expectedPrice ~= nextProps.expectedPrice then
-        self:setState({})
-    end
+	if self.props.expectedPrice ~= nextProps.expectedPrice then
+		self:setState({})
+	end
 end
 
 function ProductPurchaseContainer:didUpdate(prevProps, prevState)
@@ -302,15 +344,26 @@ function ProductPurchaseContainer:didUpdate(prevProps, prevState)
 		self.configContextActionService(self.props.windowState)
 
 		GuiService:SetPurchasePromptIsShown(self.props.windowState == WindowState.Shown)
+
+		if FFlagAddCursorProviderToPurchasePromptApp then
+			if self.props.windowState == WindowState.Hidden then
+				self.props.completeRequest()
+			end
+		end
 	end
 
 	if
-		FFlagCoreScriptPublishAssetAnalytics
-		and requestType == RequestType.AvatarCreationFee
+		requestType == RequestType.AvatarCreationFee
 		and self.props.promptState == PromptState.PurchaseComplete
 		and prevProps.promptState ~= PromptState.PurchaseComplete
 	then
 		PublishAssetAnalytics.sendPageLoad(PublishAssetAnalytics.Section.ProcessCompleteModal)
+	end
+
+	-- Call the function anytime the prompt state changes
+	-- reportModalShown will be responsible for determining how to process the prompt state
+	if FFlagEnableAnalyticEventV1UpsellFlow and prevProps.promptState ~= self.props.promptState then
+		self.emitPurchaseFlowEvent("ViewShown")
 	end
 end
 
@@ -325,32 +378,32 @@ function ProductPurchaseContainer:getMessageKeysFromPromptState()
 				key = PURCHASE_MESSAGE_KEY:format("Succeeded"),
 				params = {
 					ITEM_NAME = productInfo.name,
-				}
+				},
 			},
 			okText = { key = OK_LOCALE_KEY },
 			titleText = { key = BUY_ITEM_LOCALE_KEY },
 		}
 	elseif promptState == PromptState.U13PaymentModal then
 		return {
-			messageText = { key = "CoreScripts.PurchasePrompt.PurchaseDetails.ScaryModalOne", },
+			messageText = { key = "CoreScripts.PurchasePrompt.PurchaseDetails.ScaryModalOne" },
 			okText = { key = OK_LOCALE_KEY },
 			titleText = { key = BUY_ITEM_LOCALE_KEY },
 		}
 	elseif promptState == PromptState.U13MonthlyThreshold1Modal then
 		return {
-			messageText = { key = "CoreScripts.PurchasePrompt.PurchaseDetails.ScaryModalTwo", },
+			messageText = { key = "CoreScripts.PurchasePrompt.PurchaseDetails.ScaryModalTwo" },
 			okText = { key = OK_LOCALE_KEY },
 			titleText = { key = BUY_ITEM_LOCALE_KEY },
 		}
 	elseif promptState == PromptState.U13MonthlyThreshold2Modal then
 		return {
-			messageText = { key = "CoreScripts.PurchasePrompt.PurchaseDetails.ScaryModalParental", },
+			messageText = { key = "CoreScripts.PurchasePrompt.PurchaseDetails.ScaryModalParental" },
 			okText = { key = OK_LOCALE_KEY },
 			titleText = { key = BUY_ITEM_LOCALE_KEY },
 		}
 	elseif promptState == PromptState.ParentalConsentWarningPaymentModal13To17 then
 		return {
-			messageText = { key = "CoreScripts.PurchasePrompt.PurchaseDetails.ParentalConsent", },
+			messageText = { key = "CoreScripts.PurchasePrompt.PurchaseDetails.ParentalConsent" },
 			okText = { key = OK_LOCALE_KEY },
 			titleText = { key = BUY_ITEM_LOCALE_KEY },
 		}
@@ -360,28 +413,27 @@ function ProductPurchaseContainer:getMessageKeysFromPromptState()
 				messageText = {
 					key = LocalizationService.getErrorKey(purchaseError),
 					params = {
-						ITEM_NAME = productInfo.name
-					}
+						ITEM_NAME = productInfo.name,
+					},
 				},
 				okText = { key = OK_LOCALE_KEY },
 				titleText = { key = ERROR_LOCALE_KEY },
 			}
-		elseif (purchaseError == PurchaseError.TwoFactorNeededSettings or isGenericChallengeResponse(purchaseError)) then
-
+		elseif purchaseError == PurchaseError.TwoFactorNeededSettings or isGenericChallengeResponse(purchaseError) then
 			local messageKey = "CoreScripts.PurchasePrompt.PurchaseFailed.Enable2SV"
 			if FFlagPPTwoFactorLogOutMessage then
 				messageKey = "CoreScripts.PurchasePrompt.PurchaseFailed.Enable2SVLogout"
 			end
 
 			return {
-				messageText = { key = messageKey, },
+				messageText = { key = messageKey },
 				okText = { key = SETTINGS_LOCALE_KEY },
 				cancelText = { key = CANCEL_LOCALE_KEY },
 				titleText = { key = "CoreScripts.PurchasePrompt.Title.VerificationRequired" },
 			}
 		else
 			return {
-				messageText = { key = LocalizationService.getErrorKey(purchaseError), },
+				messageText = { key = LocalizationService.getErrorKey(purchaseError) },
 				okText = { key = OK_LOCALE_KEY },
 				titleText = { key = ERROR_LOCALE_KEY },
 			}
@@ -410,8 +462,7 @@ function ProductPurchaseContainer:render()
 			instances for it around, so we don't render them
 		]]
 		prompt = nil
-	elseif promptState == PromptState.PromptPurchase
-			or promptState == PromptState.PurchaseInProgress then
+	elseif promptState == PromptState.PromptPurchase or promptState == PromptState.PurchaseInProgress then
 		prompt = Roact.createElement(ProductPurchase, {
 			screenSize = self.state.screenSize,
 
@@ -434,8 +485,7 @@ function ProductPurchaseContainer:render()
 
 			isLuobu = self.state.isLuobu,
 		})
-	elseif promptState == PromptState.RobuxUpsell
-			or promptState == PromptState.UpsellInProgress then
+	elseif promptState == PromptState.RobuxUpsell or promptState == PromptState.UpsellInProgress then
 		prompt = Roact.createElement(ProductPurchaseRobuxUpsell, {
 			screenSize = self.state.screenSize,
 
@@ -445,6 +495,7 @@ function ProductPurchaseContainer:render()
 			itemName = productInfo.name,
 			itemRobuxCost = getPlayerPrice(productInfo, accountInfo.membershipType == 4, expectedPrice),
 			robuxPurchaseAmount = nativeUpsell.robuxPurchaseAmount,
+			robuxPurchaseAmountBeforeBonus = nativeUpsell.robuxAmountBeforeBonus,
 			balanceAmount = accountInfo.balance,
 
 			isDelayedInput = self.hasDelayedInput(),
@@ -453,24 +504,30 @@ function ProductPurchaseContainer:render()
 			buyItemControllerIcon = self.props.isGamepadEnabled and BUTTON_A_ICON or nil,
 			cancelControllerIcon = self.props.isGamepadEnabled and BUTTON_B_ICON or nil,
 
-			buyItemActivated = self.confirmButtonPressed,
-			cancelPurchaseActivated = self.cancelButtonPressed,
+			buyItemActivated = if FFlagEnableAnalyticEventV1UpsellFlow
+				then function()
+					self.confirmButtonPressed()
+					self.emitPurchaseFlowEvent("UserInput", "Buy")
+				end
+				else self.confirmButtonPressed,
+			cancelPurchaseActivated = if FFlagEnableAnalyticEventV1UpsellFlow
+				then function()
+					self.cancelButtonPressed()
+					self.emitPurchaseFlowEvent("UserInput", "Cancel")
+				end
+				else self.cancelButtonPressed,
 
 			isLuobu = self.state.isLuobu,
-			isVng = GetFFlagOpenVngTosForVngRobuxUpsell() and getAppFeaturePolicies().getShowVNGTosForRobuxUpsell()
+			isVng = GetFFlagOpenVngTosForVngRobuxUpsell() and getAppFeaturePolicies().getShowVNGTosForRobuxUpsell(),
 		})
 	elseif promptState == PromptState.LeaveRobloxWarning then
 		prompt = Roact.createElement(LeaveRobloxAlert, {
-				screenSize = self.state.screenSize,
+			screenSize = self.state.screenSize,
 
-				cancelActivated = self.cancelButtonPressed,
-				continueActivated = self.confirmButtonPressed,
-			})
-	elseif
-		FFlagPublishAvatarPromptEnabled
-		and promptState == PromptState.PurchaseComplete
-		and requestType == RequestType.AvatarCreationFee
-	then
+			cancelActivated = self.cancelButtonPressed,
+			continueActivated = self.confirmButtonPressed,
+		})
+	elseif promptState == PromptState.PurchaseComplete and requestType == RequestType.AvatarCreationFee then
 		prompt = Roact.createElement(InteractiveAlert, {
 			bodyText = RobloxTranslator:FormatByKey(PURCHASE_COMPLETE_DESC_KEY),
 			buttonStackInfo = {
@@ -488,9 +545,10 @@ function ProductPurchaseContainer:render()
 			screenSize = self.state.screenSize,
 			title = RobloxTranslator:FormatByKey(PURCHASE_COMPLETE_HEADER_KEY),
 		})
-	elseif (promptState == PromptState.Error
-			and purchaseError == PurchaseError.TwoFactorNeededSettings) or
-			isGenericChallengeResponse(purchaseError) then
+	elseif
+		(promptState == PromptState.Error and purchaseError == PurchaseError.TwoFactorNeededSettings)
+		or isGenericChallengeResponse(purchaseError)
+	then
 		prompt = Roact.createElement(MultiTextLocalizer, {
 			locKeys = self:getMessageKeysFromPromptState(),
 			render = function(localeMap)
@@ -519,7 +577,7 @@ function ProductPurchaseContainer:render()
 					title = localeMap.titleText,
 					titleIcon = Images[ERROR_ICON],
 				})
-			end
+			end,
 		})
 	elseif
 		GetFFlagEnableTexasU18VPCForInExperienceBundleRobuxUpsellFlow()
@@ -560,7 +618,7 @@ function ProductPurchaseContainer:render()
 					screenSize = self.state.screenSize,
 					title = localeMap.titleText,
 				})
-			end
+			end,
 		})
 	end
 
@@ -573,15 +631,14 @@ function ProductPurchaseContainer:render()
 			shouldShow = self.props.windowState ~= WindowState.Hidden,
 			onShown = function()
 				if
-					FFlagCoreScriptPublishAssetAnalytics
-					and self.props.requestType == RequestType.AvatarCreationFee
+					self.props.requestType == RequestType.AvatarCreationFee
 					and promptState == PromptState.PromptPurchase
 				then
 					PublishAssetAnalytics.sendPageLoad(PublishAssetAnalytics.Section.BuyItemModal)
 				end
 				self:setState({
 					isAnimating = false,
-					doneAnimatingTime = os.clock()
+					doneAnimatingTime = os.clock(),
 				})
 			end,
 			onHidden = function()
@@ -589,8 +646,12 @@ function ProductPurchaseContainer:render()
 					isAnimating = nil,
 					doneAnimatingTime = nil,
 				})
-				if self.props.windowState == WindowState.Hidden and isRelevantRequestType(self.props.requestType) then
-					self.props.completeRequest()
+				if not FFlagAddCursorProviderToPurchasePromptApp then
+					if
+						self.props.windowState == WindowState.Hidden and isRelevantRequestType(self.props.requestType)
+					then
+						self.props.completeRequest()
+					end
 				end
 			end,
 			[Roact.Ref] = self.animatorRef,
@@ -624,6 +685,8 @@ function ProductPurchaseContainer:render()
 end
 
 local function mapStateToProps(state)
+	local isTestPurchase = isMockingPurchases(state.promptRequest.requestType)
+	
 	return {
 		purchaseFlow = state.purchaseFlow,
 		promptState = state.promptState,
@@ -635,7 +698,7 @@ local function mapStateToProps(state)
 		productInfo = state.productInfo,
 		accountInfo = state.accountInfo,
 		nativeUpsell = state.nativeUpsell,
-		isTestPurchase = isMockingPurchases(),
+		isTestPurchase = isTestPurchase,
 		isGamepadEnabled = state.gamepadEnabled,
 	}
 end
@@ -669,6 +732,9 @@ local function mapDispatchToProps(dispatch)
 			dispatch(hideWindow())
 		end,
 		completeRequest = function()
+			if FFlagAddCursorProviderToPurchasePromptApp then
+				GuiService.SelectedCoreObject = nil
+			end
 			dispatch(completeRequest())
 		end,
 		onAnalyticEvent = function(name, data)
@@ -684,11 +750,9 @@ ProductPurchaseContainer = PurchasePromptPolicy.connect(function(appPolicy, prop
 		enablePurchaseWarningChecks = appPolicy.enablePurchaseWarningChecks(),
 	}
 end)(ProductPurchaseContainer)
-]]--
+]]
+--
 
-ProductPurchaseContainer = connectToStore(
-	mapStateToProps,
-	mapDispatchToProps
-)(ProductPurchaseContainer)
+ProductPurchaseContainer = connectToStore(mapStateToProps, mapDispatchToProps)(ProductPurchaseContainer)
 
 return ProductPurchaseContainer

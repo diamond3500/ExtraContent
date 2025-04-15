@@ -2,13 +2,10 @@ local Root = script.Parent.Parent.Parent
 
 local Players = game:GetService("Players")
 local ContextActionService = game:GetService("ContextActionService")
-local AssetService = game:GetService("AssetService")
 
 local CorePackages = game:GetService("CorePackages")
-local PurchasePromptDeps = require(CorePackages.PurchasePromptDeps)
+local PurchasePromptDeps = require(CorePackages.Workspace.Packages.PurchasePromptDeps)
 local Roact = PurchasePromptDeps.Roact
-local CoreGui = game:GetService("CoreGui")
-local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 
 local IAPExperience = PurchasePromptDeps.IAPExperience
 local RobuxUpsellFlow = IAPExperience.PurchaseFlow.RobuxUpsellFlow
@@ -18,7 +15,6 @@ local PurchaseErrorType = IAPExperience.PurchaseFlow.PurchaseErrorType
 
 local PromptState = require(Root.Enums.PromptState)
 local PurchaseError = require(Root.Enums.PurchaseError)
-local connectToStore = require(Root.connectToStore)
 local VPCModalType = require(Root.Enums.VPCModalType)
 
 local RobuxUpsellOverlay = Roact.PureComponent:extend(script.Name)
@@ -26,8 +22,9 @@ local RobuxUpsellOverlay = Roact.PureComponent:extend(script.Name)
 local CONFIRM_BUTTON_BIND = "ProductPurchaseConfirmButtonBind"
 local CANCEL_BUTTON_BIND = "ProductPurchaseCancelButtonBind"
 
-local GetFFlagDisablePurchasePromptFunctionForMaquettes = require(Root.Flags.GetFFlagDisablePurchasePromptFunctionForMaquettes)
-local FFlagPublishAvatarPromptEnabled = require(RobloxGui.Modules.PublishAssetPrompt.FFlagPublishAvatarPromptEnabled)
+local GetFFlagDisablePurchasePromptFunctionForMaquettes =
+	require(Root.Flags.GetFFlagDisablePurchasePromptFunctionForMaquettes)
+local GetFFlagEnableEventMetadataInUpsell = IAPExperience.Flags.GetFFlagEnableEventMetadataInUpsell
 
 local PaymentPlatform = require(Root.Enums.PaymentPlatform)
 local getPaymentPlatform = require(Root.Utils.getPaymentPlatform)
@@ -49,10 +46,12 @@ type Props = {
 	robuxProductId: number,
 
 	humanoidModel: Model?,
+	itemProductId: string?,
 	itemIcon: any,
 	itemName: string,
 	itemRobuxCost: number,
 	iapRobuxAmount: number,
+	iapCostStr: string?,
 	beforeRobuxBalance: number,
 
 	isTestPurchase: boolean,
@@ -284,8 +283,10 @@ function RobuxUpsellOverlay:render()
 
 		model = props.humanoidModel,
 		itemIcon = props.itemIcon,
+		itemProductId = if GetFFlagEnableEventMetadataInUpsell then props.itemProductId else nil,
 		itemName = props.itemName,
 		itemRobuxCost = props.itemRobuxCost,
+		iapCostStr = props.iapCostStr,
 		iapRobuxAmount = props.iapRobuxAmount,
 		beforeRobuxBalance = props.beforeRobuxBalance,
 
@@ -294,12 +295,8 @@ function RobuxUpsellOverlay:render()
 		u13ConfirmType = self:getU13ConfirmType(),
 		purchaseVPCType = self:getVPCModalType(),
 
-		acceptControllerIcon = if props.isGamepadEnabled
-			then BUTTON_A_ICON
-			else nil,
-		cancelControllerIcon = if props.isGamepadEnabled
-			then BUTTON_B_ICON
-			else nil,
+		acceptControllerIcon = if props.isGamepadEnabled then BUTTON_A_ICON else nil,
+		cancelControllerIcon = if props.isGamepadEnabled then BUTTON_B_ICON else nil,
 
 		purchaseRobux = self.dispatchFetchPurchaseWarning,
 		acceptPurchaseWarning = self.promptRobuxPurchase,
@@ -311,21 +308,9 @@ function RobuxUpsellOverlay:render()
 
 		onAnalyticEvent = props.onAnalyticEvent,
 		eventPrefix = FLOW_NAME,
-		isQuest = GetFFlagDisablePurchasePromptFunctionForMaquettes() and getPaymentPlatform(externalSettings.getPlatform()) == PaymentPlatform.Maquettes,
+		isQuest = GetFFlagDisablePurchasePromptFunctionForMaquettes()
+			and getPaymentPlatform(externalSettings.getPlatform()) == PaymentPlatform.Maquettes,
 	})
-end
-
-if FFlagPublishAvatarPromptEnabled then
-	local function mapStateToProps(state)
-		return {
-			humanoidModel = state.promptRequest.humanoidModel,
-		}
-	end
-
-	RobuxUpsellOverlay = connectToStore(
-		mapStateToProps,
-		nil
-	)(RobuxUpsellOverlay)
 end
 
 return RobuxUpsellOverlay

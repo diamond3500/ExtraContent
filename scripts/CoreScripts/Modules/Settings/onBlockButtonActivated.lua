@@ -3,10 +3,10 @@ local ContextActionService = game:GetService("ContextActionService")
 local CoreGui = game:GetService("CoreGui")
 local CorePackages = game:GetService("CorePackages")
 local RobloxGui = CoreGui:WaitForChild("RobloxGui")
-local Roact = require(CorePackages.Roact)
-local Promise = require(CorePackages.Promise)
+local Roact = require(CorePackages.Packages.Roact)
+local Promise = require(CorePackages.Packages.Promise)
 
-local RobloxTranslator = require(RobloxGui.Modules.RobloxTranslator)
+local RobloxTranslator = require(CorePackages.Workspace.Packages.RobloxTranslator)
 local CoreScriptsRootProvider = require(CorePackages.Workspace.Packages.CoreScriptsRoactCommon).CoreScriptsRootProvider
 
 local BlockingModalScreen = require(script.Parent.Components.Blocking.BlockingModalScreen)
@@ -26,7 +26,7 @@ end
 return function(player, analytics, source, config)
 	analytics:action("SettingsHub", "blockUserButtonClick", {
 		blockeeUserId = player.UserId,
-		source = source
+		source = source,
 	})
 
 	unmount()
@@ -41,7 +41,7 @@ return function(player, analytics, source, config)
 		closeModal = closeModal,
 		analytics = analytics,
 		translator = (config and config.RobloxTranslator) or RobloxTranslator,
-		source = source
+		source = source,
 	})
 
 	if GetFFlagWrapBlockModalScreenInProvider() then
@@ -49,7 +49,13 @@ return function(player, analytics, source, config)
 			BlockingModalScreen = blockingScreen,
 		})
 		handle = Roact.mount(coreScriptsRootProvider, RobloxGui, "BlockingContainer")
-		ContextActionService:BindCoreAction(PAGE_CONTEXT_NAME, closeModal, false, Enum.KeyCode.ButtonB, Enum.KeyCode.Escape)
+		ContextActionService:BindCoreAction(
+			PAGE_CONTEXT_NAME,
+			closeModal,
+			false,
+			Enum.KeyCode.ButtonB,
+			Enum.KeyCode.Escape
+		)
 	else
 		handle = Roact.mount(blockingScreen, RobloxGui, "BlockingContainer")
 	end

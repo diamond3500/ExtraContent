@@ -2,7 +2,7 @@
 -- This component is a simple 3-part entry that's used in 'Object Tags', 'Mmeory Categories' and 'Object Categories' views
 local CorePackages = game:GetService("CorePackages")
 
-local Roact = require(CorePackages.Roact)
+local Roact = require(CorePackages.Packages.Roact)
 
 local Components = script.Parent.Parent.Parent.Components
 local CellLabel = require(Components.CellLabel)

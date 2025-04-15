@@ -3,7 +3,7 @@ local CorePackages = game:GetService("CorePackages")
 local GuiService = game:GetService("GuiService")
 local Players = game:GetService("Players")
 
-local InGameMenuDependencies = require(CorePackages.InGameMenuDependencies)
+local InGameMenuDependencies = require(CorePackages.Packages.InGameMenuDependencies)
 local Roact = InGameMenuDependencies.Roact
 local t = InGameMenuDependencies.t
 local RoactRodux = InGameMenuDependencies.RoactRodux
@@ -33,7 +33,7 @@ InviteFriendsPage.validateProps = t.strictInterface({
 	pageTitle = t.string,
 	canCaptureFocus = t.optional(t.boolean),
 	PlayersService = t.union(t.Instance, t.table),
-	menuPage = GetFFlagIGMGamepadSelectionHistory() and t.string or nil
+	menuPage = GetFFlagIGMGamepadSelectionHistory() and t.string or nil,
 })
 
 InviteFriendsPage.defaultProps = {
@@ -108,7 +108,7 @@ function InviteFriendsPage:render()
 			onNavigateTo = function()
 				self:loadFriends()
 			end,
-		})
+		}),
 	}
 
 	if state.loadingFriends then
@@ -125,11 +125,9 @@ function InviteFriendsPage:render()
 		render = function(isRooted)
 			return Roact.createElement(FocusHandler, {
 				shouldForgetPreviousSelection = GetFFlagIGMGamepadSelectionHistory()
-					and self.props.menuPage ~= "InviteFriends"
+						and self.props.menuPage ~= "InviteFriends"
 					or nil,
-				isFocused = self.props.canCaptureFocus
-					and state.loadingFriends
-					and isRooted,
+				isFocused = self.props.canCaptureFocus and state.loadingFriends and isRooted,
 
 				didFocus = function()
 					GuiService.SelectedCoreObject = self.backButtonRef:getValue()
@@ -167,7 +165,7 @@ function InviteFriendsPage:loadFriends()
 
 			while true do
 				for _, item in ipairs(friendsPages:GetCurrentPage()) do
-					friends[#friends+1] = {
+					friends[#friends + 1] = {
 						IsOnline = item.IsOnline,
 						Id = item.Id,
 						Username = item.Username,
@@ -192,38 +190,38 @@ function InviteFriendsPage:loadFriends()
 			friends = Cryo.List.sort(friends, sortFriends)
 			resolve(friends)
 		end)()
-	end):andThen(function(friends)
-		if self.mounted then
-			self:setState({
-				loadingFriends = false,
-				friends = friends,
-			})
-		end
-	end):catch(function()
-		if self.mounted then
-			self:setState({
-				loadingFriends = false,
-				loadingFriendsError = true,
-			})
-		end
 	end)
+		:andThen(function(friends)
+			if self.mounted then
+				self:setState({
+					loadingFriends = false,
+					friends = friends,
+				})
+			end
+		end)
+		:catch(function()
+			if self.mounted then
+				self:setState({
+					loadingFriends = false,
+					loadingFriendsError = true,
+				})
+			end
+		end)
 end
 
 function InviteFriendsPage:willUnmount()
 	self.mounted = false
 end
 
-return RoactRodux.connect(
-	function(state, props)
-		local canCaptureFocus = state.menuPage == "InviteFriends"
-			and state.isMenuOpen
-			and state.displayOptions.inputType == Constants.InputType.Gamepad
-			and not state.respawn.dialogOpen
-			and state.currentZone == 1
+return RoactRodux.connect(function(state, props)
+	local canCaptureFocus = state.menuPage == "InviteFriends"
+		and state.isMenuOpen
+		and state.displayOptions.inputType == Constants.InputType.Gamepad
+		and not state.respawn.dialogOpen
+		and state.currentZone == 1
 
-		return {
-			canCaptureFocus = canCaptureFocus,
-			menuPage = GetFFlagIGMGamepadSelectionHistory() and state.menuPage or nil
-		}
-	end
-)(InviteFriendsPage)
+	return {
+		canCaptureFocus = canCaptureFocus,
+		menuPage = GetFFlagIGMGamepadSelectionHistory() and state.menuPage or nil,
+	}
+end)(InviteFriendsPage)

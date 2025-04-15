@@ -1,5 +1,5 @@
 local CorePackages = game:GetService("CorePackages")
-local Roact = require(CorePackages.Roact)
+local Roact = require(CorePackages.Packages.Roact)
 local t = require(CorePackages.Packages.t)
 
 local ReportConfirmationContainer = require(script.Parent.ReportConfirmationContainer)

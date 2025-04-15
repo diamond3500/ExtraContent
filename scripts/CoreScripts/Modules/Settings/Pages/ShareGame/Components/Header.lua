@@ -4,7 +4,7 @@ local CorePackages = game:GetService("CorePackages")
 local CoreGui = game:GetService("CoreGui")
 local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 
-local Roact = require(CorePackages.Roact)
+local Roact = require(CorePackages.Packages.Roact)
 
 local ShareGame = RobloxGui.Modules.Settings.Pages.ShareGame
 local Theme = require(RobloxGui.Modules.Settings.Theme)
@@ -32,7 +32,6 @@ function Header:render()
 	local layoutSpecific = Constants.LayoutSpecific[deviceLayout]
 	local isDesktop = deviceLayout == Constants.DeviceLayout.DESKTOP
 
-
 	local isSearchingWithIcon = toggleSearchIcon and searchAreaActive
 	local backButtonWidth
 	if iconType == BackButton.IconType.None then
@@ -50,7 +49,7 @@ function Header:render()
 		AnchorPoint = Vector2.new(0, 1),
 		LayoutOrder = layoutOrder,
 		ZIndex = zIndex,
-		Position = if Theme.UIBloxThemeEnabled then UDim2.new(0,0,0,4) else UDim2.new(0,0,0,0),
+		Position = if Theme.UIBloxThemeEnabled then UDim2.new(0, 0, 0, 4) else UDim2.new(0, 0, 0, 0),
 	}, {
 		Title = Roact.createElement("TextLabel", {
 			BackgroundTransparency = 1,
@@ -67,8 +66,10 @@ function Header:render()
 			iconType = iconType,
 			position = UDim2.new(0, 0, 0.5, 0),
 			size = UDim2.new(
-				0, backButtonWidth or layoutSpecific.BACK_BUTTON_WIDTH,
-				0, layoutSpecific.BACK_BUTTON_HEIGHT
+				0,
+				backButtonWidth or layoutSpecific.BACK_BUTTON_WIDTH,
+				0,
+				layoutSpecific.BACK_BUTTON_HEIGHT
 			),
 			anchorPoint = Vector2.new(0, 0.5),
 			zIndex = zIndex,
@@ -82,7 +83,7 @@ function Header:render()
 			size = UDim2.new(1, -backButtonWidth, 1, 0),
 			zIndex = zIndex,
 			analytics = analytics,
-		})
+		}),
 	})
 end
 

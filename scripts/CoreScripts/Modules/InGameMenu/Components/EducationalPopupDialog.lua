@@ -3,7 +3,7 @@ local RunService = game:GetService("RunService")
 local CorePackages = game:GetService("CorePackages")
 local ContextActionService = game:GetService("ContextActionService")
 
-local InGameMenuDependencies = require(CorePackages.InGameMenuDependencies)
+local InGameMenuDependencies = require(CorePackages.Packages.InGameMenuDependencies)
 local Roact = InGameMenuDependencies.Roact
 local t = InGameMenuDependencies.t
 local UIBlox = InGameMenuDependencies.UIBlox
@@ -39,7 +39,7 @@ EducationalPopupDialog.validateProps = t.strictInterface({
 	onConfirm = t.callback,
 
 	blurBackground = t.boolean,
-	visible  = t.boolean,
+	visible = t.boolean,
 })
 
 EducationalPopupDialog.defaultProps = {
@@ -76,8 +76,8 @@ function EducationalPopupDialog:render()
 					onDismiss = self.props.onDismiss,
 					onCancel = self.props.onCancel,
 					onConfirm = self.props.onConfirm,
-				})
-			})
+				}),
+			}),
 		})
 	end)
 end
@@ -89,8 +89,7 @@ function EducationalPopupDialog:bindActions()
 		end
 	end
 
-	ContextActionService:BindCoreAction(
-		EDU_POPUP_CONFIRM_ACTION, dismissFunc, false, Enum.KeyCode.Escape)
+	ContextActionService:BindCoreAction(EDU_POPUP_CONFIRM_ACTION, dismissFunc, false, Enum.KeyCode.Escape)
 end
 
 function EducationalPopupDialog:unbindActions()

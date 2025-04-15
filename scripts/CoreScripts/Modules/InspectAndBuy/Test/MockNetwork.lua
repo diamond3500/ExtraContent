@@ -4,7 +4,7 @@
 	formats, or returns promise rejections if specified
 ]]
 local CorePackages = game:GetService("CorePackages")
-local Cryo = require(CorePackages.Cryo)
+local Cryo = require(CorePackages.Packages.Cryo)
 local Promise = require(CorePackages.Packages.Promise)
 local PlayabilityStatusEnum = require(CorePackages.Workspace.Packages.PlayabilityRodux).Enums.PlayabilityStatusEnum
 

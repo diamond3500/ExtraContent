@@ -1,3 +1,4 @@
+-- moving this file to LuaApps, please replicate any changes in the LuaApps file as well
 local DetailsPage = script.Parent.Parent
 local Template = DetailsPage.Parent
 local App = Template.Parent
@@ -8,6 +9,8 @@ local React = require(Packages.React)
 local DetailsPageTypes = require(DetailsPage.Types)
 type DetailsPageRenderItem = DetailsPageTypes.DetailsPageRenderItem
 type ComponentList = DetailsPageTypes.ComponentList
+
+local UIBloxConfig = require(UIBlox.UIBloxConfig)
 
 local function useDetailsPageRenderItems(
 	componentList: ComponentList,
@@ -65,4 +68,6 @@ local function useDetailsPageRenderItems(
 	return detailsPageItems
 end
 
-return useDetailsPageRenderItems
+return (
+	if UIBloxConfig.moveDetailsPageToLuaApps then nil else useDetailsPageRenderItems
+) :: typeof(useDetailsPageRenderItems)

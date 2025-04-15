@@ -1,7 +1,7 @@
 local CoreGui = game:GetService("CoreGui")
 local CorePackages = game:GetService("CorePackages")
 
-local Promise = require(CorePackages.Promise)
+local Promise = require(CorePackages.Packages.Promise)
 
 local RobloxGui = CoreGui.RobloxGui
 local GetFIntCanHideGuiGroupId = require(RobloxGui.Modules.Flags.GetFIntCanHideGuiGroupId)

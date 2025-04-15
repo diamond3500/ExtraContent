@@ -4,8 +4,6 @@ local Packages = Foundation.Parent
 local React = require(Packages.React)
 
 local View = require(Foundation.Components.View)
-local FillBehavior = require(Foundation.Enums.FillBehavior)
-type FillBehavior = FillBehavior.FillBehavior
 
 type TileFooterProps = {
 	children: React.ReactNode?,

@@ -1,7 +1,7 @@
 --!nonstrict
 local CorePackages = game:GetService("CorePackages")
 
-local Cryo = require(CorePackages.Cryo)
+local Cryo = require(CorePackages.Packages.Cryo)
 
 local PlayerList = script.Parent.Parent
 local Actions = PlayerList.Actions
@@ -59,8 +59,8 @@ local function GameStats(state, action)
 				addId = oldAddId or gameStatAddIdCounter,
 				isPrimary = action.isPrimary,
 				priority = action.priority,
-				serverAddId = oldServerAddId
-			}
+				serverAddId = oldServerAddId,
+			},
 		})
 		table.sort(newState, gameStatsComp)
 		return newState
@@ -70,13 +70,14 @@ local function GameStats(state, action)
 		end)
 	elseif action.type == SetGameStatText.name then
 		return Cryo.List.map(state, function(stat)
-			return (stat.name == action.statName and
-					Cryo.Dictionary.join(stat, {text = action.text}) or stat)
+			return (stat.name == action.statName and Cryo.Dictionary.join(stat, { text = action.text }) or stat)
 		end)
 	elseif FFlagLeaderstatsWithASideOfClient and action.type == SetGameStatAddId.name then
 		local newState = Cryo.List.map(state, function(stat)
-			return (stat.name == action.statName and
-					Cryo.Dictionary.join(stat, {serverAddId = action.serverAddId}) or stat)
+			return (
+				stat.name == action.statName and Cryo.Dictionary.join(stat, { serverAddId = action.serverAddId })
+				or stat
+			)
 		end)
 		table.sort(newState, gameStatsComp)
 		return newState

@@ -1,29 +1,31 @@
 --!nonstrict
 local root = script:FindFirstAncestor("AbuseReportMenu")
-local GuiService = game:GetService("GuiService")
+local CorePackages = game:GetService("CorePackages")
 local Constants = require(root.Components.Constants)
 
+local UIBlox = require(CorePackages.Packages.UIBlox)
+local useStyle = UIBlox.Core.Style.useStyle
+
+local GetFFlagAddAbuseReportMenuCoreScriptsProvider = require(root.Flags.GetFFlagAddAbuseReportMenuCoreScriptsProvider)
+
 function getMenuItemSizings()
-	if GuiService:IsTenFootInterface() then
+	local style = useStyle()
+
+	if GetFFlagAddAbuseReportMenuCoreScriptsProvider() then
 		return {
-			ItemPadding = Constants.ReportMenuItemPaddingConsole,
-			TopPadding = Constants.ReportMenuTopPaddingConsole,
-			TextOffset = Constants.ReportMenuTextOffsetConsole,
-			DropdownTextSize = Constants.ReportMenuDropdownTextSizeConsole,
-			FontStyle = Constants.ReportMenuFontStyleConsole,
-			TextEntryRelativeSize = Constants.ReportTextEntryFontRelativeSizeConsole,
+			ItemPadding = style.Tokens.Global.Space_125, -- 12 for desktop, 18 for console
+			DropdownTextSize = style.Tokens.Global.FontSize_100, -- 20.16 for desktop, 30.24 for console
+			FontStyle = Constants.ReportMenuFontStyle,
+			ButtonSize = Constants.ReportMenuButtonSizeConsole,
+		}
+	else
+		return {
+			ItemPadding = style.Tokens.Global.Size_150, -- 12 for desktop, 18 for console
+			DropdownTextSize = style.Tokens.Global.FontSize_100, -- 20.16 for desktop, 30.24 for console
+			FontStyle = Constants.ReportMenuFontStyle,
 			ButtonSize = Constants.ReportMenuButtonSizeConsole,
 		}
 	end
-	return {
-		ItemPadding = Constants.ReportMenuItemPadding,
-		TopPadding = Constants.ReportMenuTopPadding,
-		TextOffset = Constants.ReportMenuTextOffset,
-		DropdownTextSize = Constants.ReportMenuDropdownTextSize,
-		FontStyle = Constants.ReportMenuFontStyle,
-		TextEntryRelativeSize = Constants.ReportTextEntryFontRelativeSize,
-		ButtonSize = Constants.ReportMenuButtonSize,
-	}
 end
 
 return getMenuItemSizings

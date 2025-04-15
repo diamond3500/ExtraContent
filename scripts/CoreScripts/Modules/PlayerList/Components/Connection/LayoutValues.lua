@@ -1,6 +1,6 @@
 local CorePackages = game:GetService("CorePackages")
 
-local Roact = require(CorePackages.Roact)
+local Roact = require(CorePackages.Packages.Roact)
 
 local LayoutValuesContext = require(script.Parent.LayoutValuesContext)
 
@@ -13,7 +13,7 @@ end
 local function withLayoutValues(callback)
 	assert(type(callback) == "function", "Expect withLayoutValues callback to be a function.")
 	return Roact.createElement(LayoutValuesContext.Consumer, {
-		render = callback
+		render = callback,
 	})
 end
 

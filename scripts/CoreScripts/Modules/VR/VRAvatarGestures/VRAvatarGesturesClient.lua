@@ -7,10 +7,12 @@ local VRService = game:GetService("VRService")
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local RobloxReplicatedStorage = game:GetService("RobloxReplicatedStorage")
+local CorePackages = game:GetService("CorePackages")
 local RobloxGui = game:GetService("CoreGui"):WaitForChild("RobloxGui")
 local RbxAnalyticsService = game:GetService("RbxAnalyticsService")
-local ConnectionUtil = require(RobloxGui.Modules.Common.ConnectionUtil)
-local AvatarUtil = require(RobloxGui.Modules.Common.AvatarUtil)
+local CoreScriptsCommon = require(CorePackages.Workspace.Packages.CoreScriptsCommon)
+local ConnectionUtil = CoreScriptsCommon.ConnectionUtil
+local AvatarUtil = CoreScriptsCommon.AvatarUtil
 
 local FIRST_PERSON_THRESHOLD_DISTANCE = 5
 local HEAD_OFFSET_FORWARD_RATIO = 1/8
@@ -26,10 +28,10 @@ local VR_AVATAR_GESTURES_ANALYTICS_EVENT_NAME = "VRAvatarGestures"
 
 export type VRAvatarGesturesClientType = {
 	--------------- Member Variables ------------------------
-	-- holds the input data received at the beginning of the frame and saves it for 
+	-- holds the input data received at the beginning of the frame and saves it for
 	-- calculations at a later part of the frame
 	partCFrameMap: {[string]: CFrame},
-	connections: ConnectionUtil.ConnectionUtilType,
+	connections: CoreScriptsCommon.ConnectionUtilType,
 
 	-- true when the enabled analytics event is ready to be sent. Otherwise, nil.
 	analyticsSendEnabled: boolean?,
@@ -57,7 +59,7 @@ function VRAvatarGesturesClient.new()
 	self.analyticsSendEnabled = true
 	self.connections:connect("AvatarGestures", VRService:GetPropertyChangedSignal("AvatarGestures"), function() self:onAvatarGesturesChanged() end)
 	if VRService.AvatarGestures then self:onAvatarGesturesChanged() end
-	return self :: any 
+	return self :: any
 end
 
 function VRAvatarGesturesClient:onCharacterChanged(character)
@@ -161,59 +163,59 @@ function VRAvatarGesturesClient:updateCFrames(partName, cframeOffset)
 	if not Players.LocalPlayer then
 		return
 	end
-		
+
 	local character = player.Character :: Model
 	if not player.Character then
 		return
 	end
-		
+
 	local part = character:FindFirstChild(partName) :: Part
 	if not part then
 		return
 	end
-	
+
 	local camera = workspace.CurrentCamera :: Camera
 	if not camera then
 		return
 	end
-	
+
 	local attachment = part:FindFirstChild(partName .. "Attachment") :: Attachment
 	if not attachment then
 		return
 	end
-	
+
 	local alignPosition = part:FindFirstChild(partName .. "AlignPosition") :: AlignPosition
 	if not alignPosition then
 		return
 	end
-	
+
 	local alignOrientation = part:FindFirstChild(partName .. "AlignOrientation") :: AlignOrientation
 	if not alignOrientation then
 		return
 	end
-	
+
 	if VRService.VREnabled then
 		cframeOffset = cframeOffset.Rotation + cframeOffset.Position * camera.HeadScale
-		local worldCFrame = camera.CFrame * cframeOffset 
-		
+		local worldCFrame = camera.CFrame * cframeOffset
+
 		local head = character:FindFirstChild("Head") :: Part
-		
+
 		-- third person
 		if (camera.CFrame.Position - camera.Focus.Position).Magnitude > FIRST_PERSON_THRESHOLD_DISTANCE and head then
 			local headCframeOffset = VRService:GetUserCFrame(Enum.UserCFrame.Head)
 			headCframeOffset = headCframeOffset.Rotation + headCframeOffset.Position * camera.HeadScale
 			local headWorld = camera.CFrame * headCframeOffset * CFrame.new(0, 0, 0.5)
-			
+
 			if partName ~= "TrackedHead"then
 				-- the cframe of the input (hands) should be the same offset from the avatar's head as the input cframe from the player's head
-				local headRelativeCFrame = head.CFrame:ToWorldSpace(headWorld:ToObjectSpace(worldCFrame)) 
+				local headRelativeCFrame = head.CFrame:ToWorldSpace(headWorld:ToObjectSpace(worldCFrame))
 				alignPosition.Position = headRelativeCFrame.Position
 				alignOrientation.CFrame = headRelativeCFrame * CFrame.Angles(math.pi/2, 0, 0)
 			else
 				local rootPartCFrame = (character.PrimaryPart :: BasePart).CFrame
 				alignPosition.Position = (rootPartCFrame * CFrame.new(0, rootPartCFrame.Position.Y * HEAD_OFFSET_HEIGHT_RATIO, -rootPartCFrame.Position.Y * HEAD_OFFSET_FORWARD_RATIO)).Position
 				-- instead of using the camera to position the head orientation in the world, the orientation of the head should be relative to
-				-- the avatar's root part. That is, if the player is looking at the front of their avatar (in third person), the avatar's head should 
+				-- the avatar's root part. That is, if the player is looking at the front of their avatar (in third person), the avatar's head should
 				-- still be facing forward, not matching the player's head orientation.
 				alignOrientation.CFrame = rootPartCFrame * cframeOffset
 			end
@@ -226,17 +228,17 @@ function VRAvatarGesturesClient:updateCFrames(partName, cframeOffset)
 				alignOrientation.CFrame = worldCFrame
 			end
 		end
-		
+
 	else -- Simulate VR Input
 		local hrp = character:FindFirstChild("HumanoidRootPart") :: Part
-		
+
 		local cframe
 		if partName ~= "TrackedHead" then
 			cframe =  hrp.CFrame  * cframeOffset * CFrame.Angles(0, 0, math.rad(time() * 30)) * CFrame.new(1, 0, -0.5)
 		else
 			cframe = hrp.CFrame * cframeOffset
 		end
-		
+
 		if hrp then
 			alignPosition.Position = cframe.Position
 			alignOrientation.CFrame = cframe

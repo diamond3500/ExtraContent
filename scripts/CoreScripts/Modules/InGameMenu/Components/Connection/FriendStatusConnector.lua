@@ -1,7 +1,7 @@
 local CorePackages = game:GetService("CorePackages")
 local Players = game:GetService("Players")
 
-local InGameMenuDependencies = require(CorePackages.InGameMenuDependencies)
+local InGameMenuDependencies = require(CorePackages.Packages.InGameMenuDependencies)
 local Roact = InGameMenuDependencies.Roact
 local RoactRodux = InGameMenuDependencies.RoactRodux
 
@@ -52,7 +52,6 @@ function FriendStatusConnector:render()
 
 	return Roact.createFragment(connections)
 end
-
 
 return RoactRodux.UNSTABLE_connect2(nil, function(dispatch)
 	return {

@@ -2,9 +2,9 @@
 local CorePackages = game:GetService("CorePackages")
 local CoreGui = game:GetService("CoreGui")
 
-local Roact = require(CorePackages.Roact)
-local RoactRodux = require(CorePackages.RoactRodux)
-local UIBlox = require(CorePackages.UIBlox)
+local Roact = require(CorePackages.Packages.Roact)
+local RoactRodux = require(CorePackages.Packages.RoactRodux)
+local UIBlox = require(CorePackages.Packages.UIBlox)
 
 local withStyle = UIBlox.Style.withStyle
 
@@ -37,7 +37,8 @@ function TeamEntry:render()
 				if self.props.teamColor then
 					backgroundStyle = {
 						Color = self.props.teamColor.Color,
-						Transparency = layoutValues.TeamEntryBackgroundTransparency * style.Settings.PreferredTransparency 
+						Transparency = layoutValues.TeamEntryBackgroundTransparency
+							* style.Settings.PreferredTransparency,
 					}
 				else
 					backgroundStyle = style.Theme.Divider
@@ -80,7 +81,7 @@ function TeamEntry:render()
 				SortOrder = Enum.SortOrder.LayoutOrder,
 				FillDirection = Enum.FillDirection.Horizontal,
 				VerticalAlignment = Enum.VerticalAlignment.Center,
-				Padding = padding
+				Padding = padding,
 			})
 
 			teamEntryChildren["NameFrame"] = Roact.createElement("Frame", {
@@ -123,8 +124,8 @@ function TeamEntry:render()
 						Roact.createElement("UIPadding", {
 							PaddingLeft = UDim.new(0, layoutValues.TeamEntryTextPadding),
 						}),
-					})
-				})
+					}),
+				}),
 			})
 
 			local maxLeaderstats = layoutValues.MaxLeaderstats
@@ -136,7 +137,7 @@ function TeamEntry:render()
 				if i > maxLeaderstats then
 					break
 				end
-				teamEntryChildren["gameStat_" ..gameStat.name] = Roact.createElement(StatEntry, {
+				teamEntryChildren["gameStat_" .. gameStat.name] = Roact.createElement(StatEntry, {
 					statName = gameStat.name,
 					statValue = self.props.leaderstats[gameStat.name],
 					isTitleEntry = false,
@@ -146,7 +147,7 @@ function TeamEntry:render()
 					backgroundStyle = backgroundStyle,
 					overlayStyle = overlayStyle,
 					doubleOverlay = false,
-					textStyle = textStyle
+					textStyle = textStyle,
 				})
 			end
 

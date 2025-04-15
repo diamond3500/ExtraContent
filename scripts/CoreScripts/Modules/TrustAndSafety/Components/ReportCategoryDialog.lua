@@ -3,11 +3,11 @@ local ContextActionService = game:GetService("ContextActionService")
 local CorePackages = game:GetService("CorePackages")
 local GuiService = game:GetService("GuiService")
 
-local Roact = require(CorePackages.Roact)
-local RoactRodux = require(CorePackages.RoactRodux)
-local UIBlox = require(CorePackages.UIBlox)
+local Roact = require(CorePackages.Packages.Roact)
+local RoactRodux = require(CorePackages.Packages.RoactRodux)
+local UIBlox = require(CorePackages.Packages.UIBlox)
 local t = require(CorePackages.Packages.t)
-local Cryo = require(CorePackages.Cryo)
+local Cryo = require(CorePackages.Packages.Cryo)
 
 local TnsModule = script.Parent.Parent
 local Dependencies = require(TnsModule.Dependencies)
@@ -52,7 +52,7 @@ local CELL_THEME_OVERRIDES = {
 	},
 	BackgroundOnHover = {
 		Color = Colors.Graphite,
-		Transparency = .666,
+		Transparency = 0.666,
 	},
 	BackgroundOnPress = {
 		Color = Colors.Graphite,
@@ -65,19 +65,24 @@ local SINK_ACTION = "ReporSentDialogSinkAction"
 local CELL_HEIGHT = 72
 
 local function Divider(props)
-	return Roact.createElement("Frame", Cryo.Dictionary.join({
-		Size = UDim2.new(1, 0, 0, 1),
-	}, props, {
-		BorderSizePixel = 0,
-		BackgroundColor3 = Colors.Graphite,
-		BackgroundTransparency = .5,
-		theme = Cryo.None,
-	}))
+	return Roact.createElement(
+		"Frame",
+		Cryo.Dictionary.join(
+			{
+				Size = UDim2.new(1, 0, 0, 1),
+			},
+			props,
+			{
+				BorderSizePixel = 0,
+				BackgroundColor3 = Colors.Graphite,
+				BackgroundTransparency = 0.5,
+				theme = Cryo.None,
+			}
+		)
+	)
 end
 
-
 local function CategoryCellContent(props)
-
 	return Roact.createElement("Frame", {
 		BackgroundTransparency = 1,
 		Size = UDim2.new(1, 0, 0, CELL_HEIGHT),
@@ -132,9 +137,8 @@ local function CategoryCellContent(props)
 				TextTruncate = Enum.TextTruncate.AtEnd,
 				TextXAlignment = Enum.TextXAlignment.Left,
 			}),
-		})
+		}),
 	})
-
 end
 
 local function CategoryCell(props)
@@ -148,7 +152,6 @@ local function CategoryCell(props)
 		tail = Roact.createElement("Frame"),
 	})
 end
-
 
 local ReportCategoryDialog = Roact.PureComponent:extend("ReportCategoryDialog")
 
@@ -177,7 +180,7 @@ function ReportCategoryDialog:renderContents(voiceEnabled, localized)
 		ListLayout = Roact.createElement("UIListLayout", {
 			FillDirection = Enum.FillDirection.Vertical,
 			SortOrder = Enum.SortOrder.LayoutOrder,
-		})
+		}),
 	}
 
 	local canvasHeight = CELL_HEIGHT
@@ -188,7 +191,8 @@ function ReportCategoryDialog:renderContents(voiceEnabled, localized)
 		local voiceActiveUsers = VoiceChatServiceManager:getRecentUsersInteractionData()
 		if voiceActiveUsers and not Cryo.isEmpty(voiceActiveUsers) then
 			if self.props.playerFocusedFlow then
-				canShowVoiceCategory = self.props.targetPlayer and voiceActiveUsers[tostring(self.props.targetPlayer.UserId)] ~= nil
+				canShowVoiceCategory = self.props.targetPlayer
+					and voiceActiveUsers[tostring(self.props.targetPlayer.UserId)] ~= nil
 			end
 		else
 			canShowVoiceCategory = false
@@ -196,67 +200,90 @@ function ReportCategoryDialog:renderContents(voiceEnabled, localized)
 	end
 
 	if canShowVoiceCategory then
-		table.insert(items, Roact.createElement(CategoryCell, {
-			text = localized.voiceHeader,
-			subtext = localized.voiceDescription,
-			icon = Assets.Images.VoiceChatIcon,
-			layoutOrder = #items + 1,
+		table.insert(
+			items,
+			Roact.createElement(CategoryCell, {
+				text = localized.voiceHeader,
+				subtext = localized.voiceDescription,
+				icon = Assets.Images.VoiceChatIcon,
+				layoutOrder = #items + 1,
 
-			onActivated = function()
-				self.props.selectReportCategory(Constants.Category.Voice)
-			end,
-		}))
-		table.insert(items, Roact.createElement(Divider, {
-			LayoutOrder = #items + 1,
-		}))
+				onActivated = function()
+					self.props.selectReportCategory(Constants.Category.Voice)
+				end,
+			})
+		)
+		table.insert(
+			items,
+			Roact.createElement(Divider, {
+				LayoutOrder = #items + 1,
+			})
+		)
 	end
 
-	table.insert(items, Roact.createElement(CategoryCell, {
-		text = localized.textHeader,
-		subtext = localized.textDescription,
-		icon = Assets.Images.TextChatIcon,
-		layoutOrder = #items + 1,
-		onActivated = function()
-			self.props.selectReportCategory(Constants.Category.Text)
-		end,
-	}))
-	table.insert(items, Roact.createElement(Divider, {
-		LayoutOrder = #items + 1,
-	}))
+	table.insert(
+		items,
+		Roact.createElement(CategoryCell, {
+			text = localized.textHeader,
+			subtext = localized.textDescription,
+			icon = Assets.Images.TextChatIcon,
+			layoutOrder = #items + 1,
+			onActivated = function()
+				self.props.selectReportCategory(Constants.Category.Text)
+			end,
+		})
+	)
+	table.insert(
+		items,
+		Roact.createElement(Divider, {
+			LayoutOrder = #items + 1,
+		})
+	)
 
 	if not self.props.playerFocusedFlow then
-		table.insert(items, Roact.createElement(CategoryCell, {
-			iconComponent = Roact.createElement(GameIcon, {
-				gameId = game.GameId,
-				iconSize = 33,
-				cornerRadius = UDim.new(0, 8),
-			}),
-			text = localized.experienceHeader,
-			subtext = localized.experienceDescription,
-			layoutOrder = #items + 1,
-			onActivated = function()
-				self.props.selectReportCategory(Constants.Category.Experience)
-			end,
-		}))
-		table.insert(items, Roact.createElement(Divider, {
-			LayoutOrder = #items + 1,
-		}))
+		table.insert(
+			items,
+			Roact.createElement(CategoryCell, {
+				iconComponent = Roact.createElement(GameIcon, {
+					gameId = game.GameId,
+					iconSize = 33,
+					cornerRadius = UDim.new(0, 8),
+				}),
+				text = localized.experienceHeader,
+				subtext = localized.experienceDescription,
+				layoutOrder = #items + 1,
+				onActivated = function()
+					self.props.selectReportCategory(Constants.Category.Experience)
+				end,
+			})
+		)
+		table.insert(
+			items,
+			Roact.createElement(Divider, {
+				LayoutOrder = #items + 1,
+			})
+		)
 	end
 
-	table.insert(items, Roact.createElement(CategoryCell, {
-		text = localized.otherHeader,
-		subtext = localized.otherDescription,
-		icon = Assets.Images.OtherIcon,
-		layoutOrder = #items + 1,
+	table.insert(
+		items,
+		Roact.createElement(CategoryCell, {
+			text = localized.otherHeader,
+			subtext = localized.otherDescription,
+			icon = Assets.Images.OtherIcon,
+			layoutOrder = #items + 1,
 
-		onActivated = function()
-			self.props.selectReportCategory(Constants.Category.Other)
-		end,
-	}))
-	table.insert(items, Roact.createElement(Divider, {
-		LayoutOrder = #items + 1,
-	}))
-
+			onActivated = function()
+				self.props.selectReportCategory(Constants.Category.Other)
+			end,
+		})
+	)
+	table.insert(
+		items,
+		Roact.createElement(Divider, {
+			LayoutOrder = #items + 1,
+		})
+	)
 
 	-- override cell style
 	return withStyle(function(style)
@@ -271,7 +298,7 @@ function ReportCategoryDialog:renderContents(voiceEnabled, localized)
 				Size = UDim2.fromScale(1, 1),
 				CanvasSize = UDim2.new(1, 0, 0, canvasHeight),
 				scrollingFrameRef = self.scrollingFrameRef,
-			}, items)
+			}, items),
 		})
 	end)
 end

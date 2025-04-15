@@ -7,29 +7,27 @@ local Text = require(Foundation.Components.Text)
 local ControlState = require(Foundation.Enums.ControlState)
 type ControlState = ControlState.ControlState
 
+local useTokens = require(Foundation.Providers.Style.useTokens)
+
 local function Story(props)
+	local tokens = useTokens()
 	return React.createElement(View, {
 		AutomaticSize = Enum.AutomaticSize.XY,
 		GroupTransparency = props.GroupTransparency,
 		padding = 10,
 		stroke = {
-			Color = Color3.new(1, 1, 1),
-			Transparency = 0.3,
+			Color = tokens.Color.Stroke.Emphasis.Color3,
+			Transparency = tokens.Color.Stroke.Emphasis.Transparency,
 			Thickness = 2,
 		},
 	}, {
 		React.createElement(View, {
 			Size = UDim2.new(0, 100, 0, 100),
-			backgroundStyle = {
-				Transparency = 0.8,
-				Color3 = Color3.new(1, 1, 1),
-			},
+			backgroundStyle = tokens.Color.Surface.Surface_200,
 			tag = "row align-x-center align-y-center",
 		}, {
 			React.createElement(Text, {
-				textStyle = {
-					Color3 = Color3.new(1, 1, 1),
-				},
+				textStyle = tokens.Color.Content.Emphasis,
 				fontStyle = {
 					Font = Enum.Font.BuilderSansMedium,
 					FontSize = 24,
@@ -43,6 +41,7 @@ end
 
 local function StoryGuiState(props)
 	local guiState, setGuiState = React.useBinding(ControlState.Initialize :: ControlState)
+	local tokens = useTokens()
 
 	local function onStateChanged(new: ControlState)
 		setGuiState(new)
@@ -52,10 +51,7 @@ local function StoryGuiState(props)
 		Size = UDim2.new(0, 120, 0, 120),
 		LayoutOrder = 2,
 		GroupTransparency = props.GroupTransparency,
-		backgroundStyle = {
-			Transparency = 0,
-			Color3 = Color3.fromRGB(120, 0, 180),
-		},
+		backgroundStyle = tokens.Color.Extended.Purple.Purple_500,
 		layout = {
 			FillDirection = Enum.FillDirection.Vertical,
 			HorizontalAlignment = Enum.HorizontalAlignment.Center,
@@ -64,9 +60,7 @@ local function StoryGuiState(props)
 		onStateChanged = onStateChanged,
 	}, {
 		React.createElement(Text, {
-			textStyle = {
-				Color3 = Color3.new(1, 1, 1),
-			},
+			textStyle = tokens.Color.Content.Emphasis,
 			Text = guiState:map(function(state)
 				return tostring(state)
 			end),

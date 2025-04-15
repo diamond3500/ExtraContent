@@ -1,7 +1,7 @@
 local CorePackages = game:GetService("CorePackages")
 
-local Roact = require(CorePackages.Roact)
-local RoactRodux = require(CorePackages.RoactRodux)
+local Roact = require(CorePackages.Packages.Roact)
+local RoactRodux = require(CorePackages.Packages.RoactRodux)
 
 local Components = script.Parent.Parent.Components
 local LogData = require(Components.Log.LogData)
@@ -14,11 +14,8 @@ local ServerStatsData = require(Components.ServerStats.ServerStatsData)
 local ActionBindingsData = require(Components.ActionBindings.ActionBindingsData)
 local ServerJobsData = require(Components.ServerJobs.ServerJobsData)
 local DebugVisualizationsData = require(Components.DebugVisualizations.DebugVisualizationsData)
-local ServerProfilingData = require(Components.ScriptProfiler.ServerProfilingData)
 local LuauHeapData = require(Components.LuauHeap.LuauHeapData)
 local DataContext = require(Components.DataContext)
-
-local FFlagScriptProfilerNoClientRepl = game:DefineFastFlag("ScriptProfilerNoClientRepl", false)
 
 local DataProvider = Roact.Component:extend("DataProvider")
 
@@ -37,7 +34,6 @@ function DataProvider:init()
 			ActionBindingsData = ActionBindingsData.new(),
 			ServerJobsData = ServerJobsData.new(),
 			DebugVisualizationsData = DebugVisualizationsData.new(),
-			ServerProfilingData = if FFlagScriptProfilerNoClientRepl then nil else ServerProfilingData.new(),
 			LuauHeapData = LuauHeapData.new(),
 		},
 	})

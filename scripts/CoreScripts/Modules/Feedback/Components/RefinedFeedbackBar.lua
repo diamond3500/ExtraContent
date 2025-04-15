@@ -14,11 +14,11 @@ local withLocalization = require(CorePackages.Workspace.Packages.Localization).w
 
 -- Components
 local FeedbackBarHint = require(script.Parent.FeedbackBarHint)
-local Roact = require(CorePackages.Roact)
-local RoactRodux = require(CorePackages.RoactRodux)
-local UIBlox = require(CorePackages.UIBlox)
+local Roact = require(CorePackages.Packages.Roact)
+local RoactRodux = require(CorePackages.Packages.RoactRodux)
+local UIBlox = require(CorePackages.Packages.UIBlox)
 local t = require(CorePackages.Packages.t)
-local Cryo = require(CorePackages.Cryo)
+local Cryo = require(CorePackages.Packages.Cryo)
 
 -- UIBlox Library
 local withStyle = UIBlox.Core.Style.withStyle

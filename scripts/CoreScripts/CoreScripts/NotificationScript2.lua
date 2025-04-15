@@ -27,23 +27,26 @@ local AnalyticsService = game:GetService("RbxAnalyticsService")
 local VRService = game:GetService("VRService")
 local GroupService = game:GetService("GroupService")
 local TeleportService = game:GetService("TeleportService")
+local CorePackages = game:GetService("CorePackages")
 local RobloxGui = CoreGui.RobloxGui
 local Settings = UserSettings()
 local GameSettings = Settings.GameSettings
-
 local FFlagCoreScriptShowTeleportPrompt = require(RobloxGui.Modules.Flags.FFlagCoreScriptShowTeleportPrompt)
 
+local FFlagLogBadgeAwardImpression = game:DefineFastFlag("LogBadgeAwardImpression", false)
+local FFlagLogBadgeAwardDismissed = game:DefineFastFlag("LogBadgeAwardDismissed", false)
+local FFlagLogFriendRequestImpression = game:DefineFastFlag("LogFriendRequestImpression", false)
+local FFlagLogFriendRequestDismissed = game:DefineFastFlag("LogFriendRequestDismissed", false)
 local FFlagLogAcceptFriendshipEvent = game:DefineFastFlag("LogAcceptFriendshipEvent", false)
 local FFlagClientToastNotificationsEnabled = game:GetEngineFeature("ClientToastNotificationsEnabled")
 local GetFFlagClientToastNotificationsRedirect =
 	require(RobloxGui.Modules.Flags.GetFFlagClientToastNotificationsRedirect)
+local GetFFlagFriendshipNotifsUseSendr = require(RobloxGui.Modules.Flags.GetFFlagFriendshipNotifsUseSendr)
 
 local shouldSaveScreenshotToAlbum = require(RobloxGui.Modules.shouldSaveScreenshotToAlbum)
+local FFlagFixOnBadgeAwardedError = game:DefineFastFlag("FixOnBadgeAwardedError", false)
 
-local RobloxTranslator = require(RobloxGui.Modules.RobloxTranslator)
-
-local FFlagNotificationsNoLongerRequireControllerState =
-	game:DefineFastFlag("NotificationsNoLongerRequireControllerState", false)
+local RobloxTranslator = require(CorePackages.Workspace.Packages.RobloxTranslator)
 
 local function LocalizedGetString(key, rtv)
 	pcall(function()
@@ -74,7 +77,7 @@ local badgesNotificationsActive = true
 
 local SocialUtil = require(RobloxGui.Modules.SocialUtil)
 local GameTranslator = require(RobloxGui.Modules.GameTranslator)
-local PolicyService = require(RobloxGui.Modules.Common.PolicyService)
+local CachedPolicyService = require(CorePackages.Workspace.Packages.CachedPolicyService)
 
 local BG_TRANSPARENCY_DEFAULT = 0.6
 local bgTransparency = BG_TRANSPARENCY_DEFAULT * GameSettings.PreferredTransparency
@@ -445,7 +448,7 @@ local function createNotification(title, text, image)
 		end
 	end
 
-	notificationFrame.Parent = nil
+	notificationFrame.Parent = nil;
 
 	-- AddSelectionParent is deprecated
 	(GuiService :: any):AddSelectionParent(HttpService:GenerateGUID(false), notificationFrame)
@@ -623,14 +626,14 @@ local function onSendNotificationInfo(notificationInfo)
 		if button1Text and button1Text ~= "" then
 			table.insert(
 				buttons,
-				createNotificationButtonDetails(button1Text, Enum.NotificationButtonType.Secondary, callback)
+				createNotificationButtonDetails(button1Text, Enum.NotificationButtonType.Primary, callback)
 			)
 		end
 
 		if button2Text and button2Text ~= "" then
 			table.insert(
 				buttons,
-				createNotificationButtonDetails(button2Text, Enum.NotificationButtonType.Primary, callback)
+				createNotificationButtonDetails(button2Text, Enum.NotificationButtonType.Secondary, callback)
 			)
 		end
 
@@ -642,8 +645,10 @@ local function onSendNotificationInfo(notificationInfo)
 				then GameTranslator:TranslateGameText(CoreGui, notificationInfo.Text)
 				else notificationInfo.Text,
 			Icon = notificationInfo.Image,
+			OnDisplay = notificationInfo.OnDisplay,
+			OnDismiss = notificationInfo.OnDismiss,
 			Buttons = buttons,
-		}
+		};
 		(GuiService :: any):SendNotification(newNotificationInfo)
 		return
 	end
@@ -831,6 +836,18 @@ local function sendFriendNotification(fromPlayer)
 		end,
 		Button1Text = acceptText,
 		Button2Text = declineText,
+		OnDisplay = if FFlagLogFriendRequestImpression
+			then function()
+				AnalyticsService:ReportCounter("NotificationScript-FriendshipNotificationDisplayed")
+				AnalyticsService:TrackEvent("Game", "FriendshipNotificationDisplayed", "NotificationScript")
+			end
+			else nil,
+		OnDismiss = if FFlagLogFriendRequestDismissed
+			then function()
+				AnalyticsService:ReportCounter("NotificationScript-FriendshipNotificationDismissed")
+				AnalyticsService:TrackEvent("Game", "FriendshipNotificationDismissed", "NotificationScript")
+			end
+			else nil,
 	})
 end
 
@@ -840,7 +857,7 @@ local function onFriendRequestEvent(fromPlayer, toPlayer, event)
 	end
 	--
 	if fromPlayer == LocalPlayer then
-		if event == Enum.FriendRequestEvent.Accept then
+		if event == Enum.FriendRequestEvent.Accept and (not GetFFlagFriendshipNotifsUseSendr()) then
 			local detailText = RobloxTranslator:FormatByKey(
 				"NotificationScript2.FriendRequestEvent.Accept",
 				{ RBX_NAME = toPlayer.Name }
@@ -857,7 +874,7 @@ local function onFriendRequestEvent(fromPlayer, toPlayer, event)
 			})
 		end
 	elseif toPlayer == LocalPlayer then
-		if event == Enum.FriendRequestEvent.Issue then
+		if event == Enum.FriendRequestEvent.Issue and (not GetFFlagFriendshipNotifsUseSendr()) then
 			if FriendRequestBlacklist[fromPlayer] then
 				return
 			end
@@ -951,6 +968,11 @@ local function onBadgeAwarded(userId, creatorId, badgeId)
 			return
 		end -- could not get info from network
 
+		if FFlagFixOnBadgeAwardedError then
+			if creatorName == nil then
+				creatorName = ""
+			end
+		end
 		local badgeAwardText = RobloxTranslator:FormatByKey(
 			"NotificationScript2.onBadgeAwardedDetail",
 			{ RBX_NAME = LocalPlayer.Name, CREATOR_NAME = creatorName, BADGE_NAME = badgeInfo.DisplayName }
@@ -964,6 +986,18 @@ local function onBadgeAwarded(userId, creatorId, badgeId)
 			DetailText = badgeAwardText,
 			Image = BADGE_IMG,
 			Duration = DEFAULT_NOTIFICATION_DURATION,
+			OnDisplay = if FFlagLogBadgeAwardImpression
+				then function()
+					AnalyticsService:ReportCounter("NotificationScript-BadgeAwardNotificationDisplayed")
+					AnalyticsService:TrackEvent("Game", "BadgeAwardNotificationDisplayed", "NotificationScript")
+				end
+				else nil,
+			OnDismiss = if FFlagLogBadgeAwardDismissed
+				then function()
+					AnalyticsService:ReportCounter("NotificationScript-BadgeAwardNotificationDismissed")
+					AnalyticsService:TrackEvent("Game", "BadgeAwardNotificationDismissed", "NotificationScript")
+				end
+				else nil,
 		})
 	end
 end
@@ -1010,7 +1044,7 @@ function onGameSettingsChanged(property, amount)
 	end
 end
 
-if not PolicyService:IsSubjectToChinaPolicies() then
+if not CachedPolicyService:IsSubjectToChinaPolicies() then
 	BadgeService.OnBadgeAwarded:connect(onBadgeAwarded)
 end
 
@@ -1024,7 +1058,7 @@ if not isTenFootInterface then
 	end)
 end
 
-local allowScreenshots = not PolicyService:IsSubjectToChinaPolicies()
+local allowScreenshots = not CachedPolicyService:IsSubjectToChinaPolicies()
 
 if allowScreenshots then
 	-- Otherwise game.ScreenshotSavedToAlbum signal will be fired, handling in CaptureNotification.lua
@@ -1143,41 +1177,6 @@ local function onPreferredTransparencyChanged()
 	end
 end
 GameSettings:GetPropertyChangedSignal("PreferredTransparency"):connect(onPreferredTransparencyChanged)
-
-if not FFlagNotificationsNoLongerRequireControllerState then
-	local Platform = UserInputService:GetPlatform()
-	local Modules = RobloxGui:FindFirstChild("Modules")
-	local CSMModule = Modules:FindFirstChild("ControllerStateManager")
-	if Modules and not CSMModule then
-		local ShellModules = Modules:FindFirstChild("Shell")
-		if ShellModules then
-			CSMModule = ShellModules:FindFirstChild("ControllerStateManager")
-		end
-	end
-
-	if Platform == Enum.Platform.XBoxOne then
-		-- Platform hook for controller connection events
-		-- Displays overlay to user on controller connection lost
-		local PlatformService = nil
-		pcall(function()
-			PlatformService = game:GetService("PlatformService")
-		end)
-		if PlatformService and CSMModule then
-			local controllerStateManager = require(CSMModule)
-			if controllerStateManager then
-				controllerStateManager:Initialize()
-
-				if not game:IsLoaded() then
-					game.Loaded:Wait()
-				end
-
-				-- retro check in case of controller disconnect while loading
-				-- for now, gamepad1 is always mapped to the active user
-				controllerStateManager:CheckUserConnected()
-			end
-		end
-	end
-end
 
 if FFlagCoreScriptShowTeleportPrompt then
 	local function onMenuTeleportAttemptNotification()

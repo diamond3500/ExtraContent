@@ -10,8 +10,6 @@ local SetEquippedAssets = require(InspectAndBuyFolder.Actions.SetEquippedAssets)
 local Constants = require(InspectAndBuyFolder.Constants)
 local GetAssetBundles = require(InspectAndBuyFolder.Thunks.GetAssetBundles)
 
-local FFlagAttributionInInspectAndBuy = require(InspectAndBuyFolder.Flags.FFlagAttributionInInspectAndBuy)
-
 local requiredServices = {}
 
 local function getAssetIds(humanoidDescription)
@@ -63,17 +61,15 @@ local function GetAssetsFromHumanoidDescription(humanoidDescription, isForLocalP
 						store:dispatch(GetAssetBundles(asset.assetId))
 					end
 
-					if FFlagAttributionInInspectAndBuy then
-						--[[
-							FIXME(dbanks)
-							2023/12/07
-							See https://roblox.atlassian.net/browse/AVBURST-12905
-							This will be changed once backend sends "creating universe" with asset details.
-							Either GetProductInfo will get us the "creating universe" id, or we hit different/better
-							endpoint (like generic "get asset details" endpoint to this id.)
-						--]]
-						store:dispatch(GetVersionInfo(asset.assetId))
-					end
+					--[[
+						FIXME(dbanks)
+						2023/12/07
+						See https://roblox.atlassian.net/browse/AVBURST-12905
+						This will be changed once backend sends "creating universe" with asset details.
+						Either GetProductInfo will get us the "creating universe" id, or we hit different/better
+						endpoint (like generic "get asset details" endpoint to this id.)
+					--]]
+					store:dispatch(GetVersionInfo(asset.assetId))
 				end)()
 			end
 			store:dispatch(SetAssets(assets))

@@ -6,8 +6,6 @@ local Dash = require(Packages.Dash)
 
 local Tile = require(Foundation.Components.Tile)
 local MediaType = require(Foundation.Enums.MediaType)
-local Radius = require(Foundation.Enums.Radius)
-local FillBehavior = require(Foundation.Enums.FillBehavior)
 local Theme = require(Foundation.Enums.Theme)
 
 local Badge = require(Foundation.Components.Badge)
@@ -16,8 +14,9 @@ type BadgeVariant = BadgeVariant.BadgeVariant
 local BadgeSize = require(Foundation.Enums.BadgeSize)
 
 local useTokens = require(Foundation.Providers.Style.useTokens)
+local Flags = require(Foundation.Utility.Flags)
 
-local itemTileSize = UDim2.fromOffset(150, 230)
+local itemTileSize = UDim2.fromOffset(150, 240)
 local itemId = 21070012
 
 return {
@@ -26,6 +25,7 @@ return {
 		return {
 			name = variant,
 			story = function(props): React.Node
+				Flags.FoundationDisableBadgeTruncation = props.controls.disableBadgeTruncation
 				local tokens = useTokens()
 
 				local item, setItem = React.useState({} :: { Name: string?, PriceText: string? })
@@ -48,40 +48,24 @@ return {
 
 				if props.controls.onTile then
 					return React.createElement(Tile.Root, {
-						fillDirection = Enum.FillDirection.Vertical,
-						fillBehavior = FillBehavior.Fit,
-						spacing = tokens.Gap.Small,
-						backgroundStyle = tokens.Color.Shift.Shift_200,
-						-- Add negative size to offset border
-						Size = itemTileSize - UDim2.fromOffset(2, 2),
+						isContained = true,
+						FillDirection = Enum.FillDirection.Vertical,
+						Size = itemTileSize,
 					}, {
-						UIStroke = React.createElement("UIStroke", {
-							Color = tokens.Color.Stroke.Emphasis.Color3,
-							Transparency = tokens.Color.Stroke.Emphasis.Transparency,
-							Thickness = 1,
-						}),
-						UICorner = React.createElement("UICorner", {
-							CornerRadius = UDim.new(0, tokens.Radius.Medium),
-						}),
 						TileMedia = React.createElement(Tile.Media, {
-							mediaId = itemId,
-							mediaType = MediaType.Asset,
+							id = itemId,
+							type = MediaType.Asset,
 							aspectRatio = 1,
-							radius = Radius.Medium,
-							background = "component_assets/itemBG_"
-								.. if tokens.Config.Theme.Name == Theme.Dark then "dark" else "light",
+							background = {
+								image = "component_assets/itemBG_"
+									.. if tokens.Config.Theme.Name == Theme.Dark then "dark" else "light",
+							},
 						}, {
 							UIListLayout = React.createElement("UIListLayout", {
 								FillDirection = Enum.FillDirection.Vertical,
 								HorizontalAlignment = Enum.HorizontalAlignment.Left,
 								VerticalAlignment = Enum.VerticalAlignment.Bottom,
 								SortOrder = Enum.SortOrder.LayoutOrder,
-							}),
-							UIPadding = React.createElement("UIPadding", {
-								PaddingTop = UDim.new(0, tokens.Padding.XSmall),
-								PaddingBottom = UDim.new(0, tokens.Padding.XSmall),
-								PaddingLeft = UDim.new(0, tokens.Padding.XSmall),
-								PaddingRight = UDim.new(0, tokens.Padding.XSmall),
 							}),
 							Badge = React.createElement(Badge, {
 								text = props.controls.text,
@@ -91,10 +75,7 @@ return {
 								variant = variant,
 							}),
 						}),
-						TileContent = React.createElement(Tile.Content, {
-							spacing = tokens.Gap.XXSmall,
-							padding = tokens.Gap.Small,
-						}, {
+						TileContent = React.createElement(Tile.Content, {}, {
 							TileHeader = React.createElement(Tile.Header, {
 								title = {
 									text = item.Name,
@@ -134,5 +115,6 @@ return {
 		size = Dash.values(BadgeSize),
 		isDisabled = false,
 		onTile = false,
+		disableBadgeTruncation = Flags.FoundationDisableBadgeTruncation,
 	},
 }

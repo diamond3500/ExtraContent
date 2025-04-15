@@ -1,4 +1,5 @@
 --!nonstrict
+-- moving this file to LuaApps, please replicate any changes in the LuaApps file as well
 local DetailsPage = script.Parent
 local Template = DetailsPage.Parent
 local App = Template.Parent
@@ -15,6 +16,8 @@ local DEFAULT_LINE_HEIGHT = 1.0
 
 local Roact = require(Packages.Roact)
 local t = require(Packages.t)
+
+local UIBloxConfig = require(UIBlox.UIBloxConfig)
 
 local DetailsPageTitleContent = Roact.PureComponent:extend("DetailsPageTitleContent")
 
@@ -103,4 +106,4 @@ function DetailsPageTitleContent:render()
 	end)
 end
 
-return DetailsPageTitleContent
+return if UIBloxConfig.moveDetailsPageToLuaApps then nil else DetailsPageTitleContent

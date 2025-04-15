@@ -10,11 +10,12 @@ local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 local PlayerPermissionsModule = require(RobloxGui.Modules.PlayerPermissionsModule)
 local TenFootInterface = require(RobloxGui.Modules.TenFootInterface)
 
-local BlockingUtility = require(RobloxGui.Modules.BlockingUtility)
+local BlockingUtility = require(CorePackages.Workspace.Packages.BlockingUtility)
 
-local FFlagInExperienceUserProfileSettingsEnabled = require(RobloxGui.Modules.Common.Flags.FFlagInExperienceUserProfileSettingsEnabled)
+local FFlagInExperienceUserProfileSettingsEnabled =
+	require(RobloxGui.Modules.Common.Flags.FFlagInExperienceUserProfileSettingsEnabled)
 
-local UIBlox = require(CorePackages.UIBlox)
+local UIBlox = require(CorePackages.Packages.UIBlox)
 local Images = UIBlox.App.ImageSet.Images
 
 local PlayerList = script.Parent.Parent
@@ -100,7 +101,11 @@ end
 
 local function getPlayerFriendStatus(store, player)
 	if player ~= Players.LocalPlayer and player.Parent == Players and Players.LocalPlayer.Parent == Players then
-		dispatchIfPlayerExists(store, player, SetPlayerFriendStatus(player, Players.LocalPlayer:GetFriendStatus(player)))
+		dispatchIfPlayerExists(
+			store,
+			player,
+			SetPlayerFriendStatus(player, Players.LocalPlayer:GetFriendStatus(player))
+		)
 	end
 end
 

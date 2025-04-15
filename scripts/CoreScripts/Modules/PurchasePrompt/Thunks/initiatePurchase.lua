@@ -11,6 +11,7 @@ local PurchaseError = require(Root.Enums.PurchaseError)
 local Constants = require(Root.Misc.Constants)
 local Network = require(Root.Services.Network)
 --local ABTest = require(Root.Services.ABTest)
+local deprecated_GetProductInfo = require(Root.Network.deprecated_GetProductInfo)
 local getProductInfo = require(Root.Network.getProductInfo)
 local getBalanceInfo = require(Root.Network.getBalanceInfo)
 local getIsAlreadyOwned = require(Root.Network.getIsAlreadyOwned)
@@ -21,6 +22,8 @@ local Promise = require(Root.Promise)
 local Thunk = require(Root.Thunk)
 
 local resolvePromptState = require(script.Parent.resolvePromptState)
+
+local GetFFlagEnableCreatorStorePurchasingCutover = require(Root.Flags.GetFFlagEnableCreatorStorePurchasingCutover)
 
 local requiredServices = {
 	--ABTest,
@@ -64,10 +67,10 @@ local function initiatePurchase(id, infoType, equipIfPurchased, isRobloxPurchase
 		end
 
 		return Promise.all({
-			productInfo = getProductInfo(network, id, infoType),
+			productInfo = if GetFFlagEnableCreatorStorePurchasingCutover() then getProductInfo(network, id, infoType) else deprecated_GetProductInfo(network, id, infoType),
 			accountInfo = getAccountInfo(network, externalSettings),
 			alreadyOwned = getIsAlreadyOwned(network, id, infoType),
-			balanceInfo = getBalanceInfo(network, externalSettings),
+			balanceInfo = getBalanceInfo(network, externalSettings, false --[[overrideStudioMock]]),
 		})
 			:andThen(function(results)
 				-- Once we've finished all of our async data fetching, we'll

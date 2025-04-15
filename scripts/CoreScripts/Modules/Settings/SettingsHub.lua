@@ -11,7 +11,7 @@
 local AnalyticsService = game:GetService("RbxAnalyticsService")
 local CoreGui = game:GetService("CoreGui")
 local CorePackages = game:GetService("CorePackages")
-local Symbol = require(CorePackages.Symbol)
+local Symbol = require(CorePackages.Workspace.Packages.AppCommonLib).Symbol
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local IXPService = game:GetService("IXPService")
@@ -20,23 +20,24 @@ local LocalizationService = game:GetService("LocalizationService")
 local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 local isTenFootInterface = require(RobloxGui.Modules.TenFootInterface):IsEnabled()
 
-local Roact = require(CorePackages.Roact)
-local Cryo = require(CorePackages.Cryo)
-local Otter = require(CorePackages.Otter)
+local Roact = require(CorePackages.Packages.Roact)
+local Cryo = require(CorePackages.Packages.Cryo)
+local Otter = require(CorePackages.Packages.Otter)
 
 --[[ UTILITIES ]]
 local utility = require(RobloxGui.Modules.Settings.Utility)
 local VRHub = require(RobloxGui.Modules.VR.VRHub)
-local PolicyService = require(RobloxGui.Modules.Common.PolicyService)
+local CachedPolicyService = require(CorePackages.Workspace.Packages.CachedPolicyService)
 local PerfUtils = require(RobloxGui.Modules.Common.PerfUtils)
 local MouseIconOverrideService = require(CorePackages.InGameServices.MouseIconOverrideService)
 local SharedFlags = CorePackages.Workspace.Packages.SharedFlags
 local isSubjectToDesktopPolicies = require(SharedFlags).isSubjectToDesktopPolicies
 local MenuBackButton = require(RobloxGui.Modules.Settings.Components.MenuBackButton)
+local MenuFrontButton = require(RobloxGui.Modules.Settings.Components.MenuFrontButton)
 local RoactAppExperiment = require(CorePackages.Packages.RoactAppExperiment)
-local IXPServiceWrapper = require(RobloxGui.Modules.Common.IXPServiceWrapper)
+local IXPServiceWrapper = require(CorePackages.Workspace.Packages.IxpServiceWrapper).IXPServiceWrapper
 local AppFonts = require(CorePackages.Workspace.Packages.Style).AppFonts
-local ScreenshotsPolicy  = require(CorePackages.Workspace.Packages.Screenshots).ScreenshotsPolicy
+local CapturesPolicy  = require(CorePackages.Workspace.Packages.CapturesInExperience).CapturesPolicy
 local InExperienceCapabilities = require(CorePackages.Workspace.Packages.InExperienceCapabilities).InExperienceCapabilities
 local getCamMicPermissions = require(CoreGui.RobloxGui.Modules.Settings.getCamMicPermissions)
 local Create = require(CorePackages.Workspace.Packages.AppCommonLib).Create
@@ -79,19 +80,14 @@ local GetFFlagMuteButtonRaceConditionFix = require(RobloxGui.Modules.Flags.GetFF
 
 local GetFFlagRemoveAssetVersionEndpoint = require(RobloxGui.Modules.Flags.GetFFlagRemoveAssetVersionEndpoint)
 local GetFFlagNewEventIngestPlayerScriptsDimensions = require(RobloxGui.Modules.Flags.GetFFlagNewEventIngestPlayerScriptsDimensions)
-local GetFFlagShareInviteLinkContextMenuV1Enabled = require(RobloxGui.Modules.Settings.Flags.GetFFlagShareInviteLinkContextMenuV1Enabled)
 local GetFFlagReportAbuseMenuEntrypointAnalytics = require(RobloxGui.Modules.Settings.Flags.GetFFlagReportAbuseMenuEntrypointAnalytics)
 local FFlagAvatarChatCoreScriptSupport = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagAvatarChatCoreScriptSupport()
 local GetFFlagVoiceRecordingIndicatorsEnabled = require(RobloxGui.Modules.Flags.GetFFlagVoiceRecordingIndicatorsEnabled)
 local ChromeEnabled = require(RobloxGui.Modules.Chrome.Enabled)()
-local GetFFlagOpenControlsOnMenuOpen = require(RobloxGui.Modules.Chrome.Flags.GetFFlagOpenControlsOnMenuOpen)
-local GetFFlagEnableCapturesInChrome = require(RobloxGui.Modules.Chrome.Flags.GetFFlagEnableCapturesInChrome)
 local FFlagLuaEnableGameInviteModalSettingsHub = game:DefineFastFlag("LuaEnableGameInviteModalSettingsHub", false)
 local GetFFlagLuaInExperienceCoreScriptsGameInviteUnification = require(RobloxGui.Modules.Flags.GetFFlagLuaInExperienceCoreScriptsGameInviteUnification)
 local GetFStringGameInviteMenuLayer = require(SharedFlags).GetFStringGameInviteMenuLayer
-local GetFFlagRightAlignMicText =  require(RobloxGui.Modules.Settings.Flags.GetFFlagRightAlignMicText)
 local FFlagPreventHiddenSwitchPage = game:DefineFastFlag("PreventHiddenSwitchPage", false)
-local GetFFlagEnableScreenshotUtility = require(SharedFlags).GetFFlagEnableScreenshotUtility
 local FFlagIGMThemeResizeFix = game:DefineFastFlag("IGMThemeResizeFix", false)
 local FFlagFixReducedMotionStuckIGM = game:DefineFastFlag("FixReducedMotionStuckIGM2", false)
 local GetFFlagEnableInExpJoinVoiceAnalytics = require(RobloxGui.Modules.Flags.GetFFlagEnableInExpJoinVoiceAnalytics)
@@ -104,11 +100,23 @@ local GetFFlagEnableInExpPhoneVoiceUpsellEntrypoints = require(CorePackages.Work
 local GetFFlagEnableLeaveGameUpsellEntrypoint = require(RobloxGui.Modules.Settings.Flags.GetFFlagEnableLeaveGameUpsellEntrypoint)
 local GetFFlagFixIGMBottomBarVisibility = require(RobloxGui.Modules.Settings.Flags.GetFFlagFixIGMBottomBarVisibility)
 local GetFFlagDisplayServerChannel = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagDisplayServerChannel
-local FFlagCoreGuiFinalStateAnalytic = require(RobloxGui.Modules.Flags.FFlagCoreGuiFinalStateAnalytic)
 local FFlagEnableExperienceMenuSessionTracking = require(RobloxGui.Modules.Flags.FFlagEnableExperienceMenuSessionTracking)
 local FFlagSettingsHubIndependentBackgroundVisibility = require(CorePackages.Workspace.Packages.SharedFlags).getFFlagSettingsHubIndependentBackgroundVisibility()
 local FFlagAppChatReappearIfClosedByTiltMenu = game:DefineFastFlag("AppChatReappearIfClosedByTiltMenu", true)
-local FFlagInExperienceMenuResetButtonTextToRespawn = require(RobloxGui.Modules.Settings.Flags.FFlagInExperienceMenuResetButtonTextToRespawn)
+local getFFlagAppChatCoreUIConflictFix = require(CorePackages.Workspace.Packages.SharedFlags).getFFlagAppChatCoreUIConflictFix
+local EngineFeatureTeleportHistoryButtons = game:GetEngineFeature("TeleportHistoryButtons")
+local FFlagInExperienceMenuReorderFirstVariant = require(RobloxGui.Modules.Settings.Flags.FFlagInExperienceMenuReorderFirstVariant)
+local GetFStringInExperienceMenuIXPLayer = require(RobloxGui.Modules.Settings.Flags.GetFStringInExperienceMenuIXPLayer)
+local GetFStringInExperienceMenuIXPVar = require(RobloxGui.Modules.Settings.Flags.GetFStringInExperienceMenuIXPVar)
+local FFlagInExperienceMenuCanvasGroupsInvisible = require(RobloxGui.Modules.Settings.Flags.FFlagInExperienceMenuCanvasGroupsInvisible)
+local GetFFlagPackagifySettingsShowSignal = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagPackagifySettingsShowSignal
+local FFlagFixDisableTopPaddingError = game:DefineFastFlag("FixDisableTopPaddingError", false)
+local FFlagCenterIGMConsoleBottomButtons = game:DefineFastFlag("CenterIGMConsoleBottomButtons", false)
+local FFlagDelayEscCoreActionIEMOpen = game:DefineFastFlag("DelayEscCoreActionIEMOpen", false)
+local GetFFlagRemovePermissionsButtons = require(RobloxGui.Modules.Settings.Flags.GetFFlagRemovePermissionsButtons)
+local FFlagUpdateTiltMenuButtonIcons = require(SharedFlags).FFlagUpdateTiltMenuButtonIcons
+local isInExperienceUIVREnabled =
+	require(CorePackages.Workspace.Packages.SharedExperimentDefinition).isInExperienceUIVREnabled
 
 --[[ SERVICES ]]
 local RobloxReplicatedStorage = game:GetService("RobloxReplicatedStorage")
@@ -163,7 +171,7 @@ local connectedServerVersion = nil
 local connectedServerChannel = nil
 
 local SettingsFullScreenTitleBar = require(RobloxGui.Modules.Settings.Components.SettingsFullScreenTitleBar)
-local PermissionsButtons = require(RobloxGui.Modules.Settings.Components.PermissionsButtons)
+local PermissionsButtons = if GetFFlagRemovePermissionsButtons() then nil else require(RobloxGui.Modules.Settings.Components.PermissionsButtons)
 local toggleSelfViewSignal = require(RobloxGui.Modules.SelfView.toggleSelfViewSignal)
 local SelfViewAPI = require(RobloxGui.Modules.SelfView.publicApi)
 local selfViewVisibilityUpdatedSignal = require(RobloxGui.Modules.SelfView.selfViewVisibilityUpdatedSignal)
@@ -179,11 +187,11 @@ if GetFFlagLuaInExperienceCoreScriptsGameInviteUnification() then
 	GameInviteConstants = GameInvitePackage.GameInviteConstants
 end
 
-local ScreenshotsApp = require(RobloxGui.Modules.Screenshots.ScreenshotsApp)
+local CapturesApp = require(RobloxGui.Modules.Captures.CapturesApp)
 
 local Constants = require(RobloxGui.Modules:WaitForChild("InGameMenu"):WaitForChild("Resources"):WaitForChild("Constants"))
 
-local shouldLocalize = PolicyService:IsSubjectToChinaPolicies()
+local shouldLocalize = CachedPolicyService:IsSubjectToChinaPolicies()
 
 local VoiceChatServiceManager = require(RobloxGui.Modules.VoiceChat.VoiceChatServiceManager).default
 local VoiceConstants = require(RobloxGui.Modules.VoiceChat.Constants)
@@ -194,6 +202,11 @@ local FFlagFixReportButtonCutOff = game:DefineFastFlag("FixReportButtonCutOff", 
 local MuteStatusIcons = VoiceChatServiceManager.MuteStatusIcons
 local PlayerMuteStatusIcons = VoiceChatServiceManager.PlayerMuteStatusIcons
 local InExperienceAppChatModal = require(CorePackages.Workspace.Packages.AppChat).App.InExperienceAppChatModal
+
+local SettingsShowSignal = if GetFFlagPackagifySettingsShowSignal() then require(CorePackages.Workspace.Packages.CoreScriptsCommon).SettingsShowSignal else nil
+local SettingsUtility = if GetFFlagPackagifySettingsShowSignal() then require(CorePackages.Workspace.Packages.CoreScriptsCommon).SettingsUtility else nil
+
+local FFlagEnableChromeShortcutBar = require(SharedFlags).FFlagEnableChromeShortcutBar
 
 local SPRING_PARAMS = {}
 if GetFFlagVoiceRecordingIndicatorsEnabled() then
@@ -210,7 +223,8 @@ local Localization = require(CorePackages.Workspace.Packages.InExperienceLocales
 local shouldTryLocalizeVersionLabels = FFlagLocalizeVersionLabels or shouldLocalize
 local RobloxTranslator = nil
 if shouldTryLocalizeVersionLabels or GetFFlagVoiceRecordingIndicatorsEnabled() then
-	RobloxTranslator = require(RobloxGui.Modules:WaitForChild("RobloxTranslator"))
+	RobloxTranslator = require(CorePackages.Workspace.Packages.RobloxTranslator)
+
 end
 local function tryTranslate(key, defaultString)
 	if not RobloxTranslator then
@@ -308,15 +322,18 @@ local function CreateSettingsHub()
 	this.BottomBarButtons = {}
 	this.BottomBarButtonsComponents = {}
 	this.ResizedConnection = nil
-	this.TakingScreenshot = false
 	this.BackBarVisibleConnection = nil
+	if EngineFeatureTeleportHistoryButtons then
+		this.FrontBarVisibleConnection = nil
+	end
 	this.PreferredTransparencyChangedConnection = nil
 	this.TabConnection = nil
 	this.LeaveGamePage = require(RobloxGui.Modules.Settings.Pages.LeaveGame)
 	this.LeaveGameUpsellPage = if GetFFlagEnableLeaveGameUpsellEntrypoint() then require(RobloxGui.Modules.Settings.Pages.LeaveGameUpsell.LeaveGameUpsell) else nil
 	this.ResetCharacterPage = require(RobloxGui.Modules.Settings.Pages.ResetCharacter)
-	this.SettingsShowSignal = utility:CreateSignal()
-	this.CurrentPageSignal = utility:CreateSignal()
+	-- remove utility CreateSignal upon removing this flag
+	this.SettingsShowSignal = if GetFFlagPackagifySettingsShowSignal() then SettingsShowSignal else utility:CreateSignal()
+	this.CurrentPageSignal = if GetFFlagPackagifySettingsShowSignal() then SettingsUtility.CreateSignal() else utility:CreateSignal()
 	this.OpenStateChangedCount = 0
 	this.BottomButtonFrame = nil
 	this.hasMicPermissions = false
@@ -452,12 +469,8 @@ local function CreateSettingsHub()
 		MicOn = "",
 	}
 
-	local localeId
-	local localization
-	if FFlagInExperienceMenuResetButtonTextToRespawn then
-		localeId = LocalizationService.RobloxLocaleId
-		localization = Localization.new(localeId)
-	end
+	local localeId = LocalizationService.RobloxLocaleId
+	local localization = Localization.new(localeId)
 
 	local function pollVoiceTextLabel()
 		-- Lazy load and cache strings from IGMv3
@@ -746,9 +759,19 @@ local function CreateSettingsHub()
 		buttonImageAppend = "@2x"
 	end
 
-	local buttonB = "rbxasset://textures/ui/Controls/DesignSystem/ButtonB" .. buttonImageAppend .. ".png"
-	local buttonX = "rbxasset://textures/ui/Controls/DesignSystem/ButtonX" .. buttonImageAppend .. ".png"
-	local buttonY = "rbxasset://textures/ui/Controls/DesignSystem/ButtonY" .. buttonImageAppend .. ".png"
+	local buttonB, buttonX, buttonY
+
+	if FFlagUpdateTiltMenuButtonIcons then 
+		buttonB = UserInputService:GetImageForKeyCode(Enum.KeyCode.ButtonB)
+		buttonX = UserInputService:GetImageForKeyCode(Enum.KeyCode.ButtonX)
+		buttonY = UserInputService:GetImageForKeyCode(Enum.KeyCode.ButtonY)
+	else
+		buttonB = "rbxasset://textures/ui/Controls/DesignSystem/ButtonB" .. buttonImageAppend .. ".png"
+		buttonX = "rbxasset://textures/ui/Controls/DesignSystem/ButtonX" .. buttonImageAppend .. ".png"
+		buttonY = "rbxasset://textures/ui/Controls/DesignSystem/ButtonY" .. buttonImageAppend .. ".png"
+	end
+
+	local buttonStart = UserInputService:GetImageForKeyCode(Enum.KeyCode.ButtonStart)
 
 	local function appendMicButton()
 
@@ -1048,16 +1071,18 @@ local function CreateSettingsHub()
 		this.RespawnBehaviourChangedEvent:Fire(resetEnabled, customCallback)
 	end)
 
-	if FFlagCoreGuiFinalStateAnalytic then
-		StarterGui:RegisterGetCore("ResetButtonCallback", function()
-			local isResetEnabled, _ = this:GetRespawnBehaviour()
-			return isResetEnabled
-		end)
-	end
+	StarterGui:RegisterGetCore("ResetButtonCallback", function()
+		local isResetEnabled, _ = this:GetRespawnBehaviour()
+		return isResetEnabled
+	end)
 
 	local setVisibilityInternal = nil
 
 	local function createPermissionsButtons(shouldFillScreen)
+		if GetFFlagRemovePermissionsButtons() then
+			return
+		end
+
 		return Roact.createElement(PermissionsButtons, {
 			isTenFootInterface = isTenFootInterface,
 			isPortrait = utility:IsPortrait(),
@@ -1102,6 +1127,7 @@ local function CreateSettingsHub()
 			Size = UDim2.fromScale(1, 1),
 			BackgroundTransparency = 1,
 			GroupTransparency = 0,
+			Visible = if FFlagInExperienceMenuCanvasGroupsInvisible then false else true,
 			Parent = this.ClippingShield
 		}
 
@@ -1291,7 +1317,7 @@ local function CreateSettingsHub()
 		game:GetPropertyChangedSignal("PlaceVersion"):Connect(setPlaceVersionText)
 		spawn(setPlaceVersionText)
 
-		local shouldShowEnvLabel = not PolicyService:IsSubjectToChinaPolicies()
+		local shouldShowEnvLabel = not CachedPolicyService:IsSubjectToChinaPolicies()
 
 		if shouldShowEnvLabel then
 			this.EnvironmentLabel = Create("TextLabel") {
@@ -1581,7 +1607,7 @@ local function CreateSettingsHub()
 
 		end
 
-		if FFlagAvatarChatCoreScriptSupport then
+		if not GetFFlagRemovePermissionsButtons() and FFlagAvatarChatCoreScriptSupport then
 			-- Create the settings buttons for audio/camera permissions.
 			if Theme.UIBloxThemeEnabled then
 				this.permissionsButtonsRoot = Roact.mount(createPermissionsButtons(true), this.Shield, "PermissionsButtons")
@@ -1717,14 +1743,41 @@ local function CreateSettingsHub()
 			SortOrder = Enum.SortOrder.LayoutOrder,
 			Parent = this.HubBar
 		}
-
-		this.BackBarRef = Roact.createRef()
-		this.BackBar = Roact.createElement(RoactAppExperiment.Provider, {
-			value = IXPService,
-		}, {
-			BackButton = Roact.createElement(MenuBackButton,{BackBarRef=this.BackBarRef, HubBar=this.HubBar}),
-		})
-		Roact.mount(this.BackBar, menuParent, "BackBar")
+		if EngineFeatureTeleportHistoryButtons then
+			this.BackBarRef = Roact.createRef()
+			this.FrontBarRef = Roact.createRef()
+			this.BackBar = Roact.createElement(RoactAppExperiment.Provider, {
+				value = IXPService,
+			}, 
+			{
+				ButtonsFrame = Roact.createElement("Frame", {
+					BackgroundTransparency = 1,
+					LayoutOrder = -1,
+					AutomaticSize = Enum.AutomaticSize.Y,
+					Size = UDim2.new(1, 0, 0, 0)
+				}, {
+					BackButton = Roact.createElement(MenuBackButton, {
+						BackBarRef = this.BackBarRef,
+						HubBar = this.HubBar,
+						LayoutOrder = 1,
+					}),
+					FrontButton = Roact.createElement(MenuFrontButton, {
+						FrontBarRef = this.FrontBarRef,
+						HubBar = this.HubBar,
+						LayoutOrder = 2,
+					}),
+				})
+			})
+			Roact.mount(this.BackBar, menuParent, "BackBar")	
+		else
+			this.BackBarRef = Roact.createRef()
+			this.BackBar = Roact.createElement(RoactAppExperiment.Provider, {
+				value = IXPService,
+			}, {
+				BackButton = Roact.createElement(MenuBackButton,{BackBarRef=this.BackBarRef, HubBar=this.HubBar}),
+			})
+			Roact.mount(this.BackBar, menuParent, "BackBar")
+		end
 
 		if utility:IsSmallTouchScreen() then
 			if Theme.UIBloxThemeEnabled then
@@ -1743,7 +1796,7 @@ local function CreateSettingsHub()
 
 		this.VoiceRecordingIndicatorFrame = if GetFFlagVoiceRecordingIndicatorsEnabled() and not FFlagAvatarChatCoreScriptSupport then Create'Frame'
 			{
-				Size = if GetFFlagRightAlignMicText() and ChromeEnabled then UDim2.new(1, 0, 0, 100) else UDim2.fromOffset(0, 100),
+				Size = if ChromeEnabled then UDim2.new(1, 0, 0, 100) else UDim2.fromOffset(0, 100),
 				Position = UDim2.new(0,0,0,0),
 				Parent = this.HubBar,
 				BackgroundTransparency = 1,
@@ -1768,7 +1821,7 @@ local function CreateSettingsHub()
 			if utility:IsSmallTouchScreen() then
 				this.VoiceRecordingText.Size = UDim2.fromScale(1, 1)
 				this.VoiceRecordingText.AnchorPoint = Vector2.new(0,0)
-				if GetFFlagRightAlignMicText() and ChromeEnabled then
+				if ChromeEnabled then
 					this.VoiceRecordingText.TextXAlignment = Enum.TextXAlignment.Right
 					this.VoiceRecordingText.Position = UDim2.new(0,0,0,-60)
 				else
@@ -1776,7 +1829,7 @@ local function CreateSettingsHub()
 				end
 			elseif isTenFootInterface then
 				this.VoiceRecordingText.AnchorPoint = Vector2.new(0, 1)
-				if GetFFlagRightAlignMicText() and ChromeEnabled then
+				if ChromeEnabled then
 					this.VoiceRecordingText.TextXAlignment = Enum.TextXAlignment.Right
 					this.VoiceRecordingText.Size = UDim2.new(1,0,0,100)
 					this.VoiceRecordingText.Position = UDim2.new(0,0,0.1,0)
@@ -1786,7 +1839,7 @@ local function CreateSettingsHub()
 				end
 			else
 				this.VoiceRecordingText.AnchorPoint = Vector2.new(0, 1)
-				if GetFFlagRightAlignMicText() and ChromeEnabled then
+				if ChromeEnabled then
 					this.VoiceRecordingText.TextXAlignment = Enum.TextXAlignment.Right
 					this.VoiceRecordingText.Size = UDim2.new(1, 0, 0, 60)
 					this.VoiceRecordingText.Position = UDim2.new(0,0,0.1,0)
@@ -1905,6 +1958,7 @@ local function CreateSettingsHub()
 			Size = UDim2.fromScale(1, 1),
 			BackgroundTransparency = 1,
 			GroupTransparency = 0,
+			Visible = if FFlagInExperienceMenuCanvasGroupsInvisible then false else true,
 			Parent = this.PageViewInnerFrame
 		}
 
@@ -1914,6 +1968,7 @@ local function CreateSettingsHub()
 			Size = UDim2.fromScale(1, 1),
 			BackgroundTransparency = 1,
 			GroupTransparency = 0,
+			Visible = if FFlagInExperienceMenuCanvasGroupsInvisible then false else true,
 			Parent = this.PageViewInnerFrame
 		}
 
@@ -1954,7 +2009,7 @@ local function CreateSettingsHub()
 				Padding = UDim.new(0, 12),
 				FillDirection = Enum.FillDirection.Horizontal,
 				VerticalAlignment = Enum.VerticalAlignment.Center,
-				HorizontalAlignment = Enum.HorizontalAlignment.Center,
+				HorizontalAlignment = if FFlagCenterIGMConsoleBottomButtons then Enum.HorizontalAlignment.Center else Enum.HorizontalAlignment.Left,
 				SortOrder = Enum.SortOrder.LayoutOrder,
 				Parent = this.BottomButtonFrame
 			}
@@ -1992,7 +2047,7 @@ local function CreateSettingsHub()
 			end
 			)
 		end
-		
+
 		if FFlagSettingsHubIndependentBackgroundVisibility then
 			this.DarkenBackground.Activated:Connect(function()
 				if Theme.UIBloxThemeEnabled then
@@ -2008,12 +2063,12 @@ local function CreateSettingsHub()
 			if Theme.UseIconButtons then
 				addBottomBarIconButton("LeaveGame", "icons/actions/leave", leaveGameText, buttonX,
 					"rbxasset://textures/ui/Settings/Help/LeaveIcon.png", UDim2.new(0.5,isTenFootInterface and -160 or -130,0.5,-25),
-					leaveGameFunc, {Enum.KeyCode.L, Enum.KeyCode.ButtonX}
+					leaveGameFunc, {Enum.KeyCode.L, if not (FFlagEnableChromeShortcutBar and ChromeEnabled) then Enum.KeyCode.ButtonX else nil}
 				)
 			else
 				addBottomBarButtonOld("LeaveGame", leaveGameText, buttonX,
 					"rbxasset://textures/ui/Settings/Help/LeaveIcon.png", UDim2.new(0.5,isTenFootInterface and -160 or -130,0.5,-25),
-					leaveGameFunc, {Enum.KeyCode.L, Enum.KeyCode.ButtonX}, leaveGameFunc
+					leaveGameFunc, {Enum.KeyCode.L, if not (FFlagEnableChromeShortcutBar and ChromeEnabled) then Enum.KeyCode.ButtonX else nil}, leaveGameFunc
 				)
 			end
 		end
@@ -2028,16 +2083,16 @@ local function CreateSettingsHub()
 			end
 		end
 
-		local RESET_TEXT = if FFlagInExperienceMenuResetButtonTextToRespawn then localization:Format(Constants.RespawnLocalizedKey) else "Reset Character"
+		local RESET_TEXT = localization:Format(Constants.RespawnLocalizedKey)
 		if Theme.UseIconButtons then
 			addBottomBarIconButton("ResetCharacter", "icons/actions/respawn", RESET_TEXT, buttonY,
 				"rbxasset://textures/ui/Settings/Help/ResetIcon.png", UDim2.new(0.5,isTenFootInterface and -550 or -400,0.5,-25),
-				resetCharFunc, {Enum.KeyCode.R, Enum.KeyCode.ButtonY}
+				resetCharFunc, {Enum.KeyCode.R, if not (FFlagEnableChromeShortcutBar and ChromeEnabled) then Enum.KeyCode.ButtonY else nil}
 			)
 		else
 			addBottomBarButtonOld("ResetCharacter", RESET_TEXT, buttonY,
 				"rbxasset://textures/ui/Settings/Help/ResetIcon.png", UDim2.new(0.5,isTenFootInterface and -550 or -400,0.5,-25),
-				resetCharFunc, {Enum.KeyCode.R, Enum.KeyCode.ButtonY}, resetCharFunc
+				resetCharFunc, {Enum.KeyCode.R, if not (FFlagEnableChromeShortcutBar and ChromeEnabled) then Enum.KeyCode.ButtonY else nil}, resetCharFunc
 			)
 		end
 
@@ -2048,9 +2103,9 @@ local function CreateSettingsHub()
 		local resumeHotkeyFunc = function()
 			resumeFunc(Constants.AnalyticsResumeGamepadSource)
 		end
-		addBottomBarButtonOld("Resume", resumeGameText, buttonB,
+		addBottomBarButtonOld("Resume", resumeGameText, if FFlagUpdateTiltMenuButtonIcons then buttonStart else buttonB,
 			"rbxasset://textures/ui/Settings/Help/EscapeIcon.png", UDim2.new(0.5,isTenFootInterface and 200 or 140,0.5,-25),
-			resumeButtonFunc, {Enum.KeyCode.ButtonB, Enum.KeyCode.ButtonStart}, resumeHotkeyFunc
+			resumeButtonFunc, if not (FFlagEnableChromeShortcutBar and ChromeEnabled) then {Enum.KeyCode.ButtonB, Enum.KeyCode.ButtonStart} else {}, resumeHotkeyFunc
 		)
 
 		if Theme.UIBloxThemeEnabled or isSubjectToDesktopPolicies() then
@@ -2225,6 +2280,13 @@ local function CreateSettingsHub()
 			return this.BackBarRef:getValue().Visible
 		end
 
+		local function getFrontBarVisible()
+			if not this.FrontBarRef:getValue() then
+				return false
+			end
+			return this.FrontBarRef:getValue().Visible
+		end
+
 		local menuPos = Theme.MenuContainerPosition()
 		local largestPageSize = 600
 		local fullScreenSize = RobloxGui.AbsoluteSize.y
@@ -2246,7 +2308,15 @@ local function CreateSettingsHub()
 
 		local barSize = this.HubBar.Size.Y.Offset
 		local extraSpace = bufferSize*2+barSize*2
-		local extraTopPadding = if getBackBarVisible() and this.BackBarRef:getValue() then this.BackBarRef:getValue().Size.Y.Offset else 0
+
+		local extraTopPadding = 0
+		if getBackBarVisible() and this.BackBarRef:getValue() then 
+			extraTopPadding = this.BackBarRef:getValue().Size.Y.Offset 
+		end
+
+		if (EngineFeatureTeleportHistoryButtons) and getFrontBarVisible() and this.FrontBarRef:getValue() then
+			extraTopPadding = extraTopPadding + this.FrontBarRef:getValue().Size.Y.Offset
+		end
 
 		local menuAspectRatioParent = this.MenuContainer
 		if Theme.UIBloxThemeEnabled then
@@ -2295,7 +2365,7 @@ local function CreateSettingsHub()
 				this.HubBar.Size = UDim2.new(0, 800, 0, 60)
 				this.MenuAspectRatio.Parent = menuAspectRatioParent
 
-				if FFlagAvatarChatCoreScriptSupport then
+				if not GetFFlagRemovePermissionsButtons() and FFlagAvatarChatCoreScriptSupport then
 					-- Reconfigure these buttons to take a new parent to be next to
 					-- the close button.
 					if this.permissionsButtonsRoot then
@@ -2312,8 +2382,11 @@ local function CreateSettingsHub()
 			else
 				barSize = this.HubBar.Size.Y.Offset + this.BottomButtonFrame.Size.Y.Offset
 			end
-			extraSpace = bufferSize*2+(if this.Pages.CurrentPage.DisableTopPadding then 0 else barSize)
+			extraSpace = bufferSize*2+(if (not FFlagFixDisableTopPaddingError or this.Pages.CurrentPage ~= nil) and this.Pages.CurrentPage.DisableTopPadding then 0 else barSize)
 			extraTopPadding = if getBackBarVisible() and this.BackBarRef:getValue() then this.BackBarRef:getValue().Size.Y.Offset else 0
+			if EngineFeatureTeleportHistoryButtons and getFrontBarVisible() and this.FrontBarRef:getValue() then
+				extraTopPadding = extraTopPadding + this.FrontBarRef:getValue().Size.Y.Offset
+			end
 		end
 
 		--We need to wait and let the HubBar AbsoluteSize actually update.
@@ -2390,12 +2463,18 @@ local function CreateSettingsHub()
 		if not isTenFootInterface then
 			if utility:IsSmallTouchScreen() then
 				local backButtonExtraSize = if Theme.UIBloxThemeEnabled or getBackBarVisible() then 0 else 44
-				
+				local frontButtonExtraSize = 0
+				if Theme.UIBloxThemeEnabled then
+					frontButtonExtraSize = 0
+				else
+					frontButtonExtraSize = ((EngineFeatureTeleportHistoryButtons and getFrontBarVisible()) and 0 or 44)
+				end
+
 				newPageViewClipperSize = UDim2.new(
 					0,
 					this.HubBar.AbsoluteSize.X,
 					0,
-					usePageSize + backButtonExtraSize
+					usePageSize + backButtonExtraSize + frontButtonExtraSize
 				)
 			else
 				newPageViewClipperSize = UDim2.new(
@@ -2963,6 +3042,15 @@ local function CreateSettingsHub()
 		if pageToSwitchTo then
 			if this.GameSettingsPage == pageToSwitchTo then
 				AnalyticsService:SetRBXEventStream(Constants.AnalyticsTargetName, "open_GameSettings_tab", Constants.AnalyticsMenuActionName, eventTable)
+				if FFlagInExperienceMenuReorderFirstVariant and not this.GameSettingsPageReorderIXPFetched then
+					local layer = GetFStringInExperienceMenuIXPLayer()
+					local ixpVar = GetFStringInExperienceMenuIXPVar()
+					local layerData = IXPServiceWrapper:GetLayerData(layer)
+					if layerData ~= nil and layerData[ixpVar] ~= nil then
+						IXPServiceWrapper:LogUserLayerExposure(layer)
+						this.GameSettingsPageReorderIXPFetched = true
+					end
+				end
 			else
 				AnalyticsService:SetRBXEventStream(Constants.AnalyticsTargetName, "open_" .. pageToSwitchTo.Page.Name .. "_tab", Constants.AnalyticsMenuActionName, eventTable)
 			end
@@ -2977,7 +3065,7 @@ local function CreateSettingsHub()
 			end
 		end
 
-		
+
 	end
 
 	function this:SetActive(active)
@@ -3013,8 +3101,8 @@ local function CreateSettingsHub()
 
 		-- os.time seems to fail occasionally, so if its nil we'll try once to recover during the check
 		if not this.sessionStartTime then
-				this.sessionStartTime = os.time()
-			end
+			this.sessionStartTime = os.time()
+		end
 		if not this.sessionStartTime then
 			return
 		end
@@ -3022,8 +3110,8 @@ local function CreateSettingsHub()
 		if not this.checkedUpsell and this.leaveGameUpsellProp == VoiceConstants.PHONE_UPSELL_VALUE_PROP.None then
 			this.checkedUpsell = true
 			this.leaveGameUpsellProp = VoiceChatServiceManager:FetchPhoneVerificationUpsell(
-				VoiceConstants.EXIT_CONFIRMATION_PHONE_UPSELL_IXP_LAYER, 
-				this.sessionStartTime, 
+				VoiceConstants.EXIT_CONFIRMATION_PHONE_UPSELL_IXP_LAYER,
+				this.sessionStartTime,
 				true
 			)
 			this.LeaveGameUpsellPage:SetUpsellProp(this.leaveGameUpsellProp)
@@ -3046,13 +3134,13 @@ local function CreateSettingsHub()
 			if not this.DarkenBackground then
 				return
 			end
-			
+
 			if not visible and this.DarkenBackground.Visible then
 				if InExperienceAppChatModal:getVisible() or this.Visible then
 					return
 				end
 			end
-			
+
 			local goalTransparency = 1
 			local easingStyle = Enum.EasingStyle.Quart
 			local movementTime = 0
@@ -3087,7 +3175,7 @@ local function CreateSettingsHub()
 			this.DarkenBackground.Visible = visible
 		end
 	end
-	function setVisibilityInternal(visible, noAnimation, customStartPage, switchedFromGamepadInput, analyticsContext, takingScreenshot)
+	function setVisibilityInternal(visible, noAnimation, customStartPage, switchedFromGamepadInput, analyticsContext)
 		this.OpenStateChangedCount = this.OpenStateChangedCount + 1
 
 		local visibilityChanged = visible ~= this.Visible
@@ -3107,6 +3195,11 @@ local function CreateSettingsHub()
 			this.BackBarVisibleConnection = nil
 		end
 
+		if EngineFeatureTeleportHistoryButtons and this.FrontBarVisibleConnection then
+			this.FrontBarVisibleConnection:disconnect()
+			this.FrontBarVisibleConnection = nil
+		end
+
 		if this.PreferredTransparencyChangedConnection then
 			this.PreferredTransparencyChangedConnection:disconnect()
 			this.PreferredTransparencyChangedConnection = nil
@@ -3120,16 +3213,12 @@ local function CreateSettingsHub()
 		end
 
 		local playerList = require(RobloxGui.Modules.PlayerList.PlayerListManager)
-		
+
 		if FFlagSettingsHubIndependentBackgroundVisibility then
 			setBackgroundVisibilityInternal(this.Visible, noAnimation)
 		end
 
 		if this.Visible then
-			if GetFFlagOpenControlsOnMenuOpen() then
-				this.TakingScreenshot = false
-			end
-
 			this.ResizedConnection = RobloxGui.Changed:connect(function(prop)
 				if prop == "AbsoluteSize" then
 					onScreenSizeChanged()
@@ -3137,6 +3226,11 @@ local function CreateSettingsHub()
 			end)
 			if this.BackBarRef:getValue() then
 				this.BackBarVisibleConnection = this.BackBarRef:getValue():GetPropertyChangedSignal("Visible"):connect(function()
+					onScreenSizeChanged()
+				end)
+			end
+			if EngineFeatureTeleportHistoryButtons and this.FrontBarRef:getValue() then
+				this.FrontBarVisibleConnection = this.FrontBarRef:getValue():GetPropertyChangedSignal("Visible"):connect(function()
 					onScreenSizeChanged()
 				end)
 			end
@@ -3188,6 +3282,9 @@ local function CreateSettingsHub()
 
 					this.Shield.Parent = this.CanvasGroup
 					this.CanvasGroup.GroupTransparency = 1
+					if FFlagInExperienceMenuCanvasGroupsInvisible then 
+						this.CanvasGroup.Visible = true
+					end
 					this.Shield.Position = UDim2.new(0, 0, 0, 0)
 
 					local tweenInfo = TweenInfo.new(0.25)
@@ -3205,6 +3302,10 @@ local function CreateSettingsHub()
 							end
 						else
 							this.Shield.Parent = this.ClippingShield
+						end
+
+						if FFlagInExperienceMenuCanvasGroupsInvisible then
+							this.CanvasGroup.Visible = false
 						end
 					end)
 
@@ -3243,6 +3344,15 @@ local function CreateSettingsHub()
 			end
 
 			local noOpFunc = function() end
+			if isInExperienceUIVREnabled and VRService.VREnabled then
+				local UserGui = require(RobloxGui.Modules.VR.UserGui)
+				local handleOpenVRMenuIfNeeded = UserGui:getOpenVRMenuHandler()
+				noOpFunc = function(actionName, inputState, inputObject)
+					if UserGui:isInputNeededForOpenVRMenu(inputObject) then
+						handleOpenVRMenuIfNeeded(actionName, inputState, inputObject)
+					end
+				end
+			end
 			ContextActionService:BindCoreAction("RbxSettingsHubStopCharacter", noOpFunc, false,
 				Enum.PlayerActions.CharacterForward,
 				Enum.PlayerActions.CharacterBackward,
@@ -3259,6 +3369,12 @@ local function CreateSettingsHub()
 			ContextActionService:BindCoreAction("RbxSettingsScrollHotkey", scrollHotkeyFunc, false, Enum.KeyCode.PageUp, Enum.KeyCode.PageDown)
 			if shouldShowBottomBar() then
 				setBottomBarBindings()
+			end
+
+			if ChromeEnabled and FFlagEnableChromeShortcutBar then
+				local ChromeService = require(RobloxGui.Modules.Chrome.Service)
+				local ChromeConstants = require(RobloxGui.Modules.Chrome.ChromeShared.Unibar.Constants)
+				ChromeService:setShortcutBar(ChromeConstants.TILTMENU_SHORTCUTBAR_ID)
 			end
 
 			this.TabConnection = UserInputService.InputBegan:connect(switchTabFromKeyboard)
@@ -3278,11 +3394,15 @@ local function CreateSettingsHub()
 
 			playerList:HideTemp('SettingsMenu', true)
 
-			if chat:GetVisibility() then
-				chatWasVisible = true
-				chat:ToggleVisibility()
+			if getFFlagAppChatCoreUIConflictFix() then
+				chat:HideTemp('SettingsMenu', true)
+			else
+				if chat:GetVisibility() then
+					chatWasVisible = true
+					chat:ToggleVisibility()
+				end
 			end
-			
+
 			if GetFFlagEnableAppChatInExperience() and InExperienceAppChatModal:getVisible() then
 				connectWasVisible = true
 				InExperienceAppChatModal.default:setVisible(false)
@@ -3295,21 +3415,24 @@ local function CreateSettingsHub()
 
 			this.GameSettingsPage:OpenSettingsPage()
 		else
-			if GetFFlagOpenControlsOnMenuOpen() then
-				this.TakingScreenshot = takingScreenshot or false
+			this.CurrentPageSignal:fire("")
+
+			local forceNoAnimationIfWeWillShowConnect = if GetFFlagEnableAppChatInExperience() then (FFlagAppChatReappearIfClosedByTiltMenu and connectWasVisible) else false
+
+
+			if ChromeEnabled and FFlagEnableChromeShortcutBar then 
+				local ChromeService = require(RobloxGui.Modules.Chrome.Service)
+				local ChromeConstants = require(RobloxGui.Modules.Chrome.ChromeShared.Unibar.Constants)
+				ChromeService:setShortcutBar(ChromeConstants.UNIBAR_SHORTCUTBAR_ID)
 			end
 
-			this.CurrentPageSignal:fire("")
-			
-			local forceNoAnimationIfWeWillShowConnect = if GetFFlagEnableAppChatInExperience() then (FFlagAppChatReappearIfClosedByTiltMenu and connectWasVisible) else false
-			
 			if GetFFlagEnableAppChatInExperience() and connectWasVisible then
 				connectWasVisible = false
 				if FFlagAppChatReappearIfClosedByTiltMenu then
 					InExperienceAppChatModal.default:setVisible(true)
 				end
 			end
-			
+
 			if noAnimation or forceNoAnimationIfWeWillShowConnect then
 				this.Shield.Position = SETTINGS_SHIELD_INACTIVE_POSITION
 				this.Shield.Visible = this.Visible
@@ -3360,6 +3483,9 @@ local function CreateSettingsHub()
 					end
 
 					this.Shield.Parent = this.CanvasGroup
+					if FFlagInExperienceMenuCanvasGroupsInvisible then
+						this.CanvasGroup.Visible = true
+					end
 
 					local tweenInfo = TweenInfo.new(0.25)
 					local tweenProps = {
@@ -3382,10 +3508,20 @@ local function CreateSettingsHub()
 							this.Shield.Visible = this.Visible
 							this.Shield.Parent = this.ClippingShield
 						end
+						if FFlagInExperienceMenuCanvasGroupsInvisible then
+							this.CanvasGroup.Visible = false
+						end
 					end)
 
 					handleShieldClose()
 				else
+					if FFlagEnableChromeShortcutBar then
+						if ChromeEnabled and FFlagEnableChromeShortcutBar then 
+							local ChromeService = require(RobloxGui.Modules.Chrome.Service)
+							local ChromeConstants = require(RobloxGui.Modules.Chrome.ChromeShared.Unibar.Constants)
+							ChromeService:setShortcutBar(ChromeConstants.UNIBAR_SHORTCUTBAR_ID)
+						end
+					end
 					this.Shield:TweenPosition(
 						SETTINGS_SHIELD_INACTIVE_POSITION,
 						Enum.EasingDirection.In,
@@ -3393,7 +3529,7 @@ local function CreateSettingsHub()
 						movementTime,
 						true,
 						function()
-							this.Shield.Visible = this.Visible
+							this.Shield.Visible = this.Visible 
 							handleShieldClose()
 						end
 					)
@@ -3429,9 +3565,13 @@ local function CreateSettingsHub()
 
 			playerList:HideTemp('SettingsMenu', false)
 
-			if chatWasVisible then
-				chat:ToggleVisibility()
-				chatWasVisible = false
+			if getFFlagAppChatCoreUIConflictFix() then
+				chat:HideTemp('SettingsMenu', false)
+			else
+				if chatWasVisible then
+					chat:ToggleVisibility()
+					chatWasVisible = false
+				end
 			end
 
 			if not VRService.VREnabled then
@@ -3445,14 +3585,14 @@ local function CreateSettingsHub()
 			ContextActionService:UnbindCoreAction("RbxSettingsScrollHotkey")
 			removeBottomBarBindings(0.4)
 
-			GuiService.SelectedCoreObject = nil
+			if not (FFlagEnableChromeShortcutBar and ChromeEnabled) then 
+				GuiService.SelectedCoreObject = nil
+			end
 
 			this.GameSettingsPage:CloseSettingsPage()
 
-			if GetFFlagShareInviteLinkContextMenuV1Enabled() then
-				if this.ShareGamePage then
-					this.ShareGamePage:ClearShareInviteLink(this.ShareGameApp)
-				end
+			if this.ShareGamePage then
+				this.ShareGamePage:ClearShareInviteLink(this.ShareGameApp)
 			end
 		end
 
@@ -3472,12 +3612,12 @@ local function CreateSettingsHub()
 		end
 	end
 
-	function this:SetVisibility(visible, noAnimation, customStartPage, switchedFromGamepadInput, analyticsContext, takingScreenshot)
+	function this:SetVisibility(visible, noAnimation, customStartPage, switchedFromGamepadInput, analyticsContext)
 		if this.Visible == visible then return end
 
-		setVisibilityInternal(visible, noAnimation, customStartPage, switchedFromGamepadInput, analyticsContext, takingScreenshot)
+		setVisibilityInternal(visible, noAnimation, customStartPage, switchedFromGamepadInput, analyticsContext)
 	end
-	
+
 	function this:SetBackgroundVisibility(visible, noAnimation)
 		if this.DarkenBackground.Visible == visible then return end
 
@@ -3539,6 +3679,10 @@ local function CreateSettingsHub()
 				this:SetVisibility(false)
 
 				this.Pages.CurrentPage:Hide(0, 0, nil, nil, this.PageViewInnerFrame)
+			elseif ChromeEnabled and FFlagEnableChromeShortcutBar then 
+				local ChromeService = require(RobloxGui.Modules.Chrome.Service)
+				local ChromeConstants = require(RobloxGui.Modules.Chrome.ChromeShared.Unibar.Constants)
+				ChromeService:setShortcutBar(ChromeConstants.TILTMENU_SHORTCUTBAR_ID)
 			end
 		else
 			this.MenuStack = {}
@@ -3561,6 +3705,7 @@ local function CreateSettingsHub()
 	end
 
 	local thisModuleName = "SettingsMenu"
+	this.GameSettingsPageReorderIXPFetched = false
 	local vrMenuOpened, vrMenuClosed = nil, nil
 	local function enableVR()
 		local VRHub = require(RobloxGui.Modules.VR.VRHub)
@@ -3627,14 +3772,16 @@ local function CreateSettingsHub()
 	OnVREnabled("VREnabled")
 
 
-	if not isNewInGameMenuEnabled() then
-		--If the new in game menu is enabled the settings hub is just used for the gamepad leave game prompt
-		--as a special case until gamepad support for the new menu is complete.
-		local closeMenuFunc = function(name, inputState, input)
-			if inputState ~= Enum.UserInputState.Begin then return end
-			this:PopMenu(false, true)
+	if not FFlagDelayEscCoreActionIEMOpen then
+		if not isNewInGameMenuEnabled() then
+			--If the new in game menu is enabled the settings hub is just used for the gamepad leave game prompt
+			--as a special case until gamepad support for the new menu is complete.
+			local closeMenuFunc = function(name, inputState, input)
+				if inputState ~= Enum.UserInputState.Begin then return end
+				this:PopMenu(false, true)
+			end
+			ContextActionService:BindCoreAction("RBXEscapeMainMenu", closeMenuFunc, false, Enum.KeyCode.Escape)
 		end
-		ContextActionService:BindCoreAction("RBXEscapeMainMenu", closeMenuFunc, false, Enum.KeyCode.Escape)
 	end
 
 	this.ResetCharacterPage:SetHub(this)
@@ -3648,7 +3795,7 @@ local function CreateSettingsHub()
 		this.LeaveGameUpsellPage:SetHub(this)
 	end
 
-	this.GameSettingsPage = require(RobloxGui.Modules.Settings.Pages.GameSettings)
+	this.GameSettingsPage = require(RobloxGui.Modules.Settings.Pages.GameSettingsWrapper)
 	this.GameSettingsPage:SetHub(this)
 
 	this.ReportAbusePage = require(RobloxGui.Modules.Settings.Pages.ReportAbuseMenuNewContainerPage)
@@ -3665,7 +3812,7 @@ local function CreateSettingsHub()
 	this.HelpPage = require(RobloxGui.Modules.Settings.Pages.Help)
 	this.HelpPage:SetHub(this)
 
-	local shouldShowRecord = not PolicyService:IsSubjectToChinaPolicies()
+	local shouldShowRecord = not CachedPolicyService:IsSubjectToChinaPolicies()
 
 	if platform == Enum.Platform.Windows and shouldShowRecord then
 		this.RecordPage = require(RobloxGui.Modules.Settings.Pages.Record)
@@ -3722,25 +3869,21 @@ local function CreateSettingsHub()
 		end
 	end
 
-	local policy = ScreenshotsPolicy.PolicyImplementation.read()
-	local eligibleForCapturesFeature = if policy then ScreenshotsPolicy.Mapper(policy).eligibleForCapturesFeature() else false
+	local policy = CapturesPolicy.PolicyImplementation.read()
+	local eligibleForCapturesFeature = if policy then CapturesPolicy.Mapper(policy).eligibleForCapturesFeature() else false
 
 	if eligibleForCapturesFeature then
-		local ShotsPageWrapper = require(RobloxGui.Modules.Settings.Pages.ShotsPageWrapper)
+		local CapturesPageWrapper = require(RobloxGui.Modules.Settings.Pages.CapturesPageWrapper)
 
 		local function closeSettingsMenu()
 			this:SetVisibility(false, true)
 		end
 
-		this.ScreenshotsApp = ScreenshotsApp
-		if GetFFlagEnableScreenshotUtility() then
-			this.ScreenshotsApp.mountMenuPage(ShotsPageWrapper.Page, closeSettingsMenu, GetFFlagEnableCapturesInChrome() and ChromeEnabled)
-		else
-			this.ScreenshotsApp.mountMenuPage(ShotsPageWrapper.Page, closeSettingsMenu)
-		end
+		this.CapturesApp = CapturesApp
+		this.CapturesApp.mountMenuPage(CapturesPageWrapper.Page, closeSettingsMenu, ChromeEnabled)
 
-		this.ShotsPage = ShotsPageWrapper
-		this.ShotsPage:ConnectHubToApp(this, this.PageViewClipper, this.ScreenshotsApp)
+		this.CapturesPage = CapturesPageWrapper
+		this.CapturesPage:ConnectHubToApp(this, this.PageViewClipper, this.CapturesApp)
 	end
 
 	-- page registration
@@ -3760,8 +3903,8 @@ local function CreateSettingsHub()
 
 	this:AddPage(this.GameSettingsPage)
 
-	if this.ShotsPage then
-		this:AddPage(this.ShotsPage)
+	if this.CapturesPage then
+		this:AddPage(this.CapturesPage)
 	end
 
 	if this.ReportAbusePage then
@@ -3775,7 +3918,7 @@ local function CreateSettingsHub()
 	end
 
 	this:AddPage(this.HelpPage)
-	if this.RecordPage and not this.ShotsPage then
+	if this.RecordPage and not this.CapturesPage then
 		this:AddPage(this.RecordPage)
 	end
 	if this.ExitModalPage then
@@ -3787,6 +3930,18 @@ local function CreateSettingsHub()
 	end
 
 	this:InitInPage(this:GetFirstPageWithTabHeader())
+
+	if FFlagDelayEscCoreActionIEMOpen then
+		if not isNewInGameMenuEnabled() then
+			--If the new in game menu is enabled the settings hub is just used for the gamepad leave game prompt
+			--as a special case until gamepad support for the new menu is complete.
+			local closeMenuFunc = function(name, inputState, input)
+				if inputState ~= Enum.UserInputState.Begin then return end
+				this:PopMenu(false, true)
+			end
+			ContextActionService:BindCoreAction("RBXEscapeMainMenu", closeMenuFunc, false, Enum.KeyCode.Escape)
+		end
+	end
 
 	if GetFFlagEnableAppChatInExperience() then
 		if this.AppChatPage then
@@ -3869,7 +4024,7 @@ local function CreateSettingsHub()
 
 	if GetFFlagEnableAppChatInExperience() then
 		local connection = nil
-		
+
 		this.SettingsShowSignal:connect(function(visible)
 			if visible then
 				connection = InExperienceAppChatModal.default.visibilitySignal.Event:Connect(function(visible)
@@ -3942,10 +4097,6 @@ end
 
 function moduleApiTable:GetRespawnBehaviour()
 	return SettingsHubInstance:GetRespawnBehaviour()
-end
-
-function moduleApiTable:GetTakingScreenshot()
-	return if GetFFlagOpenControlsOnMenuOpen() then SettingsHubInstance.TakingScreenshot else nil
 end
 
 moduleApiTable.RespawnBehaviourChangedEvent = SettingsHubInstance.RespawnBehaviourChangedEvent

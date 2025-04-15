@@ -7,6 +7,7 @@ local ReactUtils = require(Packages.ReactUtils)
 local useForwardRef = ReactUtils.useForwardRef
 local ControlState = require(Foundation.Enums.ControlState)
 local ControlStateEvent = require(Foundation.Enums.ControlStateEvent)
+local Flags = require(Foundation.Utility.Flags)
 
 local createGuiControlStateTable = require(Control.createGuiControlStateTable)
 
@@ -14,110 +15,165 @@ type ControlState = ControlState.ControlState
 type ControlStateEvent = ControlStateEvent.ControlStateEvent
 type StateChangedCallback = createGuiControlStateTable.onGuiControlStateChange
 
+local guiStateMapper: { [Enum.GuiState]: ControlState } = {
+	[Enum.GuiState.Idle] = ControlState.Default,
+	[Enum.GuiState.Hover] = ControlState.Hover,
+	[Enum.GuiState.Press] = ControlState.Pressed,
+	[Enum.GuiState.NonInteractable] = ControlState.Disabled,
+}
+
 local function useGuiControlState(
 	guiObjectRef: React.Ref<Instance>,
 	onStateChanged: StateChangedCallback,
-	userInteractionEnabled: boolean
+	userInteractionEnabled: boolean?
 )
-	local interactionEnabled = React.useRef(userInteractionEnabled)
+	local interactionEnabled = if Flags.FoundationInteractableUseGuiState
+		then nil :: never
+		else React.useRef(userInteractionEnabled)
+	local isSelected = React.useRef(false)
+	local currentControlState = React.useRef(ControlState.Initialize :: ControlState)
 
-	local guiStateTable = React.useMemo(function()
-		return createGuiControlStateTable(onStateChanged)
-	end, {})
+	local guiStateTable = if not Flags.FoundationInteractableUseGuiState
+		then React.useMemo(function()
+			return createGuiControlStateTable(onStateChanged)
+		end, {})
+		else nil :: never
 
-	React.useEffect(function()
-		guiStateTable:onStateChange(onStateChanged)
-	end, { onStateChanged })
+	if not Flags.FoundationInteractableUseGuiState then
+		React.useEffect(function()
+			guiStateTable:onStateChange(onStateChanged)
+		end, { onStateChanged })
+	end
+
+	local onControlStateChanged = if Flags.FoundationInteractableUseGuiState
+		then React.useCallback(function(newState: ControlState)
+			local oldState = currentControlState.current
+
+			if isSelected.current then
+				if newState == ControlState.Default then
+					newState = ControlState.Selected
+				elseif newState == ControlState.Hover then
+					newState = ControlState.Selected
+				elseif newState == ControlState.Pressed then
+					newState = ControlState.SelectedPressed
+				end
+			end
+
+			if oldState == newState then
+				return
+			end
+
+			currentControlState.current = newState
+
+			if onStateChanged ~= nil then
+				onStateChanged(newState)
+			end
+		end, { onStateChanged })
+		else nil :: never
 
 	local onRefChange = React.useCallback(function(instance: GuiObject)
 		local connections: { RBXScriptConnection } = {}
 		if instance then
-			-- Due to bugs with hover we will not listen to GuiState changes for now
-			--[[
-			table.insert(
-				connections,
-				instance:GetPropertyChangedSignal("GuiState"):Connect(function()
-					if not interactionEnabled then
-						return nil
-					end
-				end)
-			)
-			]]
+			if Flags.FoundationInteractableUseGuiState then
+				onControlStateChanged(guiStateMapper[instance.GuiState])
+			end
 
-			-- listen to InputBegan and InputEnded to handle Pressed and Released
-			table.insert(
-				connections,
-				instance.InputBegan:Connect(function(inputObject: InputObject)
-					if not interactionEnabled.current then
-						return nil
-					end
-					if
-						inputObject.UserInputType == Enum.UserInputType.MouseButton1
-						or inputObject.UserInputType == Enum.UserInputType.Touch
-						or inputObject.KeyCode == Enum.KeyCode.ButtonA
-						or inputObject.KeyCode == Enum.KeyCode.Return
-					then
-						guiStateTable.events.PrimaryPressed()
-					end
-				end)
-			)
-			table.insert(
-				connections,
-				instance.InputEnded:Connect(function(inputObject: InputObject)
-					if not interactionEnabled.current then
-						return nil
-					end
-					if inputObject.UserInputType == Enum.UserInputType.MouseButton1 then
-						guiStateTable.events.PrimaryReleasedHover()
-					elseif
-						inputObject.UserInputType == Enum.UserInputType.Touch
-						or inputObject.KeyCode == Enum.KeyCode.ButtonA
-						or inputObject.KeyCode == Enum.KeyCode.Return
-					then
-						guiStateTable.events.PrimaryReleased()
-					end
-				end)
-			)
+			if Flags.FoundationInteractableUseGuiState then
+				table.insert(
+					connections,
+					instance:GetPropertyChangedSignal("GuiState"):Connect(function()
+						local controlState: ControlState = guiStateMapper[instance.GuiState]
+						onControlStateChanged(controlState)
+					end)
+				)
+			end
+
+			if not Flags.FoundationInteractableUseGuiState then
+				table.insert(
+					connections,
+					instance.InputBegan:Connect(function(inputObject: InputObject)
+						if not interactionEnabled.current then
+							return nil
+						end
+						if
+							inputObject.UserInputType == Enum.UserInputType.MouseButton1
+							or inputObject.UserInputType == Enum.UserInputType.Touch
+							or inputObject.KeyCode == Enum.KeyCode.ButtonA
+							or inputObject.KeyCode == Enum.KeyCode.Return
+						then
+							guiStateTable.events.PrimaryPressed()
+						end
+					end)
+				)
+				table.insert(
+					connections,
+					instance.InputEnded:Connect(function(inputObject: InputObject)
+						if not interactionEnabled.current then
+							return nil
+						end
+						if inputObject.UserInputType == Enum.UserInputType.MouseButton1 then
+							guiStateTable.events.PrimaryReleasedHover()
+						elseif
+							inputObject.UserInputType == Enum.UserInputType.Touch
+							or inputObject.KeyCode == Enum.KeyCode.ButtonA
+							or inputObject.KeyCode == Enum.KeyCode.Return
+						then
+							guiStateTable.events.PrimaryReleased()
+						end
+					end)
+				)
+			end
 
 			-- Selected state is not part of GuiState, so we need to handle it separately with SelectionGained and SelectionLost
 			table.insert(
 				connections,
 				instance.SelectionGained:Connect(function()
-					if not interactionEnabled.current then
-						return nil
+					if Flags.FoundationInteractableUseGuiState then
+						isSelected.current = true
+						onControlStateChanged(currentControlState.current :: ControlState)
+					else
+						if not interactionEnabled.current then
+							return
+						end
+						guiStateTable.events.SelectionGained()
 					end
-					guiStateTable.events.SelectionGained()
 				end)
 			)
 			table.insert(
 				connections,
 				instance.SelectionLost:Connect(function()
-					if not interactionEnabled.current then
-						return nil
+					if Flags.FoundationInteractableUseGuiState then
+						isSelected.current = false
+						onControlStateChanged(currentControlState.current :: ControlState)
+					else
+						if not interactionEnabled.current then
+							return
+						end
+						guiStateTable.events.SelectionLost()
 					end
-					guiStateTable.events.SelectionLost()
 				end)
 			)
 
-			-- Due to UISYS-3043 and UISYS-3045 Hover will be handled using MouseEnter and MouseLeave instead of GuiState
-			table.insert(
-				connections,
-				instance.MouseEnter:Connect(function()
-					if not interactionEnabled.current then
-						return nil
-					end
-					guiStateTable.events.PointerHover()
-				end)
-			)
-			table.insert(
-				connections,
-				instance.MouseLeave:Connect(function()
-					if not interactionEnabled.current then
-						return nil
-					end
-					guiStateTable.events.PointerHoverEnd()
-				end)
-			)
+			if not Flags.FoundationInteractableUseGuiState then
+				table.insert(
+					connections,
+					instance.MouseEnter:Connect(function()
+						if not interactionEnabled.current then
+							return
+						end
+						guiStateTable.events.PointerHover()
+					end)
+				)
+				table.insert(
+					connections,
+					instance.MouseLeave:Connect(function()
+						if not interactionEnabled.current then
+							return
+						end
+						guiStateTable.events.PointerHoverEnd()
+					end)
+				)
+			end
 		end
 
 		return function()
@@ -125,13 +181,16 @@ local function useGuiControlState(
 				connection:Disconnect()
 			end
 		end
-	end, { guiStateTable })
+	end, { guiStateTable :: any, onControlStateChanged })
 
-	React.useEffect(function()
-		interactionEnabled.current = userInteractionEnabled
-	end, { userInteractionEnabled })
+	if not Flags.FoundationInteractableUseGuiState then
+		React.useEffect(function()
+			interactionEnabled.current = userInteractionEnabled
+		end, { userInteractionEnabled })
+	end
 
-	return useForwardRef(guiObjectRef, onRefChange), guiStateTable
+	return useForwardRef(guiObjectRef, onRefChange),
+		if Flags.FoundationInteractableUseGuiState then nil :: never else guiStateTable
 end
 
 return useGuiControlState

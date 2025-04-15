@@ -4,7 +4,7 @@
 
 local CorePackages = game:GetService("CorePackages")
 local ArgCheck = require(CorePackages.Workspace.Packages.ArgCheck)
-local Logging = require(CorePackages.Logging)
+local Logging = require(CorePackages.Workspace.Packages.AppCommonLib).Logging
 
 local TAG = "Utils"
 -- This global key will be accessed by native code

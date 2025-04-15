@@ -1,7 +1,7 @@
 local CorePackages = game:GetService("CorePackages")
 
-local Cryo = require(CorePackages.Cryo)
-local Promise = require(CorePackages.Promise)
+local Cryo = require(CorePackages.Packages.Cryo)
+local Promise = require(CorePackages.Packages.Promise)
 
 local GetCurrentHumanoidDescription = require(script.Parent.GetCurrentHumanoidDescription)
 local GetAssetIdsFromDescription = require(script.Parent.GetAssetIdsFromDescription)
@@ -45,7 +45,7 @@ return function(humanoidDescription)
 				addedNames = addedNames,
 				removedNames = removedNames,
 				addedAssetIds = addedAssetIds,
-				removedAssetIds = removedAssetIds
+				removedAssetIds = removedAssetIds,
 			}
 		end)
 	end)

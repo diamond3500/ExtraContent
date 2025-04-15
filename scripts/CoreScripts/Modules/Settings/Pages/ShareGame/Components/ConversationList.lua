@@ -11,8 +11,8 @@ local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 
-local Roact = require(CorePackages.Roact)
-local RoactRodux = require(CorePackages.RoactRodux)
+local Roact = require(CorePackages.Packages.Roact)
+local RoactRodux = require(CorePackages.Packages.RoactRodux)
 
 local Modules = CoreGui.RobloxGui.Modules
 local ShareGame = RobloxGui.Modules.Settings.Pages.ShareGame
@@ -29,11 +29,8 @@ local NewInviteMenuExperimentManager = require(ShareGame.NewInviteMenuExperiment
 local LoadingFriendsPage = require(ShareGame.Components.LoadingFriendsPage)
 local NoFriendsPage = require(ShareGame.Components.NoFriendsPage)
 local PlayerSearchPredicate = require(CoreGui.RobloxGui.Modules.InGameMenu.Utility.PlayerSearchPredicate)
-local GetFFlagShareInviteLinkContextMenuV1Enabled =
-	require(Modules.Settings.Flags.GetFFlagShareInviteLinkContextMenuV1Enabled)
 local GetFFlagAbuseReportAnalyticsHasLaunchData =
 	require(Modules.Settings.Flags.GetFFlagAbuseReportAnalyticsHasLaunchData)
-local GetFFlagInviteFriendsDesignUpdates = require(Modules.Settings.Flags.GetFFlagInviteFriendsDesignUpdates)
 local GetFFlagEnableNewInviteMenu = require(Modules.Flags.GetFFlagEnableNewInviteMenu)
 local GetFFlagEnableNewInviteSendEndpoint = require(Modules.Flags.GetFFlagEnableNewInviteSendEndpoint)
 
@@ -187,9 +184,7 @@ function ConversationList:render()
 				TextSize = NO_RESULTS_TEXTSIZE,
 				TextTransparency = NO_RESULTS_TRANSPRENCY,
 				ZIndex = zIndex,
-				Position = if GetFFlagShareInviteLinkContextMenuV1Enabled()
-					then UDim2.new(0, 0, 0, topPadding)
-					else nil,
+				Position = UDim2.new(0, 0, 0, topPadding),
 			})
 		end
 	end
@@ -200,8 +195,8 @@ function ConversationList:render()
 		BackgroundTransparency = 1,
 		LayoutOrder = layoutOrder,
 		Size = size,
-		BorderSizePixel = if GetFFlagInviteFriendsDesignUpdates() then 0 else nil,
-		Position = GetFFlagShareInviteLinkContextMenuV1Enabled() and UDim2.new(0, 0, 0, topPadding) or nil,
+		BorderSizePixel = 0,
+		Position = UDim2.new(0, 0, 0, topPadding),
 		CanvasSize = if newInviteMenuEnabled
 			then UDim2.new()
 			else UDim2.new(0, 0, 0, numEntries * (entryHeight + entryPadding)),

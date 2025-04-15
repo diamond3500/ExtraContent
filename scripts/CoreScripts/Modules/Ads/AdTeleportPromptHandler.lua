@@ -6,8 +6,8 @@ local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 
 local AdTeleportPrompt = require(RobloxGui.Modules.Ads.AdTeleportPromptUI)
-local Roact = require(CorePackages.Roact)
-local UIBlox = require(CorePackages.UIBlox)
+local Roact = require(CorePackages.Packages.Roact)
+local UIBlox = require(CorePackages.Packages.UIBlox)
 
 local RoactGamepad = require(CorePackages.Packages.RoactGamepad)
 

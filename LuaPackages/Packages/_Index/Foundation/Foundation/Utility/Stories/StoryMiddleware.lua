@@ -7,8 +7,6 @@ local FoundationProvider = require(Foundation.Providers.Foundation)
 local Theme = require(Foundation.Enums.Theme)
 local Device = require(Foundation.Enums.Device)
 
-local ColorUpdateStory = require(Foundation.Providers.Foundation.ColorUpdateStory)
-
 local themes = {
 	Light = Theme.Light,
 	Dark = Theme.Dark,
@@ -40,7 +38,6 @@ local function StoryMiddleware(story)
 				device = devices[storyProps.platform],
 				preferences = storyProps.settings,
 				overlayGui = storyProps.focus,
-				DONOTUSE_colorUpdate = ColorUpdateStory.FoundationColors,
 			}, {
 				Child = React.createElement(story, storyProps),
 			}),

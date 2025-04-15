@@ -25,7 +25,7 @@ Text and icon content type can be added any of the buttons
 
 ## How to Use
 
-A `Button` should be used with a standard size defined in [[ButtonSize]] (`Medium`/`Small`/`XSmall`).
+A `Button` should be used with a standard size defined in [[InputSize]] (`Large`/`Medium`/`Small`/`XSmall`).
 
 Each standard size will apply the corresponding font style, padding, border radius and button height.
 
@@ -35,7 +35,7 @@ Each standard size will apply the corresponding font style, padding, border radi
 local Foundation = require(Packages.Foundation)
 local Button = Foundation.Button
 local ButtonVariant = Foundation.Enums.ButtonVariant
-local ButtonSize = Foundation.Enums.ButtonSize
+local InputSize = Foundation.Enums.InputSize
 ...
 return React.createElement(Button, {
 	icon = "icons/common/robux",
@@ -45,7 +45,7 @@ return React.createElement(Button, {
 		print("Button Clicked!")
 	end,
 	isDisabled = false,
-	size = ButtonSize.Small,
+	size = InputSize.Small,
 })
 ...
 ```

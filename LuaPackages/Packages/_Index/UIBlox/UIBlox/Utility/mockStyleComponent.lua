@@ -3,16 +3,48 @@ local UIBlox = Component.Parent
 local Roact = require(UIBlox.Parent.Roact)
 
 local AppStyleProvider = require(UIBlox.App.Style.AppStyleProvider)
+local FoundationProvider = require(UIBlox.Parent.Foundation).FoundationProvider
 
-return function(elements)
-	return Roact.createElement(AppStyleProvider, {
-		style = {
-			themeName = "Dark",
-			fontName = "Gotham",
-		},
-	}, {
-		Content = Roact.createElement("Frame", {
-			Size = UDim2.new(1, 0, 1, 0),
-		}, elements),
-	})
+local UIBloxConfig = require(UIBlox.UIBloxConfig)
+local StyleTypes = require(UIBlox.App.Style.StyleTypes)
+type Settings = StyleTypes.Settings
+
+return function(elements, settings: Settings?)
+	if UIBloxConfig.useFoundationProvider then
+		return Roact.createElement(
+			FoundationProvider,
+			{
+				theme = "Dark",
+				preferences = if settings
+					then {
+						reducedMotion = settings.reducedMotion,
+						preferredTransparency = settings.preferredTransparency,
+					}
+					else nil,
+			},
+			Roact.createElement(AppStyleProvider, {
+				style = {
+					themeName = "Dark",
+					fontName = "Gotham",
+					settings = settings,
+				},
+			}, {
+				Content = Roact.createElement("Frame", {
+					Size = UDim2.new(1, 0, 1, 0),
+				}, elements),
+			})
+		)
+	else
+		return Roact.createElement(AppStyleProvider, {
+			style = {
+				themeName = "Dark",
+				fontName = "Gotham",
+				settings = settings,
+			},
+		}, {
+			Content = Roact.createElement("Frame", {
+				Size = UDim2.new(1, 0, 1, 0),
+			}, elements),
+		})
+	end
 end

@@ -9,7 +9,10 @@ local root = script.Parent.Parent
 local Types = require(root.util.Types)
 local tryYield = require(root.util.tryYield)
 
-return function(func: () -> any, validationContext: Types.ValidationContext): (boolean, any)
+return function(
+	func: () -> (any, any, any), -- can return any number of results, add more 'any' as needed),
+	validationContext: Types.ValidationContext
+): (boolean, any, any, any) -- can return any number of results, add more 'any' as needed
 	tryYield(validationContext)
 	return pcall(func)
 end

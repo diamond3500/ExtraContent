@@ -1,6 +1,6 @@
 local CorePackages = game:GetService("CorePackages")
 
-local InGameMenuDependencies = require(CorePackages.InGameMenuDependencies)
+local InGameMenuDependencies = require(CorePackages.Packages.InGameMenuDependencies)
 local t = InGameMenuDependencies.t
 local Roact = InGameMenuDependencies.Roact
 local Cryo = InGameMenuDependencies.Cryo
@@ -46,7 +46,7 @@ function GameIconButton:renderWithSelectionCursor(getSelectionCursor)
 			gameId = game.GameId,
 			iconSize = 32,
 			cornerRadius = CORNER_RADIUS,
-		})
+		}),
 	})
 end
 
@@ -57,7 +57,10 @@ function GameIconButton:render()
 end
 
 return Roact.forwardRef(function(props, ref)
-	return Roact.createElement(GameIconButton, Cryo.Dictionary.join(props, {
-		forwardRef = ref,
-	}))
+	return Roact.createElement(
+		GameIconButton,
+		Cryo.Dictionary.join(props, {
+			forwardRef = ref,
+		})
+	)
 end)

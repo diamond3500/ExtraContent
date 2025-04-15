@@ -1,6 +1,6 @@
 --!nonstrict
 local CorePackages = game:GetService("CorePackages")
-local UIBlox = require(CorePackages.UIBlox)
+local UIBlox = require(CorePackages.Packages.UIBlox)
 local React = require(CorePackages.Packages.React)
 local TnsModule = script.Parent.Parent.Parent
 local GetFFlagReportAnythingLocalizationEnabled = require(TnsModule.Flags.GetFFlagReportAnythingLocalizationEnabled)
@@ -52,7 +52,7 @@ local function renderCenter(title)
 			local textMaxWidth = 300
 			if camera ~= nil then
 				local viewportSize = camera.ViewportSize
-				-- bit of a hack 
+				-- bit of a hack
 				textMaxWidth = viewportSize.X - 150
 			end
 			local theme = style.Theme
@@ -74,7 +74,13 @@ local function renderCenter(title)
 	end
 end
 
-local function renderHeaderBarRight(annotationPoints, undoAnnotationPoints, redoAnnotationPoints, isUndoEnabled, isRedoEnabled)
+local function renderHeaderBarRight(
+	annotationPoints,
+	undoAnnotationPoints,
+	redoAnnotationPoints,
+	isUndoEnabled,
+	isRedoEnabled
+)
 	return function()
 		return React.createElement("Frame", {
 			BackgroundTransparency = 1,

@@ -4,7 +4,7 @@ local CoreGui = game:GetService("CoreGui")
 local _RobloxGui = CoreGui:WaitForChild("RobloxGui")
 local LoadingBar = require(CorePackages.Workspace.Packages.AppBlox).LoadingBar
 
-local Roact = require(CorePackages.Roact)
+local Roact = require(CorePackages.Packages.Roact)
 
 local LoadingFriendsPage = Roact.PureComponent:extend("LoadingFriendsPage")
 
@@ -43,7 +43,7 @@ function LoadingFriendsPage:render()
 			loadingBar = Roact.createElement(LoadingBar, {
 				ZIndex = zIndex,
 			}),
-		})
+		}),
 	})
 end
 

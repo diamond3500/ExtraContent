@@ -6,7 +6,7 @@ local CorePackages = game:GetService("CorePackages")
 local ContextActionService = game:GetService("ContextActionService")
 local GuiService = game:GetService("GuiService")
 
-local InGameMenuDependencies = require(CorePackages.InGameMenuDependencies)
+local InGameMenuDependencies = require(CorePackages.Packages.InGameMenuDependencies)
 local Roact = InGameMenuDependencies.Roact
 local t = InGameMenuDependencies.t
 
@@ -58,13 +58,13 @@ ConfirmationDialog.defaultProps = {
 
 function ConfirmationDialog:init()
 	self.state = {
-		isRooted = false
+		isRooted = false,
 	}
 
 	self.onAncestryChanged = function(instance)
 		if instance:IsDescendantOf(game) then
 			self:setState({
-				isRooted = true
+				isRooted = true,
 			})
 		end
 	end
@@ -157,7 +157,7 @@ function ConfirmationDialog:render()
 							Size = UDim2.new(1, 0, 1, 0),
 							Text = props.bodyText,
 							TextWrapped = true,
-						})
+						}),
 					}),
 					ButtonContainer = Roact.createElement("Frame", {
 						BackgroundTransparency = 1,
@@ -201,7 +201,7 @@ function ConfirmationDialog:render()
 
 					GuiService.SelectedCoreObject = self.confirmButtonRef:getValue()
 				end,
-			})
+			}),
 		})
 	end)
 end
@@ -220,8 +220,7 @@ function ConfirmationDialog:bindActions()
 	end
 
 	if self.props.bindReturnToConfirm then
-		ContextActionService:BindCoreAction(
-			MODAL_CONFIRM_ACTION, confirmFunc, false, Enum.KeyCode.Return)
+		ContextActionService:BindCoreAction(MODAL_CONFIRM_ACTION, confirmFunc, false, Enum.KeyCode.Return)
 	end
 
 	local function cancelFunc(actionName, inputState, input)
@@ -230,8 +229,7 @@ function ConfirmationDialog:bindActions()
 		end
 	end
 
-	ContextActionService:BindCoreAction(
-		MODAL_CANCEL_ACTION, cancelFunc, false, Enum.KeyCode.Escape)
+	ContextActionService:BindCoreAction(MODAL_CANCEL_ACTION, cancelFunc, false, Enum.KeyCode.Escape)
 end
 
 function ConfirmationDialog:unbindActions()

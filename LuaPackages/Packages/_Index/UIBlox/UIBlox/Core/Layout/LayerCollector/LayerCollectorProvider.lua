@@ -8,8 +8,6 @@ local LayerCollectorContext = require(script.Parent.LayerCollectorContext)
 local GuiService = game:GetService("GuiService")
 local LayerCollectorProvider = Roact.PureComponent:extend("LayerCollectorProvider")
 
-local UIBloxConfig = require(UIBlox.UIBloxConfig)
-
 function LayerCollectorProvider:init()
 	self.rootRef = Roact.createRef()
 	self.state = {
@@ -34,10 +32,6 @@ function LayerCollectorProvider:watchLayerCollector(layerCollector: LayerCollect
 		end)
 		if ok and ignoreGuiInset then
 			topLeftInset, bottomRightInset = GuiService:GetGuiInset()
-			-- Remove absoluteSize line if flag is flipped on
-			if not UIBloxConfig.fixLayerCollectorProviderAbsoluteSize then
-				absoluteSize = absoluteSize + topLeftInset
-			end
 		end
 	end
 
@@ -53,19 +47,6 @@ function LayerCollectorProvider:watchLayerCollector(layerCollector: LayerCollect
 
 	self.absoluteSizeConnection = layerCollector:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
 		absoluteSize = layerCollector.AbsoluteSize
-		-- Remove entire block if flag is flipped on
-		if not UIBloxConfig.fixLayerCollectorProviderAbsoluteSize then
-			if layerCollector:IsA("ScreenGui") then
-				local ok, ignoreGuiInset = pcall(function()
-					return layerCollector.IgnoreGuiInset
-				end)
-				if ok and ignoreGuiInset then
-					topLeftInset, bottomRightInset = GuiService:GetGuiInset()
-					absoluteSize = absoluteSize + topLeftInset
-				end
-			end
-		end
-
 		self:setState({
 			absoluteSize = absoluteSize,
 			insets = {

@@ -1,6 +1,6 @@
 local CorePackages = game:GetService("CorePackages")
 
-local InGameMenuDependencies = require(CorePackages.InGameMenuDependencies)
+local InGameMenuDependencies = require(CorePackages.Packages.InGameMenuDependencies)
 local UIBlox = InGameMenuDependencies.UIBlox
 
 local Images = require(script.Parent.Images)
@@ -64,7 +64,7 @@ return {
 		RoundedRectBorder = {
 			ScaleType = Enum.ScaleType.Slice,
 			SliceCenter = Rect.new(8, 8, 9, 9),
-			Image = UIBloxImages["component_assets/circle_17_stroke_1"]
+			Image = UIBloxImages["component_assets/circle_17_stroke_1"],
 		},
 
 		WhiteSquare = {
@@ -114,5 +114,5 @@ return {
 		SliderButton = Images["InGameMenu/Graphic/SliderButton"],
 
 		PlaceholderGameIcon = UIBloxImages["icons/imageUnavailable"],
-	}
+	},
 }

@@ -7,18 +7,18 @@
 local CoreGui = game:GetService("CoreGui")
 
 local RobloxGui = CoreGui:WaitForChild("RobloxGui")
-local Modules = game:GetService("CoreGui").RobloxGui.Modules
 local CorePackages = game:GetService("CorePackages")
+
+local FFlagEnableLuaAppsShareLinksPackages = require(CorePackages.Workspace.Packages.SharedFlags).FFlagEnableLuaAppsShareLinksPackages
 
 local ShareGame = RobloxGui.Modules.Settings.Pages.ShareGame
 local Constants = require(ShareGame.Constants)
 local dependencies = require(CorePackages.Workspace.Packages.NotificationsCommon).ReducerDependencies
 local RoduxShareLinks = dependencies.RoduxShareLinks
-local ClearShareInviteLink = RoduxShareLinks.Actions.ClearShareInviteLink
+local ShareLinksRodux = dependencies.ShareLinksRodux
+local ClearShareInviteLink = if FFlagEnableLuaAppsShareLinksPackages then (ShareLinksRodux :: any).Actions.ClearShareInviteLink else RoduxShareLinks.Actions.ClearShareInviteLink -- Remove any cast with FFlagEnableLuaAppsShareLinksPackages
 local OpenPage = require(ShareGame.Actions.OpenPage)
 local ClosePage = require(ShareGame.Actions.ClosePage)
-
-local GetFFlagShareInviteLinkContextMenuV1Enabled = require(Modules.Settings.Flags.GetFFlagShareInviteLinkContextMenuV1Enabled)
 
 local settingsPageFactory = require(RobloxGui.Modules.Settings.SettingsPageFactory)
 local this = settingsPageFactory:CreateNewPage()
@@ -69,11 +69,9 @@ function this:ConnectHubToApp(settingsHub, shareGameApp)
 end
 
 function this:ClearShareInviteLink(shareGameApp)
-	if GetFFlagShareInviteLinkContextMenuV1Enabled() then
-		local state = shareGameApp.store:getState()
-		if state.ShareLinks.Invites.ShareInviteLink ~= nil then
-			shareGameApp.store:dispatch(ClearShareInviteLink())
-		end
+	local state = shareGameApp.store:getState()
+	if state.ShareLinks.Invites.ShareInviteLink ~= nil then
+		shareGameApp.store:dispatch(ClearShareInviteLink())
 	end
 end
 

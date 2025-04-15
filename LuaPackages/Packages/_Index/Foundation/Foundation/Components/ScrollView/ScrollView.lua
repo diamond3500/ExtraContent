@@ -36,6 +36,9 @@ export type Scroll = {
 export type ScrollViewProps = {
 	scroll: Scroll?,
 	scrollingFrameRef: React.Ref<ScrollingFrame>?,
+	onCanvasPositionChanged: ((instance: ScrollingFrame) -> ())?,
+	onAbsoluteCanvasSizeChanged: ((instance: ScrollingFrame) -> ())?,
+	onAbsoluteWindowSizeChanged: ((instance: ScrollingFrame) -> ())?,
 } & GuiObjectProps & CommonProps
 
 local defaultProps = {
@@ -95,6 +98,9 @@ local function ScrollView(scrollViewProps: ScrollViewProps, ref: React.Ref<GuiOb
 			{
 				controlState = controlState,
 				scrollBarVisibility = props.scroll.scrollBarVisibility,
+				onCanvasPositionChanged = props.onCanvasPositionChanged,
+				onAbsoluteCanvasSizeChanged = props.onAbsoluteCanvasSizeChanged,
+				onAbsoluteWindowSizeChanged = props.onAbsoluteWindowSizeChanged,
 
 				-- Scrolling props
 				AutomaticCanvasSize = props.scroll.AutomaticCanvasSize,

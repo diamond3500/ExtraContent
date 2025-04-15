@@ -13,6 +13,7 @@ export type Tags = Package.Tags
 export type ColorStyle = Package.ColorStyle
 export type ColorStyleValue = Package.ColorStyleValue
 export type FontStyle = Package.FontStyle
+export type Tokens = Package.Tokens
 
 
 return Package

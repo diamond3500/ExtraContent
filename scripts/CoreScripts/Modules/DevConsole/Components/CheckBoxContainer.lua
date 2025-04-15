@@ -1,7 +1,7 @@
 --!nonstrict
 local CorePackages = game:GetService("CorePackages")
 local TextService = game:GetService("TextService")
-local Roact = require(CorePackages.Roact)
+local Roact = require(CorePackages.Packages.Roact)
 
 local Components = script.Parent.Parent.Components
 local CheckBox = require(Components.CheckBox)
@@ -25,9 +25,10 @@ function CheckBoxContainer:init()
 
 	-- this is part of the dropdown logic
 	self.onCheckBoxExpanded = function(rbx, input)
-		if input.UserInputType == Enum.UserInputType.MouseButton1 or
-			(input.UserInputType == Enum.UserInputType.Touch and
-			input.UserInputState == Enum.UserInputState.End) then
+		if
+			input.UserInputType == Enum.UserInputType.MouseButton1
+			or (input.UserInputType == Enum.UserInputType.Touch and input.UserInputState == Enum.UserInputState.End)
+		then
 			self:setState({
 				expanded = true,
 			})
@@ -36,11 +37,12 @@ function CheckBoxContainer:init()
 
 	-- this is part of the dropdown logic
 	self.onCloseCheckBox = function(rbx, input)
-		if input.UserInputType == Enum.UserInputType.MouseButton1 or
-			(input.UserInputType == Enum.UserInputType.Touch and
-			input.UserInputState == Enum.UserInputState.End) then
+		if
+			input.UserInputType == Enum.UserInputType.MouseButton1
+			or (input.UserInputType == Enum.UserInputType.Touch and input.UserInputState == Enum.UserInputState.End)
+		then
 			self:setState({
-				expanded = false
+				expanded = false,
 			})
 		end
 	end
@@ -77,7 +79,7 @@ end
 function CheckBoxContainer:render()
 	local elements = {}
 	local frameWidth = self.props.frameWidth
-	local frameHeight =  self.props.frameHeight
+	local frameHeight = self.props.frameHeight
 	local pos = self.props.pos
 
 	local layoutOrder = self.props.layoutOrder
@@ -108,11 +110,11 @@ function CheckBoxContainer:render()
 
 	if frameWidth < minFullLength then
 		elements["CheckBoxLayout"] = Roact.createElement("UIListLayout", {
-				HorizontalAlignment = Enum.HorizontalAlignment.Left,
-				SortOrder = Enum.SortOrder.LayoutOrder,
-				VerticalAlignment = Enum.VerticalAlignment.Top,
-				FillDirection = Enum.FillDirection.Vertical,
-			})
+			HorizontalAlignment = Enum.HorizontalAlignment.Left,
+			SortOrder = Enum.SortOrder.LayoutOrder,
+			VerticalAlignment = Enum.VerticalAlignment.Top,
+			FillDirection = Enum.FillDirection.Vertical,
+		})
 
 		local showDropDown = self.ref.current and expanded
 		local dropDownPos
@@ -139,8 +141,8 @@ function CheckBoxContainer:render()
 				elementHeight = frameHeight,
 				numElements = numCheckBoxes,
 
-				onCloseCheckBox = self.onCloseCheckBox
-			}, elements)
+				onCloseCheckBox = self.onCloseCheckBox,
+			}, elements),
 		})
 	else
 		elements["CheckBoxLayout"] = Roact.createElement("UIListLayout", {
@@ -151,7 +153,7 @@ function CheckBoxContainer:render()
 		})
 
 		return Roact.createElement("Frame", {
-			Size = UDim2.new(0,frameWidth,0,frameHeight),
+			Size = UDim2.new(0, frameWidth, 0, frameHeight),
 			Position = pos,
 			BackgroundTransparency = 1,
 			LayoutOrder = layoutOrder,

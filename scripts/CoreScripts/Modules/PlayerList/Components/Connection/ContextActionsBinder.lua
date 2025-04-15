@@ -2,8 +2,8 @@ local CorePackages = game:GetService("CorePackages")
 local ContextActionService = game:GetService("ContextActionService")
 local GuiService = game:GetService("GuiService")
 
-local Roact = require(CorePackages.Roact)
-local RoactRodux = require(CorePackages.RoactRodux)
+local Roact = require(CorePackages.Packages.Roact)
+local RoactRodux = require(CorePackages.Packages.RoactRodux)
 
 local Components = script.Parent.Parent
 local PlayerList = Components.Parent
@@ -32,49 +32,33 @@ function ContextActionsBinder:init()
 end
 
 function ContextActionsBinder:bindActions()
-	ContextActionService:BindCoreAction(
-		TOGGLE_CONTEXT_ACTION_NAME,
-		function(actionName, inputState, inputObject)
-			if GuiService.MenuIsOpen then
-				return Enum.ContextActionResult.Pass
-			end
+	ContextActionService:BindCoreAction(TOGGLE_CONTEXT_ACTION_NAME, function(actionName, inputState, inputObject)
+		if GuiService.MenuIsOpen then
+			return Enum.ContextActionResult.Pass
+		end
 
-			if inputState ~= Enum.UserInputState.Begin then
-				return Enum.ContextActionResult.Pass
-			end
-			self.props.setVisibility(not self.props.displayOptions.isVisible)
+		if inputState ~= Enum.UserInputState.Begin then
+			return Enum.ContextActionResult.Pass
+		end
+		self.props.setVisibility(not self.props.displayOptions.isVisible)
+		return Enum.ContextActionResult.Sink
+	end, false, Enum.KeyCode.Tab)
+	ContextActionService:BindCoreAction(GAMEPAD_STOP_MOVEMENT_ACTION_NAME, function(actionName, inputState, inputObject)
+		if self.props.displayOptions.isVisible and self.props.displayOptions.isTenFootInterface then
 			return Enum.ContextActionResult.Sink
-		end,
-		false,
-		Enum.KeyCode.Tab
-	)
-	ContextActionService:BindCoreAction(
-		GAMEPAD_STOP_MOVEMENT_ACTION_NAME,
-		function(actionName, inputState, inputObject)
-			if self.props.displayOptions.isVisible and self.props.displayOptions.isTenFootInterface then
-				return Enum.ContextActionResult.Sink
-			end
+		end
+		return Enum.ContextActionResult.Pass
+	end, false, unpack(GAMEPADS))
+	ContextActionService:BindCoreAction(GAMEPAD_CLOSE_CONTEXT_ACTION_NAME, function(actionName, inputState, inputObject)
+		if inputState ~= Enum.UserInputState.Begin then
 			return Enum.ContextActionResult.Pass
-		end,
-		false,
-		unpack(GAMEPADS)
-	)
-	ContextActionService:BindCoreAction(
-		GAMEPAD_CLOSE_CONTEXT_ACTION_NAME,
-		function(actionName, inputState, inputObject)
-			if inputState ~= Enum.UserInputState.Begin then
-				return Enum.ContextActionResult.Pass
-			end
-			if self.props.displayOptions.isVisible and self.props.displayOptions.isTenFootInterface then
-				self.props.setVisibility(false)
-				return Enum.ContextActionResult.Sink
-			end
-			return Enum.ContextActionResult.Pass
-		end,
-		false,
-		Enum.KeyCode.ButtonB,
-		Enum.KeyCode.ButtonStart
-	)
+		end
+		if self.props.displayOptions.isVisible and self.props.displayOptions.isTenFootInterface then
+			self.props.setVisibility(false)
+			return Enum.ContextActionResult.Sink
+		end
+		return Enum.ContextActionResult.Pass
+	end, false, Enum.KeyCode.ButtonB, Enum.KeyCode.ButtonStart)
 	self.boundPlayerListActions = true
 end
 

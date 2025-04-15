@@ -11,7 +11,7 @@ local Url = require(InGameMenu.Network.Url)
 local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
 local CorePackages = game:GetService("CorePackages")
-local InGameMenuDependencies = require(CorePackages.InGameMenuDependencies)
+local InGameMenuDependencies = require(CorePackages.Packages.InGameMenuDependencies)
 local Promise = InGameMenuDependencies.Promise
 
 --[[

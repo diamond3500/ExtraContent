@@ -4,6 +4,7 @@ local React = require(Packages.React)
 local Image = require(Foundation.Components.Image)
 local View = require(Foundation.Components.View)
 local Text = require(Foundation.Components.Text)
+local useTokens = require(Foundation.Providers.Style.useTokens)
 
 local ControlState = require(Foundation.Enums.ControlState)
 type ControlState = ControlState.ControlState
@@ -16,6 +17,7 @@ local function Story(props)
 end
 
 local function AssetStory(props)
+	local tokens = useTokens()
 	return React.createElement(
 		View,
 		{
@@ -26,10 +28,7 @@ local function AssetStory(props)
 		},
 		React.createElement(Image, {
 			Image = "rbxassetid://7229442422",
-			backgroundStyle = {
-				Transparency = 0,
-				Color3 = Color3.fromRGB(255, 255, 255),
-			},
+			backgroundStyle = tokens.Color.Extended.White.White_100,
 			tag = "size-2800",
 		}),
 		React.createElement(
@@ -39,18 +38,13 @@ local function AssetStory(props)
 				slice = {
 					center = Rect.new(11, 11, 12, 12),
 				},
-				backgroundStyle = {
-					Transparency = 1,
-					Color3 = Color3.fromRGB(255, 255, 255),
-				},
+				backgroundStyle = tokens.Color.Extended.White.White_0,
 				tag = "size-2800-800 col align-x-center align-y-center",
 			},
 			React.createElement(Text, {
 				Text = "Slice Center",
 				AutomaticSize = Enum.AutomaticSize.XY,
-				textStyle = {
-					Color3 = Color3.fromRGB(255, 255, 255),
-				},
+				textStyle = tokens.Color.Content.Emphasis,
 			})
 		)
 	)
@@ -58,6 +52,7 @@ end
 
 local function StoryGuiState(props)
 	local guiState, setGuiState = React.useBinding(ControlState.Initialize :: ControlState)
+	local tokens = useTokens()
 
 	local function onStateChanged(new: ControlState)
 		setGuiState(new)
@@ -74,10 +69,7 @@ local function StoryGuiState(props)
 			end
 			return "rbxthumb://type=Asset&id=23155833&w=420&h=420"
 		end),
-		backgroundStyle = {
-			Transparency = 0,
-			Color3 = Color3.fromRGB(120, 0, 180),
-		},
+		backgroundStyle = tokens.Color.Extended.Purple.Purple_500,
 		tag = "col align-x-center align-y-center size-2800",
 		onStateChanged = onStateChanged,
 	})

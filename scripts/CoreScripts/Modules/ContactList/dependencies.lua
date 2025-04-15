@@ -1,6 +1,6 @@
 local CorePackages = game:GetService("CorePackages")
-local LuaSocialLibrariesDeps = require(CorePackages.LuaSocialLibrariesDeps)
-local Lumberyak = require(CorePackages.Lumberyak)
+local LuaSocialLibrariesDeps = require(CorePackages.Packages.LuaSocialLibrariesDeps)
+local Lumberyak = require(CorePackages.Packages.Lumberyak)
 local HttpRequest = LuaSocialLibrariesDeps.httpRequest
 
 local logger = Lumberyak.Logger.new(nil, "ContactList")
@@ -47,7 +47,7 @@ return {
 	RoduxCall = LuaSocialLibrariesDeps.RoduxCall.config({
 		keyPath = "Call",
 	}),
-	RoduxFriends = LuaSocialLibrariesDeps.RoduxFriends.config({
+	RoduxFriends = require(CorePackages.Workspace.Packages.FriendsRodux).config({
 		keyPath = "Friends",
 	}),
 	RoduxPresence = LuaSocialLibrariesDeps.RoduxPresence.config({
@@ -60,15 +60,15 @@ return {
 	NetworkingPresence = LuaSocialLibrariesDeps.NetworkingPresence.config({
 		roduxNetworking = myRoduxNetworking,
 	}),
-	NetworkingFriends = LuaSocialLibrariesDeps.NetworkingFriends.config({
+	NetworkingFriends = require(CorePackages.Workspace.Packages.FriendsNetworking).config({
 		roduxNetworking = myRoduxNetworking,
 	}),
 	NetworkingUsers = LuaSocialLibrariesDeps.NetworkingUsers.config({
 		roduxNetworking = myRoduxNetworking,
 	}),
 	SocialLibraries = LuaSocialLibrariesDeps.SocialLibraries.config({}),
-	UIBlox = require(CorePackages.UIBlox),
-	enumerate = require(CorePackages.enumerate),
+	UIBlox = require(CorePackages.Packages.UIBlox),
+	enumerate = require(CorePackages.Packages.enumerate),
 	getStandardSizeAvatarHeadShotRbxthumb = require(CorePackages.Workspace.Packages.UserLib).Utils.getStandardSizeAvatarHeadShotRbxthumb,
 	teleportToRootPlace = require(script.Parent.teleportToRootPlace),
 }

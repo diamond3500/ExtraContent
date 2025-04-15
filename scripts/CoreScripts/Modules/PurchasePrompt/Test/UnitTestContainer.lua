@@ -7,12 +7,12 @@ local LocalizationService = game:GetService("LocalizationService")
 local CorePackages = game:GetService("CorePackages")
 
 local CorePackages = game:GetService("CorePackages")
-local PurchasePromptDeps = require(CorePackages.PurchasePromptDeps)
+local PurchasePromptDeps = require(CorePackages.Workspace.Packages.PurchasePromptDeps)
 local Roact = PurchasePromptDeps.Roact
 local Rodux = PurchasePromptDeps.Rodux
 local RoactRodux = PurchasePromptDeps.RoactRodux
-local IAPExperience = require(CorePackages.IAPExperience)
-local LocaleProvider =  IAPExperience.Locale.LocaleProvider
+local IAPExperience = require(CorePackages.Workspace.Packages.IAPExperience)
+local LocaleProvider = IAPExperience.Locale.LocaleProvider
 
 local LayoutValuesProvider = require(Root.Components.Connection.LayoutValuesProvider)
 local LocalizationContextProvider = require(Root.Components.Connection.LocalizationContextProvider)
@@ -33,14 +33,16 @@ function UnitTestContainer:init()
 end
 
 function UnitTestContainer:render()
-	assert(self.props[Roact.Children] ~= nil and #self.props[Roact.Children] > 0,
-		"UnitTestContainer: no children provided, nothing will be tested")
+	assert(
+		self.props[Roact.Children] ~= nil and #self.props[Roact.Children] > 0,
+		"UnitTestContainer: no children provided, nothing will be tested"
+	)
 
 	return Roact.createElement(RoactRodux.StoreProvider, {
 		store = self.store,
 	}, {
 		LocaleProvider = Roact.createElement(LocaleProvider, {
-			locale = LocalizationService.RobloxLocaleId
+			locale = LocalizationService.RobloxLocaleId,
 		}, {
 			StyleProvider = Roact.createElement(StyleProviderWithDefaultTheme, {
 				LocalizationContextProvider = Roact.createElement(LocalizationContextProvider, {
@@ -56,9 +58,9 @@ function UnitTestContainer:render()
 							end,
 						})
 					end,
-				})
-			})
-		})
+				}),
+			}),
+		}),
 	})
 end
 

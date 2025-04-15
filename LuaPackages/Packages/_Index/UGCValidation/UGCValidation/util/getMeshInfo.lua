@@ -9,28 +9,20 @@ local root = script.Parent.Parent
 local Types = require(root.util.Types)
 local getEditableMeshFromContext = require(root.util.getEditableMeshFromContext)
 
-local getEngineFeatureUGCValidateEditableMeshAndImage =
-	require(root.flags.getEngineFeatureUGCValidateEditableMeshAndImage)
-
 local function getMeshInfo(
 	meshPart: MeshPart,
 	validationContext: Types.ValidationContext
 ): (boolean, { string }?, Types.MeshInfo?)
 	local meshPartFullName = meshPart:GetFullName()
-	local theEditableMesh
-
-	if getEngineFeatureUGCValidateEditableMeshAndImage() then
-		local success
-		success, theEditableMesh = getEditableMeshFromContext(meshPart, "MeshId", validationContext)
-		if not success then
-			return false,
-				{
-					string.format(
-						"Mesh for '%s' failed to load. Make sure the mesh exists and try again.",
-						meshPartFullName
-					),
-				}
-		end
+	local success, theEditableMesh = getEditableMeshFromContext(meshPart, "MeshId", validationContext)
+	if not success then
+		return false,
+			{
+				string.format(
+					"Mesh for '%s' failed to load. Make sure the mesh exists and try again.",
+					meshPartFullName
+				),
+			}
 	end
 
 	local meshInfo = {

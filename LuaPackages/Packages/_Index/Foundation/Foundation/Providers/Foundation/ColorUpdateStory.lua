@@ -1,3 +1,0 @@
-return {
-	FoundationColors = false,
-}

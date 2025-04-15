@@ -5,21 +5,26 @@ local React = require(CorePackages.Packages.React)
 
 local ChromeService = require(Chrome.Service)
 local CommonIcon = require(Chrome.Integrations.CommonIcon)
-local Constants = require(Chrome.Unibar.Constants)
-local WindowSizeSignal = require(Chrome.Service.WindowSizeSignal)
+local Constants = require(Chrome.ChromeShared.Unibar.Constants)
+local WindowSizeSignal = require(Chrome.ChromeShared.Service.WindowSizeSignal)
 
-local UIBlox = require(CorePackages.UIBlox)
+local UIBlox = require(CorePackages.Packages.UIBlox)
 local Images = UIBlox.App.ImageSet.Images
 local IconButton = UIBlox.App.Button.IconButton
 
-local GetFFlagDebugEnableUnibarDummyIntegrations = require(Chrome.Flags.GetFFlagDebugEnableUnibarDummyIntegrations)
+local GetFFlagDebugEnableUnibarDummyIntegrations =
+	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagDebugEnableUnibarDummyIntegrations
+local GetFFlagChromeTrackWindowPosition = require(Chrome.Flags.GetFFlagChromeTrackWindowPosition)
+local GetFFlagChromeTrackWindowStatus = require(Chrome.Flags.GetFFlagChromeTrackWindowStatus)
 
 local sizeIcon = Images["icons/navigation/cycleUp"]
 local isLargeSize = false
 local windowSize = WindowSizeSignal.new(Constants.DEFAULT_WIDTH, Constants.DEFAULT_HEIGHT)
 local startingWindowPosition = UDim2.new(1, -95, 0, 165)
 
-ChromeService:updateWindowPosition("dummy_window", startingWindowPosition)
+if not GetFFlagChromeTrackWindowPosition() then
+	ChromeService:updateWindowPosition("dummy_window", startingWindowPosition)
+end
 
 local dummyWindowIntegration = ChromeService:register({
 	initialAvailability = if GetFFlagDebugEnableUnibarDummyIntegrations()
@@ -31,6 +36,7 @@ local dummyWindowIntegration = ChromeService:register({
 	cachePosition = true,
 	startingWindowPosition = startingWindowPosition,
 	windowSize = windowSize,
+	persistWindowState = GetFFlagChromeTrackWindowPosition() or GetFFlagChromeTrackWindowStatus() or nil,
 	components = {
 		Icon = function(props)
 			return CommonIcon("icons/menu/avatar_on")

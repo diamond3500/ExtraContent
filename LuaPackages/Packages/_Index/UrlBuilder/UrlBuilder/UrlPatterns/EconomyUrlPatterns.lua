@@ -29,6 +29,9 @@ return function(UrlBuilder)
 		},
 		vngPayments = {
 			getVngShopUrl = UrlBuilder.fromString("apis:vng-payments/v1/getVngShopUrl"),
+		},
+		info = {
+			developerProduct = UrlBuilder.fromString("www:developer-product/{universeId}/product/{productId}"),
 		}
 	}
 

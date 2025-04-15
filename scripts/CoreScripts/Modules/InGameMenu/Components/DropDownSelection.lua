@@ -3,7 +3,7 @@ local CorePackages = game:GetService("CorePackages")
 local ContextActionService = game:GetService("ContextActionService")
 local GuiService = game:GetService("GuiService")
 
-local InGameMenuDependencies = require(CorePackages.InGameMenuDependencies)
+local InGameMenuDependencies = require(CorePackages.Packages.InGameMenuDependencies)
 local Roact = InGameMenuDependencies.Roact
 local UIBlox = InGameMenuDependencies.UIBlox
 local t = InGameMenuDependencies.t
@@ -49,7 +49,7 @@ DropDownSelection.validateProps = t.intersection(
 		canOpen = t.optional(t.boolean),
 		canCaptureFocus = t.optional(t.boolean),
 		selectionParentName = t.optional(t.string),
-		ButtonRef = t.optional(t.table)
+		ButtonRef = t.optional(t.table),
 	}),
 	function(props)
 		if props.selectedIndex > #props.selections then
@@ -57,7 +57,8 @@ DropDownSelection.validateProps = t.intersection(
 		end
 
 		return true
-	end)
+	end
+)
 
 DropDownSelection.defaultProps = {
 	canOpen = true,
@@ -140,7 +141,7 @@ function DropDownSelection:renderDropDownList(style, localized)
 						Image = Assets.Images.SelectedCheck,
 						ImageColor3 = iconColor3,
 						ImageTransparency = iconTransparency,
-						Visible = self.props.selectedIndex == index
+						Visible = self.props.selectedIndex == index,
 					}),
 
 					TextLabel = Roact.createElement(ThemedTextLabel, {
@@ -159,7 +160,7 @@ function DropDownSelection:renderDropDownList(style, localized)
 
 		if index < #self.props.selections then
 			dropDownList["divider" .. index] = Roact.createElement(Divider, {
-				LayoutOrder = index * 2 + 1
+				LayoutOrder = index * 2 + 1,
 			})
 		end
 	end
@@ -167,41 +168,41 @@ function DropDownSelection:renderDropDownList(style, localized)
 end
 
 function DropDownSelection:renderFocusHandler()
-	return self.props.selectionParentName and Roact.createElement(FocusHandler, {
-		isFocused = self.props.canOpen and self.state.isOpen,
+	return self.props.selectionParentName
+			and Roact.createElement(FocusHandler, {
+				isFocused = self.props.canOpen and self.state.isOpen,
 
-		didFocus = function()
-			ContextActionService:BindCoreAction(SETTINGS_DROPDOWN_CLOSE_ACTION, function(actionName, inputState)
-				if inputState == Enum.UserInputState.End then
-					self:setState({ isOpen = false })
-					return Enum.ContextActionResult.Sink
-				end
-				return Enum.ContextActionResult.Pass
-			end, false, Enum.KeyCode.ButtonB)
+				didFocus = function()
+					ContextActionService:BindCoreAction(SETTINGS_DROPDOWN_CLOSE_ACTION, function(actionName, inputState)
+						if inputState == Enum.UserInputState.End then
+							self:setState({ isOpen = false })
+							return Enum.ContextActionResult.Sink
+						end
+						return Enum.ContextActionResult.Pass
+					end, false, Enum.KeyCode.ButtonB)
 
-			if self.props.canCaptureFocus then
-				GuiService:RemoveSelectionGroup(self.props.selectionParentName)
-				GuiService:AddSelectionParent(self.props.selectionParentName, self.rootRef.current)
-				GuiService.SelectedCoreObject = self.firstOptionRef.current
-			end
-		end,
+					if self.props.canCaptureFocus then
+						GuiService:RemoveSelectionGroup(self.props.selectionParentName)
+						GuiService:AddSelectionParent(self.props.selectionParentName, self.rootRef.current)
+						GuiService.SelectedCoreObject = self.firstOptionRef.current
+					end
+				end,
 
-		didBlur = function()
-			ContextActionService:UnbindCoreAction(SETTINGS_DROPDOWN_CLOSE_ACTION)
-			GuiService:RemoveSelectionGroup(self.props.selectionParentName)
+				didBlur = function()
+					ContextActionService:UnbindCoreAction(SETTINGS_DROPDOWN_CLOSE_ACTION)
+					GuiService:RemoveSelectionGroup(self.props.selectionParentName)
 
-			if self.props.canOpen and not self.state.isOpen and self.props.canCaptureFocus then
-				GuiService.SelectedCoreObject = self.openDropDownButtonRef.current
-			end
-		end,
-	}) or nil
+					if self.props.canOpen and not self.state.isOpen and self.props.canCaptureFocus then
+						GuiService.SelectedCoreObject = self.openDropDownButtonRef.current
+					end
+				end,
+			})
+		or nil
 end
 
 function DropDownSelection:render()
 	return withStyle(function(style)
-		return withLocalization(
-			self.props.localize and self.props.selections or {}
-		)(function(localized)
+		return withLocalization(self.props.localize and self.props.selections or {})(function(localized)
 			local dropDownOpenText = self.props.placeHolderText
 			if self.props.selectedIndex > 0 then
 				if self.props.localize then
@@ -270,7 +271,9 @@ function DropDownSelection:render()
 								Position = UDim2.new(0, 12, 0, 0),
 								Size = UDim2.new(1, self.props.truncate and -12 * 4 or -12, 1, 0),
 								TextTransparency = transparency,
-								TextTruncate = if self.props.truncate then Enum.TextTruncate.AtEnd else Enum.TextTruncate.None,
+								TextTruncate = if self.props.truncate
+									then Enum.TextTruncate.AtEnd
+									else Enum.TextTruncate.None,
 								TextXAlignment = Enum.TextXAlignment.Left,
 							}),
 						}
@@ -366,10 +369,8 @@ function DropDownSelection:didUpdate(prevProps)
 	end
 
 	-- e.g. close the dropdown when the input device changes
-	if self.state.isOpen
-		and prevProps.canCaptureFocus ~= self.props.canCaptureFocus
-	then
-		self:setState({isOpen = false})
+	if self.state.isOpen and prevProps.canCaptureFocus ~= self.props.canCaptureFocus then
+		self:setState({ isOpen = false })
 	end
 end
 

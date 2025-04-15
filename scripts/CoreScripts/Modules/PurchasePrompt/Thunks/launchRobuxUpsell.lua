@@ -27,9 +27,11 @@ local GetFStringVNGWebshopUrl =
 
 local retryAfterUpsell = require(script.Parent.retryAfterUpsell)
 
-local IAPExperience = require(CorePackages.Packages.IAPExperience)
+local IAPExperience = require(CorePackages.Workspace.Packages.IAPExperience)
 local PreparePaymentCheck = IAPExperience.PreparePaymentCheck
 local GetFFlagEnableConsolePreparePaymentCheck = IAPExperience.GetEnableConsolePreparePaymentCheck
+
+local FFlagQuickPayUpsell = game:DefineFastFlag("QuickPayUpsell", false)
 
 local requiredServices = {
 	Analytics,
@@ -107,11 +109,15 @@ local function launchRobuxUpsell()
 					store:dispatch(SetPromptState(PromptState.LeaveRobloxWarning))
 				end
 			else
-				local purchaseFlow = state.purchaseFlow
-				if purchaseFlow == PurchaseFlow.RobuxUpsellV2 or purchaseFlow == PurchaseFlow.LargeRobuxUpsell then
-					platformInterface.startRobuxUpsellWeb(state.nativeUpsell.productId)
+				if FFlagQuickPayUpsell then
+					platformInterface.startRobuxUpsellWebByFlow(state.purchaseFlow, state.nativeUpsell.productId)
 				else
-					platformInterface.startRobuxUpsellWeb()
+					local purchaseFlow = state.purchaseFlow
+					if purchaseFlow == PurchaseFlow.RobuxUpsellV2 or purchaseFlow == PurchaseFlow.LargeRobuxUpsell then
+						platformInterface.startRobuxUpsellWeb(state.nativeUpsell.productId)
+					else
+						platformInterface.startRobuxUpsellWeb()
+					end
 				end
 				store:dispatch(SetPromptState(PromptState.UpsellInProgress))
 			end

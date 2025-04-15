@@ -8,12 +8,13 @@
 
 local CoreGuiService = game:GetService('CoreGui')
 local PlayersService = game:GetService("Players")
+local CorePackages = game:GetService("CorePackages")
 local Settings = UserSettings()
 local GameSettings = Settings.GameSettings
 
 local StyleWidgets = require(CoreGuiService.RobloxGui.Modules.StyleWidgets)
 
-local RobloxTranslator = require(CoreGuiService.RobloxGui.Modules.RobloxTranslator)
+local RobloxTranslator = require(CorePackages.Workspace.Packages.RobloxTranslator)
 
 function LocalizedGetKey(key)
   local rtv = key

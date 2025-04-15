@@ -7,7 +7,7 @@ local View = require(Foundation.Components.View)
 local Text = require(Foundation.Components.Text)
 local Button = require(Foundation.Components.Button)
 local Popover = require(Foundation.Components.Popover)
-local ButtonSize = require(Foundation.Enums.ButtonSize)
+local InputSize = require(Foundation.Enums.InputSize)
 local PopoverSide = require(Foundation.Enums.PopoverSide)
 local PopoverAlign = require(Foundation.Enums.PopoverAlign)
 
@@ -36,7 +36,7 @@ return {
 								}),
 								Button = React.createElement(Button, {
 									text = "Just a button!",
-									size = ButtonSize.Medium,
+									size = InputSize.Medium,
 									onActivated = function()
 										print("Button activated")
 									end,
@@ -54,7 +54,7 @@ return {
 							}, {
 								Title = React.createElement(Text, {
 									Text = "Tooltip Title",
-									tag = "auto-xy text-title-medium",
+									tag = "auto-xy text-title-medium content-emphasis",
 								}),
 								Subtitle = React.createElement(Text, {
 									Text = "Here's the tootip's subtitle and content.",
@@ -89,7 +89,7 @@ return {
 								}),
 								Button = React.createElement(Button, {
 									text = "Click me to open!",
-									size = ButtonSize.Medium,
+									size = InputSize.Medium,
 									onActivated = function()
 										setOpen(true)
 									end,
@@ -110,7 +110,7 @@ return {
 							}, {
 								Title = React.createElement(Text, {
 									Text = "Click outside example",
-									tag = "auto-xy text-title-medium",
+									tag = "auto-xy text-title-medium content-emphasis",
 								}),
 								Subtitle = React.createElement(Text, {
 									Text = "Click anywhere outside to close this",

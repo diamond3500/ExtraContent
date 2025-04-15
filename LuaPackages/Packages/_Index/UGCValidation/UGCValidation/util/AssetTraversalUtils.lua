@@ -17,9 +17,6 @@ local getExpectedPartSize = require(root.util.getExpectedPartSize)
 local ConstantsInterface = require(root.ConstantsInterface)
 local getPartNamesInHierarchyOrder = require(root.util.getPartNamesInHierarchyOrder)
 
-local getEngineFeatureUGCValidateEditableMeshAndImage =
-	require(root.flags.getEngineFeatureUGCValidateEditableMeshAndImage)
-
 local AssetTraversalUtils = {}
 
 function AssetTraversalUtils.calculateBounds(
@@ -30,7 +27,7 @@ function AssetTraversalUtils.calculateBounds(
 	validationContext: Types.ValidationContext?
 )
 	-- this relies on validateMeshIsAtOrigin() in validateDescendantMeshMetrics.lua to catch meshes not built at the origin
-	if getEngineFeatureUGCValidateEditableMeshAndImage() and validationContext then
+	if validationContext then
 		local partSize = getExpectedPartSize(part, validationContext)
 		minMaxBounds.minMeshCorner, minMaxBounds.maxMeshCorner = calculateMinMax(
 			minMaxBounds.minMeshCorner,

@@ -5,9 +5,9 @@ local GuiService = game:GetService("GuiService")
 local CoreGui = game:GetService("CoreGui")
 local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 
-local Roact = require(CorePackages.Roact)
-local RoactRodux = require(CorePackages.RoactRodux)
-local UIBlox = require(CorePackages.UIBlox)
+local Roact = require(CorePackages.Packages.Roact)
+local RoactRodux = require(CorePackages.Packages.RoactRodux)
+local UIBlox = require(CorePackages.Packages.UIBlox)
 local t = require(CorePackages.Packages.t)
 
 local withStyle = UIBlox.Core.Style.withStyle
@@ -70,7 +70,9 @@ function ReportSentDialog:init()
 	self.onBlockCheckBoxActivated = function(selected)
 		self:setState({
 			isBlockCheckBoxSelected = selected,
-			isMuteCheckBoxSelected = if selected and self:isVoiceReport() then true else self.state.isMuteCheckBoxSelected,
+			isMuteCheckBoxSelected = if selected and self:isVoiceReport()
+				then true
+				else self.state.isMuteCheckBoxSelected,
 		})
 	end
 
@@ -109,7 +111,10 @@ function ReportSentDialog:init()
 		if self:isReportingPlayer() then
 			local toastMessage = self.getToastMessage(localized)
 			if self:hasMuteChanged() then
-				VoiceChatServiceManager:ToggleMutePlayer(self.props.targetPlayer.UserId, VoiceConstants.VOICE_CONTEXT_TYPE.REPORT_MENU)
+				VoiceChatServiceManager:ToggleMutePlayer(
+					self.props.targetPlayer.UserId,
+					VoiceConstants.VOICE_CONTEXT_TYPE.REPORT_MENU
+				)
 			end
 
 			local isBlockingPlayer = self.state.isBlockCheckBoxSelected
@@ -165,7 +170,7 @@ function ReportSentDialog:renderFocusHandler()
 		didBlur = function()
 			ContextActionService:UnbindCoreAction(SINK_ACTION)
 			GuiService:RemoveSelectionGroup(SELECTION_GROUP_NAME)
-		end
+		end,
 	})
 end
 
@@ -193,17 +198,19 @@ function ReportSentDialog:renderBlockFrame()
 				LayoutOrder = 1,
 				Size = UDim2.new(1, 0, 0, 1),
 			}),
-			MutePlayerItem = if self:isVoiceReport() then Roact.createElement(BlockPlayerItem, {
-				layoutOrder = 2,
-				size = UDim2.new(1, 0, 0, 72),
-				text = localized.mutePlayerText,
-				description = localized.mutePlayerDescription,
-				icon = Assets.Images.MuteIcon.Image,
-				iconSize = Assets.Images.MuteIcon.Size,
-				isDisabled = self.state.isBlockCheckBoxSelected,
-				isCheckBoxSelected = self.state.isMuteCheckBoxSelected,
-				onCheckBoxActivated = self.onMuteCheckBoxActivated,
-			}) else nil,
+			MutePlayerItem = if self:isVoiceReport()
+				then Roact.createElement(BlockPlayerItem, {
+					layoutOrder = 2,
+					size = UDim2.new(1, 0, 0, 72),
+					text = localized.mutePlayerText,
+					description = localized.mutePlayerDescription,
+					icon = Assets.Images.MuteIcon.Image,
+					iconSize = Assets.Images.MuteIcon.Size,
+					isDisabled = self.state.isBlockCheckBoxSelected,
+					isCheckBoxSelected = self.state.isMuteCheckBoxSelected,
+					onCheckBoxActivated = self.onMuteCheckBoxActivated,
+				})
+				else nil,
 			BlockPlayerItem = Roact.createElement(BlockPlayerItem, {
 				layoutOrder = 3,
 				size = UDim2.new(1, 0, 0, 72),
@@ -219,7 +226,7 @@ function ReportSentDialog:renderBlockFrame()
 end
 
 function ReportSentDialog:renderContents()
-	return withStyle(function (stylePalette)
+	return withStyle(function(stylePalette)
 		return withLocalization({
 			bodyText = "CoreScripts.InGameMenu.Report.ThanksForReportDescription",
 			otherStepsText = {
@@ -287,7 +294,9 @@ function ReportSentDialog:render()
 	end
 	return withLocalization({
 		titleText = "CoreScripts.InGameMenu.Report.ThanksForReport",
-		dismissText = if self:doesRequireConfirmation() then "CoreScripts.InGameMenu.Report.Confirm" else "CoreScripts.InGameMenu.Report.Done",
+		dismissText = if self:doesRequireConfirmation()
+			then "CoreScripts.InGameMenu.Report.Confirm"
+			else "CoreScripts.InGameMenu.Report.Done",
 		toastDefaultTitle = "CoreScripts.InGameMenu.Report.Confirmation.ThanksForReport",
 		toastDefaultDescription = "CoreScripts.InGameMenu.Report.Confirmation.ThanksForReportDescription",
 		toastMutedTitle = "CoreScripts.InGameMenu.Report.Confirmation.Muted",
@@ -315,7 +324,7 @@ function ReportSentDialog:render()
 				actionButtons = Roact.createElement(Button, {
 					buttonType = ButtonType.PrimarySystem,
 					size = UDim2.new(1, 0, 1, 0),
-					onActivated = function ()
+					onActivated = function()
 						return self.onConfirm(localized)
 					end,
 					text = localized.dismissText,
@@ -323,7 +332,7 @@ function ReportSentDialog:render()
 				}),
 				onDismiss = self.onCancel,
 			}),
-			FocusHandler = self:renderFocusHandler()
+			FocusHandler = self:renderFocusHandler(),
 		})
 	end)
 end

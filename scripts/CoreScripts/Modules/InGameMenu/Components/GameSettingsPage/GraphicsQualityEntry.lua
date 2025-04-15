@@ -6,7 +6,7 @@
 
 local CorePackages = game:GetService("CorePackages")
 
-local InGameMenuDependencies = require(CorePackages.InGameMenuDependencies)
+local InGameMenuDependencies = require(CorePackages.Packages.InGameMenuDependencies)
 local Roact = InGameMenuDependencies.Roact
 local t = InGameMenuDependencies.t
 
@@ -28,10 +28,7 @@ local SAVED_QUALITY_LEVELS = #Enum.SavedQualitySetting:GetEnumItems() - 1
 local GRAPHICS_QUALITY_LEVELS = 10
 
 local function mapInteger(x, xMin, xMax, yMin, yMax)
-	return math.clamp(
-		math.floor(yMin + (x - xMin)*(yMax - yMin)/(xMax - xMin)),
-		yMin,
-		yMax)
+	return math.clamp(math.floor(yMin + (x - xMin) * (yMax - yMin) / (xMax - xMin)), yMin, yMax)
 end
 
 local GraphicsQualityEntry = Roact.PureComponent:extend("GraphicsQualityEntry")
@@ -73,10 +70,13 @@ end
 function GraphicsQualityEntry:setManualQualityLevel(manualQualityLevel)
 	local renderQualityLevel = mapInteger(
 		manualQualityLevel,
-		1, SAVED_QUALITY_LEVELS,
+		1,
+		SAVED_QUALITY_LEVELS,
 		-- Quality levels are zero-based; GetMaxQualityLevel reports 22, even
 		-- though 21 is the maximum.
-		1, RenderSettings:GetMaxQualityLevel() - 1)
+		1,
+		RenderSettings:GetMaxQualityLevel() - 1
+	)
 	UserGameSettings.SavedQualityLevel = manualQualityLevel
 	RenderSettings.QualityLevel = renderQualityLevel
 	return nil
@@ -122,7 +122,7 @@ function GraphicsQualityEntry:render()
 		QualityListener = Roact.createElement(ExternalEventConnection, {
 			event = SavedQualityLevelChanged,
 			callback = self.onQualityChanged,
-		})
+		}),
 	})
 end
 

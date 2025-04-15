@@ -1,10 +1,6 @@
 --!strict
 local root = script.Parent.Parent
 
-local getFFlagUGCValidateFixAccessories = require(root.flags.getFFlagUGCValidateFixAccessories)
-local getEngineFeatureUGCValidateEditableMeshAndImage =
-	require(root.flags.getEngineFeatureUGCValidateEditableMeshAndImage)
-
 local Promise = require(root.Parent.Promise)
 
 local ConstantsInterface = require(root.ConstantsInterface)
@@ -32,7 +28,7 @@ local SORTED_ASSET_TYPES = {
 	Enum.AssetType.EyelashAccessory,
 }
 
-type AvatarValidationPiece = {
+export type AvatarValidationPiece = {
 	assetType: Enum.AssetType,
 	instance: Instance?,
 	settings: BundlesMetadata.AssetTypeSettings,
@@ -54,36 +50,6 @@ export type AvatarValidationResponse = {
 	errors: { AvatarValidationError },
 	pieces: { AvatarValidationPiece },
 }
-
--- remove when FFlagUGCValidateFixAccessories is remvoed true
--- Delete stuff that Roblox makes automatically that is never valid for publish
-local function sanitizeAvatarForValidation(avatar: Instance)
-	avatar = avatar:Clone()
-
-	for _, thing in avatar:GetDescendants() do
-		if thing:IsA("Motor6D") or thing.Name == "OriginalSize" or thing.Name == "OriginalPosition" then
-			thing:Destroy()
-			continue
-		end
-
-		if thing:IsA("Weld") and thing.Name == "AccessoryWeld" then
-			thing:Destroy()
-			continue
-		end
-
-		if
-			thing:IsA("MeshPart")
-			and (not thing.Parent:IsA("Accessory"))
-			and thing.TextureID == ""
-			and (not thing:FindFirstChildWhichIsA("SurfaceAppearance"))
-		then
-			local surfaceAppearance = Instance.new("SurfaceAppearance")
-			surfaceAppearance.Parent = thing
-		end
-	end
-
-	return avatar
-end
 
 -- Promise is not typed, so we cannot use it as a return value
 local function validateBundleReadyForUpload(
@@ -115,9 +81,7 @@ local function validateBundleReadyForUpload(
 		return Promise.resolve(response)
 	end
 
-	avatar = if getFFlagUGCValidateFixAccessories()
-		then fixUpPreValidation(avatar)
-		else sanitizeAvatarForValidation(avatar)
+	avatar = fixUpPreValidation(avatar)
 
 	-- Get all the body parts to be validated in the format that the validation code expects.
 	local ugcBodyPartFolders = createUGCBodyPartFolders(
@@ -210,25 +174,21 @@ local function validateBundleReadyForUpload(
 			requireAllFolders = false,
 		} :: Types.ValidationContext
 
-		if getEngineFeatureUGCValidateEditableMeshAndImage() then
-			local createSuccess, result = createEditableInstancesForContext(instances, allowEditableInstances)
-			-- assuming isServer is false
-			if not createSuccess then
-				problems = result
-				success = false
-			else
-				validationContext.editableMeshes = result.editableMeshes :: Types.EditableMeshes
-				validationContext.editableImages = result.editableImages :: Types.EditableImages
-
-				success, problems = validateInternal(validationContext)
-
-				destroyEditableInstances(
-					validationContext.editableMeshes :: Types.EditableMeshes,
-					validationContext.editableImages :: Types.EditableImages
-				)
-			end
+		local createSuccess, result = createEditableInstancesForContext(instances, allowEditableInstances)
+		-- assuming isServer is false
+		if not createSuccess then
+			problems = result
+			success = false
 		else
+			validationContext.editableMeshes = result.editableMeshes :: Types.EditableMeshes
+			validationContext.editableImages = result.editableImages :: Types.EditableImages
+
 			success, problems = validateInternal(validationContext)
+
+			destroyEditableInstances(
+				validationContext.editableMeshes :: Types.EditableMeshes,
+				validationContext.editableImages :: Types.EditableImages
+			)
 		end
 
 		response = table.clone(response)
@@ -283,31 +243,27 @@ local function validateBundleReadyForUpload(
 					requireAllFolders = false,
 				} :: Types.ValidationContext
 
-				if getEngineFeatureUGCValidateEditableMeshAndImage() then
-					local instances = {}
-					for _, instancesAndType in fullBodyData do
-						for _, instance in instancesAndType.allSelectedInstances do
-							table.insert(instances, instance)
-						end
+				local instances = {}
+				for _, instancesAndType in fullBodyData do
+					for _, instance in instancesAndType.allSelectedInstances do
+						table.insert(instances, instance)
 					end
+				end
 
-					local createSuccess, result = createEditableInstancesForContext(instances, allowEditableInstances)
-					if not createSuccess then
-						failures = result
-						success = false
-					else
-						validationContext.editableMeshes = result.editableMeshes :: Types.EditableMeshes
-						validationContext.editableImages = result.editableImages :: Types.EditableImages
-
-						success, failures = validateFullBody(validationContext)
-
-						destroyEditableInstances(
-							validationContext.editableMeshes :: Types.EditableMeshes,
-							validationContext.editableImages :: Types.EditableImages
-						)
-					end
+				local createSuccess, result = createEditableInstancesForContext(instances, allowEditableInstances)
+				if not createSuccess then
+					failures = result
+					success = false
 				else
+					validationContext.editableMeshes = result.editableMeshes :: Types.EditableMeshes
+					validationContext.editableImages = result.editableImages :: Types.EditableImages
+
 					success, failures = validateFullBody(validationContext)
+
+					destroyEditableInstances(
+						validationContext.editableMeshes :: Types.EditableMeshes,
+						validationContext.editableImages :: Types.EditableImages
+					)
 				end
 
 				if not success then

@@ -5,12 +5,13 @@ local Players = game:GetService("Players")
 
 local LocalPlayer = Players.LocalPlayer
 
-local Roact = require(CorePackages.Roact)
-local RoactRodux = require(CorePackages.RoactRodux)
+local Roact = require(CorePackages.Packages.Roact)
+local RoactRodux = require(CorePackages.Packages.RoactRodux)
 local AppFonts = require(CorePackages.Workspace.Packages.Style).AppFonts
 local t = require(CorePackages.Packages.t)
-local UIBlox = require(CorePackages.UIBlox)
-local InExperienceCapabilities = require(CorePackages.Workspace.Packages.InExperienceCapabilities).InExperienceCapabilities
+local UIBlox = require(CorePackages.Packages.UIBlox)
+local InExperienceCapabilities =
+	require(CorePackages.Workspace.Packages.InExperienceCapabilities).InExperienceCapabilities
 
 local SharedFlags = CorePackages.Workspace.Packages.SharedFlags
 local withStyle = UIBlox.Style.withStyle
@@ -80,7 +81,7 @@ PlayerEntry.validateProps = t.strictInterface({
 })
 
 function PlayerEntry:init()
-	self.state  = {
+	self.state = {
 		isHovered = false,
 		isPressed = false,
 	}

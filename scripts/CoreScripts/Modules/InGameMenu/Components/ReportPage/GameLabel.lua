@@ -1,6 +1,6 @@
 local CorePackages = game:GetService("CorePackages")
 
-local InGameMenuDependencies = require(CorePackages.InGameMenuDependencies)
+local InGameMenuDependencies = require(CorePackages.Packages.InGameMenuDependencies)
 local Roact = InGameMenuDependencies.Roact
 local UIBlox = InGameMenuDependencies.UIBlox
 local t = InGameMenuDependencies.t
@@ -47,8 +47,8 @@ function GameLabel:renderButtons()
 			HorizontalAlignment = Enum.HorizontalAlignment.Right,
 			SortOrder = Enum.SortOrder.LayoutOrder,
 			VerticalAlignment = Enum.VerticalAlignment.Center,
-			Padding = UDim.new(0, BUTTONS_PADDING)
-		})
+			Padding = UDim.new(0, BUTTONS_PADDING),
+		}),
 	})
 
 	return buttons
@@ -58,7 +58,7 @@ function GameLabel:renderWithSelectionCursor(getSelectionCursor)
 	local gameId = self.props.gameId
 	local gameThumbnail = Assets.Images.PlaceholderGameIcon
 	if self.props.gameId > 0 then
-		gameThumbnail = "rbxthumb://type=GameIcon&id=" ..gameId.. "&w=150&h=150"
+		gameThumbnail = "rbxthumb://type=GameIcon&id=" .. gameId .. "&w=150&h=150"
 	end
 
 	return withStyle(function(style)
@@ -98,7 +98,7 @@ function GameLabel:renderWithSelectionCursor(getSelectionCursor)
 				BackgroundTransparency = 1,
 				Position = UDim2.new(1, -BUTTONS_RIGHT_PADDING, 0, 0),
 				Size = UDim2.new(0, 0, 1, 0),
-			}, self:renderButtons())
+			}, self:renderButtons()),
 		})
 	end)
 end
@@ -110,7 +110,10 @@ function GameLabel:render()
 end
 
 return Roact.forwardRef(function(props, ref)
-	return Roact.createElement(GameLabel, Cryo.Dictionary.join(props, {
-		buttonRef = ref
-	}))
+	return Roact.createElement(
+		GameLabel,
+		Cryo.Dictionary.join(props, {
+			buttonRef = ref,
+		})
+	)
 end)

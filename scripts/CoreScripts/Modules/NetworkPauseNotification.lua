@@ -7,13 +7,10 @@ local PULSE_ORIGINAL_SIZE = UDim2.new(0.9, 0, 0.9, 0)
 local PULSE_ORIGINAL_TRANSPARENCY = 0
 
 local TweenService = game:GetService("TweenService")
-local CoreGuiService = game:GetService("CoreGui")
-local RobloxGui = CoreGuiService:WaitForChild("RobloxGui")
-local CoreGuiModules = RobloxGui:WaitForChild("Modules")
 local CorePackages = game:GetService("CorePackages")
 local AppFonts = require(CorePackages.Workspace.Packages.Style).AppFonts
 
-local RobloxTranslator = require(CoreGuiModules.RobloxTranslator)
+local RobloxTranslator = require(CorePackages.Workspace.Packages.RobloxTranslator)
 local Create = require(CorePackages.Workspace.Packages.AppCommonLib).Create
 
 -- animations presets

@@ -6,9 +6,7 @@ local Constants = require(UIManagerRoot.Constants)
 local SpatialUIType = Constants.SpatialUIType
 local LuauPolyfill = require(CorePackages.Packages.LuauPolyfill)
 local Object = LuauPolyfill.Object
-
-local DEFAULT_VR_PANEL_SIZE_X = 10
-local DEFAULT_VR_PANEL_SIZE_Y = 10
+local VRService = game:GetService("VRService")
 
 local defaultPanelCompatProps: Constants.PanelCompatProps = {
 	spatialPanelProps = nil,
@@ -25,11 +23,10 @@ local defaultScreenGuiProps: Constants.ScreenGuiProps = {
 
 local defaultSpatialPanelProps: Constants.SpatialUIProps = {
 	name = "",
-	partSize = Vector2.new(DEFAULT_VR_PANEL_SIZE_X, DEFAULT_VR_PANEL_SIZE_Y),
-	virtualScreenSize = Vector2.new(DEFAULT_VR_PANEL_SIZE_X, DEFAULT_VR_PANEL_SIZE_Y),
+	partSize = Constants.DEFAULT_VR_PANEL_SIZE,
+	virtualScreenSize = Constants.DEFAULT_VR_PANEL_SIZE * Constants.VR_PANEL_RESOLUTION_MULTIPLIER,
 	cframe = CFrame.new(0, 0, 0),
 	alwaysOnTop = true,
-	parent = workspace,
 	hidden = false,
 	curvature = 1, -- On by default to obtain anti-aliasing, disable with 0
 	transparency = 1,
@@ -37,20 +34,20 @@ local defaultSpatialPanelProps: Constants.SpatialUIProps = {
 
 local function createPanelPart(spatialPanelProps: Constants.SpatialUIProps)
 	local part = Instance.new("Part")
-	part.Parent = if spatialPanelProps.parent then spatialPanelProps.parent else workspace
+	part.Parent = workspace.CurrentCamera
 	part.Name = spatialPanelProps.name .. "_Part"
-	part.CFrame = spatialPanelProps.cframe
-	part.Size = Vector3.new(spatialPanelProps.partSize.X, spatialPanelProps.partSize.Y, 0.05)
-	part.Transparency = spatialPanelProps.transparency
-	part.Color = Color3.new(1, 1, 1)
+	part.CFrame = spatialPanelProps.cframe :: CFrame
+	part.CastShadow = false
+	part.Size = Vector3.new(spatialPanelProps.partSize.X, spatialPanelProps.partSize.Y, 0.002)
+	part.Transparency = if spatialPanelProps.transparency then spatialPanelProps.transparency else 1
+	part.Color = Color3.new(0, 0, 0)
 	part.CanCollide = false
 	part.CanTouch = false
 	part.Anchored = true
 	return part
 end
 
--- Util function for creating SpatialUI compatible panels to be used by UIManager
-return function(props: Constants.PanelCompatProps): Constants.CompatPanel?
+local function createPanel(props: Constants.PanelCompatProps): Constants.CompatPanel?
 	local props: Constants.PanelCompatProps = Object.assign({}, defaultPanelCompatProps, props)
 	if props.type == SpatialUIType.SpatialUIPartOnly then
 		local spatialPanelProps = Object.assign({}, defaultSpatialPanelProps, props.spatialPanelProps)
@@ -63,7 +60,7 @@ return function(props: Constants.PanelCompatProps): Constants.CompatPanel?
 		local spatialPanelProps = Object.assign({}, defaultSpatialPanelProps, props.spatialPanelProps)
 		local panelPart = createPanelPart(spatialPanelProps)
 		local surfaceGui = Instance.new("SurfaceGui", CoreGui)
-		surfaceGui.Name = spatialPanelProps.Name .. "_SurfaceGui"
+		surfaceGui.Name = spatialPanelProps.name .. "_SurfaceGui"
 		surfaceGui.Enabled = not spatialPanelProps.hidden
 		surfaceGui.CanvasSize = spatialPanelProps.virtualScreenSize
 		surfaceGui.AlwaysOnTop = spatialPanelProps.alwaysOnTop
@@ -97,5 +94,37 @@ return function(props: Constants.PanelCompatProps): Constants.CompatPanel?
 	else
 		print("Invalid panel type: " .. tostring(props.type))
 		return nil
+	end
+end
+
+-- Util function for creating SpatialUI compatible panels to be used by UIManager
+
+return function(props: Constants.PanelCreationProps): Constants.PanelStruct?
+	if VRService.VREnabled then
+		local compatPanel: Constants.CompatPanel? = createPanel(Constants.COMPAT_PANEL_PROPS_MAP[props.panelType])
+		if compatPanel == nil then
+			return nil
+		end
+		return {
+			panelObject = compatPanel.panelObject,
+			uiType = compatPanel.type,
+			panelType = props.panelType,
+			panelPositionProps = Constants.SPATIAL_PANEL_POSITION_PROPS_MAP[props.panelType],
+			headScale = 1,
+		} :: Constants.PanelStruct
+	else
+		local compatPanel: Constants.CompatPanel? = createPanel({
+			type = SpatialUIType.ScreenUI,
+			screenGuiProps = props.screenGuiProps,
+		})
+		if compatPanel == nil then
+			return nil
+		end
+		return {
+			panelObject = compatPanel.panelObject,
+			uiType = compatPanel.type,
+			panelType = props.panelType,
+			panelPositionProps = nil,
+		} :: Constants.PanelStruct
 	end
 end

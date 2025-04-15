@@ -3,7 +3,7 @@ local CoreGui = game:GetService("CoreGui")
 local ContextActionService = game:GetService("ContextActionService")
 local GuiService = game:GetService("GuiService")
 
-local InGameMenuDependencies = require(CorePackages.InGameMenuDependencies)
+local InGameMenuDependencies = require(CorePackages.Packages.InGameMenuDependencies)
 local Roact = InGameMenuDependencies.Roact
 local UIBlox = InGameMenuDependencies.UIBlox
 local t = InGameMenuDependencies.t
@@ -16,7 +16,8 @@ local FocusHandler = require(script.Parent.Connection.FocusHandler)
 local RootedConnection = require(script.Parent.Connection.RootedConnection)
 
 local Flags = InGameMenu.Flags
-local GetFFlagIGMRefactorPlayerContextualMenuGamepadSupport = require(Flags.GetFFlagIGMRefactorPlayerContextualMenuGamepadSupport)
+local GetFFlagIGMRefactorPlayerContextualMenuGamepadSupport =
+	require(Flags.GetFFlagIGMRefactorPlayerContextualMenuGamepadSupport)
 local GetFFlagIGMGamepadSelectionHistory = require(Flags.GetFFlagIGMGamepadSelectionHistory)
 
 local PLAYER_CONTEXTUAL_MENU_CLOSE_ACTION = "player_contextual_menu_close_action"
@@ -89,10 +90,9 @@ function PlayerContextualMenu:renderContextualMenuFocusHandler(isRooted, childre
 					return Enum.ContextActionResult.Sink
 				end
 				return Enum.ContextActionResult.Pass
-			end, false, Enum.KeyCode.ButtonB)
-
-			-- RemoveSelectionGroup is deprecated
-			;(GuiService :: any):RemoveSelectionGroup(SELECTION_PARENT_NAME)
+			end, false, Enum.KeyCode.ButtonB)			-- RemoveSelectionGroup is deprecated
+;
+			(GuiService :: any):RemoveSelectionGroup(SELECTION_PARENT_NAME)
 			if GetFFlagIGMRefactorPlayerContextualMenuGamepadSupport() then
 				-- AddSelectionParent is deprecated
 				(GuiService :: any):AddSelectionParent(SELECTION_PARENT_NAME, self.containerRef:getValue())
@@ -129,39 +129,45 @@ function PlayerContextualMenu:render()
 			DisplayOrder = 2,
 			ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
 		}, {
-			FocusHandler = not GetFFlagIGMRefactorPlayerContextualMenuGamepadSupport() and self:renderContextualMenuFocusHandler() or nil,
-			MoreActionsMenu = not GetFFlagIGMRefactorPlayerContextualMenuGamepadSupport() and Roact.createElement("Frame", {
-				[Roact.Event.AncestryChanged] = self.onAncestryChanged,
-				Size = UDim2.fromScale(1, 1),
-				BackgroundTransparency = 1,
-				[Roact.Ref] = self.setContainerRef,
-			}, {
-				BaseMenu = Roact.createElement(BaseMenu, {
-					buttonProps = self.props.moreActions,
-					setFirstItemRef = self.setFirstOptionRef,
-					width = UDim.new(0, self.props.actionWidth),
-					position = UDim2.fromOffset(self.props.xOffset, self.props.yOffset),
-				}),
-			}) or nil,
-
-			RootedConnection = GetFFlagIGMRefactorPlayerContextualMenuGamepadSupport() and Roact.createElement(RootedConnection, {
-				render = function(isRooted)
-					return self:renderContextualMenuFocusHandler(isRooted, {
-						MoreActionsMenu = Roact.createElement("Frame", {
-							Size = UDim2.fromScale(1, 1),
-							BackgroundTransparency = 1,
-							[Roact.Ref] = self.containerRef,
-						}, {
-							BaseMenu = Roact.createElement(BaseMenu, {
-								buttonProps = self.props.moreActions,
-								setFirstItemRef = self.firstOptionRef,
-								width = UDim.new(0, self.props.actionWidth),
-								position = UDim2.fromOffset(self.props.xOffset, self.props.yOffset),
-							}),
+			FocusHandler = not GetFFlagIGMRefactorPlayerContextualMenuGamepadSupport()
+					and self:renderContextualMenuFocusHandler()
+				or nil,
+			MoreActionsMenu = not GetFFlagIGMRefactorPlayerContextualMenuGamepadSupport()
+					and Roact.createElement("Frame", {
+						[Roact.Event.AncestryChanged] = self.onAncestryChanged,
+						Size = UDim2.fromScale(1, 1),
+						BackgroundTransparency = 1,
+						[Roact.Ref] = self.setContainerRef,
+					}, {
+						BaseMenu = Roact.createElement(BaseMenu, {
+							buttonProps = self.props.moreActions,
+							setFirstItemRef = self.setFirstOptionRef,
+							width = UDim.new(0, self.props.actionWidth),
+							position = UDim2.fromOffset(self.props.xOffset, self.props.yOffset),
 						}),
 					})
-				end,
-			}) or nil,
+				or nil,
+
+			RootedConnection = GetFFlagIGMRefactorPlayerContextualMenuGamepadSupport()
+					and Roact.createElement(RootedConnection, {
+						render = function(isRooted)
+							return self:renderContextualMenuFocusHandler(isRooted, {
+								MoreActionsMenu = Roact.createElement("Frame", {
+									Size = UDim2.fromScale(1, 1),
+									BackgroundTransparency = 1,
+									[Roact.Ref] = self.containerRef,
+								}, {
+									BaseMenu = Roact.createElement(BaseMenu, {
+										buttonProps = self.props.moreActions,
+										setFirstItemRef = self.firstOptionRef,
+										width = UDim.new(0, self.props.actionWidth),
+										position = UDim2.fromOffset(self.props.xOffset, self.props.yOffset),
+									}),
+								}),
+							})
+						end,
+					})
+				or nil,
 		}),
 	})
 end

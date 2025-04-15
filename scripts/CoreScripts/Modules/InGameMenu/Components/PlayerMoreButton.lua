@@ -1,6 +1,6 @@
 local CorePackages = game:GetService("CorePackages")
 
-local InGameMenuDependencies = require(CorePackages.InGameMenuDependencies)
+local InGameMenuDependencies = require(CorePackages.Packages.InGameMenuDependencies)
 local Roact = InGameMenuDependencies.Roact
 local UIBlox = InGameMenuDependencies.UIBlox
 local t = InGameMenuDependencies.t
@@ -24,7 +24,7 @@ MoreButton.validateProps = t.strictInterface({
 
 function MoreButton:init()
 	if FFlagLuaMenuPerfImprovements then
-		self.onActivated = function ()
+		self.onActivated = function()
 			self.props.onActivated(self.props.userId)
 		end
 	end
@@ -43,7 +43,7 @@ function MoreButton:render()
 			ImageColor3 = style.Theme.IconEmphasis.Color,
 			LayoutOrder = self.props.LayoutOrder,
 
-			[Roact.Event.Activated] = activated
+			[Roact.Event.Activated] = activated,
 		})
 	end)
 end

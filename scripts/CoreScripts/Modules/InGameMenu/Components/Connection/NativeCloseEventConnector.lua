@@ -2,7 +2,7 @@ local GuiService = game:GetService("GuiService")
 local RbxAnalyticsService = game:GetService("RbxAnalyticsService")
 local CorePackages = game:GetService("CorePackages")
 
-local InGameMenuDependencies = require(CorePackages.InGameMenuDependencies)
+local InGameMenuDependencies = require(CorePackages.Packages.InGameMenuDependencies)
 local Roact = InGameMenuDependencies.Roact
 local RoactRodux = InGameMenuDependencies.RoactRodux
 local t = InGameMenuDependencies.t
@@ -50,13 +50,10 @@ NativeCloseEventConnector = InGameMenuPolicy.connect(function(appPolicy, props)
 	}
 end)(NativeCloseEventConnector)
 
-return RoactRodux.UNSTABLE_connect2(
-	nil,
-	function(dispatch)
-		return {
-			openEducationalPopup = function(guiService, appStorageService, maxCount)
-				return dispatch(OpenEducationalPopup(guiService, appStorageService, maxCount))
-			end,
-		}
-	end
-)(NativeCloseEventConnector)
+return RoactRodux.UNSTABLE_connect2(nil, function(dispatch)
+	return {
+		openEducationalPopup = function(guiService, appStorageService, maxCount)
+			return dispatch(OpenEducationalPopup(guiService, appStorageService, maxCount))
+		end,
+	}
+end)(NativeCloseEventConnector)

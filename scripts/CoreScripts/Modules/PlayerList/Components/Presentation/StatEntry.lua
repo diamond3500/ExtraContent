@@ -2,9 +2,9 @@
 local CorePackages = game:GetService("CorePackages")
 local CoreGui = game:GetService("CoreGui")
 
-local Roact = require(CorePackages.Roact)
+local Roact = require(CorePackages.Packages.Roact)
 local t = require(CorePackages.Packages.t)
-local UIBlox = require(CorePackages.UIBlox)
+local UIBlox = require(CorePackages.Packages.UIBlox)
 
 local withStyle = UIBlox.Style.withStyle
 
@@ -167,7 +167,7 @@ function StatEntry:render()
 					BackgroundTransparency = self.props.overlayStyle.Transparency,
 					BackgroundColor3 = self.props.overlayStyle.Color,
 					BorderSizePixel = 0,
-				}, statChildren)
+				}, statChildren),
 			})
 		end)
 	end)

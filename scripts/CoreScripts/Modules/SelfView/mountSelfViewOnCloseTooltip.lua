@@ -1,11 +1,11 @@
 local CorePackages = game:GetService("CorePackages")
-local Roact = require(CorePackages.Roact)
+local Roact = require(CorePackages.Packages.Roact)
 local CoreGui = game:GetService("CoreGui")
 local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 local TopBarConstants = require(RobloxGui.Modules.TopBar.Constants)
 local ScreenSideOffset = TopBarConstants.ScreenSideOffset
 local TopBarButtonHeight = TopBarConstants.TopBarButtonHeight
-local UIBlox = require(CorePackages.UIBlox)
+local UIBlox = require(CorePackages.Packages.UIBlox)
 local AppStyleProvider = UIBlox.App.Style.AppStyleProvider
 local DarkTheme = UIBlox.App.Style.Constants.ThemeName.Dark
 
@@ -14,7 +14,7 @@ local Promise = require(CorePackages.Packages.Promise)
 local SelfViewTooltipFTUX = require(script.Parent.SelfViewTooltipFTUX)
 local PADDING_TIME = 5
 
-return function (props)
+return function(props)
 	local screenGui = Instance.new("ScreenGui")
 	screenGui.Name = "SelfViewTooltipOnCloseGui"
 	screenGui.DisplayOrder = -1
@@ -25,10 +25,10 @@ return function (props)
 		style = {
 			themeName = DarkTheme,
 		},
-    }, {
+	}, {
 		frame = Roact.createElement("Frame", {
-			Position = UDim2.fromOffset(ScreenSideOffset, - TopBarButtonHeight),
-			Size =  UDim2.fromOffset(TopBarButtonHeight, TopBarButtonHeight),
+			Position = UDim2.fromOffset(ScreenSideOffset, -TopBarButtonHeight),
+			Size = UDim2.fromOffset(TopBarButtonHeight, TopBarButtonHeight),
 			BackgroundTransparency = 0,
 			Visible = false,
 		}, {
@@ -36,8 +36,8 @@ return function (props)
 				fallbackText = props.fallbackText,
 				translationKey = props.translationKey,
 				tooltipLifetime = props.tooltipLifetime,
-			})
-		})
+			}),
+		}),
 	})
 
 	local instance = Roact.mount(root, screenGui, "SelfViewTooltipOnClose")

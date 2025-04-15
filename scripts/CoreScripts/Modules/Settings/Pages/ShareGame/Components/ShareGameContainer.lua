@@ -11,8 +11,8 @@ local Players = game:GetService("Players")
 local Modules = CoreGui.RobloxGui.Modules
 local ShareGame = Modules.Settings.Pages.ShareGame
 
-local Roact = require(CorePackages.Roact)
-local RoactRodux = require(CorePackages.RoactRodux)
+local Roact = require(CorePackages.Packages.Roact)
+local RoactRodux = require(CorePackages.Packages.RoactRodux)
 
 local httpRequest = require(Modules.Common.httpRequest)
 
@@ -35,28 +35,25 @@ function ShareGameContainer:render()
 	return Roact.createElement(self.props.skeletonComponent, self.props)
 end
 
-ShareGameContainer = RoactRodux.UNSTABLE_connect2(
-	function(state, props)
-		return {
-			deviceLayout = state.DeviceInfo.DeviceLayout,
-			searchAreaActive = state.ConversationsSearch.SearchAreaActive,
-			searchText = state.ConversationsSearch.SearchText,
-		}
-	end,
-	function(dispatch)
-		return {
-			closePage = function()
-				dispatch(ClosePage(Constants.PageRoute.SHARE_GAME))
-			end,
+ShareGameContainer = RoactRodux.UNSTABLE_connect2(function(state, props)
+	return {
+		deviceLayout = state.DeviceInfo.DeviceLayout,
+		searchAreaActive = state.ConversationsSearch.SearchAreaActive,
+		searchText = state.ConversationsSearch.SearchText,
+	}
+end, function(dispatch)
+	return {
+		closePage = function()
+			dispatch(ClosePage(Constants.PageRoute.SHARE_GAME))
+		end,
 
-			reFetch = function()
-				local userId = tostring(Players.LocalPlayer.UserId)
-				local requestImpl = httpRequest(HttpRbxApiService)
+		reFetch = function()
+			local userId = tostring(Players.LocalPlayer.UserId)
+			local requestImpl = httpRequest(HttpRbxApiService)
 
-				dispatch(FetchUserFriends(requestImpl, userId))
-			end
-		}
-	end
-)(ShareGameContainer)
+			dispatch(FetchUserFriends(requestImpl, userId))
+		end,
+	}
+end)(ShareGameContainer)
 
 return ShareGameContainer

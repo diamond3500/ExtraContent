@@ -6,7 +6,7 @@
 local Root = script.Parent.Parent
 
 local CorePackages = game:GetService("CorePackages")
-local PurchasePromptDeps = require(CorePackages.PurchasePromptDeps)
+local PurchasePromptDeps = require(CorePackages.Workspace.Packages.PurchasePromptDeps)
 local Cryo = PurchasePromptDeps.Cryo
 
 local DEFAULT_FLAG_STATES = {

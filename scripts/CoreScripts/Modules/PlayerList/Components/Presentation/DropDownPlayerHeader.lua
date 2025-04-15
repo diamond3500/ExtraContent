@@ -1,9 +1,9 @@
 --!nonstrict
 local CorePackages = game:GetService("CorePackages")
 
-local Roact = require(CorePackages.Roact)
+local Roact = require(CorePackages.Packages.Roact)
 local t = require(CorePackages.Packages.t)
-local UIBlox = require(CorePackages.UIBlox)
+local UIBlox = require(CorePackages.Packages.UIBlox)
 local UserLib = require(CorePackages.Workspace.Packages.UserLib)
 
 local withStyle = UIBlox.Style.withStyle
@@ -53,7 +53,7 @@ function DropDownPlayerHeader:render()
 				}, {
 					TextContainerFrame = Roact.createElement("Frame", {
 						BackgroundTransparency = 1,
-						Size =  UDim2.new(1, -X_OFFSET, 1, 0),
+						Size = UDim2.new(1, -X_OFFSET, 1, 0),
 						Position = UDim2.new(0, 107, 0, 0),
 					}, {
 						Layout = Roact.createElement("UIListLayout", {
@@ -97,7 +97,7 @@ function DropDownPlayerHeader:render()
 						PlayerName = Roact.createElement("TextLabel", {
 							LayoutOrder = 2,
 							Size = UDim2.new(1, 0, 0, TEXT_HEIGHT),
-							Text ="@" .. player.Name,
+							Text = "@" .. player.Name,
 							Font = style.Font.CaptionHeader.Font,
 							TextSize = style.Font.BaseSize * style.Font.CaptionHeader.RelativeSize,
 							TextColor3 = style.Theme.TextMuted.Color,
@@ -116,11 +116,11 @@ function DropDownPlayerHeader:render()
 				}),
 
 				AvatarImage = Roact.createElement("ImageLabel", {
-					Position = UDim2.new(0, 112/2, 0, 0),
+					Position = UDim2.new(0, 112 / 2, 0, 0),
 					Size = UDim2.new(0, layoutValues.DropDownHeaderSizeY, 0, layoutValues.DropDownHeaderSizeY),
 					AnchorPoint = Vector2.new(0.5, 0),
 					BackgroundTransparency = 1,
-					Image = "rbxthumb://type=AvatarHeadShot&id=" ..player.UserId.. "&w=150&h=150",
+					Image = "rbxthumb://type=AvatarHeadShot&id=" .. player.UserId .. "&w=150&h=150",
 					ZIndex = 2,
 				}),
 

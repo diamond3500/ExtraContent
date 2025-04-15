@@ -12,6 +12,9 @@ local Constants = require(root.Components.Constants)
 local ScreenshotFlowStepHandlerContainer = require(root.ReportAnything.Components.ScreenshotFlowStepHandlerContainer)
 local ReportAnythingAnalytics = require(root.ReportAnything.Utility.ReportAnythingAnalytics)
 
+local GetFFlagAbuseReportMenuConsoleSupportRefactor =
+	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagAbuseReportMenuConsoleSupportRefactor
+
 local elements: any = {
 	annotationPageHandle = nil,
 	annotationPageFrame = nil,
@@ -44,7 +47,9 @@ local function mountAnnotationPage(
 		screenGui.DisplayOrder = 7
 		screenGui.Enabled = true
 		screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-		screenGui.Parent = CoreGui:FindFirstChild(Constants.AbuseReportMenuRootName, true)
+		screenGui.Parent = if GetFFlagAbuseReportMenuConsoleSupportRefactor()
+			then CoreGui:FindFirstChild(Constants.AbuseReportMenuPlaceholderFrame, true)
+			else CoreGui:FindFirstChild(Constants.AbuseReportMenuRootName, true)
 
 		elements.annotationPageScreenGui = screenGui
 

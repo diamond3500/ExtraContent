@@ -2,7 +2,7 @@
 local Root = script.Parent.Parent
 local CorePackages = game:GetService("CorePackages")
 local HttpService = game:GetService("HttpService")
-local PurchasePromptDeps = require(CorePackages.PurchasePromptDeps)
+local PurchasePromptDeps = require(CorePackages.Workspace.Packages.PurchasePromptDeps)
 
 local Rodux = PurchasePromptDeps.Rodux
 
@@ -21,7 +21,7 @@ local EMPTY_STATE = { requestType = RequestType.None }
 local RequestReducer = Rodux.createReducer(EMPTY_STATE, {
 	[RequestAssetPurchase.name] = function(state, action)
 		local idempotencyKey = action.idempotencyKey
-		if idempotencyKey == nil or idempotencyKey == '' then
+		if idempotencyKey == nil or idempotencyKey == "" then
 			idempotencyKey = HttpService:GenerateGUID(false)
 		end
 		return {
@@ -31,10 +31,10 @@ local RequestReducer = Rodux.createReducer(EMPTY_STATE, {
 			equipIfPurchased = action.equipIfPurchased,
 			isRobloxPurchase = action.isRobloxPurchase,
 			idempotencyKey = idempotencyKey,
-			purchaseAuthToken = action.purchaseAuthToken or '',
-			collectibleItemId = action.collectibleItemId or '',
-			collectibleItemInstanceId = action.collectibleItemInstanceId or '',
-			collectibleProductId = action.collectibleProductId or '',
+			purchaseAuthToken = action.purchaseAuthToken or "",
+			collectibleItemId = action.collectibleItemId or "",
+			collectibleItemInstanceId = action.collectibleItemInstanceId or "",
+			collectibleProductId = action.collectibleProductId or "",
 			expectedPrice = action.expectedPrice or 0,
 		}
 	end,
@@ -56,7 +56,7 @@ local RequestReducer = Rodux.createReducer(EMPTY_STATE, {
 	end,
 	[RequestBundlePurchase.name] = function(state, action)
 		local idempotencyKey = action.idempotencyKey
-		if idempotencyKey == nil or idempotencyKey == '' then
+		if idempotencyKey == nil or idempotencyKey == "" then
 			idempotencyKey = HttpService:GenerateGUID(false)
 		end
 		return {
@@ -65,10 +65,10 @@ local RequestReducer = Rodux.createReducer(EMPTY_STATE, {
 			requestType = RequestType.Bundle,
 			isRobloxPurchase = true,
 			idempotencyKey = idempotencyKey,
-			purchaseAuthToken = action.purchaseAuthToken or '',
-			collectibleItemId = action.collectibleItemId or '',
-			collectibleItemInstanceId = action.collectibleItemInstanceId or '',
-			collectibleProductId = action.collectibleProductId or '',
+			purchaseAuthToken = action.purchaseAuthToken or "",
+			collectibleItemId = action.collectibleItemId or "",
+			collectibleItemInstanceId = action.collectibleItemInstanceId or "",
+			collectibleProductId = action.collectibleProductId or "",
 			expectedPrice = action.expectedPrice or 0,
 		}
 	end,

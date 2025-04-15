@@ -9,6 +9,7 @@ export type StyleRule = {
 	tag: string,
 	modifier: string?,
 	pseudo: string?,
+	priority: number?,
 	properties: {
 		[string]: any,
 	},
@@ -209,12 +210,14 @@ local function DefaultRules(tokens: Tokens): { StyleRule }
 	return {
 		{
 			tag = "gui-object-defaults",
+			priority = 0,
 			properties = {
 				BackgroundTransparency = 1,
 			},
 		},
 		{
 			tag = "text-defaults",
+			priority = 0,
 			properties = {
 				Font = tokens.Typography.BodyLarge.Font,
 			},
@@ -226,6 +229,7 @@ local function DefaultSizeRules(tokens: Tokens): { StyleRule }
 	return {
 		{
 			tag = "text-size-defaults",
+			priority = 0,
 			properties = {
 				TextSize = tokens.Typography.BodyLarge.FontSize,
 				LineHeight = tokens.Typography.BodyLarge.LineHeight,
@@ -238,9 +242,21 @@ local function DefaultColorRules(tokens: Tokens): { StyleRule }
 	return {
 		{
 			tag = "text-color-defaults",
+			priority = 0,
 			properties = {
 				TextColor3 = tokens.Color.Content.Default.Color3,
 				TextTransparency = tokens.Color.Content.Default.Transparency,
+			},
+		},
+	}
+end
+
+local function EngineDefaultBypassRules(): { StyleRule }
+	return {
+		{
+			tag = "x-default-transparency",
+			properties = {
+				BackgroundTransparency = 0,
 			},
 		},
 	}
@@ -961,6 +977,7 @@ local function generateRules(tokens: Tokens)
 
 	local common = Cryo.List.join(
 		DefaultRules(tokens),
+		EngineDefaultBypassRules(),
 		FlexItemRules(),
 		TextRules(),
 		AutomaticSizeRules(),

@@ -12,31 +12,27 @@ local AnalyticsService = game:GetService("RbxAnalyticsService")
 local Players = game:GetService("Players")
 
 -------------- Flags ----------------------------------------------------------
-local FFlagCoreGuiFinalStateAnalytic = require(RobloxGui.Modules.Flags.FFlagCoreGuiFinalStateAnalytic)
 
 ----------- UTILITIES --------------
 local PerfUtils = require(RobloxGui.Modules.Common.PerfUtils)
 local MessageBus = require(CorePackages.Workspace.Packages.MessageBus).MessageBus
-local coreGuiFinalStateAnalytics -- TODO: set this value outside of FFlagCoreGuiFinalStateAnalytic
+local coreGuiFinalStateAnalytics = require(script:FindFirstAncestor("Settings").Analytics.CoreGuiFinalStateAnalytics).new()
 
 ------------ Variables -------------------
 RobloxGui:WaitForChild("Modules"):WaitForChild("TenFootInterface")
 
 local GetFFlagEnableInGameMenuDurationLogger = require(RobloxGui.Modules.Common.Flags.GetFFlagEnableInGameMenuDurationLogger)
-local GetFFlagChromeSurveySupport = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagChromeSurveySupport
 
 local GetDefaultQualityLevel = require(CorePackages.Workspace.Packages.AppCommonLib).GetDefaultQualityLevel
 
 local Constants = require(RobloxGui.Modules:WaitForChild("InGameMenu"):WaitForChild("Resources"):WaitForChild("Constants"))
-
-local LocalStore = require(RobloxGui.Modules.Chrome.Service.LocalStore)
 
 local leaveGame = function(publishSurveyMessage: boolean)
     if GetFFlagEnableInGameMenuDurationLogger() then
         PerfUtils.leavingGame()
     end
     GuiService.SelectedCoreObject = nil -- deselects the button and prevents spamming the popup to save in studio when using gamepad
-        
+
     AnalyticsService:SetRBXEventStream(
         Constants.AnalyticsTargetName,
         Constants.AnalyticsInGameMenuName,
@@ -49,21 +45,15 @@ local leaveGame = function(publishSurveyMessage: boolean)
     )
 
     if publishSurveyMessage then
-        local customProps = nil
-        if GetFFlagChromeSurveySupport() then
-            local chromeSeenCount = tostring(LocalStore.getChromeSeenCount())
-            customProps = { chromeSeenCount = chromeSeenCount }
-        end
+        -- TODO APPEXP-1879: Remove code passing chromeSeenCount/customProps to survey receiver by flagging it off, now that it is unused.
+        local chromeSeenCount = tostring(0)
+        local customProps = { chromeSeenCount = chromeSeenCount }
 
         local localUserId = tostring(Players.LocalPlayer.UserId)
         MessageBus.publish(Constants.OnSurveyEventDescriptor, {eventType = Constants.SurveyEventType, userId = localUserId, customProps = customProps})
     end
-
-	if FFlagCoreGuiFinalStateAnalytic then
-		-- TODO: Move this import up top
-		coreGuiFinalStateAnalytics = require(script:FindFirstAncestor("Settings").Analytics.CoreGuiFinalStateAnalytics).new()
-		coreGuiFinalStateAnalytics:sendCoreGuiFinalAnalytic()
-	end
+	
+	coreGuiFinalStateAnalytics:sendCoreGuiFinalAnalytic()
 
     -- need to wait for render frames so on slower devices the leave button highlight will update
     -- otherwise, since on slow devices it takes so long to leave you are left wondering if you pressed the button

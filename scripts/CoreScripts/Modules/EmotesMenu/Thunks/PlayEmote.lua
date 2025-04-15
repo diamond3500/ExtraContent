@@ -8,7 +8,6 @@ local LocalPlayer = Players.LocalPlayer
 
 local Thunks = script.Parent
 local EmotesMenu = Thunks.Parent
-local CoreScriptModules = EmotesMenu.Parent
 
 local Actions = EmotesMenu.Actions
 
@@ -17,7 +16,7 @@ local Constants = require(EmotesMenu.Constants)
 
 local EventStream = require(CorePackages.Workspace.Packages.Analytics).AnalyticsReporters.EventStream
 
-local RobloxTranslator = require(CoreScriptModules.RobloxTranslator)
+local RobloxTranslator = require(CorePackages.Workspace.Packages.RobloxTranslator)
 local MaybeSendEmoteFailureAnalyticsFromPlayer =
 	require(CoreGui.RobloxGui.Modules.EmotesMenu.Utility.MaybeSendEmoteFailureAnalyticsFromPlayer)
 

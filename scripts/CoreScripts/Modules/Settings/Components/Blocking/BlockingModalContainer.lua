@@ -1,9 +1,7 @@
-local CoreGui = game:GetService("CoreGui")
-local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 local CorePackages = game:GetService("CorePackages")
-local Roact = require(CorePackages.Roact)
+local Roact = require(CorePackages.Packages.Roact)
 local t = require(CorePackages.Packages.t)
-local BlockingUtility = require(RobloxGui.Modules.BlockingUtility)
+local BlockingUtility = require(CorePackages.Workspace.Packages.BlockingUtility)
 local ActionModal = require(script.Parent.ActionModal)
 
 local BlockingModalContainer = Roact.PureComponent:extend("BlockingModalContainer")

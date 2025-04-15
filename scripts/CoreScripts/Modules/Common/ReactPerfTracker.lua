@@ -1,5 +1,24 @@
 -- Log the outputs of React Performance Tracker to feed monitoring dashboards.
 
+type SummaryEvent = {
+	summary_sessionid: string,
+	summary_total_time_ms: number,
+	summary_sample_time_s: number,
+	summary_num_components: number,
+	summary_sample_count: number,
+}
+
+type ComponentEvent = {
+	sessionid: string,
+	component: unknown,
+	time_ms_max: number,
+	time_ms_avg: number,
+	total_time_ms: number,
+	total_time_pct: number,
+	count: number,
+	count_pct: number,
+}
+
 export type ReactPerfTracker = {
 	new: () -> ReactPerfTracker,
 	start: () -> (),
@@ -8,6 +27,10 @@ export type ReactPerfTracker = {
 	componentCount: { string: number },
 	componentTotalTime: { string: number },
 	componentMaxTime: { string: number },
+	outgoingEvents : { [number]: ComponentEvent | SummaryEvent },
+	loggingProtocol : any,
+	nextSendTime : number,
+	previousSendTime: number,
 }
 
 type Marker = {
@@ -17,6 +40,7 @@ type Marker = {
 }
 
 local FIntReactPerfTrackerKibana: number = game:DefineFastInt("ReactPerfTrackerKibana", 0)
+local FFlagEnableReactPerfSummaryEvents = game:DefineFastFlag("EnableReactPerfSummaryEvents", false)
 
 local MAX_SAMPLE_RATE = 1000
 local SAMPLE_ID_BIAS = 327
@@ -101,6 +125,7 @@ function ReactPerfTracker.new(): ReactPerfTracker
 	self.loggingProtocol = LoggingProtocol.default
 	self.outgoingEvents = {}
 	self.nextSendTime = 0
+	self.previousSendTime = 0
 
 	return (setmetatable(self, ReactPerfTracker) :: any) :: ReactPerfTracker
 end
@@ -140,14 +165,27 @@ function ReactPerfTracker:start()
 			if self.nextSendTime > 0 then
 				self:sendEvents()
 			end
+			if FFlagEnableReactPerfSummaryEvents then
+				self.previousSendTime = self.nextSendTime
+
+				-- edge case: on startup, nextSendTime is initialized at 0, but we can't init previousSendTime as 0
+				-- instead init as first marker's start time, as that marks the beginning of the first period 
+				if self.previousSendTime == 0 then
+					self.previousSendTime = marker.startTime
+				end
+			end
 			self.nextSendTime = marker.startTime + 30
 		end
 	end)
 end
 
--- convert tally counts into events per comonent
+-- convert tally counts into events per component, and one summary event
 function ReactPerfTracker:genEvents()
+	local numComponents = 0
 	for component, _ in self.componentCount do
+		if FFlagEnableReactPerfSummaryEvents then
+			numComponents += 1
+		end
 		table.insert(self.outgoingEvents, {
 			sessionid = if AnalyticsService then AnalyticsService:GetSessionId() else "",
 			component = component,
@@ -159,6 +197,16 @@ function ReactPerfTracker:genEvents()
 				/ (self :: ReactPerfTracker).totalTime,
 			count = self.componentCount[component],
 			count_pct = (self :: ReactPerfTracker).componentCount[component] / (self :: ReactPerfTracker).sampleCount,
+		})
+	end
+
+	if FFlagEnableReactPerfSummaryEvents then
+		table.insert( (self :: ReactPerfTracker).outgoingEvents, 1, {
+			summary_sessionid = if AnalyticsService then AnalyticsService:GetSessionId() else "",
+			summary_total_time_ms = (self :: ReactPerfTracker).totalTime,
+			summary_sample_time_s = ((self :: ReactPerfTracker).nextSendTime - (self :: ReactPerfTracker).previousSendTime),
+			summary_num_components = numComponents,
+			summary_sample_count = (self :: ReactPerfTracker).sampleCount,
 		})
 	end
 end

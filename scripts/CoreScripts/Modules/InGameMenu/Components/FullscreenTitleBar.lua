@@ -5,7 +5,7 @@ local UserGameSettings = UserSettings():GetService("UserGameSettings")
 local GuiService = game:GetService("GuiService")
 local AppStorageService = game:GetService("AppStorageService")
 
-local InGameMenuDependencies = require(CorePackages.InGameMenuDependencies)
+local InGameMenuDependencies = require(CorePackages.Packages.InGameMenuDependencies)
 local Roact = InGameMenuDependencies.Roact
 local RoactRodux = InGameMenuDependencies.RoactRodux
 local t = InGameMenuDependencies.t
@@ -22,9 +22,12 @@ local StartLeavingGame = require(InGameMenu.Actions.StartLeavingGame)
 local ExternalEventConnection = require(InGameMenu.Utility.ExternalEventConnection)
 local UserLocalStore = require(InGameMenu.Utility.UserLocalStore)
 
-local GetFIntFullscreenTitleBarTriggerDelayMillis = require(InGameMenu.Flags.GetFIntFullscreenTitleBarTriggerDelayMillis)
-local GetFFlagCleanUpFullscreenTitleBarPromiseOnUnmount = require(InGameMenu.Flags.GetFFlagCleanUpFullscreenTitleBarPromiseOnUnmount)
-local GetFFlagFullscreenTitleBarInjectGameServices = require(InGameMenu.Flags.GetFFlagFullscreenTitleBarInjectGameServices)
+local GetFIntFullscreenTitleBarTriggerDelayMillis =
+	require(InGameMenu.Flags.GetFIntFullscreenTitleBarTriggerDelayMillis)
+local GetFFlagCleanUpFullscreenTitleBarPromiseOnUnmount =
+	require(InGameMenu.Flags.GetFFlagCleanUpFullscreenTitleBarPromiseOnUnmount)
+local GetFFlagFullscreenTitleBarInjectGameServices =
+	require(InGameMenu.Flags.GetFFlagFullscreenTitleBarInjectGameServices)
 local GetFFlagFixFullscreenTitleBarPromiseCancel = require(InGameMenu.Flags.GetFFlagFixFullscreenTitleBarPromiseCancel)
 
 local DISAPPEAR_DELAY = 0.5
@@ -52,9 +55,11 @@ FullscreenTitleBar.defaultProps = {
 }
 
 function FullscreenTitleBar:init()
-	self.userGameSettings = GetFFlagFullscreenTitleBarInjectGameServices() and self.props.userGameSettings or UserGameSettings
+	self.userGameSettings = GetFFlagFullscreenTitleBarInjectGameServices() and self.props.userGameSettings
+		or UserGameSettings
 	self.guiService = GetFFlagFullscreenTitleBarInjectGameServices() and self.props.guiService or GuiService
-	self.appStorageService = GetFFlagFullscreenTitleBarInjectGameServices() and self.props.appStorageService or AppStorageService
+	self.appStorageService = GetFFlagFullscreenTitleBarInjectGameServices() and self.props.appStorageService
+		or AppStorageService
 
 	self:setState({
 		isTriggered = false,
@@ -174,7 +179,7 @@ function FullscreenTitleBar:render()
 					closeRoblox = self.closeRoblox,
 				}),
 			}),
-		})
+		}),
 	})
 end
 
@@ -203,20 +208,17 @@ FullscreenTitleBar = InGameMenuPolicy.connect(function(appPolicy, props)
 	}
 end)(FullscreenTitleBar)
 
-return RoactRodux.UNSTABLE_connect2(
-	function(state, props)
-		return {
-			isMenuOpen = state.isMenuOpen,
-		}
-	end,
-	function(dispatch)
-		return {
-			openEducationalPopup = function(guiService, appStorageService, maxCount)
-				return dispatch(OpenEducationalPopup(guiService, appStorageService, maxCount))
-			end,
-			startLeavingGame = function()
-				dispatch(StartLeavingGame())
-			end,
-		}
-	end
-)(FullscreenTitleBar)
+return RoactRodux.UNSTABLE_connect2(function(state, props)
+	return {
+		isMenuOpen = state.isMenuOpen,
+	}
+end, function(dispatch)
+	return {
+		openEducationalPopup = function(guiService, appStorageService, maxCount)
+			return dispatch(OpenEducationalPopup(guiService, appStorageService, maxCount))
+		end,
+		startLeavingGame = function()
+			dispatch(StartLeavingGame())
+		end,
+	}
+end)(FullscreenTitleBar)

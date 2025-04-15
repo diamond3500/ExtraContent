@@ -8,9 +8,9 @@ local CorePackages = game:GetService("CorePackages")
 local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 
 local React = require(CorePackages.Packages.React)
-local Roact = require(CorePackages.Roact)
-local Cryo = require(CorePackages.Cryo)
-local Promise = require(CorePackages.Promise)
+local Roact = require(CorePackages.Packages.Roact)
+local Cryo = require(CorePackages.Packages.Cryo)
+local Promise = require(CorePackages.Packages.Promise)
 local t = require(CorePackages.Packages.t)
 local ArgCheck = require(CorePackages.Workspace.Packages.ArgCheck)
 local Modules = CoreGui.RobloxGui.Modules
@@ -18,7 +18,7 @@ local VoiceChatServiceManager = require(Modules.VoiceChat.VoiceChatServiceManage
 local log = require(CorePackages.Workspace.Packages.CoreScriptsInitializer).CoreLogger:new(script.Name)
 local Constants = require(Modules.VoiceChat.Constants)
 
-local UIBlox = require(CorePackages.UIBlox)
+local UIBlox = require(CorePackages.Packages.UIBlox)
 local useStyle = UIBlox.Core.Style.useStyle
 local StyledTextLabel = UIBlox.App.Text.StyledTextLabel
 local Images = UIBlox.App.ImageSet.Images

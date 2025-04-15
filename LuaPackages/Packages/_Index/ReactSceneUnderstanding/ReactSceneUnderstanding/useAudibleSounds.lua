@@ -6,14 +6,21 @@ local SceneAnalysisContext = require(Root.SceneAnalysisContext)
 local enums = require(Root.enums)
 local useCameraState = require(Root.useCameraState)
 local sortByAudibleVolume = require(Root.audio.sortByAudibleVolume)
-local useAllSounds = require(Root.audio.useAllSounds)
+local useAudioSources = require(Root.audio.useAudioSources)
 local useTimedLoop = require(Root.useTimedLoop)
+local getFFlagFixAudibleSoundDetectionPerformance = require(Root.flags.getFFlagFixAudibleSoundDetectionPerformance)
 
 local AUTO_REFRESH_SECONDS = 1
 
-local SKIPPED_SOUND_PROPERTIES = {
-	TimePosition = true,
-	TimeLength = true,
+local ALLOWED_SOUND_PROPERTIES = {
+	"Volume",
+	"Playing",
+	"RollOffGain",
+	"SoundGroup",
+}
+
+local ALLOWED_AUDIO_PLAYER_PROPERTIES = {
+	"Volume",
 }
 
 local useCallback = React.useCallback
@@ -21,66 +28,80 @@ local useEffect = React.useEffect
 local usePrevious = ReactUtils.usePrevious
 
 --[=[
-	Returns an array of [Sound] instances sorted by how audible they are to the
-	client. Sounds that are determined to be inaudible are omitted.
+	Returns an array of audio sources sorted by how audible they are relative to
+	the client. Any instances determined to be inaudible are omitted.
 
-	If `parents` is not supplied then this hook will traverse the entire
-	[DataModel] for Sounds. If this behavior is not desired, make sure to pass
-	in an array of Instances to scope how much work is being performed.
-	Similarly, `DataModelTraversalOptions` can be passed in to further control
-	behavior if you are hitting performance bottlenecks.
+	This function supports [Sound] and [AudioPlayer] instances.
 
 	```lua
-	local SoundService = game:GetService("SoundService")
-	local Workspace = game:GetService("Workspace")
-
-	local sounds = useAudibleSounds({ SoundService, Workspace }, {
-		instanceProcessingLimit = 500
-	})
+	local audioSources = useAudibleSounds()
 	```
 
 	@within ReactSceneUnderstanding
 	@tag internal
 ]=]
-local function useAudibleSounds()
+local function useAudibleSounds(): { AudioPlayer | Sound }
 	local sceneAnalysis = SceneAnalysisContext.use()
-	local sounds = useAllSounds()
+	local audioSources = useAudioSources()
 	local cameraState = useCameraState()
 	local prevCameraState = usePrevious(cameraState)
 
 	local updateAudibleSounds = useCallback(function()
-		sceneAnalysis.setAudibleSounds(sortByAudibleVolume(sounds))
-	end, { sounds, sceneAnalysis.setAudibleSounds } :: { unknown })
+		sceneAnalysis.setAudibleSounds(sortByAudibleVolume(audioSources))
+	end, { audioSources, sceneAnalysis.setAudibleSounds } :: { unknown })
 
-	local onSoundChanged = useCallback(function(property: string)
-		if not SKIPPED_SOUND_PROPERTIES[property] then
-			updateAudibleSounds()
-		end
-	end, { updateAudibleSounds })
+	--[[
+		In the past we called updateAudibleSounds each time certain properties
+		of Sound and Audio instances changed. The goal was to make
+		useAudibleSounds as snappy as possible, but this resulted in significant
+		FPS drops in production experiences. So instead we simply rely on
+		polling.
 
+		Read more here:
+		https://roblox.atlassian.net/wiki/spaces/MUS/pages/3375399016/What+s+Playing+Experiment+Deallocation+and+Investigation
+
+		It would be entirely feasible to listen for property changes again and
+		throttle state updates to get the best of both worlds, but there's
+		currently no pressing business need to have immediate updates, so
+		polling is just fine
+	]]
 	useTimedLoop(AUTO_REFRESH_SECONDS, function()
 		updateAudibleSounds()
 	end)
 
 	useEffect(function()
-		if #sceneAnalysis.audibleSounds == 0 and #sounds > 0 then
+		if #sceneAnalysis.audibleSounds == 0 and #audioSources > 0 then
 			updateAudibleSounds()
 		end
-	end, { #sceneAnalysis.audibleSounds, #sounds, updateAudibleSounds } :: { unknown })
+	end, { #sceneAnalysis.audibleSounds, #audioSources, updateAudibleSounds } :: { unknown })
 
-	useEffect(function()
-		local connections: { RBXScriptConnection } = {}
+	if not getFFlagFixAudibleSoundDetectionPerformance() then
+		useEffect(function()
+			local connections: { RBXScriptConnection } = {}
 
-		for _, sound in sounds do
-			table.insert(connections, sound.Changed:Connect(onSoundChanged))
-		end
+			for _, audioSource in audioSources do
+				local watchedProperties
+				if audioSource:IsA("Sound") then
+					watchedProperties = ALLOWED_SOUND_PROPERTIES
+				elseif audioSource:IsA("AudioPlayer") then
+					watchedProperties = ALLOWED_AUDIO_PLAYER_PROPERTIES
+				end
 
-		return function()
-			for _, connection in connections do
-				connection:Disconnect()
+				for _, property in watchedProperties do
+					table.insert(
+						connections,
+						audioSource:GetPropertyChangedSignal(property):Connect(updateAudibleSounds)
+					)
+				end
 			end
-		end
-	end, { sounds, onSoundChanged } :: { unknown })
+
+			return function()
+				for _, connection in connections do
+					connection:Disconnect()
+				end
+			end
+		end, { audioSources } :: { unknown })
+	end
 
 	useEffect(function()
 		if cameraState ~= prevCameraState and cameraState == enums.CameraState.Idle then

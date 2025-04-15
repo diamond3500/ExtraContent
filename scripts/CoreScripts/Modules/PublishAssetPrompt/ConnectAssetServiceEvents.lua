@@ -8,6 +8,7 @@
 local AssetService = game:GetService("AssetService")
 local AvatarCreationService = game:GetService("AvatarCreationService")
 local ExpAuthSvc = game:GetService("ExperienceAuthService")
+local RobloxReplicatedStorage = game:GetService("RobloxReplicatedStorage")
 
 local PublishAssetPrompt = script.Parent
 local OpenPublishAssetPrompt = require(PublishAssetPrompt.Thunks.OpenPublishAssetPrompt)
@@ -17,10 +18,32 @@ local SetHumanoidModel = require(PublishAssetPrompt.Actions.SetHumanoidModel)
 local SetPriceInRobux = require(PublishAssetPrompt.Actions.SetPriceInRobux)
 local OpenValidationErrorModal = require(PublishAssetPrompt.Actions.OpenValidationErrorModal)
 
-local FFlagPublishAvatarPromptEnabled = require(script.Parent.FFlagPublishAvatarPromptEnabled)
-
 local EngineFeaturePromptImportAnimationClipFromVideoAsyncEnabled =
 	game:GetEngineFeature("PromptImportAnimationClipFromVideoAsyncEnabled")
+
+local function updateModelAttachmentsWithWrapDeformers(avatarModel: Instance)
+	-- The Avatar model needs to be parented to the DataModel for GetDeformedCFrameAsync to work
+	avatarModel.Parent = RobloxReplicatedStorage
+
+	for _, child in avatarModel:GetChildren() do
+		if not child:IsA("MeshPart") then
+			continue
+		end
+
+		local wrapDeformer = child:FindFirstChildWhichIsA("WrapDeformer")
+		if not wrapDeformer then
+			continue
+		end
+
+		for _, meshPartChild in child:GetChildren() do
+			if not meshPartChild:IsA("Attachment") then
+				continue
+			end
+
+			meshPartChild.CFrame = wrapDeformer:GetDeformedCFrameAsync(meshPartChild.CFrame)
+		end
+	end
+end
 
 local function ConnectAssetServiceEvents(store)
 	local connections = {}
@@ -45,7 +68,7 @@ local function ConnectAssetServiceEvents(store)
 				elseif metadata["serializedInstance"] then
 					local instance = AssetService:DeserializeInstance(metadata["serializedInstance"])
 					store:dispatch(OpenPublishAssetPrompt(instance, metadata["assetType"], guid, scopes))
-				elseif FFlagPublishAvatarPromptEnabled and metadata["outfitToPublish"] then
+				elseif metadata["outfitToPublish"] then
 					store:dispatch(OpenPublishAvatarPrompt(guid, scopes))
 				end
 			end
@@ -72,12 +95,12 @@ local function ConnectAssetServiceEvents(store)
 
 				-- check that guid matches for the prompt to update humanoid model
 				if state and state.promptRequest.promptInfo.guid == guid then
-					store:dispatch(SetHumanoidModel(AvatarCreationService:DeserializeAvatarModel(serializedModel)))
-					if FFlagPublishAvatarPromptEnabled then
-						store:dispatch(SetPriceInRobux(priceFromToken))
-					else
-						store:dispatch(SetPriceInRobux(0))
-					end
+					local deserializedModel = AvatarCreationService:DeserializeAvatarModel(serializedModel)
+
+					updateModelAttachmentsWithWrapDeformers(deserializedModel)
+
+					store:dispatch(SetHumanoidModel(deserializedModel))
+					store:dispatch(SetPriceInRobux(priceFromToken))
 				end
 			end)
 		)

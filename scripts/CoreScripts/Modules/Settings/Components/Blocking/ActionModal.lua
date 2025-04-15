@@ -2,9 +2,9 @@ local CorePackages = game:GetService("CorePackages")
 local CoreGui = game:GetService("CoreGui")
 local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 
-local Roact = require(CorePackages.Roact)
+local Roact = require(CorePackages.Packages.Roact)
 local t = require(CorePackages.Packages.t)
-local UIBlox = require(CorePackages.UIBlox)
+local UIBlox = require(CorePackages.Packages.UIBlox)
 
 local withStyle = UIBlox.Style.withStyle
 local ButtonType = UIBlox.App.Button.Enum.ButtonType
@@ -30,20 +30,21 @@ ActionModal.validateProps = t.interface({
 
 function ActionModal:render()
 	return withStyle(function(style)
-			return Roact.createElement("ImageButton", {
-				Size = UDim2.new(1, 0, 1, 0),
-				BackgroundTransparency = style.Theme.Overlay.Transparency,
-				BackgroundColor3 = style.Theme.Overlay.Color,
-				Active = true,
-				AutoButtonColor = false,
-				Selectable = if GetFFlagWrapBlockModalScreenInProvider() then false else nil,
-				Visible = self.props.Visible,
-				[Roact.Event.Activated] = self.props.cancel,
-			},  {
-				AlertModal = Roact.createElement(InteractiveAlert, {
-					title = self.props.title,
-					bodyText = self.props.body,
-					buttonStackInfo = { buttons = {
+		return Roact.createElement("ImageButton", {
+			Size = UDim2.new(1, 0, 1, 0),
+			BackgroundTransparency = style.Theme.Overlay.Transparency,
+			BackgroundColor3 = style.Theme.Overlay.Color,
+			Active = true,
+			AutoButtonColor = false,
+			Selectable = if GetFFlagWrapBlockModalScreenInProvider() then false else nil,
+			Visible = self.props.Visible,
+			[Roact.Event.Activated] = self.props.cancel,
+		}, {
+			AlertModal = Roact.createElement(InteractiveAlert, {
+				title = self.props.title,
+				bodyText = self.props.body,
+				buttonStackInfo = {
+					buttons = {
 						{
 							buttonType = ButtonType.Secondary,
 							props = {
@@ -58,11 +59,12 @@ function ActionModal:render()
 								onActivated = self.props.action,
 							},
 						},
-					}},
-					screenSize = self.props.screenSize,
-				})
-			})
-		end)
+					},
+				},
+				screenSize = self.props.screenSize,
+			}),
+		})
+	end)
 end
 
 return ActionModal

@@ -1,3 +1,4 @@
+-- DEPRECATED: Use the packgified UIManager in vr-spatial-ui module instead.
 local VRService = game:GetService("VRService")
 local RunService = game:GetService("RunService")
 local CoreGui = game:GetService("CoreGui")
@@ -5,8 +6,15 @@ local RobloxGui = CoreGui.RobloxGui
 local VRHub = require(RobloxGui.Modules.VR.VRHub)
 local UIManagerRoot = script.Parent
 local Constants = require(UIManagerRoot.Constants)
+local Utils = require(UIManagerRoot.Utils)
 local PanelType = Constants.PanelType
 local SpatialUIType = Constants.SpatialUIType
+local createCompatPanel = require(script.Parent.createCompatPanel)
+local createUIGroupDragBar = require(script.Parent.createUIGroupDragBar)
+local DragBar = require(UIManagerRoot.DragBar)
+local Players = game:GetService("Players")
+local FIntUIResetDelayInSec = game:DefineFastInt("FIntUIResetDelayInSec", 3)
+local FFlagFixHeadSacleAdjustment = game:DefineFastFlag("FixHeadSacleAdjustment", false)
 
 export type UIGroupPositionProps = {
 	-- The rotation of the UI group relative to the head, used to update the CFrame of the UI group
@@ -21,45 +29,20 @@ export type UIGroupPositionProps = {
 	defaultGroupHeadRotation: CFrame,
 }
 
-export type CameraFixedUIObjectProps = {
-	-- Offset of the panel within the UI group relative to the origin computed by headCrame:ToWorlsSpace(uiGroupHeadRotation)
-	uiGroupElementOffset: CFrame,
-}
-
-export type SpatialUIGroupTypeValue = "MainUIGroup" | "WristUIGroup"
-
-export type PanelProps = {
-	-- The UI group that the panel belongs to
-	uiGroup: SpatialUIGroupTypeValue,
-	cameraFixedPanelProp: CameraFixedUIObjectProps?,
-}
-
-export type PanelStruct = {
-	panelObject: Instance,
-	uiType: Constants.SpatialUITypeValue,
-	panelType: Constants.PanelTypeValue,
-	panelProps: PanelProps,
-}
-
-export type DragBarStruct = {
-	part: Instance,
-}
-
 export type UIGroupStruct = {
 	positionProps: UIGroupPositionProps,
 	uiContainerSize: Vector2,
-}
-
-local SpatialUIGroupType = {
-	MainUIGroup = "MainUIGroup" :: SpatialUIGroupTypeValue,
-	WristUIGroup = "WristUIGroup" :: SpatialUIGroupTypeValue,
+	draggable: boolean,
+	dragBar: DragBar.DragBarClassType?,
+	dragBarOffset: CFrame?,
+	headScale: number,
 }
 
 local REPOSITION_DEVIATION_ANGLE = 100
 
 local ROBLOX_UI_GROUP_ANGLE = CFrame.Angles(math.rad(-18), math.rad(10), math.rad(0))
 
-local METER_TO_STUD_FACTOR = (workspace.CurrentCamera :: Camera).HeadScale / 0.3
+local METER_TO_STUD_FACTOR = 1 / 0.3
 
 local ROBLOX_UI_GROUP_POSITION =
 	CFrame.new(-0.14 * METER_TO_STUD_FACTOR, -0.24 * METER_TO_STUD_FACTOR, -0.64 * METER_TO_STUD_FACTOR)
@@ -68,89 +51,139 @@ local MAIN_UI_GROUP_SIZE = Vector2.new(0.8 * METER_TO_STUD_FACTOR, 0.56 * METER_
 
 local ROBLOX_UI_GROUP_HEAD_ROTATION = ROBLOX_UI_GROUP_POSITION * ROBLOX_UI_GROUP_ANGLE
 
-local function getYAxisStablizedCFrame(cframe: CFrame)
-	local _, x, z = cframe:ToOrientation()
-	return CFrame.new(cframe.Position) * CFrame.fromOrientation(0, x, z)
+local function getZAxisStablizedCFrame(cframe: CFrame)
+	local oX, oY, _ = cframe:ToOrientation()
+	return CFrame.new(cframe.Position) * CFrame.fromOrientation(oX, oY, 0)
 end
 
 local function getCameraOffsetFromHeadRotationWithZAxisStabl(rotation)
-	--- Stablize the camera CF from Y axis rotation
-	local stablizedCameraCF = getYAxisStablizedCFrame((workspace.CurrentCamera :: Camera).CFrame)
+	local cameraCFrame = (workspace.CurrentCamera :: Camera).CFrame
 	local localHeadCF = VRService:GetUserCFrame(Enum.UserCFrame.Head)
-	local headCFrame = stablizedCameraCF * localHeadCF
-	--- Stablize the head CF from Y axis rotation
-	local stablizedHeadCFrame = getYAxisStablizedCFrame(headCFrame)
-	local finalCFrame = stablizedHeadCFrame:ToWorldSpace(rotation)
+	local headCFrame = cameraCFrame * localHeadCF
+	local finalCFrame = headCFrame:ToWorldSpace(rotation)
 
-	-- Remove horizontal head rotation
-	local oY, oX = finalCFrame:ToOrientation()
-	return stablizedCameraCF:ToObjectSpace(CFrame.new(finalCFrame.Position) * CFrame.fromOrientation(oY, oX, 0))
+	return cameraCFrame:ToObjectSpace(getZAxisStablizedCFrame(finalCFrame))
 end
 
-local function getPanelPart(panelStruct: PanelStruct)
+local function getPanelPart(panelStruct: Constants.PanelStruct): Part?
 	if panelStruct.uiType == SpatialUIType.SpatialUI or panelStruct.uiType == SpatialUIType.SpatialUIRoact then
 		local panelObject = panelStruct.panelObject :: SurfaceGui
-		return panelObject.Adornee
+		return panelObject.Adornee :: Part
 	elseif panelStruct.uiType == SpatialUIType.SpatialUIPartOnly then
-		return panelStruct.panelObject
+		return panelStruct.panelObject :: Part
 	else
 		return nil
 	end
 end
 
-local function panelExistsInSpace(panelStruct: PanelStruct)
+local function panelExistsInSpace(panelStruct: Constants.PanelStruct)
 	return panelStruct ~= nil and panelStruct.panelObject ~= nil and panelStruct.uiType ~= SpatialUIType.ScreenUI
 end
 
 local UIManager = {}
 
+local instance = nil :: UIManagerClassType?
+
 export type UIManagerClassType = typeof(setmetatable(
 	{} :: {
-		uiElements: { [Constants.PanelTypeValue]: PanelStruct },
-		uiGroups: { [SpatialUIGroupTypeValue]: UIGroupStruct },
+		currentMouseTarget: BasePart?,
+		uiGroupsOutOfViewTimeStamp: number?,
+		uiElements: { [Constants.PanelTypeValue]: Constants.PanelStruct },
+		uiGroups: { [Constants.SpatialUIGroupTypeValue]: UIGroupStruct },
 	},
 	UIManager
 ))
 
 UIManager.__index = UIManager
 
-function UIManager.resetUIGroupsHeadRotationToDefault(self: UIManagerClassType)
-	for _, uiGroupStruct: UIGroupStruct in pairs(self.uiGroups) do
-		uiGroupStruct.positionProps.uiGroupHeadRotation = uiGroupStruct.positionProps.defaultGroupHeadRotation
-	end
+function UIManager.removeRoactPanel(self: UIManagerClassType, panelType: Constants.PanelTypeValue)
+	self.uiElements[panelType] = nil
 end
 
-function UIManager.updateUIGroupForCurHeadCFrame(self: UIManagerClassType, uiGroupType: SpatialUIGroupTypeValue)
+function UIManager.registerRoactPanel(
+	self: UIManagerClassType,
+	panelType: Constants.PanelTypeValue,
+	panelStruct: Constants.PanelStruct
+)
+	self.uiElements[panelType] = panelStruct
+
+	-- Make sure the UI is scaled correctly to current scale
+	self:rescaleUIForCurrentHeadScale()
+	self:updateUIGroupsForCurHeadCFrame()
+end
+
+function UIManager.createUI(self: UIManagerClassType, props: Constants.PanelCreationProps): Constants.CompatPanel?
+	local panelStruct = createCompatPanel(props)
+	if panelStruct == nil then
+		return nil
+	end
+	self.uiElements[props.panelType] = panelStruct
+	self:updatePanelForCurHeadCFrame(props.panelType)
+	return {
+		type = panelStruct.uiType,
+		panelObject = panelStruct.panelObject,
+	}
+end
+
+function UIManager.updateUIGroupForCurHeadCFrame(
+	self: UIManagerClassType,
+	uiGroupType: Constants.SpatialUIGroupTypeValue,
+	disableDragBarReposition: boolean?
+)
 	local uiGroupStruct: UIGroupStruct = self.uiGroups[uiGroupType]
 	local newCameraOffSet =
 		getCameraOffsetFromHeadRotationWithZAxisStabl(uiGroupStruct.positionProps.uiGroupHeadRotation)
 	uiGroupStruct.positionProps.uiGroupCameraOffSet = newCameraOffSet
+	local disableDragBarReposition = disableDragBarReposition or false
+	if uiGroupStruct.draggable and uiGroupStruct.dragBar and not disableDragBarReposition then
+		local dragBar = uiGroupStruct.dragBar :: DragBar.DragBarClassType
+		--- Bottom placement of dragbar
+		dragBar:setCFrame(
+			(workspace.CurrentCamera :: Camera).CFrame
+				* newCameraOffSet:ToWorldSpace(uiGroupStruct.dragBarOffset :: CFrame)
+		)
+	end
 	self:updatePanelsInUIGroupForCurHeadCFrame(uiGroupType)
 end
 
 function UIManager.updateUIGroupsForCurHeadCFrame(self: UIManagerClassType)
 	for uiGroupType, _ in pairs(self.uiGroups) do
-		self:updateUIGroupForCurHeadCFrame(uiGroupType :: SpatialUIGroupTypeValue)
+		self:updateUIGroupForCurHeadCFrame(uiGroupType :: Constants.SpatialUIGroupTypeValue)
 	end
 end
 
 function UIManager.updatePanelForCurHeadCFrame(self: UIManagerClassType, panelType: Constants.PanelTypeValue)
-	local panelStruct: PanelStruct = self.uiElements[panelType]
-	if panelExistsInSpace(panelStruct) and panelStruct.panelProps.cameraFixedPanelProp ~= nil then
+	local panelStruct: Constants.PanelStruct = self.uiElements[panelType]
+	if
+		panelExistsInSpace(panelStruct)
+		and panelStruct.panelPositionProps
+		and panelStruct.panelPositionProps.cameraFixedPanelProp
+	then
+		local panelPositionProps = panelStruct.panelPositionProps :: Constants.PanelPositionProps
+		local cameraFixedPanelProp = panelPositionProps.cameraFixedPanelProp :: Constants.CameraFixedUIObjectProps
 		local newCameraOffSet = getCameraOffsetFromHeadRotationWithZAxisStabl(
-			self.uiGroups[panelStruct.panelProps.uiGroup].positionProps.uiGroupHeadRotation
+			self.uiGroups[panelPositionProps.uiGroup].positionProps.uiGroupHeadRotation
 		)
-		local panelPart = getPanelPart(panelStruct) :: Part
-		panelPart.CFrame = getYAxisStablizedCFrame((workspace.CurrentCamera :: Camera).CFrame) * newCameraOffSet
-		panelPart.CFrame =
-			panelPart.CFrame:ToWorldSpace(panelStruct.panelProps.cameraFixedPanelProp.uiGroupElementOffset)
+		local panelPart = getPanelPart(panelStruct)
+		if panelPart == nil then
+			return
+		end
+		panelPart = panelPart :: Part
+		panelPart.CFrame = (workspace.CurrentCamera :: Camera).CFrame * newCameraOffSet
+		panelPart.CFrame = panelPart.CFrame:ToWorldSpace(cameraFixedPanelProp.uiGroupElementOffset)
 	end
 end
 
-function UIManager.updatePanelsInUIGroupForCurHeadCFrame(self: UIManagerClassType, uiGroupType: SpatialUIGroupTypeValue)
-	for panelType, panelStruct: PanelStruct in pairs(self.uiElements) do
-		if panelStruct.panelProps.uiGroup == uiGroupType then
-			self:updatePanelForCurHeadCFrame(panelType :: Constants.PanelTypeValue)
+function UIManager.updatePanelsInUIGroupForCurHeadCFrame(
+	self: UIManagerClassType,
+	uiGroupType: Constants.SpatialUIGroupTypeValue
+)
+	for panelType, panelStruct: Constants.PanelStruct in pairs(self.uiElements) do
+		if panelStruct.panelPositionProps then
+			local panelPositionProps = panelStruct.panelPositionProps :: Constants.PanelPositionProps
+			if panelPositionProps.uiGroup == uiGroupType then
+				self:updatePanelForCurHeadCFrame(panelType :: Constants.PanelTypeValue)
+			end
 		end
 	end
 end
@@ -161,8 +194,72 @@ function UIManager.updatePanelsForCurHeadCFrame(self: UIManagerClassType)
 	end
 end
 
+function UIManager.dragUiGroupStart(self: UIManagerClassType, uiGroupType)
+	if self.uiGroups[uiGroupType].draggable == false then
+		return
+	end
+	local dragBar = self.uiGroups[uiGroupType].dragBar :: DragBar.DragBarClassType
+	local uiGroupCFrame = (workspace.CurrentCamera :: Camera).CFrame:ToWorldSpace(
+		self.uiGroups[uiGroupType].positionProps.uiGroupCameraOffSet
+	)
+	local uiGroupDragBarOffSet = dragBar:getCFrame():ToObjectSpace(uiGroupCFrame)
+	dragBar:startDrag(uiGroupDragBarOffSet)
+end
+
+function UIManager.dragUiGroupEnd(self: UIManagerClassType, uiGroupType)
+	if self.uiGroups[uiGroupType].draggable == false then
+		return
+	end
+	local dragBar = self.uiGroups[uiGroupType].dragBar :: DragBar.DragBarClassType
+	dragBar:dragEnd()
+end
+
+function UIManager.dragUiGroupStep(self: UIManagerClassType, uiGroupType)
+	if self.uiGroups[uiGroupType].draggable == false then
+		return
+	end
+	local dragBar = self.uiGroups[uiGroupType].dragBar :: DragBar.DragBarClassType
+
+	local stablizedCameraCF = (workspace.CurrentCamera :: Camera).CFrame
+	local localHeadCF = VRService:GetUserCFrame(Enum.UserCFrame.Head)
+	local headCFrame = stablizedCameraCF * localHeadCF
+
+	-- Force the Y rotation so that UI would face camera (180 rotation since UI is attached to back of part)
+	local currentDragBarCFrame = dragBar:getCFrame()
+	-- Adjust the head aiming position to be slightly lower than the actual head position
+	local adjustedHeadAimingPosition =
+		Vector3.new(headCFrame.Position.X, headCFrame.Position.Y - 0.2 * METER_TO_STUD_FACTOR, headCFrame.Position.Z)
+	local headFacingXRotation, headFacingYRotation, _ = (CFrame.lookAt(
+		currentDragBarCFrame.Position,
+		adjustedHeadAimingPosition
+	) * CFrame.Angles(0, math.rad(180), 0)):ToEulerAnglesXYZ()
+	local _, _, newDragBarAngleZ = currentDragBarCFrame:ToEulerAnglesXYZ()
+	dragBar:setCFrame(
+		getZAxisStablizedCFrame(
+			CFrame.new(currentDragBarCFrame.Position)
+				* CFrame.Angles(headFacingXRotation, headFacingYRotation, newDragBarAngleZ)
+		)
+	)
+
+	local newUiGroupCFrame = dragBar:getCFrame():ToWorldSpace(dragBar.uiGroupOffSet :: CFrame)
+	self.uiGroups[uiGroupType].positionProps.uiGroupHeadRotation = headCFrame:ToObjectSpace(newUiGroupCFrame)
+	self:updateUIGroupForCurHeadCFrame(uiGroupType, true --[[disableDragBarReposition]])
+end
+
 function UIManager.setUpUiGroups(self: UIManagerClassType)
 	-- Set up the ui groups
+	local mainUiGroupDragBar = createUIGroupDragBar({
+		name = "MainUIGroup",
+		dragFunction = function(player, ray, viewFrame, vrInputFrame, isModeSwitchKeyDown)
+			self:dragUiGroupStep(Constants.SpatialUIGroupType.MainUIGroup)
+		end,
+		dragStartFunction = function(player, ray, hiFrame, hitFrame, clickedPart, vrInputFrame, isModeSwitchKeyDown)
+			self:dragUiGroupStart(Constants.SpatialUIGroupType.MainUIGroup)
+		end,
+		dragEndFunction = function(player)
+			self:dragUiGroupEnd(Constants.SpatialUIGroupType.MainUIGroup)
+		end,
+	})
 	local mainUiGroupStruct: UIGroupStruct = {
 		positionProps = {
 			uiGroupHeadRotation = ROBLOX_UI_GROUP_HEAD_ROTATION,
@@ -170,8 +267,18 @@ function UIManager.setUpUiGroups(self: UIManagerClassType)
 			defaultGroupHeadRotation = ROBLOX_UI_GROUP_HEAD_ROTATION,
 		},
 		uiContainerSize = MAIN_UI_GROUP_SIZE,
+		draggable = true,
+		dragBar = mainUiGroupDragBar,
+		dragBarOffset = CFrame.new(
+			0,
+			Constants.ROACT_PANEL_UIGROUP_ELEMENT_OFFSET_MAP[PanelType.BottomBar].Y
+				- 0.075
+				- 0.02 * METER_TO_STUD_FACTOR,
+			0
+		),
+		headScale = 1,
 	}
-	self.uiGroups[SpatialUIGroupType.MainUIGroup] = mainUiGroupStruct
+	self.uiGroups[Constants.SpatialUIGroupType.MainUIGroup] = mainUiGroupStruct
 end
 
 function UIManager.step(self: UIManagerClassType)
@@ -179,7 +286,7 @@ function UIManager.step(self: UIManagerClassType)
 		return
 	end
 
-	for panelType, panelStruct: PanelStruct in pairs(self.uiElements) do
+	for panelType, panelStruct: Constants.PanelStruct in pairs(self.uiElements) do
 		-- Use Main Roblox GUI for angle detection
 		if panelExistsInSpace(panelStruct) and panelType :: Constants.PanelTypeValue == PanelType.RobloxGui then
 			local robloxGuiPart: Part
@@ -198,7 +305,16 @@ function UIManager.step(self: UIManagerClassType)
 				math.abs(pY - hY) > math.rad(REPOSITION_DEVIATION_ANGLE)
 				or math.abs(pX - hX) > math.rad(REPOSITION_DEVIATION_ANGLE)
 			then
-				self:updateUIGroupsForCurHeadCFrame()
+				if self.uiGroupsOutOfViewTimeStamp then
+					if os.clock() - self.uiGroupsOutOfViewTimeStamp >= FIntUIResetDelayInSec then
+						self:updateUIGroupsForCurHeadCFrame()
+						self.uiGroupsOutOfViewTimeStamp = nil
+					end
+				else
+					self.uiGroupsOutOfViewTimeStamp = os.clock()
+				end
+			else
+				self.uiGroupsOutOfViewTimeStamp = nil
 			end
 		end
 	end
@@ -209,50 +325,148 @@ function UIManager.onShowTopBarChanged(self: UIManagerClassType)
 		return
 	end
 	if VRHub.ShowTopBar then
-		self:resetUIGroupsHeadRotationToDefault()
-		self:updateUIGroupsForCurHeadCFrame()
-		for _, panelStruct: PanelStruct in pairs(self.uiElements) do
+		for _, uiGroup: UIGroupStruct in pairs(self.uiGroups) do
+			if uiGroup.draggable and uiGroup.dragBar then
+				uiGroup.dragBar:show()
+			end
+		end
+		for _, panelStruct: Constants.PanelStruct in pairs(self.uiElements) do
 			if panelStruct.uiType == SpatialUIType.SpatialUI or panelStruct.uiType == SpatialUIType.SpatialUIRoact then
-				local panelPart = panelStruct.panelObject :: SurfaceGui
-				panelPart.Enabled = true
+				local panelObject = panelStruct.panelObject :: SurfaceGui
+				panelObject.Enabled = true
+				local panelPart = panelObject.Adornee :: Part
+				panelPart.Parent = workspace
+			elseif panelStruct.uiType == SpatialUIType.SpatialUIPartOnly then
+				local panelObject = panelStruct.panelObject :: Part
+				panelObject.Parent = workspace
 			end
 		end
 	else
-		for _, panelStruct: PanelStruct in pairs(self.uiElements) do
+		for _, uiGroup: UIGroupStruct in pairs(self.uiGroups) do
+			if uiGroup.draggable and uiGroup.dragBar then
+				uiGroup.dragBar:hide()
+			end
+		end
+		for _, panelStruct: Constants.PanelStruct in pairs(self.uiElements) do
 			if panelStruct.uiType == SpatialUIType.SpatialUI or panelStruct.uiType == SpatialUIType.SpatialUIRoact then
-				local panelPart = panelStruct.panelObject :: SurfaceGui
-				panelPart.Enabled = false
+				local panelObject = panelStruct.panelObject :: SurfaceGui
+				panelObject.Enabled = false
+				local panelPart = panelObject.Adornee :: Part
+				panelPart.Parent = nil
+			elseif panelStruct.uiType == SpatialUIType.SpatialUIPartOnly then
+				local panelObject = panelStruct.panelObject :: Part
+				panelObject.Parent = nil
 			end
 		end
 	end
 end
 
-function UIManager.cameraMoved(self: UIManagerClassType)
+function UIManager.updateUIGroupsForCurCamera(self: UIManagerClassType)
 	if not VRService.VREnabled then
 		return
 	end
-	for _, panelStruct: PanelStruct in pairs(self.uiElements) do
-		if panelExistsInSpace(panelStruct) and panelStruct.panelProps.cameraFixedPanelProp ~= nil then
-			local panelPart = getPanelPart(panelStruct) :: Part
-			panelPart.CFrame = getYAxisStablizedCFrame((workspace.CurrentCamera :: Camera).CFrame)
-				* self.uiGroups[panelStruct.panelProps.uiGroup].positionProps.uiGroupCameraOffSet:ToWorldSpace(
-					panelStruct.panelProps.cameraFixedPanelProp.uiGroupElementOffset
+	for _, uiGroupStruct: UIGroupStruct in pairs(self.uiGroups) do
+		if uiGroupStruct.draggable then
+			local dragBar = uiGroupStruct.dragBar :: DragBar.DragBarClassType
+			dragBar:setCFrame(
+				(workspace.CurrentCamera :: Camera).CFrame
+					* uiGroupStruct.positionProps.uiGroupCameraOffSet:ToWorldSpace(
+						uiGroupStruct.dragBarOffset :: CFrame
+					)
+			)
+		end
+	end
+	for _, panelStruct: Constants.PanelStruct in pairs(self.uiElements) do
+		if
+			panelExistsInSpace(panelStruct)
+			and panelStruct.panelPositionProps
+			and panelStruct.panelPositionProps.cameraFixedPanelProp
+		then
+			local panelPositionProps = panelStruct.panelPositionProps :: Constants.PanelPositionProps
+			local cameraFixedPanelProp = panelPositionProps.cameraFixedPanelProp :: Constants.CameraFixedUIObjectProps
+			local panelPart = getPanelPart(panelStruct)
+			if panelPart == nil then
+				return
+			end
+			panelPart = panelPart :: Part
+			panelPart.CFrame = (workspace.CurrentCamera :: Camera).CFrame
+				* self.uiGroups[panelPositionProps.uiGroup].positionProps.uiGroupCameraOffSet:ToWorldSpace(
+					cameraFixedPanelProp.uiGroupElementOffset
 				)
 		end
 	end
 end
 
+function UIManager.onMouseTargetChanged(self: UIManagerClassType, target: BasePart?)
+	for _, uiGroupStruct: UIGroupStruct in pairs(self.uiGroups) do
+		if not uiGroupStruct.draggable then
+			-- do nothing
+		elseif uiGroupStruct.dragBar and (uiGroupStruct.dragBar :: DragBar.DragBarClassType).part == target then
+			uiGroupStruct.dragBar:startHover()
+		elseif uiGroupStruct.dragBar and (uiGroupStruct.dragBar :: DragBar.DragBarClassType).part :: Part ~= target then
+			uiGroupStruct.dragBar:hoverEnd()
+		end
+	end
+end
+
+function UIManager.rescaleUIForCurrentHeadScale(self: UIManagerClassType)
+	local newHeadScale = (workspace.CurrentCamera :: Camera).HeadScale
+
+	for _, uiGroupStruct: UIGroupStruct in pairs(self.uiGroups) do
+		local uiGroupScalingFactor = newHeadScale / uiGroupStruct.headScale
+		uiGroupStruct.positionProps.uiGroupHeadRotation =
+			Utils.rescaleCFramePosition(uiGroupStruct.positionProps.uiGroupHeadRotation, uiGroupScalingFactor)
+		uiGroupStruct.positionProps.uiGroupCameraOffSet =
+			Utils.rescaleCFramePosition(uiGroupStruct.positionProps.uiGroupCameraOffSet, uiGroupScalingFactor)
+		uiGroupStruct.positionProps.defaultGroupHeadRotation =
+			Utils.rescaleCFramePosition(uiGroupStruct.positionProps.defaultGroupHeadRotation, uiGroupScalingFactor)
+		if uiGroupStruct.draggable then
+			uiGroupStruct.dragBarOffset =
+				Utils.rescaleCFramePosition(uiGroupStruct.dragBarOffset :: CFrame, uiGroupScalingFactor)
+			local dragBar = uiGroupStruct.dragBar :: DragBar.DragBarClassType
+			dragBar:rescale(uiGroupScalingFactor)
+		end
+		uiGroupStruct.headScale = newHeadScale
+	end
+	for _, uiElement: Constants.PanelStruct in pairs(self.uiElements) do
+		local uiElementScalingFactor = newHeadScale / uiElement.headScale
+		-- React resets the part size to the property value at each re-render so we would delegate the headscale refresh
+		if uiElement.uiType ~= SpatialUIType.SpatialUIRoact then
+			local panelPart = getPanelPart(uiElement)
+			if panelPart ~= nil then
+				(panelPart :: Part).Size = panelPart.Size * uiElementScalingFactor
+			end
+		end
+		local panelPositionProps = uiElement.panelPositionProps :: Constants.PanelPositionProps
+		if panelPositionProps and panelPositionProps.cameraFixedPanelProp then
+			(panelPositionProps.cameraFixedPanelProp :: Constants.CameraFixedUIObjectProps).uiGroupElementOffset =
+				Utils.rescaleCFramePosition(
+					(panelPositionProps.cameraFixedPanelProp :: Constants.CameraFixedUIObjectProps).uiGroupElementOffset,
+					uiElementScalingFactor
+				)
+		end
+		uiElement.headScale = newHeadScale
+	end
+end
+
 function UIManager.new()
 	local self = {
-		uiElements = {} :: { [Constants.PanelTypeValue]: PanelStruct },
-		uiGroups = {} :: { [SpatialUIGroupTypeValue]: UIGroupStruct },
+		currentMouseTarget = nil :: BasePart?,
+		uiGroupsOutOfViewTimeStamp = nil :: number?,
+		uiElements = {} :: { [Constants.PanelTypeValue]: Constants.PanelStruct },
+		uiGroups = {} :: { [Constants.SpatialUIGroupTypeValue]: UIGroupStruct },
 	}
 
 	setmetatable(self, UIManager)
 
 	--- Immediately initialize the UI groups after creation
 	self:setUpUiGroups()
-	self:updateUIGroupsForCurHeadCFrame()
+	self:rescaleUIForCurrentHeadScale()
+	if FFlagFixHeadSacleAdjustment then
+		self:updateUIGroupsForCurCamera()
+	else
+		self:updateUIGroupsForCurHeadCFrame()
+	end
 
 	RunService:BindToRenderStep("UIManagerRenderStep", Enum.RenderPriority.Last.Value, function()
 		self:step()
@@ -264,10 +478,35 @@ function UIManager.new()
 
 	local camera = workspace.CurrentCamera :: Camera
 	camera:GetPropertyChangedSignal("CFrame"):Connect(function()
-		self:cameraMoved()
+		self:updateUIGroupsForCurCamera()
 	end)
+
+	camera:GetPropertyChangedSignal("HeadScale"):Connect(function()
+		self:rescaleUIForCurrentHeadScale()
+		self:updateUIGroupsForCurHeadCFrame()
+	end)
+
+	local Player = Players.LocalPlayer :: Player
+	local mouse = Player:GetMouse()
+	if mouse then
+		mouse.Move:Connect(function()
+			local Player = Players.LocalPlayer :: Player
+			local mouse = Player:GetMouse()
+			if mouse.Target ~= self.currentMouseTarget then
+				self:onMouseTargetChanged(mouse.Target)
+				self.currentMouseTarget = mouse.Target
+			end
+		end)
+	end
 
 	return self
 end
 
-return UIManager.new()
+function UIManager.getInstance(): UIManagerClassType
+	if instance == nil then
+		instance = UIManager.new()
+	end
+	return instance :: UIManagerClassType
+end
+
+return UIManager

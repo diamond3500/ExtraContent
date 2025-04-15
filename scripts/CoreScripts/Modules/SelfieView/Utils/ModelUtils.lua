@@ -1,11 +1,12 @@
 --!strict
-local CoreGui = game:GetService("CoreGui")
-local RobloxGui = CoreGui:WaitForChild("RobloxGui")
+local CorePackages = game:GetService("CorePackages")
 local CollectionService = game:GetService("CollectionService")
 local EngineFeatureAvatarJointUpgrade = game:GetEngineFeature("AvatarJointUpgradeFeature")
 local FFlagSelfViewLookUpHumanoidByType = game:DefineFastFlag("SelfViewLookUpHumanoidByType", false)
 local GetFFlagSelfieViewFixMigration = require(script.Parent.Parent.Flags.GetFFlagSelfieViewFixMigration)
-local GetFFlagSelfieViewMoreFixMigration = require(RobloxGui.Modules.Flags.GetFFlagSelfieViewMoreFixMigration)
+local GetFFlagSelfieViewMoreFixMigration =
+	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagSelfieViewMoreFixMigration
+local GetFFlagSelfieViewGyroMigration = require(script.Parent.Parent.Flags.GetFFlagSelfieViewGyroMigration)
 
 --we want to trigger UpdateClone which recreates the clone fresh as rarely as possible (performance optimization),
 --so for triggering dirty on DescendantAdded or DescendantRemoving we only trigger it for things which make a visual difference
@@ -43,6 +44,17 @@ local function getNeck(character: Model, head: MeshPart): Motor6D?
 		if child:IsA("Motor6D") then
 			if child.Part1 == head or child.Name == "Neck" then
 				return child
+			end
+		end
+	end
+
+	--in case no neck found it could be using AnimationConstraint, do fallback neck loockup for that
+	if GetFFlagSelfieViewGyroMigration() then
+		for _, child in descendants do
+			if child:IsA("AnimationConstraint") then
+				if child.Parent == head and (child.Attachment0.Name == "NeckRigAttachment" or child.Name == "Neck") then
+					return child
+				end
 			end
 		end
 	end

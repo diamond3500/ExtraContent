@@ -3,8 +3,6 @@ local CoreGui = game:GetService("CoreGui")
 local CorePackages = game:GetService("CorePackages")
 
 local React = require(CorePackages.Packages.React)
-local GetFFlagIrisUseLocalizationProvider =
-	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagIrisUseLocalizationProvider
 
 local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 
@@ -12,13 +10,7 @@ local ContactList = RobloxGui.Modules.ContactList
 local dependencies = require(ContactList.dependencies)
 local UIBlox = dependencies.UIBlox
 
-local useLocalization
-local RobloxTranslator
-if GetFFlagIrisUseLocalizationProvider() then
-	useLocalization = dependencies.Hooks.useLocalization
-else
-	RobloxTranslator = require(RobloxGui.Modules.RobloxTranslator)
-end
+local useLocalization = dependencies.Hooks.useLocalization
 
 local Images = UIBlox.App.ImageSet.Images
 local ImageSetLabel = UIBlox.Core.ImageSet.ImageSetLabel
@@ -39,13 +31,10 @@ local function NoItemView(props: Props)
 	local font = style.Font
 	local theme = style.Theme
 
-	local localized
-	if GetFFlagIrisUseLocalizationProvider() then
-		localized = useLocalization({
-			failedLabel = "Feature.Call.Label.Retry",
-			placeCallLabel = "Feature.Call.Prompt.StartCall",
-		})
-	end
+	local localized = useLocalization({
+		failedLabel = "Feature.Call.Label.Retry",
+		placeCallLabel = "Feature.Call.Prompt.StartCall",
+	})
 
 	-- TODO (timothyhsu): Localization
 	return React.createElement("Frame", {
@@ -100,9 +89,7 @@ local function NoItemView(props: Props)
 				BorderSizePixel = 0,
 				Font = font.Header2.Font,
 				LayoutOrder = 3,
-				Text = if GetFFlagIrisUseLocalizationProvider()
-					then localized.failedLabel
-					else RobloxTranslator:FormatByKey("Feature.Call.Label.Retry"),
+				Text = localized.failedLabel,
 				TextColor3 = theme.SystemPrimaryContent.Color,
 				TextSize = font.Header2.RelativeSize * font.BaseSize,
 				TextTransparency = theme.SystemPrimaryContent.Transparency,
@@ -152,9 +139,7 @@ local function NoItemView(props: Props)
 					BackgroundTransparency = 1,
 					Font = font.Header2.Font,
 					LayoutOrder = 2,
-					Text = if GetFFlagIrisUseLocalizationProvider()
-						then localized.placeCallLabel
-						else RobloxTranslator:FormatByKey("Feature.Call.Prompt.StartCall"),
+					Text = localized.placeCallLabel,
 					TextColor3 = theme.SystemPrimaryContent.Color,
 					TextSize = font.Header2.RelativeSize * font.BaseSize,
 					TextTransparency = theme.SystemPrimaryContent.Transparency,

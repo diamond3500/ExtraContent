@@ -16,7 +16,6 @@ local EmojiTextLabel = require(UIBlox.Core.Text.EmojiTextLabel.EmojiTextLabel)
 local Emoji = require(UIBlox.Core.Emoji.Enum.Emoji)
 local validateFontInfo = require(UIBlox.Core.Style.Validator.validateFontInfo)
 local validateTypographyInfo = require(UIBlox.Core.Style.Validator.validateTypographyInfo)
-local UIBloxConfig = require(UIBlox.UIBloxConfig)
 
 local ICON_PADDING = 4
 local LINE_PADDING = 4
@@ -101,9 +100,7 @@ function ItemTileName:render()
 					fontStyle = titleFontStyle,
 					colorStyle = colorStyle,
 					Text = name,
-					TextTruncate = if UIBloxConfig.enableRichTextPlayerTileName
-						then Enum.TextTruncate.SplitWord
-						else Enum.TextTruncate.AtEnd,
+					TextTruncate = Enum.TextTruncate.SplitWord,
 					TextXAlignment = Enum.TextXAlignment.Left,
 					TextYAlignment = Enum.TextYAlignment.Top,
 					LayoutOrder = layoutOrder,
@@ -129,9 +126,7 @@ function ItemTileName:render()
 					fontStyle = titleFontStyle,
 					colorStyle = colorStyle,
 					Text = name,
-					TextTruncate = if UIBloxConfig.enableRichTextPlayerTileName
-						then Enum.TextTruncate.SplitWord
-						else Enum.TextTruncate.AtEnd,
+					TextTruncate = Enum.TextTruncate.SplitWord,
 					RichText = richText,
 					TextXAlignment = horizontalXAlignment,
 				},

@@ -3,11 +3,15 @@ local Packages = Foundation.Parent
 local React = require(Packages.React)
 local Dash = require(Packages.Dash)
 
+local View = require(Foundation.Components.View)
 local Button = require(Foundation.Components.Button)
-local ButtonSize = require(Foundation.Enums.ButtonSize)
+local InputSize = require(Foundation.Enums.InputSize)
+type InputSize = InputSize.InputSize
 local ButtonVariant = require(Foundation.Enums.ButtonVariant)
 local FillBehavior = require(Foundation.Enums.FillBehavior)
 type FillBehavior = FillBehavior.FillBehavior
+
+local Flags = require(Foundation.Utility.Flags)
 
 return {
 	summary = "Button",
@@ -16,37 +20,55 @@ return {
 			name = variant,
 			story = function(props)
 				local controls = props.controls
+				Flags.FoundationButtonEnableLoadingState = controls.enableLoadingState
+				Flags.FoundationEnableNewButtonSizes = controls.enableNewButtonSizes
 
-				return React.createElement(Button, {
-					icon = if controls.icon == "" then nil else props.controls.icon,
-					text = controls.text,
-					variant = variant,
-					onActivated = function()
-						print(`{variant}Button activated`)
-					end,
-					isDisabled = controls.isDisabled,
-					size = controls.size,
-					fillBehavior = if controls.fillBehavior == React.None then nil else controls.fillBehavior,
-					inputDelay = controls.inputDelay,
-				})
+				return React.createElement(
+					View,
+					{
+						tag = "row gap-medium auto-y size-full-0 align-y-center",
+					},
+					Dash.map(
+						{ InputSize.Large, InputSize.Medium, InputSize.Small, InputSize.XSmall } :: { InputSize },
+						function(size)
+							return React.createElement(Button, {
+								icon = if controls.icon == "" then nil else props.controls.icon,
+								text = controls.text,
+								variant = variant,
+								isLoading = controls.isLoading,
+								onActivated = function()
+									print(`{variant}Button activated`)
+								end,
+								isDisabled = controls.isDisabled,
+								size = size,
+								fillBehavior = if controls.fillBehavior == React.None
+									then nil
+									else controls.fillBehavior,
+								inputDelay = controls.inputDelay,
+							})
+						end
+					)
+				)
 			end,
 		}
 	end),
 	controls = {
 		icon = {
-			"icons/common/search",
+			"icons/placeholder/placeholderOn",
 			"icons/common/robux",
 			"icons/common/play",
 			"",
 		},
-		text = "Click me!",
-		size = Dash.values(ButtonSize),
+		text = "Lorem ipsum",
 		isDisabled = false,
+		isLoading = false,
 		fillBehavior = {
 			React.None,
 			FillBehavior.Fit,
 			FillBehavior.Fill,
 		} :: { FillBehavior },
 		inputDelay = 0,
+		enableLoadingState = Flags.FoundationButtonEnableLoadingState,
+		enableNewButtonSizes = Flags.FoundationEnableNewButtonSizes,
 	},
 }

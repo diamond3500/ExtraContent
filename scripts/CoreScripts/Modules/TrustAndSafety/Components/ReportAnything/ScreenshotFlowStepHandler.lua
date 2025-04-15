@@ -1,10 +1,8 @@
 --!nonstrict
-local CoreGui = game:GetService("CoreGui")
-local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 local CorePackages = game:GetService("CorePackages")
 local React = require(CorePackages.Packages.React)
 
-local RobloxTranslator = require(RobloxGui.Modules.RobloxTranslator)
+local RobloxTranslator = require(CorePackages.Workspace.Packages.RobloxTranslator)
 local TnsModule = script.Parent.Parent.Parent
 local ScreenshotDialog = require(TnsModule.Components.ReportAnything.ScreenshotDialog)
 local ScreenshotReviewDialog = require(TnsModule.Components.ReportAnything.ScreenshotReviewDialog)

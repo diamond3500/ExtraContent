@@ -1,6 +1,6 @@
 --!nonstrict
 local CorePackages = game:GetService("CorePackages")
-local InGameMenuDependencies = require(CorePackages.InGameMenuDependencies)
+local InGameMenuDependencies = require(CorePackages.Packages.InGameMenuDependencies)
 local Roact = InGameMenuDependencies.Roact
 local RoactRodux = InGameMenuDependencies.RoactRodux
 local t = InGameMenuDependencies.t
@@ -45,29 +45,37 @@ function VRComfortSettingsPage:render()
 				HorizontalAlignment = Enum.HorizontalAlignment.Right,
 				VerticalAlignment = Enum.VerticalAlignment.Top,
 			}),
-			VRComfortSettings = if game:GetEngineFeature("VRMoreComfortSettings") then Roact.createElement(ComfortSettingsEntry, {
-				LayoutOrder = getNextLayoutOrder(),
-			}) else nil,
-			VignetteEnabled = if game:GetEngineFeature("VRMoreComfortSettings") then Roact.createElement(VRComfortAutoToggleEntry, {
-				LayoutOrder = getNextLayoutOrder(),
-				labelKey = "CoreScripts.InGameMenu.GameSettings.VignetteEnabled",
-				customValueKey = "VignetteEnabledCustomOption",
-				derivedValueKey = "VignetteEnabled",
-			}) else nil,
-			VRSteppedRotationEnabled = if game:GetEngineFeature("VRMoreComfortSettings") then Roact.createElement(VRComfortAutoToggleEntry, {
-				LayoutOrder = getNextLayoutOrder(),
-				labelKey = "CoreScripts.InGameMenu.GameSettings.VRSteppedRotationEnabled",
-				customValueKey = "VRSmoothRotationEnabledCustomOption",
-				derivedValueKey = "VRSmoothRotationEnabled",
-				checkedValue = false,
-			}) else nil,
-			VRThirdPersonFixedCamEnabled = if game:GetEngineFeature("VRMoreComfortSettings") then Roact.createElement(VRComfortAutoToggleEntry, {
-				LayoutOrder = getNextLayoutOrder(),
-				labelKey = "CoreScripts.InGameMenu.GameSettings.VRThirdPersonFixedCamEnabled",
-				customValueKey = "VRThirdPersonFollowCamEnabledCustomOption",
-				derivedValueKey = "VRThirdPersonFollowCamEnabled",
-				checkedValue = false,
-			}) else nil,
+			VRComfortSettings = if game:GetEngineFeature("VRMoreComfortSettings")
+				then Roact.createElement(ComfortSettingsEntry, {
+					LayoutOrder = getNextLayoutOrder(),
+				})
+				else nil,
+			VignetteEnabled = if game:GetEngineFeature("VRMoreComfortSettings")
+				then Roact.createElement(VRComfortAutoToggleEntry, {
+					LayoutOrder = getNextLayoutOrder(),
+					labelKey = "CoreScripts.InGameMenu.GameSettings.VignetteEnabled",
+					customValueKey = "VignetteEnabledCustomOption",
+					derivedValueKey = "VignetteEnabled",
+				})
+				else nil,
+			VRSteppedRotationEnabled = if game:GetEngineFeature("VRMoreComfortSettings")
+				then Roact.createElement(VRComfortAutoToggleEntry, {
+					LayoutOrder = getNextLayoutOrder(),
+					labelKey = "CoreScripts.InGameMenu.GameSettings.VRSteppedRotationEnabled",
+					customValueKey = "VRSmoothRotationEnabledCustomOption",
+					derivedValueKey = "VRSmoothRotationEnabled",
+					checkedValue = false,
+				})
+				else nil,
+			VRThirdPersonFixedCamEnabled = if game:GetEngineFeature("VRMoreComfortSettings")
+				then Roact.createElement(VRComfortAutoToggleEntry, {
+					LayoutOrder = getNextLayoutOrder(),
+					labelKey = "CoreScripts.InGameMenu.GameSettings.VRThirdPersonFixedCamEnabled",
+					customValueKey = "VRThirdPersonFollowCamEnabledCustomOption",
+					derivedValueKey = "VRThirdPersonFollowCamEnabled",
+					checkedValue = false,
+				})
+				else nil,
 		})
 	end)
 end
@@ -76,6 +84,6 @@ return RoactRodux.UNSTABLE_connect2(nil, function(dispatch)
 	return {
 		closeMenu = function()
 			dispatch(CloseMenu)
-		end
+		end,
 	}
 end)(VRComfortSettingsPage)

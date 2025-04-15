@@ -7,11 +7,10 @@ local CorePackages = game:GetService("CorePackages")
 local GuiService = game:GetService("GuiService")
 local UserInputService = game:GetService("UserInputService")
 local CoreGui = game:GetService("CoreGui")
-local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 local Players = game:GetService("Players")
 
-local Roact = require(CorePackages.Roact)
-local RoactRodux = require(CorePackages.RoactRodux)
+local Roact = require(CorePackages.Packages.Roact)
+local RoactRodux = require(CorePackages.Packages.RoactRodux)
 local RoactGamepad = require(CorePackages.Packages.RoactGamepad)
 local t = require(CorePackages.Packages.t)
 local ExternalEventConnection = require(CorePackages.Workspace.Packages.RoactUtils).ExternalEventConnection
@@ -26,7 +25,7 @@ local PublishAssetPromptSingleStep = require(Components.PublishAssetPromptSingle
 local PublishAvatarPrompt = require(Components.PublishAvatarPrompt.PublishAvatarPrompt)
 local ResultModal = require(Components.ResultModal)
 
-local UIBlox = require(CorePackages.UIBlox)
+local UIBlox = require(CorePackages.Packages.UIBlox)
 local SelectionCursorProvider = UIBlox.App.SelectionImage.SelectionCursorProvider
 local ReactFocusNavigation = require(CorePackages.Packages.ReactFocusNavigation)
 local focusNavigationService =
@@ -34,12 +33,13 @@ local focusNavigationService =
 local FocusNavigationUtils = require(CorePackages.Workspace.Packages.FocusNavigationUtils)
 local FocusNavigableSurfaceRegistry = FocusNavigationUtils.FocusNavigableSurfaceRegistry
 local FocusNavigationRegistryProvider = FocusNavigableSurfaceRegistry.Provider
-local FocusNavigationEffects = require(RobloxGui.Modules.Common.FocusNavigationEffectsWrapper)
+local FocusNavigationCoreScriptsWrapper = FocusNavigationUtils.FocusNavigationCoreScriptsWrapper
+local FocusRoot = FocusNavigationUtils.FocusRoot
 local FocusNavigableSurfaceIdentifierEnum = FocusNavigationUtils.FocusNavigableSurfaceIdentifierEnum
 
-local FFlagPublishAvatarPromptEnabled = require(script.Parent.Parent.FFlagPublishAvatarPromptEnabled)
 -- flagging roact gamepad for removal due to deprecation - focusNavigation will be used instead for engine navigation
 local FFlagMigratePublishPromptFromRoactGamepad = game:DefineFastFlag("MigratePublishPromptFromRoactGamepad", false)
+local FFlagCSFocusWrapperRefactor = require(CorePackages.Workspace.Packages.SharedFlags).FFlagCSFocusWrapperRefactor
 
 --Displays behind the in-game menu so that developers can't block interaction with the InGameMenu by constantly prompting.
 --The in-game menu displays at level 0, to render behind it we need to display at level -1.
@@ -99,7 +99,7 @@ function PublishAssetPromptApp:render()
 				screenSize = self.state.screenSize,
 			})
 		end
-	elseif FFlagPublishAvatarPromptEnabled then
+	else
 		if self.props.promptType == PromptType.PublishAvatar then
 			promptElement = Roact.createElement(PublishAvatarPrompt, {
 				screenSize = self.state.screenSize,
@@ -133,18 +133,38 @@ function PublishAssetPromptApp:render()
 			Prompt = if FFlagMigratePublishPromptFromRoactGamepad then nil else promptElement,
 			CursorProvider = if FFlagMigratePublishPromptFromRoactGamepad
 				then Roact.createElement(SelectionCursorProvider, {}, {
-					FocusNavigationProvider = Roact.createElement(ReactFocusNavigation.FocusNavigationContext.Provider, {
-						value = focusNavigationService,
-					}, {
-						FocusNavigationRegistryProvider = Roact.createElement(FocusNavigationRegistryProvider, nil, {
-							FocusNavigationEffects = Roact.createElement(FocusNavigationEffects, {
-								selectionGroupName = SELECTION_GROUP_NAME,
-								focusNavigableSurfaceIdentifier = FocusNavigableSurfaceIdentifierEnum.RouterView,
-							}, {
-								Prompt = promptElement,
-							}),
-						}),
-					}),
+					FocusNavigationProvider = Roact.createElement(
+						ReactFocusNavigation.FocusNavigationContext.Provider,
+						{
+							value = focusNavigationService,
+						},
+						{
+							FocusNavigationRegistryProvider = Roact.createElement(
+								FocusNavigationRegistryProvider,
+								nil,
+								{
+									FocusNavigationCoreScriptsWrapper = Roact.createElement(
+										if FFlagCSFocusWrapperRefactor
+											then FocusRoot
+											else FocusNavigationCoreScriptsWrapper,
+										if FFlagCSFocusWrapperRefactor
+											then {
+												surfaceIdentifier = FocusNavigableSurfaceIdentifierEnum.RouterView,
+												isIsolated = true,
+												isAutoFocusRoot = true,
+											}
+											else {
+												selectionGroupName = SELECTION_GROUP_NAME,
+												focusNavigableSurfaceIdentifier = FocusNavigableSurfaceIdentifierEnum.RouterView,
+											},
+										{
+											Prompt = promptElement,
+										}
+									),
+								}
+							),
+						}
+					),
 				})
 				else nil,
 		}) or nil,

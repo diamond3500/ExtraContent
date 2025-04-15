@@ -1,16 +1,18 @@
 --!nonstrict
+-- APPEXP-2274: Remove with FFlagConnectGamepadChrome
 local CorePackages = game:GetService("CorePackages")
 local ContextActionService = game:GetService("ContextActionService")
 local CoreGui = game:GetService("CoreGui")
 local GuiService = game:GetService("GuiService")
 local VRService = game:GetService("VRService")
 local TextChatService = game:GetService("TextChatService")
+local StarterGui = game:GetService("StarterGui")
 
-local Roact = require(CorePackages.Roact)
-local RoactRodux = require(CorePackages.RoactRodux)
-local Cryo = require(CorePackages.Cryo)
+local Roact = require(CorePackages.Packages.Roact)
+local RoactRodux = require(CorePackages.Packages.RoactRodux)
+local Cryo = require(CorePackages.Packages.Cryo)
 local t = require(CorePackages.Packages.t)
-local UIBlox = require(CorePackages.UIBlox)
+local UIBlox = require(CorePackages.Packages.UIBlox)
 
 local withStyle = UIBlox.Core.Style.withStyle
 local Images = UIBlox.App.ImageSet.Images
@@ -23,20 +25,18 @@ local ControllerBar = require(script.QuickMenuControllerBar)
 local MenuNavigationToggleDialog = require(script.MenuNavigationToggleDialog)
 
 local RobloxGui = CoreGui:WaitForChild("RobloxGui")
-local TenFootInterface = require(RobloxGui.Modules.TenFootInterface)
-local BackpackModule = require(RobloxGui.Modules.BackpackScript)
-local EmotesModule = require(RobloxGui.Modules.EmotesMenu.EmotesMenuMaster)
-local ChatModule = require(RobloxGui.Modules.ChatSelector)
-local PlayerListMaster = require(RobloxGui.Modules.PlayerList.PlayerListManager)
+local Modules = RobloxGui.Modules
+local TenFootInterface = require(Modules.TenFootInterface)
+local BackpackModule = require(Modules.BackpackScript)
+local EmotesModule = require(Modules.EmotesMenu.EmotesMenuMaster)
+local ChatModule = require(Modules.ChatSelector)
+local PlayerListMaster = require(Modules.PlayerList.PlayerListManager)
 
-local isNewInGameMenuEnabled = require(RobloxGui.Modules.isNewInGameMenuEnabled)
-local InGameMenuConstants = require(RobloxGui.Modules.InGameMenuConstants)
-local ChromeEnabled = require(RobloxGui.Modules.Chrome.Enabled)
+local isNewInGameMenuEnabled = require(Modules.isNewInGameMenuEnabled)
+local InGameMenuConstants = require(Modules.InGameMenuConstants)
+local ChromeEnabled = require(Modules.Chrome.Enabled)
 
-local ToastRoot = CoreGui:WaitForChild("ToastNotification", 3)
-local ToastGui = if ToastRoot ~= nil then ToastRoot:WaitForChild("ToastNotificationWrapper", 3) else nil
-local Toast = if ToastGui ~= nil then ToastGui:FindFirstChild("Toast", true) else nil
-
+local GameSettings = UserSettings().GameSettings
 local Components = script.Parent.Parent
 local Actions = Components.Parent.Actions
 local SetGamepadMenuOpen = require(Actions.SetGamepadMenuOpen)
@@ -83,11 +83,28 @@ local GAMEPAD_MENU_KEY = "GamepadMenu"
 local GamepadMenu = Roact.PureComponent:extend("GamepadMenu")
 local SharedFlags = require(CorePackages.Workspace.Packages.SharedFlags)
 local FFlagAddMenuNavigationToggleDialog = SharedFlags.FFlagAddMenuNavigationToggleDialog
-local GetFFlagEnableUnibarSneakPeak = require(RobloxGui.Modules.Chrome.Flags.GetFFlagEnableUnibarSneakPeak)
-local GetFFlagSupportCompactUtility = SharedFlags.GetFFlagSupportCompactUtility
-local GetFFlagEnableAlwaysOpenUnibar = require(RobloxGui.Modules.Flags.GetFFlagEnableAlwaysOpenUnibar)
 local GetFFlagToastNotificationsGamepadSupport = SharedFlags.GetFFlagToastNotificationsGamepadSupport
-local GetFFlagReenableTextChatForTenFootInterfaces = SharedFlags.GetFFlagReenableTextChatForTenFootInterfaces
+local FFlagTiltIconUnibarFocusNav = SharedFlags.FFlagTiltIconUnibarFocusNav
+
+local SocialExperiments = require(CorePackages.Workspace.Packages.SocialExperiments)
+local TenFootInterfaceExpChatExperimentation = SocialExperiments.TenFootInterfaceExpChatExperimentation
+local FFlagSaveChatVisibilityUserSettings = game:DefineFastFlag("SaveChatVisibilityUserSettings", false)
+local FFlagMountCoreGuiBackpack = require(Modules.Flags.FFlagMountCoreGuiBackpack)
+
+local getFFlagCheckForTCSMigration = SharedFlags.getFFlagCheckForTCSMigration
+local getFFlagExpChatAlwaysRunTCS = SharedFlags.getFFlagExpChatAlwaysRunTCS
+
+local ToastRoot
+local ToastGui
+local Toast
+-- Loading the ToastNotification takes several seconds on Console, ensure this is wrapped in a task/coroutine
+if GetFFlagToastNotificationsGamepadSupport() then
+	task.spawn(function()
+			ToastRoot = CoreGui:WaitForChild("ToastNotification", 3)
+			ToastGui = if ToastRoot ~= nil then ToastRoot:WaitForChild("ToastNotificationWrapper", 3) else nil
+			Toast = if ToastGui ~= nil then ToastGui:FindFirstChild("Toast", true) else nil
+	end)
+end
 
 GamepadMenu.validateProps = t.strictInterface({
 	screenSize = t.Vector2,
@@ -96,7 +113,7 @@ GamepadMenu.validateProps = t.strictInterface({
 	chatEnabled = t.boolean,
 	leaderboardEnabled = t.boolean,
 	emotesEnabled = t.boolean,
-	backpackEnabled = t.boolean,
+	backpackEnabled = if FFlagMountCoreGuiBackpack then nil else t.boolean,
 
 	respawnEnabled = t.boolean,
 
@@ -105,16 +122,33 @@ GamepadMenu.validateProps = t.strictInterface({
 	emotesOpen = t.boolean,
 
 	menuOpen = t.boolean,
+	topBarEnabled = if FFlagMountCoreGuiBackpack then t.boolean else nil,
 
 	setGamepadMenuOpen = t.callback,
 	isGamepadMenuOpen = t.boolean,
 })
 
 function GamepadMenu:init()
-	self:setState({
-		selectedIndex = 1,
-		menuActions = {},
-	})
+	if FFlagMountCoreGuiBackpack then
+		self:setState({
+			selectedIndex = 1,
+			menuActions = {},
+			mountBackpack = StarterGui:GetCoreGuiEnabled(Enum.CoreGuiType.Backpack),
+		})
+
+		StarterGui.CoreGuiChangedSignal:Connect(function(coreGuiType: Enum.CoreGuiType, enabled: boolean)
+			if coreGuiType == Enum.CoreGuiType.Backpack or coreGuiType == Enum.CoreGuiType.All then
+				self:setState({
+					mountBackpack = enabled,
+				})
+			end
+		end)
+	else
+		self:setState({
+			selectedIndex = 1,
+			menuActions = {},
+		})
+	end
 
 	self.boundMenuOpenActions = false
 
@@ -279,44 +313,37 @@ end
 function GamepadMenu.openRootMenu()
 	-- todo: move InGameMenu to a script global when removing isNewInGameMenuEnabled
 	if isNewInGameMenuEnabled() then
-		local InGameMenu = require(RobloxGui.Modules.InGameMenuInit)
+		local InGameMenu = require(Modules.InGameMenuInit)
 		InGameMenu.openInGameMenu(InGameMenuConstants.MainPagePageKey)
 	else
-		local MenuModule = require(RobloxGui.Modules.Settings.SettingsHub)
+		local MenuModule = require(Modules.Settings.SettingsHub)
 		MenuModule:SetVisibility(true, nil, nil, true, InGameMenuConstants.AnalyticsMenuOpenTypes.PlayersTriggered)
 	end
 end
 
 function GamepadMenu.openUnibarMenu()
-	local ChromeService = require(RobloxGui.Modules.Chrome.Service)
-
-	if GetFFlagEnableAlwaysOpenUnibar() then
-		ChromeService:enableFocusNav()
-	elseif GetFFlagEnableUnibarSneakPeak() then
-		ChromeService:open()
-	else
-		ChromeService:toggleOpen()
-	end
+	local ChromeService = require(Modules.Chrome.Service)
+	ChromeService:enableFocusNav()
 end
 
 function GamepadMenu.closeUnibarMenu()
-	local ChromeService = require(RobloxGui.Modules.Chrome.Service)
-	if GetFFlagEnableAlwaysOpenUnibar() then
-		ChromeService:disableFocusNav()
-	elseif GetFFlagSupportCompactUtility() then
-		ChromeService:close(true)
-	else
-		ChromeService:close()
-	end
+	local ChromeService = require(Modules.Chrome.Service)
+	ChromeService:disableFocusNav()
 end
 
 function GamepadMenu.toggleChatVisible()
 	ChatModule:ToggleVisibility()
+	if FFlagSaveChatVisibilityUserSettings then
+		GameSettings.ChatVisible = ChatModule:GetVisibility()
+	end
 end
 
 function GamepadMenu.focusChatBar()
-	if GetFFlagReenableTextChatForTenFootInterfaces() then
+	if TenFootInterfaceExpChatExperimentation.getIsEnabled() then
 		ChatModule:SetVisible(true)
+		if FFlagSaveChatVisibilityUserSettings then
+			GameSettings.ChatVisible = true
+		end
 		ChatModule:FocusChatBar()
 	end
 end
@@ -324,7 +351,7 @@ end
 function GamepadMenu.toggleLeaderboard()
 	-- todo: move InGameMenu to a script global when removing isNewInGameMenuEnabled
 	if isNewInGameMenuEnabled() then
-		local InGameMenu = require(RobloxGui.Modules.InGameMenuInit)
+		local InGameMenu = require(Modules.InGameMenuInit)
 		InGameMenu.openPlayersPage()
 	else
 		PlayerListMaster:SetVisibility(not PlayerListMaster:GetSetVisible())
@@ -346,10 +373,10 @@ end
 function GamepadMenu.leaveGame()
 	-- todo: move InGameMenu to a script global when removing isNewInGameMenuEnabled
 	if isNewInGameMenuEnabled() then
-		local InGameMenu = require(RobloxGui.Modules.InGameMenuInit)
+		local InGameMenu = require(Modules.InGameMenuInit)
 		InGameMenu.openGameLeavePage()
 	else
-		local MenuModule = require(RobloxGui.Modules.Settings.SettingsHub)
+		local MenuModule = require(Modules.Settings.SettingsHub)
 		MenuModule:SetVisibility(
 			true,
 			false,
@@ -362,10 +389,10 @@ end
 
 function GamepadMenu.respawnCharacter()
 	if isNewInGameMenuEnabled() then
-		local InGameMenu = require(RobloxGui.Modules.InGameMenuInit)
+		local InGameMenu = require(Modules.InGameMenuInit)
 		InGameMenu.openCharacterResetPage()
 	else
-		local MenuModule = require(RobloxGui.Modules.Settings.SettingsHub)
+		local MenuModule = require(Modules.Settings.SettingsHub)
 		MenuModule:SetVisibility(
 			true,
 			false,
@@ -385,11 +412,16 @@ function GamepadMenu.shouldShowChatMenuOption(chatVersion, chatEnabled)
 	-- Passing in chat version through props was primarily added for unit tests, if it's nil grab the right version
 	chatVersion = chatVersion or TextChatService.ChatVersion
 
+	--Check to see if the place is automigrated to TCS (initial chatVersion may still be showing LegacyChat and won't be reliable)
+	if getFFlagCheckForTCSMigration() and getFFlagExpChatAlwaysRunTCS() then
+		return chatEnabled
+	end
+
 	-- We will currently only show the chat option for TCS, don't show it for legacy chat until other checks are added
 	return chatEnabled and chatVersion == Enum.ChatVersion.TextChatService
 end
 
-function GamepadMenu.getMenuActionsFromProps(props)
+function GamepadMenu.getMenuActionsFromProps(props, prevProps)
 	local menuActions = {}
 
 	table.insert(menuActions, {
@@ -400,7 +432,7 @@ function GamepadMenu.getMenuActionsFromProps(props)
 		onActivated = GamepadMenu.openRootMenu,
 	})
 
-	if GetFFlagReenableTextChatForTenFootInterfaces() then
+	if TenFootInterfaceExpChatExperimentation.getIsEnabled() then
 		if GamepadMenu.shouldShowChatMenuOption(props.chatVersion, props.chatEnabled) then
 			table.insert(menuActions, {
 				name = "Chat",
@@ -422,7 +454,7 @@ function GamepadMenu.getMenuActionsFromProps(props)
 		})
 	end
 
-	if not GetFFlagReenableTextChatForTenFootInterfaces() then
+	if not TenFootInterfaceExpChatExperimentation.getIsEnabled() then
 		if props.chatEnabled and not TenFootInterface:IsEnabled() then
 			table.insert(menuActions, {
 				name = "Chat",
@@ -470,7 +502,14 @@ function GamepadMenu.getMenuActionsFromProps(props)
 		})
 	end
 
-	if props.backpackEnabled then
+	local backpackEnabled = nil
+	if FFlagMountCoreGuiBackpack then
+		backpackEnabled = props.topBarEnabled and prevProps.mountBackpack
+	else
+		backpackEnabled = props.backpackEnabled
+	end
+
+	if backpackEnabled then
 		local icon
 		if props.backpackOpen then
 			icon = INVENTORY_ICON_ON
@@ -509,7 +548,12 @@ function GamepadMenu.getMenuActionsFromProps(props)
 end
 
 function GamepadMenu.getDerivedStateFromProps(nextProps, prevState)
-	local menuActions = GamepadMenu.getMenuActionsFromProps(nextProps)
+	local menuActions = nil
+	if FFlagMountCoreGuiBackpack then
+		menuActions = GamepadMenu.getMenuActionsFromProps(nextProps, prevState)
+	else
+		menuActions = GamepadMenu.getMenuActionsFromProps(nextProps)
+	end
 
 	local selectedIndex = prevState.selectedIndex or 1
 	if selectedIndex > #menuActions then
@@ -578,7 +622,7 @@ function GamepadMenu:render()
 
 		local visible = self.props.isGamepadMenuOpen
 		local controllerBarComponent
-		if GetFFlagReenableTextChatForTenFootInterfaces() then
+		if TenFootInterfaceExpChatExperimentation.getIsEnabled() then
 			if visible then
 				controllerBarComponent = Roact.createElement(ControllerBar, {
 					chatMenuEnabled = self.shouldShowChatMenuOption(self.props.chatVersion, self.props.chatEnabled),
@@ -602,10 +646,10 @@ function GamepadMenu:render()
 			}, menuChildren),
 
 			ControllerBar = controllerBarComponent,
-			MenuNavigationToggleDialog = if FFlagAddMenuNavigationToggleDialog
+			MenuNavigationToggleDialog = if not ChromeEnabled() and not FFlagTiltIconUnibarFocusNav and FFlagAddMenuNavigationToggleDialog
 				then Roact.createElement(MenuNavigationToggleDialog, {
 					Position = UDim2.fromScale(0.5, 0.1),
-				})
+				} :: never)
 				else nil,
 		}
 
@@ -664,7 +708,7 @@ function GamepadMenu:bindMenuOpenActions()
 	ContextActionService:BindCoreAction(GO_TO_TOP_ACTION_NAME, self.goToTopAction, false, Enum.KeyCode.ButtonL2)
 	ContextActionService:BindCoreAction(GO_TO_BOTTOM_ACTION_NAME, self.goToBottomAction, false, Enum.KeyCode.ButtonR2)
 
-	if GetFFlagReenableTextChatForTenFootInterfaces() then
+	if TenFootInterfaceExpChatExperimentation.getIsEnabled() then
 		ContextActionService:BindCoreAction(
 			TOGGLE_CHAT_VISIBILITY,
 			self.toggleChatVisibilityAction,
@@ -693,7 +737,7 @@ function GamepadMenu:unbindMenuOpenActions()
 	ContextActionService:UnbindCoreAction(GO_TO_TOP_ACTION_NAME)
 	ContextActionService:UnbindCoreAction(GO_TO_BOTTOM_ACTION_NAME)
 
-	if GetFFlagReenableTextChatForTenFootInterfaces() then
+	if TenFootInterfaceExpChatExperimentation.getIsEnabled() then
 		ContextActionService:UnbindCoreAction(TOGGLE_CHAT_VISIBILITY)
 	end
 end
@@ -728,7 +772,7 @@ function GamepadMenu:didUpdate(prevProps, prevState)
 
 			GuiService:SetMenuIsOpen(true, GAMEPAD_MENU_KEY)
 
-			if GetFFlagEnableUnibarSneakPeak() and ChromeEnabled() then
+			if ChromeEnabled() then
 				GamepadMenu.closeUnibarMenu()
 			end
 		else
@@ -754,10 +798,11 @@ local function mapStateToProps(state)
 		emotesEnabled = state.moreMenu.emotesEnabled
 			and state.coreGuiEnabled[Enum.CoreGuiType.EmotesMenu]
 			and topBarEnabled,
-		backpackEnabled = state.coreGuiEnabled[Enum.CoreGuiType.Backpack] and topBarEnabled,
+		backpackEnabled = if FFlagMountCoreGuiBackpack then nil else state.coreGuiEnabled[Enum.CoreGuiType.Backpack] and topBarEnabled,
 
 		respawnEnabled = state.respawn.enabled,
 
+		topBarEnabled = if FFlagMountCoreGuiBackpack then topBarEnabled else nil,
 		leaderboardOpen = state.moreMenu.leaderboardOpen,
 		backpackOpen = state.moreMenu.backpackOpen,
 		emotesOpen = state.moreMenu.emotesOpen,

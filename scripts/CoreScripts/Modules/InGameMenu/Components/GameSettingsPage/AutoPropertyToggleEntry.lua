@@ -1,6 +1,6 @@
 local CorePackages = game:GetService("CorePackages")
 
-local InGameMenuDependencies = require(CorePackages.InGameMenuDependencies)
+local InGameMenuDependencies = require(CorePackages.Packages.InGameMenuDependencies)
 local Roact = InGameMenuDependencies.Roact
 local t = InGameMenuDependencies.t
 
@@ -45,7 +45,7 @@ function AutoPropertyToggleEntry:init(props)
 	self.onExternalChange = function()
 		local newValue = props.instance[props.valueKey]
 		self:setState({
-			checked = newValue == props.onValue
+			checked = newValue == props.onValue,
 		})
 	end
 

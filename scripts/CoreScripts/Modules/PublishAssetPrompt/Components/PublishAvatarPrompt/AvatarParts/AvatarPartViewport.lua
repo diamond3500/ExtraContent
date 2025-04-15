@@ -3,14 +3,16 @@
 ]]
 local CorePackages = game:GetService("CorePackages")
 
-local Roact = require(CorePackages.Roact)
+local Roact = require(CorePackages.Packages.Roact)
 local t = require(CorePackages.Packages.t)
 
-local UIBlox = require(CorePackages.UIBlox)
+local UIBlox = require(CorePackages.Packages.UIBlox)
 local withStyle = UIBlox.Style.withStyle
-local CameraUtility = require(CorePackages.Thumbnailing).CameraUtility
-local MannequinUtility = require(CorePackages.Thumbnailing).MannequinUtility
+local CameraUtility = require(CorePackages.Packages.Thumbnailing).CameraUtility
+local MannequinUtility = require(CorePackages.Packages.Thumbnailing).MannequinUtility
 local Constants = require(script.Parent.Parent.Parent.Parent.Constants)
+
+local FFlagFixPublishAvatarVRViewports = require(script.Parent.Parent.Parent.Parent.FFlagFixPublishAvatarVRViewports)
 
 local AvatarPartViewport = Roact.PureComponent:extend("AvatarPartViewport")
 
@@ -41,6 +43,10 @@ function AvatarPartViewport:createViewportCamera()
 	local camera = Instance.new("Camera")
 	camera.Parent = self.modelRef:getValue()
 	camera.CameraType = Enum.CameraType.Scriptable
+	if FFlagFixPublishAvatarVRViewports then
+		camera.HeadLocked = true
+		camera.VRTiltAndRollEnabled = true
+	end
 	return camera
 end
 

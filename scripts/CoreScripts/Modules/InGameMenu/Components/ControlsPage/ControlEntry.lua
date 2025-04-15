@@ -1,7 +1,7 @@
 --!nonstrict
 local CorePackages = game:GetService("CorePackages")
 
-local InGameMenuDependencies = require(CorePackages.InGameMenuDependencies)
+local InGameMenuDependencies = require(CorePackages.Packages.InGameMenuDependencies)
 local Roact = InGameMenuDependencies.Roact
 local t = InGameMenuDependencies.t
 local UIBlox = InGameMenuDependencies.UIBlox
@@ -74,12 +74,11 @@ local function renderInputIconContainer(inputs, isList)
 
 	local layoutOrder = 1
 	for i, input in ipairs(inputs) do
-
 		-- If input is a group of inputs, we iterate over that table and render
 		-- with "+"" as spacers. Otherwise, we render the single input with "/"
 		-- as the spacer.
 		if typeof(input) ~= "table" then
-			children["input"..i] = renderKey(input, layoutOrder)
+			children["input" .. i] = renderKey(input, layoutOrder)
 			layoutOrder = layoutOrder + 1
 
 			-- if "list", append elipses to the end of inputs
@@ -89,11 +88,11 @@ local function renderInputIconContainer(inputs, isList)
 		else
 			for i2, groupedInput in ipairs(input) do
 				local order = string.format("%d_%d", i, i2)
-				children["groupedInput"..order] = renderKey(groupedInput, layoutOrder)
+				children["groupedInput" .. order] = renderKey(groupedInput, layoutOrder)
 				layoutOrder = layoutOrder + 1
 
 				if i2 < #input then
-					children["groupedDivider"..order] = renderHorizontalSpacer("+", layoutOrder)
+					children["groupedDivider" .. order] = renderHorizontalSpacer("+", layoutOrder)
 					layoutOrder = layoutOrder + 1
 				end
 			end
@@ -101,7 +100,7 @@ local function renderInputIconContainer(inputs, isList)
 
 		-- If "list", don't render dividers
 		if not isList and i < #inputs then
-			children["divider"..i] = renderHorizontalSpacer("/", layoutOrder)
+			children["divider" .. i] = renderHorizontalSpacer("/", layoutOrder)
 			layoutOrder = layoutOrder + 1
 		end
 	end
@@ -124,7 +123,7 @@ local function ControlEntry(props)
 		return Roact.createElement("Frame", {
 			LayoutOrder = props.LayoutOrder,
 			BackgroundTransparency = 1,
-			Size = UDim2.new(1, 0, 0, CONTROL_ENTRY_HEIGHT)
+			Size = UDim2.new(1, 0, 0, CONTROL_ENTRY_HEIGHT),
 		}, {
 			ActionLabel = Roact.createElement(ThemedTextLabel, {
 				fontKey = "Header2",

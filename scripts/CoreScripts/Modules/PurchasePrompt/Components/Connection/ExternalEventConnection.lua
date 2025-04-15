@@ -5,7 +5,7 @@ local Root = script.Parent.Parent.Parent
 
 local CorePackages = game:GetService("CorePackages")
 
-local PurchasePromptDeps = require(CorePackages.PurchasePromptDeps)
+local PurchasePromptDeps = require(CorePackages.Workspace.Packages.PurchasePromptDeps)
 local Roact = PurchasePromptDeps.Roact
 
 local ExternalEventConnection = Roact.Component:extend("ExternalEventConnection")

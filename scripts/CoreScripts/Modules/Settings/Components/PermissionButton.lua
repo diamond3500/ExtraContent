@@ -1,8 +1,8 @@
 local CorePackages = game:GetService("CorePackages")
 
-local Roact = require(CorePackages.Roact)
+local Roact = require(CorePackages.Packages.Roact)
 local t = require(CorePackages.Packages.t)
-local UIBlox = require(CorePackages.UIBlox)
+local UIBlox = require(CorePackages.Packages.UIBlox)
 
 local ImageSetButton = UIBlox.Core.ImageSet.ImageSetButton
 
@@ -21,7 +21,9 @@ PermissionButton.validateProps = t.strictInterface({
 function PermissionButton:render()
 	return Roact.createElement("ImageButton", {
 		LayoutOrder = self.props.LayoutOrder,
-		Image = if self.props.useNewMenuTheme then "rbxasset://textures/ui/TopBar/iconBase.png" else "rbxasset://textures/ui/dialog_white.png",
+		Image = if self.props.useNewMenuTheme
+			then "rbxasset://textures/ui/TopBar/iconBase.png"
+			else "rbxasset://textures/ui/dialog_white.png",
 		ImageTransparency = if self.props.useNewMenuTheme then 0 else 0.85,
 		BackgroundTransparency = 1,
 		ScaleType = Enum.ScaleType.Slice,
@@ -32,10 +34,11 @@ function PermissionButton:render()
 			LayoutOrder = 2,
 			Image = self.props.image,
 			BackgroundTransparency = 1,
-			Size = self.props.imageLabelProps and self.props.imageLabelProps.Size or UDim2.new(0, BUTTON_SIZE, 0, BUTTON_SIZE),
+			Size = self.props.imageLabelProps and self.props.imageLabelProps.Size
+				or UDim2.new(0, BUTTON_SIZE, 0, BUTTON_SIZE),
 			Position = self.props.imageLabelProps and self.props.imageLabelProps.Position,
 			[Roact.Event.Activated] = self.props.callback,
-		})
+		}),
 	})
 end
 

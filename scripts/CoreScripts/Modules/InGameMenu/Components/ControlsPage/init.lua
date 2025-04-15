@@ -3,7 +3,7 @@ local GuiService = game:GetService("GuiService")
 
 local MockableProxyServices = require(CorePackages.Workspace.Packages.MockableProxyServices)
 local VRService = MockableProxyServices.VRService :: VRService
-local InGameMenuDependencies = require(CorePackages.InGameMenuDependencies)
+local InGameMenuDependencies = require(CorePackages.Packages.InGameMenuDependencies)
 local Roact = InGameMenuDependencies.Roact
 local RoactRodux = InGameMenuDependencies.RoactRodux
 local t = InGameMenuDependencies.t
@@ -50,9 +50,8 @@ function ControlsPage:render()
 				FocusHandler = Roact.createElement(FocusHandler, {
 					isFocused = self.props.canCaptureFocus,
 					didFocus = function()
-						local buttonRef = self.closeButtonRef:getValue()
-						-- AddSelectionParent is deprecated
-						;(GuiService :: any):AddSelectionParent(CLOSE_BUTTON_SELECTION_GROUP_NAME, buttonRef)
+						local buttonRef = self.closeButtonRef:getValue(); -- AddSelectionParent is deprecated
+						(GuiService :: any):AddSelectionParent(CLOSE_BUTTON_SELECTION_GROUP_NAME, buttonRef)
 						GuiService.SelectedCoreObject = buttonRef
 					end,
 					didBlur = function()

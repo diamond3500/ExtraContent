@@ -1,7 +1,7 @@
 local CorePackages = game:GetService("CorePackages")
 local GuiService = game:GetService("GuiService")
 
-local InGameMenuDependencies = require(CorePackages.InGameMenuDependencies)
+local InGameMenuDependencies = require(CorePackages.Packages.InGameMenuDependencies)
 local Roact = InGameMenuDependencies.Roact
 local RoactRodux = InGameMenuDependencies.RoactRodux
 local t = InGameMenuDependencies.t
@@ -32,16 +32,14 @@ function FocusHighlightManager:render()
 			isFocused = self.props.menuOpen and self.props.inputType == InputType.Gamepad,
 			didBlur = function()
 				GuiService.SelectedCoreObject = nil
-			end
+			end,
 		})
 	end
 end
 
-return RoactRodux.UNSTABLE_connect2(
-	function(state)
-		return {
-			menuOpen = state.isMenuOpen,
-			inputType = state.displayOptions.inputType,
-		}
-	end
-)(FocusHighlightManager)
+return RoactRodux.UNSTABLE_connect2(function(state)
+	return {
+		menuOpen = state.isMenuOpen,
+		inputType = state.displayOptions.inputType,
+	}
+end)(FocusHighlightManager)

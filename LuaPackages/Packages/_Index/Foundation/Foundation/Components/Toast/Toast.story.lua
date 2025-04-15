@@ -26,7 +26,7 @@ return {
 								onActivated = function()
 									print(props.controls.button1)
 								end,
-								variant = ButtonVariant.Subtle :: ButtonVariant,
+								variant = ButtonVariant.Emphasis :: ButtonVariant,
 								text = props.controls.button1,
 							}
 							else nil,
@@ -35,11 +35,12 @@ return {
 								onActivated = function()
 									print(props.controls.button2)
 								end,
-								variant = ButtonVariant.Emphasis :: ButtonVariant,
+								variant = ButtonVariant.Subtle :: ButtonVariant,
 								text = props.controls.button2,
 							}
 							else nil,
 					},
+					width = UDim.new(0, props.controls.width),
 				} :: any)
 			end,
 		},
@@ -54,5 +55,6 @@ return {
 		text = "U have been toasted . >:)",
 		button1 = "Action 1",
 		button2 = "Action 2",
+		width = { 400, 300, 500 },
 	},
 }

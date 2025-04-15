@@ -1,8 +1,8 @@
 local CorePackages = game:GetService("CorePackages")
 local getClientReplicator = require(script.Parent.Parent.Parent.Util.getClientReplicator)
 
-local Roact = require(CorePackages.Roact)
-local RoactRodux = require(CorePackages.RoactRodux)
+local Roact = require(CorePackages.Packages.Roact)
+local RoactRodux = require(CorePackages.Packages.RoactRodux)
 
 local Actions = script.Parent.Parent.Parent.Actions
 local SetRCCProfilerState = require(Actions.SetRCCProfilerState)
@@ -35,7 +35,6 @@ end
 function RCCProfilerDataCompleteListener:render()
 	return nil
 end
-
 
 local function mapStateToProps(state, props)
 	return {

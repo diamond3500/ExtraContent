@@ -1,8 +1,8 @@
 export type BadgeSize = "Small" | "Medium"
 
 local BadgeSizeEnum = {
-	Small = "Small",
-	Medium = "Medium",
+	Small = "Small" :: "Small",
+	Medium = "Medium" :: "Medium",
 }
 
 return BadgeSizeEnum

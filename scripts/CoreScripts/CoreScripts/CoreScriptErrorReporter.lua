@@ -12,8 +12,10 @@ local UserInputService = game:GetService("UserInputService")
 local RobloxGui = CoreGui.RobloxGui
 local RateLimiter = require(RobloxGui.Modules.ErrorReporting.RateLimiter)
 local PiiFilter = require(RobloxGui.Modules.ErrorReporting.PiiFilter)
+local LuaCoreScriptsErrorV2CounterConfig = require(RobloxGui.Modules.ErrorReporting.LuaCoreScriptsErrorV2CounterConfig)
 
 local BacktraceReporter = require(CorePackages.Workspace.Packages.ErrorReporters).BacktraceReporter
+local LoggingProtocol = require(CorePackages.Workspace.Packages.LoggingProtocol).default
 local React = require(CorePackages.Packages.React)
 
 -- This flag is permanent; please do not remove it. It serves as a way to
@@ -37,6 +39,8 @@ game:DefineFastInt("CoreScriptBacktraceRepeatedErrorRateLimitPeriod", 60)
 game:DefineFastInt("CoreScriptBacktraceRepeatedErrorRateLimitProcessIntervalTenths", 10)
 
 game:DefineFastInt("CoreScriptBacktraceErrorReportPercentage", 100)
+
+local FFlagEnableLuaCoreScriptsErrorV2Counter = game:DefineFastFlag("EnableLuaCoreScriptsErrorV2Counter", false)
 
 local function CanReportCoreScriptBacktrace()
 	return math.random(1, 100) <= math.clamp(game:GetFastInt("CoreScriptBacktraceErrorReportPercentage"), 0, 100)
@@ -128,6 +132,9 @@ then
 			end
 
 			reporter:reportErrorDeferred(cleanedMessage, cleanedStack, details)
+			if FFlagEnableLuaCoreScriptsErrorV2Counter then
+				LoggingProtocol:logRobloxTelemetryCounter(LuaCoreScriptsErrorV2CounterConfig, 1)
+			end
 		end
 	end
 

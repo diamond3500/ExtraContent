@@ -1,6 +1,6 @@
 local CorePackages = game:GetService("CorePackages")
 
-local InGameMenuDependencies = require(CorePackages.InGameMenuDependencies)
+local InGameMenuDependencies = require(CorePackages.Packages.InGameMenuDependencies)
 local Roact = InGameMenuDependencies.Roact
 local RoactRodux = InGameMenuDependencies.RoactRodux
 local t = InGameMenuDependencies.t
@@ -46,13 +46,10 @@ local function ReportButton(props)
 	end)
 end
 
-return RoactRodux.UNSTABLE_connect2(
-	nil,
-	function(dispatch)
-		return {
-			dispatchOpenReportDialog = function(userId, userName)
-				dispatch(OpenReportDialog(userId, userName))
-			end,
-		}
-	end
-)(ReportButton)
+return RoactRodux.UNSTABLE_connect2(nil, function(dispatch)
+	return {
+		dispatchOpenReportDialog = function(userId, userName)
+			dispatch(OpenReportDialog(userId, userName))
+		end,
+	}
+end)(ReportButton)

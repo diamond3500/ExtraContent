@@ -1,3 +1,4 @@
+-- moving this file to LuaApps, please replicate any changes in the LuaApps file as well
 local RunService = game:GetService("RunService")
 
 local MediaGallery = script.Parent
@@ -33,7 +34,6 @@ local DEFAULT_THUMBNAILS_COUNT = 5
 local PADDING_MIDDLE = 24
 local PADDING_ITEMS = 12
 local CORNER_RADIUS = 8
-local IMAGE_RATIO = 16 / 9 -- width / height
 local PAGINATION_ARROW_WIDTH = getIconSize(IconSize.Medium)
 
 local METER_BAR_THICKNESS = 2
@@ -52,6 +52,8 @@ MediaGalleryPreview.validateProps = t.strictInterface({
 	-- The Size of the cell.
 	-- If it's no set, the cell will size itself to the parent container
 	size = t.optional(t.UDim2),
+	-- If true then preview and pagination should take up full width of size without leaving room for pagination arrows
+	fullWidth = if UIBloxConfig.enableEdpComponentAlignment then t.optional(t.boolean) else nil,
 	-- The AnchorPoint of the cell
 	anchorPoint = t.optional(t.Vector2),
 	-- The Position of the cell
@@ -67,6 +69,8 @@ MediaGalleryPreview.validateProps = t.strictInterface({
 	numberOfThumbnails = t.optional(t.integer),
 	-- Callback for clicking the previewing image
 	onPreviewActivated = t.optional(t.callback),
+	-- Callback for clicking a thumbnail image
+	onThumbnailActivated = t.optional(t.callback),
 	-- Callback for clicking the video item or the play button on it
 	onVideoPlayActivated = t.optional(t.callback),
 })
@@ -74,6 +78,7 @@ MediaGalleryPreview.validateProps = t.strictInterface({
 MediaGalleryPreview.defaultProps = {
 	size = UDim2.fromScale(1, 1),
 	numberOfThumbnails = DEFAULT_THUMBNAILS_COUNT,
+	fullWidth = if UIBloxConfig.enableEdpComponentAlignment then false else nil,
 }
 
 function MediaGalleryPreview.getDerivedStateFromProps(nextProps, lastState)
@@ -223,6 +228,9 @@ function MediaGalleryPreview:init()
 	self.onItemActivated = function(index)
 		local itemsToShow = self.state.itemsToShow
 		local isVideo = itemsToShow[index].isVideo
+		local originalIndex = if UIBloxConfig.addThumbnailCallbackToMediaGalleryPreview
+			then self.state.selectedIndex
+			else nil
 
 		self.resetAnimation()
 		self:setState({
@@ -232,6 +240,10 @@ function MediaGalleryPreview:init()
 
 		if isVideo then
 			self.onVideoPlayActivated(index)
+		end
+
+		if UIBloxConfig.addThumbnailCallbackToMediaGalleryPreview and self.props.onThumbnailActivated then
+			self.props.onThumbnailActivated(originalIndex, index)
 		end
 	end
 
@@ -536,61 +548,22 @@ function MediaGalleryPreview:didUpdate(_, prevState)
 	end
 end
 
--- remove with UIBloxConfig.useSeparatedCalcFunction
-function MediaGalleryPreview:calcSizesFromWidth(containerWidth, numberOfThumbnails)
-	if UIBloxConfig.useSeparatedCalcFunction then
-		assert(false, "Deprecated usage, use `UIBlox.App.Container.calcMediaGallerySizesFromWidth` instead")
-		return
-	end
-
-	local previewWidth = containerWidth - PAGINATION_ARROW_WIDTH * 2
-	local previewHeight = math.floor(previewWidth / IMAGE_RATIO)
-	local thumbnailWidth = math.floor(
-		(containerWidth - PADDING_ITEMS * (numberOfThumbnails - 1) - PAGINATION_ARROW_WIDTH * 2) / numberOfThumbnails
-	)
-	local paginationHeight = math.floor(thumbnailWidth / IMAGE_RATIO)
-	local contentHeight = previewHeight + paginationHeight + PADDING_MIDDLE
-
-	return {
-		contentSize = UDim2.fromOffset(containerWidth, contentHeight),
-		previewSize = UDim2.fromOffset(previewWidth, previewHeight),
-		paginationSize = UDim2.fromOffset(containerWidth, paginationHeight),
-		thumbnailSize = UDim2.fromOffset(thumbnailWidth, paginationHeight),
-	}
-end
-
--- remove with UIBloxConfig.useSeparatedCalcFunction
-function MediaGalleryPreview:calcSizesFromHeight(containerHeight, numberOfThumbnails)
-	-- reverse calculation of calcSizesFromWidth()
-	if UIBloxConfig.useSeparatedCalcFunction then
-		assert(false, "Deprecated usage, use `calcMediaGallerySizesFromHeight()` instead")
-		return
-	end
-
-	local contentWidth = math.floor(
-		(
-			math.floor((containerHeight - PADDING_MIDDLE) * IMAGE_RATIO * numberOfThumbnails)
-			+ PADDING_ITEMS * (numberOfThumbnails - 1)
-			+ PAGINATION_ARROW_WIDTH * 2
-			+ PAGINATION_ARROW_WIDTH * 2 * numberOfThumbnails
-		) / (numberOfThumbnails + 1)
-	)
-
-	return self:calcSizesFromWidth(contentWidth, numberOfThumbnails)
-end
-
 function MediaGalleryPreview:updateSizes(container)
 	local containerWidth = container.AbsoluteSize.X
 	local containerHeight = container.AbsoluteSize.Y
 	local numberOfThumbnails = self.props.numberOfThumbnails
 
-	local sizes = if UIBloxConfig.useSeparatedCalcFunction
-		then calcMediaGallerySizesFromWidth(containerWidth, numberOfThumbnails)
-		else self:calcSizesFromWidth(containerWidth, numberOfThumbnails)
+	local sizes = calcMediaGallerySizesFromWidth(
+		containerWidth,
+		numberOfThumbnails,
+		if UIBloxConfig.enableEdpComponentAlignment then self.props.fullWidth else nil
+	)
 	if sizes.contentSize.Y.Offset > containerHeight then
-		sizes = if UIBloxConfig.useSeparatedCalcFunction
-			then calcMediaGallerySizesFromHeight(containerHeight, numberOfThumbnails)
-			else self:calcSizesFromHeight(containerHeight, numberOfThumbnails)
+		sizes = calcMediaGallerySizesFromHeight(
+			containerHeight,
+			numberOfThumbnails,
+			if UIBloxConfig.enableEdpComponentAlignment then self.props.fullWidth else nil
+		)
 	end
 
 	self.updateContentSize(sizes.contentSize)
@@ -614,4 +587,4 @@ function MediaGalleryPreview:scrollToNewIndex()
 	self.scrolling = true
 end
 
-return MediaGalleryPreview
+return if UIBloxConfig.moveMediaGalleryToLuaApps then nil else MediaGalleryPreview

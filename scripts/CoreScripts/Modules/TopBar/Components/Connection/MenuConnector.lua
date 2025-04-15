@@ -4,8 +4,8 @@ local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 
 local PerfUtils = require(RobloxGui.Modules.Common.PerfUtils)
 
-local Roact = require(CorePackages.Roact)
-local RoactRodux = require(CorePackages.RoactRodux)
+local Roact = require(CorePackages.Packages.Roact)
+local RoactRodux = require(CorePackages.Packages.RoactRodux)
 local t = require(CorePackages.Packages.t)
 
 local Components = script.Parent.Parent
@@ -18,7 +18,8 @@ local EventConnection = require(TopBar.Parent.Common.EventConnection)
 
 local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 local isNewInGameMenuEnabled = require(RobloxGui.Modules.isNewInGameMenuEnabled)
-local GetFFlagEnableInGameMenuDurationLogger = require(RobloxGui.Modules.Common.Flags.GetFFlagEnableInGameMenuDurationLogger)
+local GetFFlagEnableInGameMenuDurationLogger =
+	require(RobloxGui.Modules.Common.Flags.GetFFlagEnableInGameMenuDurationLogger)
 
 local MenuConnector = Roact.PureComponent:extend("MenuConnector")
 

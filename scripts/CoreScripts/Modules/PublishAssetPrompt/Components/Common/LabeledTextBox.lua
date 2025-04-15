@@ -31,6 +31,7 @@ export type Props = {
 	onTextUpdated: (string, boolean) -> (), -- function(newName, isNameValid)
 	textBoxHeight: number?,
 	textBoxRef: React.Ref<any>?,
+	invalidInputText: string?,
 }
 
 local defaultProps = {
@@ -86,6 +87,7 @@ local function LabeledTextBox(providedProps: Props)
 			centerText = props.centerText,
 			nameTextBoxRef = props.textBoxRef,
 			LayoutOrder = 2,
+			invalidInputText = props.invalidInputText,
 		}),
 	})
 end

@@ -1,14 +1,12 @@
 local CorePackages = game:GetService("CorePackages")
 local TextService = game:GetService("TextService")
-local CoreGui = game:GetService("CoreGui")
-local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 
-local Roact = require(CorePackages.Roact)
+local Roact = require(CorePackages.Packages.Roact)
 local React = require(CorePackages.Packages.React)
 local t = require(CorePackages.Packages.t)
 local ArgCheck = require(CorePackages.Workspace.Packages.ArgCheck)
 
-local UIBlox = require(CorePackages.UIBlox)
+local UIBlox = require(CorePackages.Packages.UIBlox)
 local Button = UIBlox.App.Button.Button
 local ButtonType = UIBlox.App.Button.Enum.ButtonType
 local Checkbox = UIBlox.App.InputButton.Checkbox
@@ -16,7 +14,7 @@ local Images = UIBlox.App.ImageSet.Images
 
 local Assets = require(script.Parent.Parent.Parent.InGameMenu.Resources.Assets)
 
-local RobloxTranslator = require(RobloxGui.Modules.RobloxTranslator)
+local RobloxTranslator = require(CorePackages.Workspace.Packages.RobloxTranslator)
 
 -- Constants
 local OVERLAY_WIDTH = 365

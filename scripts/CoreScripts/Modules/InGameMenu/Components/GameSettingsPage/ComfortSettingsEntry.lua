@@ -4,7 +4,7 @@ local GameSettings = UserSettings().GameSettings
 
 local LuauPolyfill = require(CorePackages.Packages.LuauPolyfill)
 
-local InGameMenuDependencies = require(CorePackages.InGameMenuDependencies)
+local InGameMenuDependencies = require(CorePackages.Packages.InGameMenuDependencies)
 local Roact = require(CorePackages.Packages.Roact)
 local t = InGameMenuDependencies.t
 local UIBlox = InGameMenuDependencies.UIBlox
@@ -28,7 +28,6 @@ local LAYOUT_PADDING_BOTTOM = 15
 local LIST_ITEM_PADDING = 20
 local DESCRIPTION_WIDTH_FRACTION = 0.9
 
-
 local COMFORT_SETTINGS_LOCALIZATION_KEYS = {
 	["Description"] = "CoreScripts.InGameMenu.GameSettings.ComfortSettingsDescription",
 	["Enum.VRComfortSetting.Comfort"] = "CoreScripts.InGameMenu.GameSettings.ComfortSettingComfort",
@@ -45,13 +44,10 @@ end
 local function setComfortSettingByIndex(index)
 	local enumValue = VRComfortSettingEnumValues[index]
 	GameSettings.VRComfortSetting = enumValue
-	SendAnalytics(
-		Constants.AnalyticsSettingsChangeName,
-		Constants.AnalyticsSettingsVRComfortSettingChangeName, {
-		mode = tostring(enumValue)
+	SendAnalytics(Constants.AnalyticsSettingsChangeName, Constants.AnalyticsSettingsVRComfortSettingChangeName, {
+		mode = tostring(enumValue),
 	})
 end
-
 
 local ComfortSettingsEntry = Roact.PureComponent:extend("ComfortSettingsEntry")
 ComfortSettingsEntry.validateProps = t.strictInterface({
@@ -65,9 +61,7 @@ function ComfortSettingsEntry:init()
 end
 
 function ComfortSettingsEntry:render()
-	return withLocalization(
-		COMFORT_SETTINGS_LOCALIZATION_KEYS
-	)(function(localized)
+	return withLocalization(COMFORT_SETTINGS_LOCALIZATION_KEYS)(function(localized)
 		return Roact.createFragment({
 			VRComfortSettingListener = Roact.createElement(ExternalEventConnection, {
 				event = VRComfortSettingChanged,
@@ -121,7 +115,7 @@ function ComfortSettingsEntry:render()
 						end,
 						tabs = LuauPolyfill.Array.map(VRComfortSettingEnumValues, function(item, index)
 							return {
-								tabName = localized[tostring(item)]
+								tabName = localized[tostring(item)],
 							}
 						end),
 					}),

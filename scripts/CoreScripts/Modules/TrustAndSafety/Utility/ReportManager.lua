@@ -9,7 +9,7 @@ local Dash = require(CorePackages.Packages.Dash)
 
 local VoiceChatServiceManager = require(RobloxGui.Modules.VoiceChat.VoiceChatServiceManager).default
 local createVoiceAbuseReportRequest = require(RobloxGui.Modules.VoiceChat.createVoiceAbuseReportRequest)
-local Url = require(RobloxGui.Modules.Common.Url)
+local Url = require(CorePackages.Workspace.Packages.CoreScriptsCommon).Url
 
 local TnsModule = script.Parent.Parent
 local Constants = require(TnsModule.Resources.Constants)

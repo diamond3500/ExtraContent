@@ -3,33 +3,47 @@ local CoreGui = game:GetService("CoreGui")
 local GuiService = game:GetService("GuiService")
 local VRService = game:GetService("VRService")
 local GamepadService = game:GetService("GamepadService")
+local ContextActionService = game:GetService("ContextActionService")
 
-local Roact = require(CorePackages.Roact)
-local RoactRodux = require(CorePackages.RoactRodux)
+local SharedFlags = require(CorePackages.Workspace.Packages.SharedFlags)
+local FFlagTiltIconUnibarFocusNav = SharedFlags.FFlagTiltIconUnibarFocusNav
+
+local Roact = require(CorePackages.Packages.Roact)
+local RoactRodux = require(CorePackages.Packages.RoactRodux)
 local t = require(CorePackages.Packages.t)
-local UIBlox = require(CorePackages.UIBlox)
+local UIBlox = require(CorePackages.Packages.UIBlox)
 local UIBloxImages = UIBlox.App.ImageSet.Images
 local withTooltip = UIBlox.App.Dialog.TooltipV2.withTooltip
 local TooltipOrientation = UIBlox.App.Dialog.Enum.TooltipOrientation
 
 local RobloxGui = CoreGui:WaitForChild("RobloxGui")
-local ChromeEnabled = require(RobloxGui.Modules.Chrome.Enabled)
+local Chrome = RobloxGui.Modules.Chrome
+local ChromeEnabled = require(Chrome.Enabled)
+local ChromeService = if ChromeEnabled() and FFlagTiltIconUnibarFocusNav then require(Chrome.Service) else nil :: never
+local UnibarConstants = if ChromeEnabled() and FFlagTiltIconUnibarFocusNav then require(Chrome.ChromeShared.Unibar.Constants) else nil :: never
 local TenFootInterface = require(RobloxGui.Modules.TenFootInterface)
 local isNewInGameMenuEnabled = require(RobloxGui.Modules.isNewInGameMenuEnabled)
 local InGameMenuConstants = require(RobloxGui.Modules.InGameMenuConstants)
 local PlayerListMaster = require(RobloxGui.Modules.PlayerList.PlayerListManager)
-local RobloxTranslator = require(RobloxGui.Modules.RobloxTranslator)
+local RobloxTranslator = require(CorePackages.Workspace.Packages.RobloxTranslator)
 local BadgeOver12 = require(script.Parent.BadgeOver12)
 
 local VRHub = require(RobloxGui.Modules.VR.VRHub)
 
-local isSubjectToDesktopPolicies = require(CorePackages.Workspace.Packages.SharedFlags).isSubjectToDesktopPolicies
+local isSubjectToDesktopPolicies = SharedFlags.isSubjectToDesktopPolicies
 
 local ExternalEventConnection = require(CorePackages.Workspace.Packages.RoactUtils).ExternalEventConnection
 
-local GetFFlagChangeTopbarHeightCalculation = require(script.Parent.Parent.Parent.Flags.GetFFlagChangeTopbarHeightCalculation)
-local FFlagEnableChromeBackwardsSignalAPI = require(script.Parent.Parent.Parent.Flags.GetFFlagEnableChromeBackwardsSignalAPI)()
-local FFlagEnableUnibarFtuxTooltips = require(script.Parent.Parent.Parent.Parent.Flags.FFlagEnableUnibarFtuxTooltips)
+local GetFFlagChangeTopbarHeightCalculation =
+	require(script.Parent.Parent.Parent.Flags.GetFFlagChangeTopbarHeightCalculation)
+local FFlagEnableChromeBackwardsSignalAPI =
+	require(script.Parent.Parent.Parent.Flags.GetFFlagEnableChromeBackwardsSignalAPI)()
+local FFlagEnableUnibarFtuxTooltips = SharedFlags.FFlagEnableUnibarFtuxTooltips
+local FFlagHideTopBarConsole = SharedFlags.FFlagHideTopBarConsole
+local FFlagEnableChromeShortcutBar = SharedFlags.FFlagEnableChromeShortcutBar
+local FFlagReduceTopBarInsetsWhileHidden = SharedFlags.FFlagReduceTopBarInsetsWhileHidden
+local FFlagShowUnibarOnVirtualCursor = SharedFlags.FFlagShowUnibarOnVirtualCursor
+
 
 local Components = script.Parent.Parent
 local Actions = Components.Parent.Actions
@@ -37,6 +51,7 @@ local Constants = require(Components.Parent.Constants)
 local SetGamepadMenuOpen = require(Actions.SetGamepadMenuOpen)
 local SetKeepOutArea = require(Actions.SetKeepOutArea)
 local menuIconHoveredSignal = require(script.Parent.menuIconHoveredSignal)
+local GamepadConnector = require(script.Parent.Parent.GamepadConnector)
 
 local InGameMenu
 if isNewInGameMenuEnabled() then
@@ -55,7 +70,6 @@ if GetFFlagChangeTopbarHeightCalculation() then
 end
 
 local tooltipEnabled = ChromeEnabled()
-local ICON_SIZE = 24
 local DEFAULT_DELAY_TIME = if tooltipEnabled then 0.65 else 0.4
 local MENU_TOOLTIP_LABEL = "CoreScripts.TopBar.RobloxMenu"
 local MENU_TOOLTIP_FALLBACK = "Roblox Menu"
@@ -71,6 +85,8 @@ MenuIcon.validateProps = t.strictInterface({
 	iconScale = t.optional(t.number),
 	onAreaChanged = t.optional(t.callback),
 	showBadgeOver12 = t.optional(t.boolean),
+	menuIconRef = if ChromeEnabled() and FFlagTiltIconUnibarFocusNav then t.optional(t.any) else nil :: never,
+	unibarMenuRef = if ChromeEnabled() and FFlagTiltIconUnibarFocusNav then t.optional(t.any) else nil :: never,
 })
 
 function MenuIcon:init()
@@ -79,14 +95,14 @@ function MenuIcon:init()
 		showTooltip = false,
 		isHovering = false,
 		clickLatched = if tooltipEnabled then false else nil,
-		enableFlashingDot = false
+		enableFlashingDot = false,
 	})
 
 	if GetFFlagVoiceRecordingIndicatorsEnabled() and not ChromeEnabled() then
 		-- We spawn a new coroutine so that this doesn't block the UI from loading.
 		task.spawn(function()
 			self:setState({
-				enableFlashingDot = true
+				enableFlashingDot = true,
 			})
 		end)
 	end
@@ -161,6 +177,62 @@ function MenuIcon:init()
 			})
 		end
 	end
+
+	if ChromeEnabled() and FFlagTiltIconUnibarFocusNav then
+		self.onMenuIconSelectionChanged = function(MenuIcon: GuiObject, isMenuIconSelected: boolean, oldSelection: GuiObject, newSelection: GuiObject)
+			local UNFOCUS_TILT = "Unfocus_Tilt"
+			local function unfocusTilt(actionName, userInputState, input): Enum.ContextActionResult
+				if not FFlagEnableChromeShortcutBar and userInputState == Enum.UserInputState.End 
+				    or FFlagEnableChromeShortcutBar and userInputState == Enum.UserInputState.Begin then
+					GuiService.SelectedCoreObject = nil
+					return Enum.ContextActionResult.Sink
+				end
+
+				return Enum.ContextActionResult.Pass
+			end
+
+			if isMenuIconSelected then
+				ContextActionService:BindCoreAction(UNFOCUS_TILT, unfocusTilt, false, Enum.KeyCode.ButtonB)
+			else
+				ContextActionService:UnbindCoreAction(UNFOCUS_TILT)
+				-- update inFocusNav if GuiSelection enters Unibar
+				if not (FFlagShowUnibarOnVirtualCursor and GamepadService.GamepadCursorEnabled) and newSelection and string.find(newSelection.Name, UnibarConstants.ICON_NAME_PREFIX :: string) then
+					ChromeService:enableFocusNav()
+				end
+			end
+		end
+	end
+
+	if ChromeEnabled and FFlagHideTopBarConsole then 
+		local showTopBarSignal = GamepadConnector:getShowTopBar()
+
+		self.showIcon, self.setShowIcon = Roact.createBinding(showTopBarSignal:get())
+
+		if FFlagReduceTopBarInsetsWhileHidden then 
+			self.priorAbsolutePosition = Vector2.zero
+			self.priorAbsoluteSize = Vector2.zero
+		end
+
+		showTopBarSignal:connect(function() 
+			local showTopBar = showTopBarSignal:get()
+			self.setShowIcon(showTopBar)
+
+			if FFlagReduceTopBarInsetsWhileHidden then 
+				if showTopBar then 
+					self.props.onAreaChanged(Constants.MenuIconKeepOutAreaId, self.priorAbsolutePosition, self.priorAbsoluteSize)
+				else
+					self.props.onAreaChanged(Constants.MenuIconKeepOutAreaId, Vector2.zero, Vector2.zero)
+				end
+			end
+		end)
+	end
+
+	if ChromeEnabled() and FFlagEnableChromeShortcutBar then 
+		ChromeService:onTriggerMenuIcon():connect(function() 
+			GuiService.SelectedCoreObject = self.props.menuIconRef:getValue()
+		end)
+	end
+
 end
 
 function MenuIcon:render()
@@ -168,7 +240,16 @@ function MenuIcon:render()
 
 	local onAreaChanged = function(rbx)
 		if rbx then
-			self.props.onAreaChanged(Constants.MenuIconKeepOutAreaId, rbx.AbsolutePosition, rbx.AbsoluteSize)
+			if FFlagReduceTopBarInsetsWhileHidden then
+				self.priorAbsolutePosition = rbx.AbsolutePosition
+				self.priorAbsoluteSize = rbx.AbsoluteSize
+				if GamepadConnector:getShowTopBar():get() then 
+					self.props.onAreaChanged(Constants.MenuIconKeepOutAreaId, rbx.AbsolutePosition, rbx.AbsoluteSize)
+				end 
+			else 
+				self.props.onAreaChanged(Constants.MenuIconKeepOutAreaId, rbx.AbsolutePosition, rbx.AbsoluteSize)
+			end
+
 		end
 	end
 
@@ -176,7 +257,7 @@ function MenuIcon:render()
 		icon = if isNewTiltIconEnabled()
 			then UIBloxImages["icons/logo/block"]
 			else "rbxasset://textures/ui/TopBar/coloredlogo.png",
-		iconSize = ICON_SIZE * (self.props.iconScale or 1),
+		iconSize = Constants.MENU_ICON_SIZE * (self.props.iconScale or 1),
 		useIconScaleAnimation = isNewTiltIconEnabled(),
 		onActivated = self.menuIconActivated,
 		onHover = self.menuIconOnHover,
@@ -184,20 +265,25 @@ function MenuIcon:render()
 		enableFlashingDot = self.state.enableFlashingDot,
 	})
 
-	local showTopBarListener = GamepadService and Roact.createElement(ExternalEventConnection, {
-		event = VRHub.ShowTopBarChanged.Event or GamepadService:GetPropertyChangedSignal("GamepadCursorEnabled"),
-		callback = self.showTopBarCallback,
-	})
+	local showTopBarListener = GamepadService
+		and Roact.createElement(ExternalEventConnection, {
+			event = VRHub.ShowTopBarChanged.Event or GamepadService:GetPropertyChangedSignal("GamepadCursorEnabled"),
+			callback = self.showTopBarCallback,
+		})
 
-	local badgeOver12 = if self.props.showBadgeOver12 then Roact.createElement(BadgeOver12, {
-		position = if ChromeEnabled() then UDim2.new(0, BADGE_INDENT, 1, -(Constants.TopBarButtonPadding + BADGE_INDENT)) else UDim2.new(0, -BADGE_OFFSET, 1, BADGE_OFFSET)
-	}) else nil
+	local badgeOver12 = if self.props.showBadgeOver12
+		then Roact.createElement(BadgeOver12, {
+			position = if ChromeEnabled()
+				then UDim2.new(0, BADGE_INDENT, 1, -(Constants.TopBarButtonPadding + BADGE_INDENT))
+				else UDim2.new(0, -BADGE_OFFSET, 1, BADGE_OFFSET),
+		})
+		else nil
 
 	if tooltipEnabled then
 		local tooltipText = MENU_TOOLTIP_FALLBACK
 		pcall(function()
 			tooltipText = RobloxTranslator:FormatByKey(MENU_TOOLTIP_LABEL)
-	   	end)
+		end)
 		local tooltipProps = {
 			textAlignment = Enum.TextXAlignment.Center,
 			headerText = tooltipText,
@@ -216,28 +302,65 @@ function MenuIcon:render()
 				triggerPointChanged(rbx)
 			end
 
+			local IconHitArea
+			if ChromeEnabled() and FFlagTiltIconUnibarFocusNav then
+				local leftmostUnibarIcon = ChromeService:menuList():get()[1]
+				local leftmostUnibarIconId = if leftmostUnibarIcon then (UnibarConstants.ICON_NAME_PREFIX::string) .. leftmostUnibarIcon.id else nil
+				local nextSelectionRight = if self.props.unibarMenuRef.current and leftmostUnibarIconId then 
+					self.props.unibarMenuRef.current:FindFirstChild(leftmostUnibarIconId, true) 
+					else nil :: never
+				IconHitArea = Roact.createElement(IconButton, {
+					icon = if isNewTiltIconEnabled()
+						then UIBloxImages["icons/logo/block"]
+						else "rbxasset://textures/ui/TopBar/coloredlogo.png",
+					iconSize = Constants.MENU_ICON_SIZE * (self.props.iconScale or 1),
+					useIconScaleAnimation = isNewTiltIconEnabled(),
+					onActivated = self.menuIconActivated,
+					onHover = self.menuIconOnHover,
+					onHoverEnd = if tooltipEnabled then self.menuIconOnHoverEnd else nil,
+					enableFlashingDot = self.state.enableFlashingDot,
+					onSelectionChanged = self.onMenuIconSelectionChanged,
+					nextSelectionRightRef = nextSelectionRight,
+					forwardRef = self.props.menuIconRef,
+				})
+			end
+
 			return Roact.createElement("Frame", {
-				Visible = visible,
+				Visible = if ChromeEnabled() and FFlagHideTopBarConsole then self.showIcon:map(function(showIcon)
+					return visible and showIcon
+				end) else visible,
 				BackgroundTransparency = 1,
 				Size = UDim2.new(0, BACKGROUND_SIZE, 1, 0),
 				LayoutOrder = self.props.layoutOrder,
+				SelectionGroup = if ChromeEnabled() and FFlagTiltIconUnibarFocusNav then true else nil :: never,
+				SelectionBehaviorLeft = if ChromeEnabled() and FFlagTiltIconUnibarFocusNav then Enum.SelectionBehavior.Stop else nil :: never,
+				SelectionBehaviorUp = if ChromeEnabled() and FFlagTiltIconUnibarFocusNav then Enum.SelectionBehavior.Stop else nil :: never,
+				SelectionBehaviorDown =  if ChromeEnabled() and FFlagTiltIconUnibarFocusNav then Enum.SelectionBehavior.Stop else nil :: never,
+				
 
 				[Roact.Change.AbsoluteSize] = onChange,
 				[Roact.Change.AbsolutePosition] = onChange,
 			}, {
 				BadgeOver12 = badgeOver12,
-				Background = background,
+				Background = if ChromeEnabled() and FFlagTiltIconUnibarFocusNav then nil else background,
+				IconHitArea = if ChromeEnabled() and FFlagTiltIconUnibarFocusNav then IconHitArea else background :: never,
 				ShowTopBarListener = showTopBarListener,
 			})
 		end)
 	else
 		return Roact.createElement("Frame", {
-			Visible = visible,
+			Visible = if ChromeEnabled() and FFlagHideTopBarConsole then self.showIcon:map(function(showIcon) 
+				return visible and showIcon
+			end) else visible,
 			BackgroundTransparency = 1,
 			Size = UDim2.new(0, BACKGROUND_SIZE, 1, 0),
 			LayoutOrder = self.props.layoutOrder,
-			[Roact.Change.AbsoluteSize] = if (FFlagEnableChromeBackwardsSignalAPI or ChromeEnabled()) then onAreaChanged else nil,
-			[Roact.Change.AbsolutePosition] = if (FFlagEnableChromeBackwardsSignalAPI or ChromeEnabled()) then onAreaChanged else nil,
+			[Roact.Change.AbsoluteSize] = if (FFlagEnableChromeBackwardsSignalAPI or ChromeEnabled())
+				then onAreaChanged
+				else nil,
+			[Roact.Change.AbsolutePosition] = if (FFlagEnableChromeBackwardsSignalAPI or ChromeEnabled())
+				then onAreaChanged
+				else nil,
 		}, {
 			BadgeOver12 = badgeOver12,
 			Background = background,

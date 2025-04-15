@@ -2,9 +2,9 @@
 local TextService = game:GetService("TextService")
 local CorePackages = game:GetService("CorePackages")
 
-local Cryo = require(CorePackages.Cryo)
-local Roact = require(CorePackages.Roact)
-local UIBlox = require(CorePackages.UIBlox)
+local Cryo = require(CorePackages.Packages.Cryo)
+local Roact = require(CorePackages.Packages.Roact)
+local UIBlox = require(CorePackages.Packages.UIBlox)
 local t = require(CorePackages.Packages.t)
 
 local TnsModule = script.Parent.Parent
@@ -68,11 +68,11 @@ function TextEntryField:calculateNeedsRescroll(style, textFont)
 
 		if textSize.Y > prevState.scrollingFrameHeight + prevState.canvasPosition then
 			return {
-				canvasPosition = textSize.Y - prevState.scrollingFrameHeight
+				canvasPosition = textSize.Y - prevState.scrollingFrameHeight,
 			}
 		elseif textSize.Y - fontHeight < prevState.canvasPosition then
 			return {
-				canvasPosition = textSize.Y - fontHeight
+				canvasPosition = textSize.Y - fontHeight,
 			}
 		end
 		return nil
@@ -198,12 +198,14 @@ function TextEntryField:renderWithSelectionCursor(getSelectionCursor)
 				Roact.createElement(FillCircle, {
 					Position = UDim2.new(0.5, 0, 0.5, 0),
 					AnchorPoint = Vector2.new(0.5, 0.5),
-					fillFraction = utf8.len(utf8.nfcnormalize(self.props.text)) / (self.props.maxTextLength - FULL_CIRCLE_OVERAGE),
-					largerCircleFraction = (self.props.maxTextLength - LARGER_CIRCLE_CHARACTERS) / self.props.maxTextLength,
+					fillFraction = utf8.len(utf8.nfcnormalize(self.props.text))
+						/ (self.props.maxTextLength - FULL_CIRCLE_OVERAGE),
+					largerCircleFraction = (self.props.maxTextLength - LARGER_CIRCLE_CHARACTERS)
+						/ self.props.maxTextLength,
 					popCircleFraction = 1,
 					shakeCircleFraction = self.props.maxTextLength / (self.props.maxTextLength - FULL_CIRCLE_OVERAGE),
 					BackgroundColor = style.Theme.BackgroundMuted.Color,
-				})
+				}),
 			}),
 		})
 	end)
@@ -229,7 +231,10 @@ function TextEntryField:didUpdate(prevProps, prevState)
 end
 
 return Roact.forwardRef(function(props, ref)
-	return Roact.createElement(TextEntryField, Cryo.Dictionary.join(props, {
-		textBoxRef = ref
-	}))
+	return Roact.createElement(
+		TextEntryField,
+		Cryo.Dictionary.join(props, {
+			textBoxRef = ref,
+		})
+	)
 end)

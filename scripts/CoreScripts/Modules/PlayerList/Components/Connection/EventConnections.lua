@@ -3,7 +3,7 @@
 ]]
 local CorePackages = game:GetService("CorePackages")
 
-local Roact = require(CorePackages.Roact)
+local Roact = require(CorePackages.Packages.Roact)
 
 local PlayerServiceConnector = require(script.Parent.PlayerServiceConnector)
 local TeamServiceConnector = require(script.Parent.TeamServiceConnector)

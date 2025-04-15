@@ -8,9 +8,9 @@ local AnalyticsService = game:GetService("RbxAnalyticsService")
 local VoiceChatServiceManager = require(RobloxGui.Modules.VoiceChat.VoiceChatServiceManager).default
 local VoiceConstants = require(RobloxGui.Modules.VoiceChat.Constants)
 
-local Roact = require(CorePackages.Roact)
+local Roact = require(CorePackages.Packages.Roact)
 local React = require(CorePackages.Packages.React)
-local UIBlox = require(CorePackages.UIBlox)
+local UIBlox = require(CorePackages.Packages.UIBlox)
 local StyledTextLabel = UIBlox.App.Text.StyledTextLabel
 local Button = UIBlox.App.Button.Button
 local ButtonStack = UIBlox.App.Button.ButtonStack
@@ -155,16 +155,11 @@ local function Initialize()
 				onActivated = function()
 					this.HubRef:SetVisibility(false, true)
 					if GetFFlagAddMorePhoneUpsellEvents() then
-						AnalyticsService:SendEventDeferred(
-							getPlatformTarget(),
-							eventContext,
-							"modalAction",
-							{
-								origin = props.origin,
-								btn = EventStreamConstants.Button.Continue,
-								section = props.section,
-							}
-						)
+						AnalyticsService:SendEventDeferred(getPlatformTarget(), eventContext, "modalAction", {
+							origin = props.origin,
+							btn = EventStreamConstants.Button.Continue,
+							section = props.section,
+						})
 					end
 					PhoneUpsellController.openPhoneUpsell({
 						origin = props.origin,
@@ -272,16 +267,11 @@ local function Initialize()
 				end)
 
 				if GetFFlagAddMorePhoneUpsellEvents() then
-					AnalyticsService:SendEventDeferred(
-						getPlatformTarget(),
-						eventContext,
-						"modalAction",
-						{
-							origin = props.origin,
-							aType = EventStreamConstants.ActionType.Shown,
-							section = props.section,
-						}
-					)
+					AnalyticsService:SendEventDeferred(getPlatformTarget(), eventContext, "modalAction", {
+						origin = props.origin,
+						aType = EventStreamConstants.ActionType.Shown,
+						section = props.section,
+					})
 				end
 				this.postSent = true
 			end

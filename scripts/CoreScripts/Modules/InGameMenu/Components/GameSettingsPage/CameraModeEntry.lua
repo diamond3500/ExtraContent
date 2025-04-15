@@ -13,7 +13,7 @@ local localPlayer = Players.LocalPlayer
 local playerScripts = CoreUtility.waitForChildOfClass(localPlayer, "PlayerScripts")
 local DevComputerMovementModeChanged = localPlayer:GetPropertyChangedSignal("DevComputerMovementMode")
 
-local InGameMenuDependencies = require(CorePackages.InGameMenuDependencies)
+local InGameMenuDependencies = require(CorePackages.Packages.InGameMenuDependencies)
 local Roact = InGameMenuDependencies.Roact
 local t = InGameMenuDependencies.t
 
@@ -46,7 +46,7 @@ CameraModeEntry.validateProps = t.strictInterface({
 })
 
 CameraModeEntry.defaultProps = {
-	canOpen = true
+	canOpen = true,
 }
 
 function CameraModeEntry:init()
@@ -69,14 +69,15 @@ function CameraModeEntry:render()
 				})
 			end,
 		}),
-		ComputerCameraMovementModeRegisteredListener = playerScripts and Roact.createElement(ExternalEventConnection, {
-			event = playerScripts.ComputerCameraMovementModeRegistered,
-			callback = function()
-				self:setState({
-					computerOptions = playerScripts:GetRegisteredComputerCameraMovementModes(),
-				})
-			end,
-		}),
+		ComputerCameraMovementModeRegisteredListener = playerScripts
+			and Roact.createElement(ExternalEventConnection, {
+				event = playerScripts.ComputerCameraMovementModeRegistered,
+				callback = function()
+					self:setState({
+						computerOptions = playerScripts:GetRegisteredComputerCameraMovementModes(),
+					})
+				end,
+			}),
 		LocalPlayerComputerMovementMode = Roact.createElement(ExternalEventConnection, {
 			event = DevComputerMovementModeChanged,
 			callback = function()
@@ -123,9 +124,9 @@ function CameraModeEntry:render()
 			AnchorPoint = Vector2.new(0, 0),
 		}),
 		Dropdown = withLocalization({
-			placeholder = disabled and CAMERA_MODE_LOCALIZATION_KEYS[self.state.developerComputerMode] or nil
+			placeholder = disabled and CAMERA_MODE_LOCALIZATION_KEYS[self.state.developerComputerMode] or nil,
 		})(function(localized)
-				return Roact.createElement(DropDownSelection, {
+			return Roact.createElement(DropDownSelection, {
 				Size = UDim2.new(1, 0, 0, 44),
 				Position = UDim2.new(0, 0, 0, 56),
 				selections = optionTexts,
@@ -140,7 +141,7 @@ function CameraModeEntry:render()
 				selectionParentName = "cameraModeDropdown",
 				canOpen = self.props.canOpen,
 				canCaptureFocus = self.props.canCaptureFocus,
-				ButtonRef = self.props.ButtonRef
+				ButtonRef = self.props.ButtonRef,
 			})
 		end),
 		LockedLabel = disabled and Roact.createElement(DeveloperLockLabel, {

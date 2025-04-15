@@ -52,7 +52,7 @@ local FFlagDebugAllowControlButtonsNoVoiceChat = game:DefineFastFlag("DebugAllow
 
 local FFlagVRMoveVoiceIndicatorToBottomBar = require(RobloxGui.Modules.Flags.FFlagVRMoveVoiceIndicatorToBottomBar)
 
-local IXPServiceWrapper = require(RobloxGui.Modules.Common.IXPServiceWrapper)
+local IXPServiceWrapper = require(CorePackages.Workspace.Packages.IxpServiceWrapper).IXPServiceWrapper
 local FFlagEasierUnmuting = game:DefineFastFlag("EasierUnmuting3", false)
 local FFlagEasierUnmutingBasedOnCamera = game:DefineFastFlag("EasierUnmutingBasedOnCamera", false)
 local FFlagEasierUnmutingHideIfMuted = game:DefineFastFlag("EasierUnmutingHideIfMuted", false)

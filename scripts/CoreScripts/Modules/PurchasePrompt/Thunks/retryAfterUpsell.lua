@@ -58,8 +58,7 @@ local function retryAfterUpsell(retriesRemaining)
 			return
 		end
 
-		if promptState ~= PromptState.UpsellInProgress
-			and promptState ~= PromptState.PollingBalance then
+		if promptState ~= PromptState.UpsellInProgress and promptState ~= PromptState.PollingBalance then
 			return
 		end
 
@@ -73,74 +72,83 @@ local function retryAfterUpsell(retriesRemaining)
 				store:dispatch(SetPromptState(PromptState.PollingBalance))
 			end
 
-			return getBalanceInfo(network, externalSettings):andThen(function(balanceInfo)
-				local state = store:getState()
-				local isPlayerPremium = state.accountInfo.membershipType == 4
-				local price = getPlayerPrice(state.productInfo, isPlayerPremium)
+			return getBalanceInfo(network, externalSettings, false --[[overrideStudioMock]])
+				:andThen(function(balanceInfo)
+					local state = store:getState()
+					local isPlayerPremium = state.accountInfo.membershipType == 4
+					local price = getPlayerPrice(state.productInfo, isPlayerPremium)
 
-				-- Check if the user cancel the purchase before this could return
-				if not hasPendingRequest(store:getState()) then
-					return
-				end
+					-- Check if the user cancel the purchase before this could return
+					if not hasPendingRequest(store:getState()) then
+						return
+					end
 
-				local prevBalance = state.accountInfo.balance
-				local newBalance = balanceInfo.robux
-				store:dispatch(BalanceInfoRecieved(balanceInfo))
+					local prevBalance = state.accountInfo.balance
+					local newBalance = balanceInfo.robux
+					store:dispatch(BalanceInfoRecieved(balanceInfo))
 
-				if prevBalance ~= newBalance then
-					if price ~= nil and price > newBalance then
-						if purchaseFlow == PurchaseFlow.LargeRobuxUpsell then
-							local platform = externalSettings.getPlatform()
-							local paymentPlatform = getPaymentPlatform(platform)
+					if prevBalance ~= newBalance then
+						if price ~= nil and price > newBalance then
+							if purchaseFlow == PurchaseFlow.LargeRobuxUpsell then
+								local platform = externalSettings.getPlatform()
+								local paymentPlatform = getPaymentPlatform(platform)
 
-							return getRobuxUpsellProduct(network, price, newBalance, paymentPlatform):andThen(
-								function(product: RobuxUpsell.Product)
-									if not hasPendingRequest(store:getState()) then
-										return
+								return getRobuxUpsellProduct(network, price, newBalance, paymentPlatform):andThen(
+									function(product: RobuxUpsell.Product)
+										if not hasPendingRequest(store:getState()) then
+											return
+										end
+
+										store:dispatch(
+											PromptNativeUpsell(
+												product.providerId,
+												product.id,
+												product.robuxAmount,
+												product.robuxAmountBeforeBonus,
+												product.price
+											)
+										)
+										store:dispatch(sendCounter(Counter.UpsellModalShownAgain))
+									end,
+									function()
+										if not hasPendingRequest(store:getState()) then
+											return
+										end
+
+										store:dispatch(SetPromptState(PromptState.LargeRobuxUpsell))
+										store:dispatch(sendCounter(Counter.UpsellGenericModalShownAgain))
 									end
-
-									store:dispatch(PromptNativeUpsell(product.providerId, product.id, product.robuxAmount))
-									store:dispatch(sendCounter(Counter.UpsellModalShownAgain))
-								end,
-								function()
-									if not hasPendingRequest(store:getState()) then
-										return
-									end
-
-									store:dispatch(SetPromptState(PromptState.LargeRobuxUpsell))
-									store:dispatch(sendCounter(Counter.UpsellGenericModalShownAgain))
+								)
+							else
+								if upsellFlow == UpsellFlow.Web then
+									store:dispatch(ErrorOccurred(PurchaseError.InvalidFundsUnknown))
+								else
+									store:dispatch(ErrorOccurred(PurchaseError.InvalidFunds))
 								end
-							)
+								store:dispatch(sendCounter(Counter.UpsellFailedNotEnoughRobux))
+							end
 						else
+							-- Upsell was successful and purchase can now be completed
+							store:dispatch(purchaseItem())
+						end
+					else
+						if retriesRemaining > 0 then
+							delay(RETRY_RATE, function()
+								store:dispatch(retryAfterUpsell(retriesRemaining - 1))
+							end)
+						else
+							analytics.signalFailedPurchasePostUpsell()
 							if upsellFlow == UpsellFlow.Web then
 								store:dispatch(ErrorOccurred(PurchaseError.InvalidFundsUnknown))
 							else
 								store:dispatch(ErrorOccurred(PurchaseError.InvalidFunds))
 							end
-							store:dispatch(sendCounter(Counter.UpsellFailedNotEnoughRobux))
-						end
-					else
-						-- Upsell was successful and purchase can now be completed
-						store:dispatch(purchaseItem())
-					end
-				else
-					if retriesRemaining > 0 then
-						delay(RETRY_RATE, function()
-							store:dispatch(retryAfterUpsell(retriesRemaining - 1))
-						end)
-					else
-						analytics.signalFailedPurchasePostUpsell()
-						if upsellFlow == UpsellFlow.Web then
-							store:dispatch(ErrorOccurred(PurchaseError.InvalidFundsUnknown))
-						else
-							store:dispatch(ErrorOccurred(PurchaseError.InvalidFunds))
 						end
 					end
-				end
-			end)
-			:catch(function(error)
-				store:dispatch(ErrorOccurred(error))
-			end)
+				end)
+				:catch(function(error)
+					store:dispatch(ErrorOccurred(error))
+				end)
 		end
 	end)
 end

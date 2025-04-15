@@ -2,15 +2,14 @@
 local CorePackages = game:GetService("CorePackages")
 local Players = game:GetService("Players")
 
-local Roact = require(CorePackages.Roact)
-local RoactRodux = require(CorePackages.RoactRodux)
-local Otter = require(CorePackages.Otter)
+local Roact = require(CorePackages.Packages.Roact)
+local RoactRodux = require(CorePackages.Packages.RoactRodux)
+local Otter = require(CorePackages.Packages.Otter)
 local AppFonts = require(CorePackages.Workspace.Packages.Style).AppFonts
 
 local CoreGui = game:GetService("CoreGui")
-local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 local Modules = CoreGui.RobloxGui.Modules
-local RobloxTranslator = require(RobloxGui:WaitForChild("Modules"):WaitForChild("RobloxTranslator"))
+local RobloxTranslator = require(CorePackages.Workspace.Packages.RobloxTranslator)
 local TopBarConstants = require(Modules.TopBar.Constants)
 local ChromeEnabled = require(Modules.Chrome.Enabled)()
 
@@ -31,7 +30,6 @@ local WithLayoutValues = LayoutValues.WithLayoutValues
 
 local FFlagPlayerListFixMobileScrolling = require(PlayerList.Flags.FFlagPlayerListFixMobileScrolling)
 local FFlagPlayerListFixBackgroundFlicker = require(PlayerList.Flags.FFlagPlayerListFixBackgroundFlicker)
-local GetFFlagPlayerListChromePushdown = require(PlayerList.Flags.GetFFlagPlayerListChromePushdown)
 local GetFFlagFixDropDownVisibility = require(PlayerList.Flags.GetFFlagFixDropDownVisibility)
 
 local MOTOR_OPTIONS = {
@@ -77,7 +75,7 @@ local function playerListSizeFromViewportSize(viewportSize)
 	local sY = viewportSize.y > viewportSize.x and sMax or sMin
 
 	-- Increase y-axis border to avoid chrome overlap on landscape
-	if GetFFlagPlayerListChromePushdown() and ChromeEnabled and viewportSize.y < viewportSize.x then
+	if ChromeEnabled and viewportSize.y < viewportSize.x then
 		sY -= (TopBarConstants.TopBarHeight - BORDER_SIZE)
 	end
 
@@ -257,9 +255,12 @@ function PlayerListApp:render()
 				selectedPlayer = self.props.dropDownPlayer,
 			}),
 			-- Push menu down when chrome enabled to below topbarheight
-			BodyPadding = if GetFFlagPlayerListChromePushdown() and ChromeEnabled and self.props.screenSizeY < self.props.screenSizeX then Roact.createElement("UIPadding", {
-				PaddingTop = UDim.new(0, TopBarConstants.TopBarHeight)
-			}) else nil,
+			BodyPadding = if ChromeEnabled
+					and self.props.screenSizeY < self.props.screenSizeX
+				then Roact.createElement("UIPadding", {
+					PaddingTop = UDim.new(0, TopBarConstants.TopBarHeight),
+				})
+				else nil,
 			BodyBackground = Roact.createElement("Frame", {
 				Size = playerListSizeFromViewportSize(Vector2.new(self.props.screenSizeX, self.props.screenSizeY)),
 				AnchorPoint = Vector2.new(0.5, 0.5),

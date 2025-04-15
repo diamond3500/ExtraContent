@@ -4,9 +4,9 @@
 		For now, the hint only has a label while icon graphics are yet to be finalized
 ]]
 local CorePackages = game:GetService("CorePackages")
-local UIBlox = require(CorePackages.UIBlox)
+local UIBlox = require(CorePackages.Packages.UIBlox)
 local t = require(CorePackages.Packages.t)
-local Roact = require(CorePackages.Roact)
+local Roact = require(CorePackages.Packages.Roact)
 
 local withStyle = UIBlox.Core.Style.withStyle
 local StyledTextLabel = UIBlox.App.Text.StyledTextLabel

@@ -23,12 +23,10 @@ local getMeshInfo = require(root.util.getMeshInfo)
 local BoundsDataUtils = require(root.util.BoundsDataUtils)
 local getExpectedPartSize = require(root.util.getExpectedPartSize)
 
-local getEngineFeatureUGCValidateEditableMeshAndImage =
-	require(root.flags.getEngineFeatureUGCValidateEditableMeshAndImage)
-local getFFlagUGCValidateStraightenLimbs = require(root.flags.getFFlagUGCValidateStraightenLimbs)
 local getFFlagUGCValidateCalculateScaleToValidateBounds =
 	require(root.flags.getFFlagUGCValidateCalculateScaleToValidateBounds)
 local getFFlagUGCValidateUseMeshSizeProperty = require(root.flags.getFFlagUGCValidateUseMeshSizeProperty)
+local getFFlagUGCValidateUseDataCache = require(root.flags.getFFlagUGCValidateUseDataCache)
 
 local BoundsCalculator = {}
 
@@ -46,12 +44,7 @@ local function orientSingleAssetToWorldAxes(
 		return
 	end
 
-	local results
-	if getFFlagUGCValidateStraightenLimbs() then
-		results = AssetCalculator.calculateStraightenedLimb(singleAsset, partsCFrames, findMeshHandle)
-	else
-		results = AssetCalculator.calculatePartsLocalToAsset(singleAsset, partsCFrames)
-	end
+	local results = AssetCalculator.calculateStraightenedLimb(singleAsset, partsCFrames, findMeshHandle)
 
 	for name, newCFrame in results do
 		partsCFrames[name] = newCFrame
@@ -91,31 +84,68 @@ local function orientFullBodyArmsLegsToWorldAxes(partsCFrames: { string: CFrame 
 end
 
 local function calculateBoundsDataForPart(
-	meshInfo: Types.MeshInfo,
+	meshInfo: Types.MeshInfo?,
 	part: MeshPart,
 	cframe: CFrame,
-	validationContext: Types.ValidationContext
+	validationContext: Types.ValidationContext,
+	dataCache: Types.DataCache?
 ): (boolean, { string }?, Types.BoundsData?)
+	if getFFlagUGCValidateUseDataCache() then
+		assert((meshInfo ~= nil) ~= (dataCache ~= nil)) --exclusive or, meshInfo or dataCache, not both, not neither
+	end
+
 	local meshBounds = nil
 	if getFFlagUGCValidateUseMeshSizeProperty() then
 		meshBounds = part.MeshSize
 	else
-		local success, failureReasons, meshMinOpt, meshMaxOpt = getMeshMinMax(meshInfo, validationContext)
+		if getFFlagUGCValidateUseDataCache() then
+			if dataCache then
+				if dataCache.meshData and dataCache.meshData[part.MeshId] then
+					local meshMinOpt = dataCache.meshData[part.MeshId].meshMin
+					local meshMaxOpt = dataCache.meshData[part.MeshId].meshMax
+					if meshMinOpt and meshMaxOpt then
+						meshBounds = (meshMaxOpt :: Vector3) - (meshMinOpt :: Vector3)
+					end
+				end
+				if not meshBounds then
+					return false, { "Mesh bounds not found in data cache" }
+				end
+			end
+		end
+
+		if not getFFlagUGCValidateUseDataCache() or not meshBounds then
+			local success, failureReasons, meshMinOpt, meshMaxOpt =
+				getMeshMinMax(meshInfo :: Types.MeshInfo, validationContext)
+			if not success then
+				return success, failureReasons
+			end
+			meshBounds = (meshMaxOpt :: Vector3) - (meshMinOpt :: Vector3)
+		end
+	end
+	local partSize = getExpectedPartSize(part, validationContext)
+	local scale = partSize / meshBounds
+
+	local verts = nil
+	if getFFlagUGCValidateUseDataCache() then
+		if dataCache then
+			if dataCache.meshData and dataCache.meshData[part.MeshId] then
+				local vertsOpt = dataCache.meshData[part.MeshId].verts
+				if vertsOpt then
+					verts = vertsOpt :: { Vector3 }
+				end
+			end
+			if not verts then
+				return false, { "Verts not found in data cache" }
+			end
+		end
+	end
+	if not getFFlagUGCValidateUseDataCache() or not verts then
+		local success, failureReasons, vertsOpt = getMeshVerts(meshInfo :: Types.MeshInfo, validationContext)
 		if not success then
 			return success, failureReasons
 		end
-		meshBounds = (meshMaxOpt :: Vector3) - (meshMinOpt :: Vector3)
+		verts = vertsOpt :: { Vector3 }
 	end
-	local partSize = if getEngineFeatureUGCValidateEditableMeshAndImage()
-		then getExpectedPartSize(part, validationContext)
-		else part.Size
-	local scale = partSize / meshBounds
-
-	local success, failureReasons, vertsOpt = getMeshVerts(meshInfo, validationContext)
-	if not success then
-		return success, failureReasons
-	end
-	local verts = vertsOpt :: { Vector3 }
 
 	local resultMinMaxBounds: Types.BoundsData = {}
 	for _, vertPos in verts do
@@ -153,20 +183,24 @@ end
 local function calculateAllPartsBoundsData(
 	partsCFrames: { string: CFrame },
 	findMeshHandle: (string) -> MeshPart,
-	validationContext: Types.ValidationContext
+	validationContext: Types.ValidationContext,
+	dataCache: Types.DataCache?
 ): (boolean, { string }?, { string: Types.BoundsData }?)
 	local result = {}
 	for meshPartName, cframe in partsCFrames do
 		local meshPart = findMeshHandle(meshPartName :: string)
-		local success, failureReasons, meshInfoOpt = getMeshInfo(meshPart, validationContext)
-		if not success then
-			return success, failureReasons
-		end
-		local meshInfo = meshInfoOpt :: Types.MeshInfo
 
-		local partMinMaxBounds
-		success, failureReasons, partMinMaxBounds =
-			calculateBoundsDataForPart(meshInfo, meshPart, cframe :: CFrame, validationContext)
+		local meshInfo = nil
+		if not getFFlagUGCValidateUseDataCache() or not dataCache then
+			local success, failureReasons, meshInfoOpt = getMeshInfo(meshPart, validationContext)
+			if not success then
+				return success, failureReasons
+			end
+			meshInfo = meshInfoOpt :: Types.MeshInfo
+		end
+
+		local success, failureReasons, partMinMaxBounds =
+			calculateBoundsDataForPart(meshInfo, meshPart, cframe :: CFrame, validationContext, dataCache)
 		if not success then
 			return success, failureReasons
 		end
@@ -278,7 +312,8 @@ end
 -- e.g { "LeftUpperArm" = { boundsData = {}, cframe = CFrame.new() }, "LeftLowerArm" = { boundsData = {}, cframe = CFrame.new() }, ... }
 function BoundsCalculator.calculateIndividualFullBodyPartsData(
 	fullBodyAssets: Types.AllBodyParts,
-	validationContext: Types.ValidationContext
+	validationContext: Types.ValidationContext,
+	dataCache: Types.DataCache?
 ): (boolean, { string }?, { string: any }?)
 	local function findMeshHandle(name: string): MeshPart
 		return fullBodyAssets[name] :: MeshPart
@@ -288,7 +323,7 @@ function BoundsCalculator.calculateIndividualFullBodyPartsData(
 	orientFullBodyArmsLegsToWorldAxes(partsCFrames, findMeshHandle)
 
 	local success, failureReasons, allPartsBoundsDataOpt =
-		calculateAllPartsBoundsData(partsCFrames, findMeshHandle, validationContext)
+		calculateAllPartsBoundsData(partsCFrames, findMeshHandle, validationContext, dataCache)
 	if not success then
 		return success, failureReasons
 	end

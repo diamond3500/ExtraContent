@@ -30,8 +30,8 @@ local GameSettings = Settings.GameSettings
 
 ----------- UTILITIES --------------
 local utility = require(RobloxGui.Modules.Settings.Utility)
-local RobloxTranslator = require(RobloxGui.Modules.RobloxTranslator)
-local PolicyService = require(RobloxGui.Modules.Common.PolicyService)
+local RobloxTranslator = require(CorePackages.Workspace.Packages.RobloxTranslator)
+local CachedPolicyService = require(CorePackages.Workspace.Packages.CachedPolicyService)
 local Theme = require(RobloxGui.Modules.Settings.Theme)
 local Create = require(CorePackages.Workspace.Packages.AppCommonLib).Create
 
@@ -44,7 +44,6 @@ local isTenFootInterface = require(RobloxGui.Modules.TenFootInterface):IsEnabled
 local success, result = pcall(function() return settings():GetFFlag('UseNotificationsLocalization') end)
 local FFlagUseNotificationsLocalization = success and result
 local GetFFlagOptimizeHelpMenuInputEvent = require(RobloxGui.Modules.Flags.GetFFlagOptimizeHelpMenuInputEvent)
-local FFlagShowUpdatedScreenshotHotkey = game:DefineFastFlag("ShowUpdatedScreenshotHotkey_v2", false)
 local GetFFlagFixIGMBottomBarVisibility = require(RobloxGui.Modules.Settings.Flags.GetFFlagFixIGMBottomBarVisibility)
 
 ----------- CLASS DECLARATION --------------
@@ -242,15 +241,10 @@ local function Initialize()
 
 		table.insert(miscActions, {["UI Selection Toggle"] = UserInputService:GetStringForKeyCode(Enum.KeyCode.BackSlash) })
 
-		local canShowRecordAndStats = not PolicyService:IsSubjectToChinaPolicies()
+		local canShowRecordAndStats = not CachedPolicyService:IsSubjectToChinaPolicies()
 
 		if canShowRecordAndStats then
-			if FFlagShowUpdatedScreenshotHotkey then
-				table.insert(miscActions, {["Screenshot"] = isOSX and "Opt + 1" or "Alt + 1"})
-			else
-				table.insert(miscActions, {["Screenshot"] = isOSX and "Cmd + Shift + 3" or "Print Screen"})
-			end
-
+			table.insert(miscActions, {["Screenshot"] = isOSX and "Opt + 1" or "Alt + 1"})
 
 			if not isOSX then
 				table.insert(miscActions, {["Record Video"] = "F12"})

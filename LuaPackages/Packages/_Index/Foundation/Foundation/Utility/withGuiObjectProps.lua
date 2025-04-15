@@ -27,12 +27,15 @@ type AppliedGuiObjectProps = {
 	Selectable: Bindable<boolean>?,
 	SelectionImageObject: Bindable<React.Ref<GuiObject>>?,
 	SelectionOrder: Bindable<number>?,
+	NextSelectionDown: Bindable<React.Ref<GuiObject>>?,
+	NextSelectionLeft: Bindable<React.Ref<GuiObject>>?,
+	NextSelectionRight: Bindable<React.Ref<GuiObject>>?,
+	NextSelectionUp: Bindable<React.Ref<GuiObject>>?,
 	Size: Bindable<UDim2>?,
 } & NativeCommonProps
 
 local function withGuiObjectProps<T>(props: GuiObjectProps & CommonProps, baseProps: T)
 	if type(baseProps) == "table" then
-		baseProps.AnchorPoint = props.AnchorPoint
 		baseProps.AutoLocalize = props.AutoLocalize
 		baseProps.AutomaticSize = props.AutomaticSize
 		baseProps.BackgroundColor3 = if props.backgroundStyle
@@ -49,6 +52,10 @@ local function withGuiObjectProps<T>(props: GuiObjectProps & CommonProps, basePr
 			baseProps.Selectable = props.selection.Selectable
 			baseProps.SelectionImageObject = props.selection.SelectionImageObject
 			baseProps.SelectionOrder = props.selection.SelectionOrder
+			baseProps.NextSelectionDown = props.selection.NextSelectionDown
+			baseProps.NextSelectionLeft = props.selection.NextSelectionLeft
+			baseProps.NextSelectionRight = props.selection.NextSelectionRight
+			baseProps.NextSelectionUp = props.selection.NextSelectionUp
 		end
 
 		if props.selectionGroup ~= nil then
@@ -71,11 +78,15 @@ local function withGuiObjectProps<T>(props: GuiObjectProps & CommonProps, basePr
 	-- Replace incompatible Common Props
 	fullProps[React.Change.AbsoluteSize] = props.onAbsoluteSizeChanged
 	fullProps.onAbsoluteSizeChanged = nil
+	fullProps[React.Change.AbsolutePosition] = props.onAbsolutePositionChanged
+	fullProps.onAbsolutePositionChanged = nil
 
-	if fullProps[React.Tag] and fullProps.testId then
-		fullProps[React.Tag] ..= " " .. fullProps.testId
+	local fullTestId = if fullProps.testId then "data-testid=" .. fullProps.testId else nil
+
+	if fullProps[React.Tag] and fullTestId then
+		fullProps[React.Tag] ..= " " .. fullTestId
 	else
-		fullProps[React.Tag] = fullProps[React.Tag] or fullProps.testId
+		fullProps[React.Tag] = fullProps[React.Tag] or fullTestId
 	end
 	fullProps.testId = nil
 

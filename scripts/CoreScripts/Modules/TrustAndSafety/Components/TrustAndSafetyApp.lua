@@ -2,8 +2,8 @@ local CorePackages = game:GetService("CorePackages")
 local CoreGui = game:GetService("CoreGui")
 local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 
-local Roact = require(CorePackages.Roact)
-local RoactRodux = require(CorePackages.RoactRodux)
+local Roact = require(CorePackages.Packages.Roact)
+local RoactRodux = require(CorePackages.Packages.RoactRodux)
 local t = require(CorePackages.Packages.t)
 
 local renderWithCoreScriptsStyleProvider = require(RobloxGui.Modules.Common.renderWithCoreScriptsStyleProvider)
@@ -27,8 +27,7 @@ TrustAndSafetyApp.validateProps = t.strictInterface({
 	visible = t.boolean,
 })
 
-function TrustAndSafetyApp:init()
-end
+function TrustAndSafetyApp:init() end
 
 function TrustAndSafetyApp:render()
 	local voiceStateContextProvider = Roact.createElement(VoiceStateContext.Provider, {}, {
@@ -60,7 +59,7 @@ end
 
 return RoactRodux.UNSTABLE_connect2(function(state, props)
 	return {
-		visible = state.displayOptions.visible
+		visible = state.displayOptions.visible,
 	}
 end, function(dispatch)
 	return {

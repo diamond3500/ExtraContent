@@ -46,7 +46,6 @@ local YourComponent = function(props: Props)
 
 		onStateChanged = onStateChanged,
 		isDisabled = props.isDisabled,
-		userInteractionEnabled = props.userInteractionEnabled,
 	}, {
 		ExampleComponent = React.createElement(Text, {
 			...

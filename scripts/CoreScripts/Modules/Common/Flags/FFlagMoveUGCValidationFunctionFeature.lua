@@ -1,1 +1,0 @@
-return game:DefineFastFlag("MoveUGCValidationFunctionFeature", false) and game:GetEngineFeature("MoveUGCValidationFromAssetService")

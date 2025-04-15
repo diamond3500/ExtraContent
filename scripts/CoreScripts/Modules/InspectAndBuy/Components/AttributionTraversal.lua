@@ -19,7 +19,7 @@ local useStyle = UIBlox.Core.Style.useStyle
 
 local useSelector = require(CorePackages.Workspace.Packages.RoactUtils).Hooks.RoactRodux.useSelector
 local useDispatch = require(CorePackages.Workspace.Packages.RoactUtils).Hooks.RoactRodux.useDispatch
-local RobloxTranslator = require(CoreGui.RobloxGui.Modules.RobloxTranslator)
+local RobloxTranslator = require(CorePackages.Workspace.Packages.RobloxTranslator)
 local useScreenSize = require(CoreGui.RobloxGui.Modules.Common.Hooks.useScreenSize)
 local ExperienceService = require(CorePackages.Workspace.Packages.ExperienceService).ExperienceService
 

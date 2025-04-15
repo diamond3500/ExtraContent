@@ -1,7 +1,7 @@
 --!nonstrict
 local CorePackages = game:GetService("CorePackages")
 local TextService = game:GetService("TextService")
-local Roact = require(CorePackages.Roact)
+local Roact = require(CorePackages.Packages.Roact)
 
 local Constants = require(script.Parent.Parent.Parent.Constants)
 
@@ -35,7 +35,7 @@ local headerCellSize = {}
 local entryCellSize = {}
 
 for _, cellWidth in ipairs(CELL_WIDTHS) do
-	table.insert(cellOffset,UDim2.new(0, currOffset + CELL_PADDING, 0, 0))
+	table.insert(cellOffset, UDim2.new(0, currOffset + CELL_PADDING, 0, 0))
 	table.insert(headerCellSize, UDim2.new(0, cellWidth - CELL_PADDING, 0, HEADER_HEIGHT))
 	table.insert(entryCellSize, UDim2.new(0, cellWidth - CELL_PADDING, 0, ENTRY_HEIGHT))
 	currOffset = currOffset + cellWidth
@@ -43,23 +43,22 @@ end
 
 -- cell 1-5 are defined widths,
 -- cell 6 pads out the remaining width in the row
-table.insert(cellOffset,UDim2.new(0, currOffset + CELL_PADDING, 0, 0))
+table.insert(cellOffset, UDim2.new(0, currOffset + CELL_PADDING, 0, 0))
 table.insert(headerCellSize, UDim2.new(1, -totalEntryWidth - CELL_PADDING, 0, HEADER_HEIGHT))
 table.insert(entryCellSize, UDim2.new(1, -totalEntryWidth - CELL_PADDING, 0, ENTRY_HEIGHT))
 
 local verticalOffsets = {}
 for i, offset in ipairs(cellOffset) do
-	verticalOffsets[i] = UDim2.new(offset.X.Scale, offset.X.Offset - CELL_PADDING,
-		offset.Y.Scale, offset.Y.Offset)
+	verticalOffsets[i] = UDim2.new(offset.X.Scale, offset.X.Offset - CELL_PADDING, offset.Y.Scale, offset.Y.Offset)
 end
 
 local NetworkChart = Roact.Component:extend("NetworkChart")
 
 function NetworkChart:init()
-	self.getOnExpandEntry = function (name)
+	self.getOnExpandEntry = function(name)
 		return function(rbx, input)
 			self:setState({
-				expandIndex = self.state.expandIndex ~= name and name
+				expandIndex = self.state.expandIndex ~= name and name,
 			})
 		end
 	end
@@ -140,7 +139,7 @@ function NetworkChart:render()
 	end
 
 	for i = 2, #verticalOffsets do
-		local key = string.format("VerticalLine_%d",i)
+		local key = string.format("VerticalLine_%d", i)
 		headerCells[key] = Roact.createElement("Frame", {
 			Size = UDim2.new(0, LINE_WIDTH, 0, HEADER_HEIGHT),
 			Position = verticalOffsets[i],
@@ -167,8 +166,8 @@ function NetworkChart:render()
 		for ind, entry in ipairs(httpEntryList) do
 			local valid = true
 			if searchTerm ~= "" then
-				valid = string.find(entry.RequestType:lower(), searchTerm:lower()) ~= nil or
-						string.find(entry.Url:lower(), searchTerm:lower()) ~= nil
+				valid = string.find(entry.RequestType:lower(), searchTerm:lower()) ~= nil
+					or string.find(entry.Url:lower(), searchTerm:lower()) ~= nil
 			end
 
 			if not (entry.RequestType == "Default") and valid then
@@ -181,9 +180,7 @@ function NetworkChart:render()
 				if showResponse then
 					frameHeight = frameHeight + RESPONSE_STR_TEXT_HEIGHT
 					if self.ref.current then
-						local fSize = Vector2.new(
-							self.ref.current.AbsoluteSize.X * RESPONSE_WIDTH_RATIO,
-							100000000)
+						local fSize = Vector2.new(self.ref.current.AbsoluteSize.X * RESPONSE_WIDTH_RATIO, 100000000)
 						local DisSize = TextService:GetTextSize(entry.Response, FONT_SIZE, MAIN_FONT, fSize)
 
 						responseBodyHeight = RESPONSE_STR_TEXT_HEIGHT + DisSize.Y
@@ -256,7 +253,7 @@ function NetworkChart:render()
 			Size = UDim2.new(1, 0, 0, HEADER_HEIGHT),
 			BackgroundTransparency = 1,
 			LayoutOrder = 1,
-		},headerCells),
+		}, headerCells),
 
 		HorizontalLine_1 = Roact.createElement("Frame", {
 			Size = UDim2.new(1, 0, 0, LINE_WIDTH),

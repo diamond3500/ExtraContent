@@ -1,6 +1,6 @@
 local CorePackages = game:GetService("CorePackages")
 
-local InGameMenuDependencies = require(CorePackages.InGameMenuDependencies)
+local InGameMenuDependencies = require(CorePackages.Packages.InGameMenuDependencies)
 local Roact = InGameMenuDependencies.Roact
 local t = InGameMenuDependencies.t
 
@@ -44,7 +44,7 @@ local function ControlEntry(props)
 				TextXAlignment = Enum.TextXAlignment.Left,
 				Position = UDim2.new(0, 0, 0, HEADER_PADDING_TOP),
 				Size = UDim2.new(1, 0, 0, HEADER_TEXT_HEIGHT),
-			})
+			}),
 		})
 	end)
 end

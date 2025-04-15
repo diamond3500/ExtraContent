@@ -1,7 +1,7 @@
 local Root = script.Parent.Parent
 
 local CorePackages = game:GetService("CorePackages")
-local PurchasePromptDeps = require(CorePackages.PurchasePromptDeps)
+local PurchasePromptDeps = require(CorePackages.Workspace.Packages.PurchasePromptDeps)
 local Rodux = PurchasePromptDeps.Rodux
 local Cryo = PurchasePromptDeps.Cryo
 
@@ -12,7 +12,7 @@ local ABVariationReducer = Rodux.createReducer({}, {
 		assert(type(action.key) == "string", "Expected 'key' to be a string")
 		assert(type(action.variation) == "string", "Expected 'variation' to be a string")
 		return Cryo.Dictionary.join(state, {
-			[action.key] = action.variation
+			[action.key] = action.variation,
 		})
 	end,
 })

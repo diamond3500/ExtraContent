@@ -1,9 +1,6 @@
-local CoreGui = game:GetService("CoreGui")
-local RobloxGui = CoreGui:WaitForChild("RobloxGui")
-local PolicyService = require(RobloxGui.Modules.Common:WaitForChild("PolicyService"))
 local CorePackages = game:GetService("CorePackages")
 
-local InGameMenuDependencies = require(CorePackages.InGameMenuDependencies)
+local InGameMenuDependencies = require(CorePackages.Packages.InGameMenuDependencies)
 local Roact = InGameMenuDependencies.Roact
 local UIBlox = InGameMenuDependencies.UIBlox
 local Cryo = InGameMenuDependencies.Cryo
@@ -46,6 +43,7 @@ local iconPos = {
 }
 
 local validatePropsWithForwardRef = require(CorePackages.Workspace.Packages.RoactUtils).validatePropsWithForwardRef
+local CachedPolicyService = require(CorePackages.Workspace.Packages.CachedPolicyService)
 
 local PlayerLabel = Roact.PureComponent:extend("PlayerLabelV2")
 
@@ -85,8 +83,8 @@ function PlayerLabel:renderButtons()
 			HorizontalAlignment = Enum.HorizontalAlignment.Right,
 			SortOrder = Enum.SortOrder.LayoutOrder,
 			VerticalAlignment = Enum.VerticalAlignment.Center,
-			Padding = UDim.new(0, BUTTONS_PADDING)
-		})
+			Padding = UDim.new(0, BUTTONS_PADDING),
+		}),
 	})
 
 	return buttons
@@ -100,7 +98,7 @@ function PlayerLabel:renderWithSelectionCursor(getSelectionCursor)
 	-- if not, we just show username at DisplayNameLabel and hide UsernameLabel
 
 	local props = self.props
-	local shouldShowDisplayName = PolicyService:IsSubjectToChinaPolicies() or FFlagAlwaysShowDisplayNameInExpMenu
+	local shouldShowDisplayName = CachedPolicyService:IsSubjectToChinaPolicies() or FFlagAlwaysShowDisplayNameInExpMenu
 	local displayName = props.displayName ~= "" and props.displayName or props.username
 
 	return withStyle(function(style)
@@ -131,17 +129,26 @@ function PlayerLabel:renderWithSelectionCursor(getSelectionCursor)
 			[Roact.Ref] = forwardRef,
 			SelectionImageObject = getSelectionCursor(CursorKind.Square),
 		}, {
-			PlayerIcon = Roact.createElement(ImageSetLabel, Cryo.Dictionary.join(iconPos, {
-				ImageColor3 = props.isOnline and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(115, 115, 115),
-				BackgroundTransparency = 1,
-				Image = props.userId > 0 and "rbxthumb://type=AvatarHeadShot&id=" ..props.userId.. "&w=60&h=60" or "",
-				ZIndex = 2,
-			})),
+			PlayerIcon = Roact.createElement(
+				ImageSetLabel,
+				Cryo.Dictionary.join(iconPos, {
+					ImageColor3 = props.isOnline and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(115, 115, 115),
+					BackgroundTransparency = 1,
+					Image = props.userId > 0 and "rbxthumb://type=AvatarHeadShot&id=" .. props.userId .. "&w=60&h=60"
+						or "",
+					ZIndex = 2,
+				})
+			),
 			DisplayNameLabel = Roact.createElement(ThemedTextLabel, {
 				fontKey = "Header2",
 				themeKey = "TextEmphasis",
 
-				Position = UDim2.new(0, USERNAME_X_OFFSET, 0, shouldShowDisplayName and USERNAME_TOP_PADDING or CONTAINER_FRAME_HEIGHT / 2),
+				Position = UDim2.new(
+					0,
+					USERNAME_X_OFFSET,
+					0,
+					shouldShowDisplayName and USERNAME_TOP_PADDING or CONTAINER_FRAME_HEIGHT / 2
+				),
 				AnchorPoint = shouldShowDisplayName and Vector2.new(0, 0) or Vector2.new(0, 0.5),
 				Size = UDim2.new(0, USERNAME_WIDTH, 0, USERNAME_HEIGHT),
 				Text = shouldShowDisplayName and displayName or props.username,
@@ -149,28 +156,29 @@ function PlayerLabel:renderWithSelectionCursor(getSelectionCursor)
 				TextTruncate = Enum.TextTruncate.AtEnd,
 			}),
 
-			UsernameLabel = shouldShowDisplayName and Roact.createElement(ThemedTextLabel, {
-				fontKey = "Header2",
-				themeKey = "TextDefault",
+			UsernameLabel = shouldShowDisplayName
+				and Roact.createElement(ThemedTextLabel, {
+					fontKey = "Header2",
+					themeKey = "TextDefault",
 
-				Position = UDim2.new(0, USERNAME_X_OFFSET, 0, USERNAME_TOP_PADDING + USERNAME_HEIGHT),
-				Size = UDim2.new(0, USERNAME_WIDTH, 0, USERNAME_HEIGHT),
-				Text = "@" .. props.username,
-				TextXAlignment = Enum.TextXAlignment.Left,
-				TextTruncate = Enum.TextTruncate.AtEnd,
-				OpenTypeFeatures = if (
-						GetFFlagLuaAppEnableOpenTypeSupport() and GetFFlagLuaAppEnableOpenTypeIGMFix()
-					)
-					then OpenTypeSupport:getUserNameStylisticAlternative()
-					else nil,
-			}),
+					Position = UDim2.new(0, USERNAME_X_OFFSET, 0, USERNAME_TOP_PADDING + USERNAME_HEIGHT),
+					Size = UDim2.new(0, USERNAME_WIDTH, 0, USERNAME_HEIGHT),
+					Text = "@" .. props.username,
+					TextXAlignment = Enum.TextXAlignment.Left,
+					TextTruncate = Enum.TextTruncate.AtEnd,
+					OpenTypeFeatures = if (
+							GetFFlagLuaAppEnableOpenTypeSupport() and GetFFlagLuaAppEnableOpenTypeIGMFix()
+						)
+						then OpenTypeSupport:getUserNameStylisticAlternative()
+						else nil,
+				}),
 
 			ButtonContainer = Roact.createElement("Frame", {
 				AnchorPoint = Vector2.new(1, 0),
 				BackgroundTransparency = 1,
 				Position = UDim2.new(1, -BUTTONS_RIGHT_PADDING, 0, 0),
 				Size = UDim2.new(0, 0, 1, 0),
-			}, self:renderButtons())
+			}, self:renderButtons()),
 		})
 	end)
 end
@@ -182,7 +190,10 @@ function PlayerLabel:render()
 end
 
 return Roact.forwardRef(function(props, ref)
-	return Roact.createElement(PlayerLabel, Cryo.Dictionary.join(props, {
-		forwardRef = ref,
-	}))
+	return Roact.createElement(
+		PlayerLabel,
+		Cryo.Dictionary.join(props, {
+			forwardRef = ref,
+		})
+	)
 end)

@@ -1,7 +1,7 @@
 local CorePackages = game:GetService("CorePackages")
 local VRService = game:GetService("VRService")
 
-local InGameMenuDependencies = require(CorePackages.InGameMenuDependencies)
+local InGameMenuDependencies = require(CorePackages.Packages.InGameMenuDependencies)
 local Roact = InGameMenuDependencies.Roact
 local t = InGameMenuDependencies.t
 
@@ -25,8 +25,7 @@ function IGMMainPageControllerBar:render()
 			respawnCharacter = "CoreScripts.InGameMenu.ControllerBar.RespawnCharacter",
 			leave = "CoreScripts.InGameMenu.ControllerBar.Leave",
 		})(function(localize)
-			
-			local controllerHints;
+			local controllerHints
 			if not VRService.VREnabled then
 				controllerHints = {
 					{
@@ -40,7 +39,7 @@ function IGMMainPageControllerBar:render()
 					{
 						text = localize.leave,
 						keyCode = Enum.KeyCode.ButtonX,
-					} 
+					},
 				}
 			else
 				controllerHints = {
@@ -51,16 +50,16 @@ function IGMMainPageControllerBar:render()
 					{
 						text = localize.leave,
 						keyCode = Enum.KeyCode.ButtonX,
-					} 
+					},
 				}
 			end
-			
+
 			return Roact.createElement(IGMControllerBar2, {
 				leftHint = {
 					text = localize.back,
 					keyCode = Enum.KeyCode.ButtonB,
 				},
-				rightHints = controllerHints
+				rightHints = controllerHints,
 			})
 		end)
 	end

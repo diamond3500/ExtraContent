@@ -1,7 +1,7 @@
 --!nonstrict
 local CorePackages = game:GetService("CorePackages")
 local TweenService = game:GetService("TweenService")
-local Roact = require(CorePackages.Roact)
+local Roact = require(CorePackages.Packages.Roact)
 
 local Components = script.Parent.Parent.Parent.Components
 local HeaderButton = require(Components.HeaderButton)
@@ -25,7 +25,7 @@ local NO_RESULT_SEARCH_STR = Constants.GeneralFormatting.NoResultSearchStr
 local FFlagDevConsoleMemorySort = game:DefineFastFlag("DevConsoleMemorySort", false)
 
 local tweenInfo = TweenInfo.new(
-	.3, -- Time
+	0.3, -- Time
 	Enum.EasingStyle.Back,
 	Enum.EasingDirection.Out,
 	0,
@@ -48,7 +48,7 @@ local function formatValueStr(value)
 end
 
 function MemoryView:init(props)
-	self.getOnButtonPress = function (name, index)
+	self.getOnButtonPress = function(name, index)
 		return function(rbx, input)
 			if self.state.expandIndex ~= name and name then
 				local scrollingRef = self.scrollingRef.current
@@ -57,17 +57,14 @@ function MemoryView:init(props)
 				-- of the entry, and another 1.4 to provide a 1.4 * ENTRY_HEIGHT's
 				-- worth of buffer space
 				if scrollingRef then
-					local newCanvasPosY = (index-2.4) * ENTRY_HEIGHT
-					TweenService:Create(
-						scrollingRef,
-						tweenInfo,
-						{CanvasPosition = Vector2.new(0, newCanvasPosY)}
-					):Play()
+					local newCanvasPosY = (index - 2.4) * ENTRY_HEIGHT
+					TweenService:Create(scrollingRef, tweenInfo, { CanvasPosition = Vector2.new(0, newCanvasPosY) })
+						:Play()
 				end
 			end
 
 			self:setState({
-				expandIndex = self.state.expandIndex ~= name and name
+				expandIndex = self.state.expandIndex ~= name and name,
 			})
 		end
 	end
@@ -80,7 +77,7 @@ function MemoryView:init(props)
 				props.targetMemoryData:setSortType(sortType)
 			end
 			self:setState({
-				reverseSort = not self.state.reverseSort
+				reverseSort = not self.state.reverseSort,
 			})
 		else
 			props.targetMemoryData:setSortType(sortType)
@@ -126,7 +123,7 @@ function MemoryView:didMount()
 	local treeUpdatedSignal = self.props.targetMemoryData:treeUpdatedSignal()
 	self.treeViewItemConnector = treeUpdatedSignal:Connect(function(memoryData)
 		self:setState({
-			memoryData = memoryData
+			memoryData = memoryData,
 		})
 	end)
 
@@ -150,7 +147,7 @@ function MemoryView:appendAdditionTabInformation(elements, infoTable, parentName
 	local absScrollSize = self.scrollingRef.current.AbsoluteSize
 
 	-- this function, where applicable is in clientMemoryData
-	for _,additionalEntry in ipairs(infoTable) do
+	for _, additionalEntry in ipairs(infoTable) do
 		local name = additionalEntry.name
 		local value = additionalEntry.value
 		local new_key = parentName .. name
@@ -200,7 +197,7 @@ function MemoryView:recursiveConstructEntries(elements, entry, depth, windowing)
 	local found = string.find(name:lower(), searchTerm:lower())
 
 	if found then
-		local showGraph =  expandIndex == name
+		local showGraph = expandIndex == name
 		local frameHeight = showGraph and ENTRY_HEIGHT + GRAPH_HEIGHT or ENTRY_HEIGHT
 		windowing.layoutOrder = windowing.layoutOrder + 1
 
@@ -266,7 +263,7 @@ function MemoryView:render()
 		scrollingFrameHeight = 0,
 		paddingHeight = -1,
 		usedFrameSpace = 0,
-		layoutOrder = 1
+		layoutOrder = 1,
 	}
 
 	if self.scrollingRef.current then
@@ -299,7 +296,7 @@ function MemoryView:render()
 				LayoutOrder = layoutOrder,
 			})
 		else
-			local noResultSearchStr = string.format(NO_RESULT_SEARCH_STR, searchTerm )
+			local noResultSearchStr = string.format(NO_RESULT_SEARCH_STR, searchTerm)
 
 			elements["noDataMessage"] = Roact.createElement("TextLabel", {
 				Size = UDim2.new(1, 0, 1, 0),
@@ -317,7 +314,7 @@ function MemoryView:render()
 		BackgroundTransparency = 1,
 		LayoutOrder = layoutOrder,
 	}, {
-		Header = 	Roact.createElement("Frame", {
+		Header = Roact.createElement("Frame", {
 			Size = UDim2.new(1, 0, 0, HEADER_HEIGHT),
 			BackgroundTransparency = 1,
 		}, {
@@ -329,7 +326,7 @@ function MemoryView:render()
 			}),
 			ValueMB = Roact.createElement(HeaderButton, {
 				text = HEADER_NAMES[2],
-				size = UDim2.new( VALUE_CELL_WIDTH, -CELL_PADDING, 0, HEADER_HEIGHT),
+				size = UDim2.new(VALUE_CELL_WIDTH, -CELL_PADDING, 0, HEADER_HEIGHT),
 				pos = UDim2.new(1 - VALUE_CELL_WIDTH, VALUE_PADDING, 0, 0),
 				sortfunction = self.onSortChanged,
 			}),

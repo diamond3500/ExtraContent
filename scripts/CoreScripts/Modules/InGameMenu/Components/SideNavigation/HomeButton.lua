@@ -4,7 +4,7 @@
 
 local CorePackages = game:GetService("CorePackages")
 
-local InGameMenuDependencies = require(CorePackages.InGameMenuDependencies)
+local InGameMenuDependencies = require(CorePackages.Packages.InGameMenuDependencies)
 local t = InGameMenuDependencies.t
 local Roact = InGameMenuDependencies.Roact
 local UIBlox = InGameMenuDependencies.UIBlox
@@ -48,7 +48,7 @@ function HomeButton:renderWithSelectionCursor(getSelectionCursor)
 			Size = UDim2.fromOffset(32, 32),
 			SelectionImageObject = getSelectionCursor(CursorKind.RoundedRect),
 			[Roact.Event.Activated] = self.props.onActivated,
-		})
+		}),
 	})
 end
 

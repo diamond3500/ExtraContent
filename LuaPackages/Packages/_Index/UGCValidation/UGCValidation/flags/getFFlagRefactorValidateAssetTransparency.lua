@@ -1,7 +1,7 @@
 --!strict
 
-game:DefineFastFlag("RefactorValidateAssetTransparency2", false)
+game:DefineFastFlag("RefactorValidateAssetTransparency3", false)
 
 return function()
-	return game:GetFastFlag("RefactorValidateAssetTransparency2")
+	return game:GetFastFlag("RefactorValidateAssetTransparency3")
 end

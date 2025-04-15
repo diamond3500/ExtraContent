@@ -10,6 +10,8 @@ local usePreferences = require(Foundation.Providers.Preferences.usePreferences)
 local View = require(Foundation.Components.View)
 local EventConnection = ReactUtils.EventConnection
 
+--selene: allow(roblox_internal_custom_color)
+local WHITE = Color3.new(1, 1, 1)
 local GRADIENT_ROTATION_SPEED = 2
 
 type Props = {
@@ -44,7 +46,7 @@ local CursorComponent = React.forwardRef(function(props: Props, ref: React.Ref<F
 			CornerRadius = props.cornerRadius,
 		}),
 		UIStroke = React.createElement("UIStroke", {
-			Color = Color3.new(1, 1, 1),
+			Color = WHITE,
 			Transparency = 0,
 			Thickness = props.borderWidth,
 		}, {

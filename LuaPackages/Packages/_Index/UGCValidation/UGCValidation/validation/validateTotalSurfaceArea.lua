@@ -8,9 +8,6 @@ local UGCValidationService = game:GetService("UGCValidationService")
 
 local root = script.Parent.Parent
 
-local getEngineFeatureUGCValidateEditableMeshAndImage =
-	require(root.flags.getEngineFeatureUGCValidateEditableMeshAndImage)
-
 local getEngineFeatureEngineUGCValidateTotalSurfaceAreaTest =
 	require(root.flags.getEngineFeatureEngineUGCValidateTotalSurfaceAreaTest)
 
@@ -21,7 +18,6 @@ local getFFlagUGCValidateFixTotalSurfaceAreaTestErrorString =
 
 local Types = require(root.util.Types)
 local pcallDeferred = require(root.util.pcallDeferred)
-local getFFlagUGCValidationShouldYield = require(root.flags.getFFlagUGCValidationShouldYield)
 
 local Analytics = require(root.Analytics)
 
@@ -38,16 +34,9 @@ local function validateTotalSurfaceArea(
 
 	local isServer = validationContext.isServer
 
-	local success, result
-	if getEngineFeatureUGCValidateEditableMeshAndImage() and getFFlagUGCValidationShouldYield() then
-		success, result = pcallDeferred(function()
-			return (UGCValidationService :: any):CalculateEditableMeshTotalSurfaceArea(meshInfo.editableMesh, meshScale)
-		end, validationContext)
-	else
-		success, result = pcall(function()
-			return (UGCValidationService :: any):CalculateTotalSurfaceArea(meshInfo.contentId, meshScale)
-		end)
-	end
+	local success, result = pcallDeferred(function()
+		return (UGCValidationService :: any):CalculateEditableMeshTotalSurfaceArea(meshInfo.editableMesh, meshScale)
+	end, validationContext)
 
 	if not success then
 		local errorString = string.format(
@@ -60,12 +49,16 @@ local function validateTotalSurfaceArea(
 			-- which would mean the asset failed validation
 			error(errorString)
 		end
-		Analytics.reportFailure(Analytics.ErrorType.validateTotalSurfaceArea_FailedToExecute)
+		Analytics.reportFailure(Analytics.ErrorType.validateTotalSurfaceArea_FailedToExecute, nil, validationContext)
 		return false, { errorString }
 	end
 
 	if result > getFIntMaxTotalSurfaceArea() then
-		Analytics.reportFailure(Analytics.ErrorType.validateTotalSurfaceArea_maxTotalSurfaceAreaExceeded)
+		Analytics.reportFailure(
+			Analytics.ErrorType.validateTotalSurfaceArea_maxTotalSurfaceAreaExceeded,
+			nil,
+			validationContext
+		)
 		return false,
 			{
 				if getFFlagUGCValidateFixTotalSurfaceAreaTestErrorString()

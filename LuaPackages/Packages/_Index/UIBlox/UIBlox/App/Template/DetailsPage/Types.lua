@@ -1,3 +1,4 @@
+-- moving this file to LuaApps, please replicate any changes in the LuaApps file as well
 local DetailsPage = script.Parent
 local Template = DetailsPage.Parent
 local App = Template.Parent
@@ -5,6 +6,8 @@ local UIBlox = App.Parent
 local Packages = UIBlox.Parent
 
 local React = require(Packages.React)
+
+local UIBloxConfig = require(UIBlox.UIBloxConfig)
 
 export type DetailsPageRenderItem = {
 	index: number,
@@ -26,4 +29,4 @@ export type ComponentList = {
 	},
 }
 
-return {}
+return if UIBloxConfig.moveDetailsPageToLuaApps then nil else {}

@@ -5,6 +5,10 @@ local App = Loading.Parent
 local UIBlox = App.Parent
 local Packages = UIBlox.Parent
 
+local Foundation = require(Packages.Foundation)
+local Skeleton = Foundation.Skeleton
+local getClosestRadius = require(Loading.getClosestRadius)
+
 local Roact = require(Packages.Roact)
 local t = require(Packages.t)
 
@@ -18,6 +22,8 @@ local lerp = require(Packages.UIBlox.Utility.lerp)
 local PULSATE_TRANSPARENCY_DELTA = 0.1
 local PULSATE_ANIM_TIME = 2.5
 
+local UIBloxConfig = require(UIBlox.UIBloxConfig)
+
 local ShimmerPanel = Roact.PureComponent:extend("ShimmerPanel")
 
 ShimmerPanel.validateProps = t.strictInterface({
@@ -30,16 +36,16 @@ ShimmerPanel.validateProps = t.strictInterface({
 	-- The corner radius of the image, shimmer, and failed image's rounded corners
 	cornerRadius = t.optional(t.UDim),
 
-	-- The image that will move across the panel
+	-- **DEPRECATED** The image that will move across the panel
 	Image = t.optional(t.string),
 
-	-- The pixel dimensions of the moving image, if provided
+	-- **DEPRECATED** The pixel dimensions of the moving image
 	imageDimensions = t.optional(t.Vector2),
 
-	-- The scale of the moving image
+	-- **DEPRECATED** The scale of the moving image
 	imageScale = t.optional(t.number),
 
-	-- The speed of the moving image
+	-- **DEPRECATED** The speed of the moving image
 	shimmerSpeed = t.optional(t.number),
 })
 
@@ -97,6 +103,18 @@ function ShimmerPanel:render()
 	return withStyle(function(stylePalette)
 		local theme = stylePalette.Theme
 		local settings = stylePalette.Settings
+		local tokens = stylePalette.Tokens
+
+		if UIBloxConfig.useFoundationSkeleton then
+			local radius = getClosestRadius(tokens.Semantic.Radius, cornerRadius)
+			return Roact.createElement(Skeleton, {
+				radius = radius,
+				AnchorPoint = anchorPoint,
+				Position = position,
+				Size = size,
+				LayoutOrder = layoutOrder,
+			})
+		end
 
 		local renderSteppedCallback = function(dt)
 			local backgroundOnHover = theme.BackgroundOnHover

@@ -12,6 +12,7 @@ type StyleProps = StyleProvider.StyleProviderProps
 type Preferences = PreferencesProvider.PreferencesProps
 
 export type FoundationProviderProps = StyleProps & {
+	-- Plugins must provide overlay since they can't use the default PlayerGui
 	overlayGui: GuiObject?,
 	preferences: Preferences?,
 }
@@ -19,15 +20,17 @@ export type FoundationProviderProps = StyleProps & {
 local function FoundationProvider(props: FoundationProviderProps)
 	-- TODO: not any, children types acting weird
 	local preferences: any = if props.preferences then props.preferences else {}
+	-- drop when FoundationStyleSheetContext is removed
+	local sheetRef = React.useRef(nil :: StyleSheet?)
 
 	return React.createElement(PreferencesProvider, preferences, {
 		StyleProvider = React.createElement(StyleProvider, {
 			theme = props.theme,
 			device = props.device,
 			derives = props.derives,
-			DONOTUSE_colorUpdate = props.DONOTUSE_colorUpdate,
+			sheetRef = sheetRef,
 		}, {
-			OverlayProvider = React.createElement(OverlayProvider, { gui = props.overlayGui }, {
+			OverlayProvider = React.createElement(OverlayProvider, { gui = props.overlayGui, sheetRef = sheetRef }, {
 				CursorProvider = React.createElement(CursorProvider, nil, props.children),
 			}),
 		}),

@@ -1,7 +1,7 @@
 local Players = game:GetService("Players")
 local CorePackages = game:GetService("CorePackages")
 
-local InGameMenuDependencies = require(CorePackages.InGameMenuDependencies)
+local InGameMenuDependencies = require(CorePackages.Packages.InGameMenuDependencies)
 local Roact = InGameMenuDependencies.Roact
 local t = InGameMenuDependencies.t
 
@@ -12,7 +12,7 @@ local Page = require(InGameMenu.Components.Page)
 local ReportList = require(script.ReportList)
 
 local function getReportablePlayers()
-	local players:{[number]: Player} = {}
+	local players: { [number]: Player } = {}
 
 	for _, player in ipairs(Players:GetPlayers()) do
 		if player ~= Players.LocalPlayer then
@@ -48,7 +48,7 @@ function ReportPage:render()
 					players = getReportablePlayers(),
 				})
 			end,
-		})
+		}),
 	})
 end
 

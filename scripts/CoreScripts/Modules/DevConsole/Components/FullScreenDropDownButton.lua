@@ -1,6 +1,6 @@
 local CorePackages = game:GetService("CorePackages")
 local RobloxGui = game:GetService("CoreGui").RobloxGui
-local Roact = require(CorePackages.Roact)
+local Roact = require(CorePackages.Packages.Roact)
 
 local ExternalEventConnection = require(CorePackages.Workspace.Packages.RoactUtils).ExternalEventConnection
 
@@ -19,16 +19,17 @@ local FullScreenDropDownButton = Roact.Component:extend("FullScreenDropDownButto
 function FullScreenDropDownButton:init()
 	self.startDropDownView = function()
 		self:setState({
-			selectionScreenExpanded = true
+			selectionScreenExpanded = true,
 		})
 	end
 
 	self.noSelection = function(rbx, input)
-		if input.UserInputType == Enum.UserInputType.MouseButton1 or
-			(input.UserInputType == Enum.UserInputType.Touch and
-			input.UserInputState == Enum.UserInputState.End) then
+		if
+			input.UserInputType == Enum.UserInputType.MouseButton1
+			or (input.UserInputType == Enum.UserInputType.Touch and input.UserInputState == Enum.UserInputState.End)
+		then
 			self:setState({
-				selectionScreenExpanded = false
+				selectionScreenExpanded = false,
 			})
 		end
 	end
@@ -61,7 +62,7 @@ function FullScreenDropDownButton:render()
 		})
 
 		if dropDownList then
-			for ind,name in ipairs(dropDownList) do
+			for ind, name in ipairs(dropDownList) do
 				local color = (ind == selectedIndex) and Constants.Color.SelectedGray or Constants.Color.UnselectedGray
 
 				dropDownItemList[ind] = Roact.createElement("TextButton", {
@@ -78,7 +79,7 @@ function FullScreenDropDownButton:render()
 
 					[Roact.Event.Activated] = function(rbx)
 						self:setState({
-							selectionScreenExpanded = false
+							selectionScreenExpanded = false,
 						})
 						onSelection(ind)
 					end,
@@ -104,7 +105,7 @@ function FullScreenDropDownButton:render()
 			event = RobloxGui:GetPropertyChangedSignal("AbsoluteSize"),
 			callback = function()
 				self:setState({
-					guiSizeY = RobloxGui.AbsoluteSize.Y
+					guiSizeY = RobloxGui.AbsoluteSize.Y,
 				})
 			end,
 		}),
@@ -124,7 +125,7 @@ function FullScreenDropDownButton:render()
 			Image = OPEN_ARROW,
 			BackgroundTransparency = 1,
 			Size = UDim2.new(0, ARROW_SIZE, 0, ARROW_SIZE),
-			Position = UDim2.new(1, -ARROW_SIZE - ARROW_OFFSET, .5, -ARROW_OFFSET),
+			Position = UDim2.new(1, -ARROW_SIZE - ARROW_OFFSET, 0.5, -ARROW_OFFSET),
 		}),
 
 		selectionView = isSelecting and Roact.createElement(Roact.Portal, {
@@ -134,14 +135,14 @@ function FullScreenDropDownButton:render()
 			GreyOutFrame = Roact.createElement("Frame", {
 				Size = UDim2.new(1, 0, 1, 0),
 				BackgroundColor3 = Constants.Color.Black,
-				BackgroundTransparency = .36,
+				BackgroundTransparency = 0.36,
 				Active = true,
 
 				[Roact.Event.InputEnded] = self.noSelection,
 			}, {
 				BorderFrame = Roact.createElement("Frame", {
 					Size = UDim2.new(0, FULL_SCREEN_WIDTH, 0, scrollingFrameHeight),
-					Position = UDim2.new(.5, -FULL_SCREEN_WIDTH / 2, 0, 0),
+					Position = UDim2.new(0.5, -FULL_SCREEN_WIDTH / 2, 0, 0),
 					BackgroundColor3 = Constants.Color.UnselectedGray,
 					BorderSizePixel = 0,
 				}, {
@@ -156,10 +157,10 @@ function FullScreenDropDownButton:render()
 						BorderSizePixel = 0,
 
 						ScrollBarThickness = 0,
-					}, dropDownItemList)
-				})
-			})
-		})
+					}, dropDownItemList),
+				}),
+			}),
+		}),
 	})
 end
 

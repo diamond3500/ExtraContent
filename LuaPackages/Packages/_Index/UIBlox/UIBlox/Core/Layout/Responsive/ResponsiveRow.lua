@@ -292,9 +292,7 @@ function ResponsiveRow:render()
 					then math.max(self.props.displayLines.Min - 1, 0)
 					else nil,
 				relativeHeight = self.props.relativeHeight,
-				scrollingFrameRef = if UIBloxConfig.responsiveBaseRowScrollingFrameRef
-					then self.props.scrollingFrameRef
-					else nil,
+				scrollingFrameRef = self.props.scrollingFrameRef,
 				[Roact.Ref] = self.props.forwardedRef,
 			}, children)
 		end,

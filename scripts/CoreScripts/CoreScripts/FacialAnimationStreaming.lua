@@ -10,9 +10,9 @@ local CorePackages = game:GetService("CorePackages")
 local RobloxReplicatedStorage = game:GetService("RobloxReplicatedStorage")
 
 local RobloxGui = CoreGui.RobloxGui
-local RobloxTranslator = require(RobloxGui.Modules.RobloxTranslator)
+local RobloxTranslator = require(CorePackages.Workspace.Packages.RobloxTranslator)
 
-local IXPServiceWrapper = require(RobloxGui.Modules.Common.IXPServiceWrapper)
+local IXPServiceWrapper = require(CorePackages.Workspace.Packages.IxpServiceWrapper).IXPServiceWrapper
 
 local log = require(CorePackages.Workspace.Packages.CoreScriptsInitializer).CoreLogger:new(script.Name)
 
@@ -31,7 +31,6 @@ local FFlagFacialAnimationStreamingCheckPauseStateAfterEmote2 = game:DefineFastF
 local GetFFlagAvatarChatServiceEnabled = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagAvatarChatServiceEnabled
 local AvatarChatService = if GetFFlagAvatarChatServiceEnabled() then game:GetService("AvatarChatService") else nil
 local FaceAnimatorService = game:GetService("FaceAnimatorService")
-local FacialAnimationStreamingService = game:GetService("FacialAnimationStreamingServiceV2")
 local FFlagUXForCameraPerformanceEnabled = game:DefineFastFlag("UXForCameraPerformanceEnabled", false)
 local FFlagDisableCameraOnLowspecAndroidCalls = game:DefineFastFlag("DisableCameraOnLowspecAndroidCalls", false)
 
@@ -49,7 +48,7 @@ end
 
 local heartbeatStats = require(RobloxGui.Modules.FacialAnimationStreaming.FacialAnimationStreamingHeartbeatStats)
 
-if not FaceAnimatorService or not FacialAnimationStreamingService then
+if not FaceAnimatorService or not AvatarChatService then
 	return
 end
 
@@ -724,18 +723,6 @@ function InitializeFacialAnimationStreaming(settings)
 		FaceAnimatorService:Init(
 			AvatarChatService:IsEnabled(settings, Enum.AvatarChatServiceFeature.UserVideo),
 			AvatarChatService:IsEnabled(settings, Enum.AvatarChatServiceFeature.UserAudio))
-	else
-		local ok, playerState =
-			pcall(FacialAnimationStreamingService.ResolveStateForUser, FacialAnimationStreamingService, Players.LocalPlayer.UserId)
-
-		if not ok then
-			playerTrace("Failed to resolve state for user.", Players.LocalPlayer)
-			return
-		end
-
-		FaceAnimatorService:Init(
-			FacialAnimationStreamingService:IsVideoEnabled(settings) and FacialAnimationStreamingService:IsVideoEnabled(playerState),
-			FacialAnimationStreamingService:IsAudioEnabled(settings) and FacialAnimationStreamingService:IsAudioEnabled(playerState))
 	end
 
 	if FFlagFaceAnimatorNotifyLODRecommendCameraInputDisable then
@@ -812,21 +799,6 @@ function CleanupFacialAnimationStreaming()
 	end
 end
 
--- Throttling
-local function onThrottleUpdate(allowed, optedIn, serviceState)
-	log:trace(string.format("[onThrottleUpdate] allowed: %s, optedIn:%s, state: %s", tostring(allowed), tostring(optedIn), tostring(serviceState)))
-
-	if allowed and FacialAnimationStreamingService:IsServerEnabled(serviceState) then
-		InitializeFacialAnimationStreaming(serviceState)
-	else
-		CleanupFacialAnimationStreaming()
-
-		if optedIn then
-			TrackerMenu:showPrompt(TrackerPromptType.FeatureDisabled)
-		end
-	end
-end
-
 -- Init with service state
 local function updateWithServiceState(settings)
 	log:trace(string.format("[updateWithServiceState] state: %s", tostring(settings)))
@@ -864,9 +836,4 @@ if GetFFlagAvatarChatServiceEnabled() then
 			clientFeaturesChangedListener:Disconnect()
 		end)
 	end
-else
-	FacialAnimationStreamingService:GetPropertyChangedSignal("ServiceState"):Connect(function()
-		updateWithServiceState(FacialAnimationStreamingService.ServiceState)
-	end)
-	updateWithServiceState(FacialAnimationStreamingService.ServiceState)
 end

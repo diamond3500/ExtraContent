@@ -5,7 +5,7 @@ local React = require(CorePackages.Packages.React)
 
 local VerifiedBadges = require(CorePackages.Workspace.Packages.VerifiedBadges)
 
-local InGameMenuDependencies = require(CorePackages.InGameMenuDependencies)
+local InGameMenuDependencies = require(CorePackages.Packages.InGameMenuDependencies)
 local Roact = InGameMenuDependencies.Roact
 local UIBlox = InGameMenuDependencies.UIBlox
 local Cryo = InGameMenuDependencies.Cryo

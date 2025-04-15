@@ -1,4 +1,5 @@
 --!nonstrict
+-- moving this file to LuaApps, please replicate any changes in the LuaApps file as well
 local Button = script.Parent
 local App = Button.Parent
 local UIBlox = App.Parent
@@ -16,13 +17,13 @@ local withStyle = require(Core.Style.withStyle)
 local GetTextSize = require(Core.Text.GetTextSize)
 
 local ActionBar = require(Button.ActionBar)
+local UIBloxConfig = require(UIBlox.UIBloxConfig)
 
 -- StickyActionBar layout parameters
 local PADDING_LEFT = 56
 local PADDING_RIGHT = 24
 local WIDTH_BREAKPOINT = 1280
 -- ActionBar section layout parameters
-local ACTIONBAR_WIDTH = 380
 local ACTIONBAR_HEIGHT = 48
 -- Info section layout parameters
 local INFO_SPACING_ICON_TEXT = 12
@@ -39,6 +40,9 @@ StickyActionBar.validateProps = t.strictInterface({
 	-- Props to render the ActionBar component.
 	-- See [[ActionBar]] for more information.
 	actionBarProps = t.optional(ActionBar.validateProps),
+	-- The width of the ActionBar component. If unspecified, a default value
+	-- will be used.
+	actionBarWidth = t.optional(t.number),
 	-- Info used to render the info section in the `StickyActionBar`.
 	infoProps = t.optional(t.strictInterface({
 		-- Title in info
@@ -62,6 +66,7 @@ StickyActionBar.validateProps = t.strictInterface({
 
 StickyActionBar.defaultProps = {
 	actionBarProps = nil,
+	actionBarWidth = 380,
 	infoProps = nil,
 	layoutOrder = 1,
 	width = nil,
@@ -80,7 +85,7 @@ function StickyActionBar:init()
 	end
 
 	local getActionBarSectionSize = function()
-		return UDim2.fromOffset(ACTIONBAR_WIDTH, ACTIONBAR_HEIGHT)
+		return UDim2.fromOffset(self.props.actionBarWidth, ACTIONBAR_HEIGHT)
 	end
 
 	local getInfoSectionWidth = function(containerWidth, hasActionBar, infoProps)
@@ -271,4 +276,4 @@ function StickyActionBar:renderHorizontalLayout(extraProps, children)
 	})
 end
 
-return StickyActionBar
+return if UIBloxConfig.moveDetailsPageToLuaApps then nil else StickyActionBar

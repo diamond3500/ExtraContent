@@ -1,6 +1,6 @@
 local CorePackages = game:GetService("CorePackages")
 
-local InGameMenuDependencies = require(CorePackages.InGameMenuDependencies)
+local InGameMenuDependencies = require(CorePackages.Packages.InGameMenuDependencies)
 local Roact = InGameMenuDependencies.Roact
 local RoactRodux = InGameMenuDependencies.RoactRodux
 local t = InGameMenuDependencies.t
@@ -14,7 +14,7 @@ local Constants = require(InGameMenu.Resources.Constants)
 local Direction = require(InGameMenu.Enums.Direction)
 local SetCurrentZone = require(InGameMenu.Actions.SetCurrentZone)
 
-local MAX_INT = 2^31 - 1
+local MAX_INT = 2 ^ 31 - 1
 
 local PORTAL_SIZE = Constants.Zone.PortalSize
 

@@ -9,6 +9,8 @@ local getFIntMeshDivisionFullExtended = require(root.flags.getFIntMeshDivisionFu
 local getFIntMeshDivisionMedium = require(root.flags.getFIntMeshDivisionMedium)
 local getFIntMeshDivisionNarrow = require(root.flags.getFIntMeshDivisionNarrow)
 
+local getEngineFeatureRemoveProxyWrap = require(root.flags.getEngineFeatureRemoveProxyWrap)
+
 local getFFlagAddUGCValidationForPackage = require(root.flags.getFFlagAddUGCValidationForPackage)
 local getFFlagUGCValidationAdjustLegBounds = require(root.flags.getFFlagUGCValidationAdjustLegBounds)
 local getFFlagUGCValidateSurfaceAppearanceAlphaMode = require(root.flags.getFFlagUGCValidateSurfaceAppearanceAlphaMode)
@@ -19,6 +21,17 @@ local getFFlagUGCValidateRestrictAttachmentPositions =
 	require(root.flags.getFFlagUGCValidateRestrictAttachmentPositions)
 local getFFlagUGCValidateConfigurableBodyBounds = require(root.flags.getFFlagUGCValidateConfigurableBodyBounds)
 local getFFlagUGCValidateConfigurableFullBodyBounds = require(root.flags.getFFlagUGCValidateConfigurableFullBodyBounds)
+local getFFlagUGCValidateConfigurableAssetTriangleLimits =
+	require(root.flags.getFFlagUGCValidateConfigurableAssetTriangleLimits)
+local getFFlagFixValidateTransparencyProperty = require(root.flags.getFFlagFixValidateTransparencyProperty)
+
+local FIntUGCValidateTriangleLimitDynamicHead = game:DefineFastInt("UGCValidateTriangleLimitDynamicHead", 4000)
+local FIntUGCValidateTriangleLimitLeftArm = game:DefineFastInt("UGCValidateTriangleLimitLeftArm", 1248)
+local FIntUGCValidateTriangleLimitRightArm = game:DefineFastInt("UGCValidateTriangleLimitRightArm", 1248)
+
+local FIntUGCValidateTriangleLimitTorso = game:DefineFastInt("UGCValidateTriangleLimitTorso", 1750)
+local FIntUGCValidateTriangleLimitLeftLeg = game:DefineFastInt("UGCValidateTriangleLimitLeftLeg", 1248)
+local FIntUGCValidateTriangleLimitRightLeg = game:DefineFastInt("UGCValidateTriangleLimitRightLeg", 1248)
 
 local ConstantBounds = require(root.ConstantBounds)
 
@@ -804,6 +817,10 @@ if getFFlagUGCValidateAddSpecificPropertyRequirements() then
 	Constants.PROPERTIES_UNRESTRICTED = {}
 end
 
+if getFFlagFixValidateTransparencyProperty() then
+	Constants.PROP_PRECISE = {}
+end
+
 Constants.PROPERTIES = {
 	Instance = {
 		Archivable = true,
@@ -828,7 +845,7 @@ Constants.PROPERTIES = {
 		Reflectance = 0,
 		RootPriority = 0,
 		RotVelocity = Vector3.new(0, 0, 0),
-		Transparency = 0,
+		Transparency = if getFFlagFixValidateTransparencyProperty() then { 0, Constants.PROP_PRECISE } else 0,
 		Velocity = Vector3.new(0, 0, 0),
 
 		-- surface properties
@@ -911,14 +928,23 @@ Constants.TEXTURE_CONTENT_ID_FIELDS = {
 	SurfaceAppearance = { "ColorMap", "MetalnessMap", "NormalMap", "RoughnessMap" },
 }
 
-Constants.ASSET_RENDER_MESH_MAX_TRIANGLES = {
-	DynamicHead = 4000,
-	LeftArm = 1248,
-	RightArm = 1248,
-	Torso = 1750,
-	LeftLeg = 1248,
-	RightLeg = 1248,
-}
+Constants.ASSET_RENDER_MESH_MAX_TRIANGLES = if getFFlagUGCValidateConfigurableAssetTriangleLimits()
+	then {
+		DynamicHead = FIntUGCValidateTriangleLimitDynamicHead,
+		LeftArm = FIntUGCValidateTriangleLimitLeftArm,
+		RightArm = FIntUGCValidateTriangleLimitRightArm,
+		Torso = FIntUGCValidateTriangleLimitTorso,
+		LeftLeg = FIntUGCValidateTriangleLimitLeftLeg,
+		RightLeg = FIntUGCValidateTriangleLimitRightLeg,
+	}
+	else {
+		DynamicHead = 4000,
+		LeftArm = 1248,
+		RightArm = 1248,
+		Torso = 1750,
+		LeftLeg = 1248,
+		RightLeg = 1248,
+	}
 
 Constants.WRAP_TARGET_CAGE_MESH_UV_COUNTS = {
 	Head = 343,
@@ -983,7 +1009,9 @@ end
 Constants.GUIDAttributeName = "RBXGUID"
 Constants.GUIDAttributeMaxLength = 100
 
-Constants.ProxyWrapAttributeName = "RBX_WRAP_DEFORMER_PROXY"
+if not getEngineFeatureRemoveProxyWrap() then
+	Constants.ProxyWrapAttributeName = "RBX_WRAP_DEFORMER_PROXY"
+end
 Constants.AlternateMeshIdAttributeName = "RBX_ALT_MESH_ID"
 
 return Constants

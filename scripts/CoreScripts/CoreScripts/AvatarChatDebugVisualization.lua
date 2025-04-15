@@ -6,8 +6,10 @@ local FaceAnimatorService = game:FindService("FaceAnimatorService")
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
 
+local GetFFlagAvatarChatServiceEnabled = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagAvatarChatServiceEnabled
+local AvatarChatService = if GetFFlagAvatarChatServiceEnabled() then game:GetService("AvatarChatService") else nil
 local FFlagAvatarChatProtocolDebugV1 = game:GetEngineFeature("AvatarChatProtocolDebugV1")
-local FacialAnimationStreamingService = game:GetService("FacialAnimationStreamingServiceV2")
+local FFlagDebugAvatarChatProtocolStats = game:DefineFastFlag("DebugAvatarChatProtocolStats", false)
 
 local log = require(CorePackages.Workspace.Packages.CoreScriptsInitializer).CoreLogger:new(script.Name)
 
@@ -428,9 +430,9 @@ function updateDebugUIsOfPlayers()
 			end
 		else
 			--facs packet loss info:
-			if FFlagAvatarChatProtocolDebugV1 then
-				local facsLost = FacialAnimationStreamingService:GetStats():GetWithPlayerId("facs/lost", player.UserId)
-				local facsRecv = FacialAnimationStreamingService:GetStats():GetWithPlayerId("facs/recv", player.UserId)
+			if AvatarChatService and FFlagAvatarChatProtocolDebugV1 and FFlagDebugAvatarChatProtocolStats then
+				local facsLost = AvatarChatService:DebugCounterGet("facs/lost", player.UserId)
+				local facsRecv = AvatarChatService:DebugCounterGet("facs/recv", player.UserId)
 
 				local facsPacketLossInfo = "" .. "recv: " .. facsRecv .. "\nlost: " .. facsLost
 				if facsLost > 0 then

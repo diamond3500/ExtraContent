@@ -12,13 +12,14 @@ local getFFlagDebugUGCDisableSurfaceAppearanceTests = require(root.flags.getFFla
 local getFFlagUGCValidateBodyPartsCollisionFidelity = require(root.flags.getFFlagUGCValidateBodyPartsCollisionFidelity)
 local getFFlagUGCValidateBodyPartsModeration = require(root.flags.getFFlagUGCValidateBodyPartsModeration)
 local getFFlagRefactorValidateAssetTransparency = require(root.flags.getFFlagRefactorValidateAssetTransparency)
-local getEngineFeatureUGCValidateEditableMeshAndImage =
-	require(root.flags.getEngineFeatureUGCValidateEditableMeshAndImage)
 local getFFlagUGCValidateOrientedSizing = require(root.flags.getFFlagUGCValidateOrientedSizing)
+local getFFlagUGCValidateMeshMin = require(root.flags.getFFlagUGCValidateMeshMin)
+local getFFlagUGCValidateIndividualPartBBoxes = require(root.flags.getFFlagUGCValidateIndividualPartBBoxes)
 
 local validateBodyPartMeshBounds = require(root.validation.validateBodyPartMeshBounds)
 local validateAssetBounds = require(root.validation.validateAssetBounds)
 local validateBodyPartChildAttachmentBounds = require(root.validation.validateBodyPartChildAttachmentBounds)
+local validateBodyPartExtentsRelativeToParent = require(root.validation.validateBodyPartExtentsRelativeToParent)
 local validateDependencies = require(root.validation.validateDependencies)
 local validateDescendantMeshMetrics = require(root.validation.validateDescendantMeshMetrics)
 local validateDescendantTextureMetrics = require(root.validation.validateDescendantTextureMetrics)
@@ -33,6 +34,8 @@ local validateModeration = require(root.validation.validateModeration)
 local validateAssetTransparency = require(root.validation.validateAssetTransparency)
 local DEPRECATED_validateAssetTransparency = require(root.validation.DEPRECATED_validateAssetTransparency)
 local validatePose = require(root.validation.validatePose)
+local ValidateBodyBlockingTests = require(root.util.ValidateBodyBlockingTests)
+
 local validateWithSchema = require(root.util.validateWithSchema)
 local FailureReasonsAccumulator = require(root.util.FailureReasonsAccumulator)
 local resetPhysicsData = require(root.util.resetPhysicsData)
@@ -51,7 +54,7 @@ local function validateMeshPartBodyPart(
 
 	local validationResult = validateWithSchema(schema, inst, validationContext)
 	if not validationResult.success then
-		Analytics.reportFailure(Analytics.ErrorType.validateMeshPartBodyPart_ValidateWithSchema)
+		Analytics.reportFailure(Analytics.ErrorType.validateMeshPartBodyPart_ValidateWithSchema, nil, validationContext)
 		return false,
 			{
 				string.format("Body part '%s' does not follow R15 schema. The specific issues are: ", inst.Name),
@@ -82,11 +85,22 @@ local function validateMeshPartBodyPart(
 		return false, { errorMessage }
 	end
 
+	if getFFlagUGCValidateMeshMin() then
+		-- anything which would cause a crash later on, we check in here and exit early
+		local successBlocking, errorMessageBlocking = ValidateBodyBlockingTests.validate(inst, validationContext)
+		if not successBlocking then
+			return false, errorMessageBlocking
+		end
+	end
+
 	local reasonsAccumulator = FailureReasonsAccumulator.new()
 
 	reasonsAccumulator:updateReasons(validateBodyPartMeshBounds(inst, validationContext))
 
 	reasonsAccumulator:updateReasons(validateBodyPartChildAttachmentBounds(inst, validationContext))
+	if getFFlagUGCValidateIndividualPartBBoxes() then
+		reasonsAccumulator:updateReasons(validateBodyPartExtentsRelativeToParent.runValidation(inst, validationContext))
+	end
 
 	if getFFlagUGCValidateOrientedSizing() then
 		reasonsAccumulator:updateReasons(validatePose(inst, validationContext))
@@ -100,25 +114,27 @@ local function validateMeshPartBodyPart(
 
 	reasonsAccumulator:updateReasons(validateHSR(inst, validationContext))
 
-	if getEngineFeatureUGCValidateEditableMeshAndImage() and getFFlagRefactorValidateAssetTransparency() then
+	if getFFlagRefactorValidateAssetTransparency() then
 		local startTime = tick()
 		reasonsAccumulator:updateReasons(validateAssetTransparency(inst, validationContext))
 		Analytics.recordScriptTime("validateAssetTransparency", startTime, validationContext)
 	elseif not skipSnapshot then
 		local startTime = tick()
-		reasonsAccumulator:updateReasons(DEPRECATED_validateAssetTransparency(inst, assetTypeEnum, isServer))
+		reasonsAccumulator:updateReasons(
+			DEPRECATED_validateAssetTransparency(inst, assetTypeEnum, isServer, validationContext)
+		)
 		Analytics.recordScriptTime("validateAssetTransparency", startTime, validationContext)
 	end
 
-	reasonsAccumulator:updateReasons(validateMaterials(inst))
+	reasonsAccumulator:updateReasons(validateMaterials(inst, validationContext))
 
-	reasonsAccumulator:updateReasons(validateProperties(inst, assetTypeEnum))
+	reasonsAccumulator:updateReasons(validateProperties(inst, assetTypeEnum, validationContext))
 
 	if getFFlagUGCValidateBodyPartsCollisionFidelity() then
 		reasonsAccumulator:updateReasons(validateBodyPartCollisionFidelity(inst, validationContext))
 	end
 
-	reasonsAccumulator:updateReasons(validateTags(inst))
+	reasonsAccumulator:updateReasons(validateTags(inst, validationContext))
 
 	reasonsAccumulator:updateReasons(validateAttributes(inst, validationContext))
 

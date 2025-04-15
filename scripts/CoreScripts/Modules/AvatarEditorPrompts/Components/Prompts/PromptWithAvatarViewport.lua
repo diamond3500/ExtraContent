@@ -6,10 +6,10 @@
 ]]
 local CorePackages = game:GetService("CorePackages")
 
-local Roact = require(CorePackages.Roact)
-local RoactRodux = require(CorePackages.RoactRodux)
+local Roact = require(CorePackages.Packages.Roact)
+local RoactRodux = require(CorePackages.Packages.RoactRodux)
 local t = require(CorePackages.Packages.t)
-local UIBlox = require(CorePackages.UIBlox)
+local UIBlox = require(CorePackages.Packages.UIBlox)
 
 local InteractiveAlert = UIBlox.App.Dialog.Alert.InteractiveAlert
 
@@ -60,7 +60,7 @@ function PromptWithAvatarViewport:init()
 		local alertNoContentHeight = alertSize.Y - currentHeight
 		local maxAllowedContentHeight = self.props.screenSize.Y - (SCREEN_SIZE_PADDING * 2) - alertNoContentHeight
 
-		local viewportMaxSize = self.middleContentRef:getValue().AbsoluteSize.X - ( VIEWPORT_SIDE_PADDING * 2)
+		local viewportMaxSize = self.middleContentRef:getValue().AbsoluteSize.X - (VIEWPORT_SIDE_PADDING * 2)
 
 		if maxAllowedContentHeight > viewportMaxSize then
 			maxAllowedContentHeight = viewportMaxSize

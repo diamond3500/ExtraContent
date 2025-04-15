@@ -1,6 +1,6 @@
 --!nonstrict
 local CorePackages = game:GetService("CorePackages")
-local Roact = require(CorePackages.Roact)
+local Roact = require(CorePackages.Packages.Roact)
 
 local Components = script.Parent.Parent.Parent.Components
 local CellLabel = require(Components.CellLabel)
@@ -47,7 +47,7 @@ return function(props)
 		LayoutOrder = layoutOrder,
 	}, {
 		button = Roact.createElement(BannerButton, {
-			size = UDim2.new(1, - offset, 0, ENTRY_HEIGHT),
+			size = UDim2.new(1, -offset, 0, ENTRY_HEIGHT),
 			pos = UDim2.new(0, offset, 0, 0),
 			isExpanded = showGraph,
 
@@ -60,7 +60,7 @@ return function(props)
 			}),
 
 			horizonal1 = Roact.createElement("Frame", {
-				Size = UDim2.new(1, -offset , 0, LINE_WIDTH),
+				Size = UDim2.new(1, -offset, 0, LINE_WIDTH),
 				Position = UDim2.new(0, offset, 0, 0),
 				BackgroundColor3 = LINE_COLOR,
 				BorderSizePixel = 0,

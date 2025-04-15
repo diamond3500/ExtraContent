@@ -7,9 +7,9 @@ local Players = game:GetService("Players")
 
 local LocalPlayer = Players.LocalPlayer
 
-local Roact = require(CorePackages.Roact)
-local RoactRodux = require(CorePackages.RoactRodux)
-local UIBlox = require(CorePackages.UIBlox)
+local Roact = require(CorePackages.Packages.Roact)
+local RoactRodux = require(CorePackages.Packages.RoactRodux)
+local UIBlox = require(CorePackages.Packages.UIBlox)
 local t = require(CorePackages.Packages.t)
 
 local withStyle = UIBlox.Style.withStyle
@@ -64,18 +64,24 @@ PlayerListDisplay.validateProps = t.strictInterface({
 		priority = t.number,
 	})),
 
-	playerIconInfo = t.map(t.integer, t.strictInterface({
-		isPlaceOwner = t.boolean,
-		avatarIcon = t.optional(t.table),
-		specialGroupIcon = t.optional(t.table),
-	})),
+	playerIconInfo = t.map(
+		t.integer,
+		t.strictInterface({
+			isPlaceOwner = t.boolean,
+			avatarIcon = t.optional(t.table),
+			specialGroupIcon = t.optional(t.table),
+		})
+	),
 
-	playerRelationship = t.map(t.integer, t.strictInterface({
-		isBlocked = t.boolean,
-		friendStatus = t.enum(Enum.FriendStatus),
-		isFollowing = t.boolean,
-		isFollower = t.boolean,
-	})),
+	playerRelationship = t.map(
+		t.integer,
+		t.strictInterface({
+			isBlocked = t.boolean,
+			friendStatus = t.enum(Enum.FriendStatus),
+			isFollowing = t.boolean,
+			isFollower = t.boolean,
+		})
+	),
 
 	dropDownPlayer = t.optional(playerInterface),
 	dropDownVisible = t.boolean,
@@ -99,7 +105,7 @@ function PlayerListDisplay:init()
 
 	self.canvasPositionChanged = function(rbx)
 		self:setState({
-			lastCanvasPosition = rbx.CanvasPosition
+			lastCanvasPosition = rbx.CanvasPosition,
 		})
 	end
 end
@@ -155,7 +161,7 @@ function PlayerListDisplay:render()
 				childElements.TitlePlayer = Roact.createElement(PlayerEntry, {
 					player = LocalPlayer,
 					playerStats = self.props.playerStats[LocalPlayer.UserId] or {},
-					playerIconInfo = self.props.playerIconInfo[LocalPlayer.UserId] or {isPlaceOwner = false,},
+					playerIconInfo = self.props.playerIconInfo[LocalPlayer.UserId] or { isPlaceOwner = false },
 					playerRelationship = self.props.playerRelationship[LocalPlayer.UserId] or {
 						isBlocked = false,
 						friendStatus = Enum.FriendStatus.NotFriend,
@@ -314,8 +320,10 @@ function PlayerListDisplay:didUpdate(prevProps)
 			if self.props.isTenFootInterface and self.props.isUsingGamepad then
 				UserInputService.OverrideMouseIconBehavior = Enum.OverrideMouseIconBehavior.None
 			end
-			if GuiService.SelectedCoreObject and
-				GuiService.SelectedCoreObject:IsDescendantOf(self.scrollingFrameRef.current) then
+			if
+				GuiService.SelectedCoreObject
+				and GuiService.SelectedCoreObject:IsDescendantOf(self.scrollingFrameRef.current)
+			then
 				GuiService.SelectedCoreObject = nil
 			end
 		end

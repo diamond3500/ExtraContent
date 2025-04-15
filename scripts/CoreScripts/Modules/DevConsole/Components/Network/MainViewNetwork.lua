@@ -1,6 +1,6 @@
 local CorePackages = game:GetService("CorePackages")
-local Roact = require(CorePackages.Roact)
-local RoactRodux = require(CorePackages.RoactRodux)
+local Roact = require(CorePackages.Packages.Roact)
+local RoactRodux = require(CorePackages.Packages.RoactRodux)
 
 local Components = script.Parent.Parent.Parent.Components
 local ClientNetwork = require(Components.Network.ClientNetwork)
@@ -20,7 +20,7 @@ local MainViewNetwork = Roact.Component:extend("MainViewNetwork")
 function MainViewNetwork:init()
 	self.onUtilTabHeightChanged = function(utilTabHeight)
 		self:setState({
-			utilTabHeight = utilTabHeight
+			utilTabHeight = utilTabHeight,
 		})
 	end
 
@@ -50,7 +50,7 @@ end
 function MainViewNetwork:didMount()
 	local utilSize = self.utilRef.current.Size
 	self:setState({
-		utilTabHeight = utilSize.Y.Offset
+		utilTabHeight = utilSize.Y.Offset,
 	})
 end
 
@@ -58,7 +58,7 @@ function MainViewNetwork:didUpdate()
 	local utilSize = self.utilRef.current.Size
 	if utilSize.Y.Offset ~= self.state.utilTabHeight then
 		self:setState({
-			utilTabHeight = utilSize.Y.Offset
+			utilTabHeight = utilSize.Y.Offset,
 		})
 	end
 end
@@ -78,7 +78,7 @@ function MainViewNetwork:render()
 		Padding = UDim.new(0, PADDING),
 	})
 
-	elements ["UtilAndTab"] = Roact.createElement(UtilAndTab, {
+	elements["UtilAndTab"] = Roact.createElement(UtilAndTab, {
 		windowWidth = size.X.Offset,
 		formFactor = formFactor,
 		tabList = tabList,
@@ -94,7 +94,7 @@ function MainViewNetwork:render()
 		onSearchTermChanged = self.onSearchTermChanged,
 	})
 
-	if utilTabHeight > 0  then
+	if utilTabHeight > 0 then
 		if isClientView then
 			elements["ClientNetwork"] = Roact.createElement(ClientNetwork, {
 				size = UDim2.new(1, 0, 1, -utilTabHeight),
@@ -115,7 +115,6 @@ function MainViewNetwork:render()
 		BackgroundColor3 = Constants.Color.BaseGray,
 		BackgroundTransparency = 1,
 		LayoutOrder = 3,
-
 	}, elements)
 end
 
@@ -136,7 +135,7 @@ local function mapDispatchToProps(dispatch)
 		dispatchServerNetworkUpdateSearchFilter = function(searchTerm, filters)
 			dispatch(ServerNetworkUpdateSearchFilter(searchTerm, filters))
 		end,
-		dispatchSetActiveTab = function (tabListIndex, isClientView)
+		dispatchSetActiveTab = function(tabListIndex, isClientView)
 			dispatch(SetActiveTab(tabListIndex, isClientView))
 		end,
 	}

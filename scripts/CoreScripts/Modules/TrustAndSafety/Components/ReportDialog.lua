@@ -1,11 +1,11 @@
 --!nonstrict
 local CorePackages = game:GetService("CorePackages")
 
-local Cryo = require(CorePackages.Cryo)
-local Roact = require(CorePackages.Roact)
-local RoactRodux = require(CorePackages.RoactRodux)
+local Cryo = require(CorePackages.Packages.Cryo)
+local Roact = require(CorePackages.Packages.Roact)
+local RoactRodux = require(CorePackages.Packages.RoactRodux)
 local t = require(CorePackages.Packages.t)
-local UIBlox = require(CorePackages.UIBlox)
+local UIBlox = require(CorePackages.Packages.UIBlox)
 
 local TnsModule = script.Parent.Parent
 local Dependencies = require(TnsModule.Dependencies)
@@ -204,7 +204,10 @@ function ReportDialog:renderPlayerInfo()
 						iconStyle = "SpeakerLight",
 						size = UDim2.fromOffset(36, 36),
 						onClicked = function()
-							VoiceChatServiceManager:ToggleMutePlayer(self.props.targetPlayer.UserId, VoiceConstants.VOICE_CONTEXT_TYPE.REPORT_MENU)
+							VoiceChatServiceManager:ToggleMutePlayer(
+								self.props.targetPlayer.UserId,
+								VoiceConstants.VOICE_CONTEXT_TYPE.REPORT_MENU
+							)
 						end,
 					}
 				) or nil,
@@ -474,7 +477,15 @@ end, function(dispatch)
 			dispatch(FilterIdentifiedAvatars(annotationPoints))
 			dispatch(ScreenshotAnnotated(reportCategory, reportType, annotationPoints))
 		end,
-		sendReport = function(reportType, targetPlayer, reason, description, reportCategory, toastTitle, toastDescription)
+		sendReport = function(
+			reportType,
+			targetPlayer,
+			reason,
+			description,
+			reportCategory,
+			toastTitle,
+			toastDescription
+		)
 			dispatch(
 				SendReport(reportType, targetPlayer, reason, description, reportCategory, toastTitle, toastDescription)
 			)

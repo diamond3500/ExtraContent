@@ -1,5 +1,5 @@
 local CorePackages = game:GetService("CorePackages")
-local Roact = require(CorePackages.Roact)
+local Roact = require(CorePackages.Packages.Roact)
 
 local ProfilerData = require(script.Parent.ProfilerDataFormatV2)
 local ProfilerUtil = require(script.Parent.ProfilerUtil)

@@ -1,10 +1,8 @@
 -- Helper to check which set of instructions we should provide to tell users how to turn on their microphone in their device
 -- This will likely be done through a Voltron protocol in the future, we should keep an eye on that when it comes
+local CorePackages = game:GetService("CorePackages")
 
-local CoreGui = game:GetService("CoreGui")
-local RobloxGui = CoreGui:WaitForChild("RobloxGui")
-
-local RobloxTranslator = require(RobloxGui.Modules.RobloxTranslator)
+local RobloxTranslator = require(CorePackages.Workspace.Packages.RobloxTranslator)
 
 local androidWithDeeplink = RobloxTranslator:FormatByKey("Feature.SettingsHub.Prompt.AndroidWithDeeplink")
 local windowsWithDeeplink = RobloxTranslator:FormatByKey("Feature.SettingsHub.Prompt.WindowsWithDeeplink")

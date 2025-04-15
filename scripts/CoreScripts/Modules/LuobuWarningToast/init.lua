@@ -1,7 +1,7 @@
 local CorePackages = game:GetService("CorePackages")
 local CoreGui = game:GetService("CoreGui")
 
-local Roact = require(CorePackages.Roact)
+local Roact = require(CorePackages.Packages.Roact)
 
 local LuobuWarningToastComponent = require(script.LuobuWarningToastComponent)
 local LuobuWarningToast = {}
@@ -14,14 +14,12 @@ function LuobuWarningToast.new()
 	self.element = Roact.createElement(LuobuWarningToastComponent)
 
 	self.root = Roact.mount(self.element, CoreGui, "LuobuWarningToast")
-	
+
 	task.delay(FRAME_DURATION, function()
 		Roact.unmount(self.root)
 	end)
 
 	return self
 end
-
-
 
 return LuobuWarningToast.new()

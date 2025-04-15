@@ -1,7 +1,7 @@
 local Root = script.Parent.Parent.Parent
 
 local CorePackages = game:GetService("CorePackages")
-local PurchasePromptDeps = require(CorePackages.PurchasePromptDeps)
+local PurchasePromptDeps = require(CorePackages.Workspace.Packages.PurchasePromptDeps)
 local Roact = PurchasePromptDeps.Roact
 local Otter = PurchasePromptDeps.Otter
 local t = PurchasePromptDeps.t
@@ -15,7 +15,7 @@ local SPRING_CONFIG = {
 
 Animator.validateProps = t.interface({
 	shouldShow = t.boolean,
-	
+
 	onShown = t.optional(t.callback),
 	onHidden = t.optional(t.callback),
 })

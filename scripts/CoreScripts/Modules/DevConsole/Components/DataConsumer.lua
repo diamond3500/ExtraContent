@@ -1,7 +1,7 @@
 local CorePackages = game:GetService("CorePackages")
 local Components = script.Parent.Parent.Components
 
-local Roact = require(CorePackages.Roact)
+local Roact = require(CorePackages.Packages.Roact)
 local Immutable = require(script.Parent.Parent.Immutable)
 local DataContext = require(Components.DataContext)
 
@@ -15,15 +15,17 @@ return function(component, ...)
 		targetList[i] = select(i, ...)
 	end
 
-	local name = string.format("Consumer(%s)_DependsOn_%s",tostring(component), targetList[1] )
+	local name = string.format("Consumer(%s)_DependsOn_%s", tostring(component), targetList[1])
 	local DataConsumer = Roact.Component:extend(name)
 
 	function DataConsumer:init()
 		local contextTable = {}
-		for _,dataName in pairs(targetList) do
+		for _, dataName in pairs(targetList) do
 			local contextualData = self.props.DevConsoleData[dataName]
 			if not contextualData then
-				local errorStr = string.format("%s %s",tostring(dataName),
+				local errorStr = string.format(
+					"%s %s",
+					tostring(dataName),
 					"could not be found. Make sure DataProvider is above this consumer"
 				)
 				error(errorStr)
@@ -47,7 +49,7 @@ return function(component, ...)
 					componentProps = props,
 					DevConsoleData = DevConsoleData,
 				})
-			end
+			end,
 		})
 	end
 

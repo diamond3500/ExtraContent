@@ -4,7 +4,7 @@
 local Root = script.Parent.Parent
 
 local CorePackages = game:GetService("CorePackages")
-local PurchasePromptDeps = require(CorePackages.PurchasePromptDeps)
+local PurchasePromptDeps = require(CorePackages.Workspace.Packages.PurchasePromptDeps)
 local enumerate = PurchasePromptDeps.enumerate
 
 local addRawValueMethodToEnum = require(Root.Utils.addRawValueMethodToEnum)
@@ -20,6 +20,7 @@ local rawKeyToRawValue = {
 	Web = "Web",
 	Maquettes = "Maquettes",
 	Palisades = "Palisades",
+	Microsoft = "Microsoft"
 }
 
 -- The values here correspond to values in the requested web view.

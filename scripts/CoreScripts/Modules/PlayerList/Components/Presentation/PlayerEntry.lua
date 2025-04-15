@@ -3,12 +3,13 @@ local CorePackages = game:GetService("CorePackages")
 local Players = game:GetService("Players")
 local CoreGui = game:GetService("CoreGui")
 
-local Cryo = require(CorePackages.Cryo)
-local Roact = require(CorePackages.Roact)
-local RoactRodux = require(CorePackages.RoactRodux)
+local Cryo = require(CorePackages.Packages.Cryo)
+local Roact = require(CorePackages.Packages.Roact)
+local RoactRodux = require(CorePackages.Packages.RoactRodux)
 local t = require(CorePackages.Packages.t)
-local UIBlox = require(CorePackages.UIBlox)
-local InExperienceCapabilities = require(CorePackages.Workspace.Packages.InExperienceCapabilities).InExperienceCapabilities
+local UIBlox = require(CorePackages.Packages.UIBlox)
+local InExperienceCapabilities =
+	require(CorePackages.Workspace.Packages.InExperienceCapabilities).InExperienceCapabilities
 
 local SharedFlags = CorePackages.Workspace.Packages.SharedFlags
 local withStyle = UIBlox.Style.withStyle
@@ -79,7 +80,7 @@ PlayerEntry.validateProps = t.strictInterface(validatePropsWithForwardRef({
 }))
 
 function PlayerEntry:init()
-	self.state  = {
+	self.state = {
 		isHovered = false,
 		isPressed = false,
 	}
@@ -296,17 +297,17 @@ function PlayerEntry:render()
 					onMouseDown = self.onMouseDown,
 					onInputEnded = self.onInputEnded,
 
-					[Roact.Ref] = forwardRef
+					[Roact.Ref] = forwardRef,
 				}, {
 					Layout = Roact.createElement("UIListLayout", {
 						SortOrder = Enum.SortOrder.LayoutOrder,
 						FillDirection = Enum.FillDirection.Horizontal,
 						VerticalAlignment = Enum.VerticalAlignment.Center,
-						Padding = UDim.new(0, layoutValues.PlayerEntryNamePadding)
+						Padding = UDim.new(0, layoutValues.PlayerEntryNamePadding),
 					}),
 
 					InitalPadding = Roact.createElement("UIPadding", {
-						PaddingLeft = UDim.new(0, layoutValues.InitalPlayerEntryPadding)
+						PaddingLeft = UDim.new(0, layoutValues.InitalPlayerEntryPadding),
 					}),
 
 					PlayerIcon = Roact.createElement(PlayerIcon, {
@@ -325,7 +326,7 @@ function PlayerEntry:render()
 						textStyle = textStyle,
 						textFont = playerNameFont,
 					}),
-				})
+				}),
 			})
 
 			local maxLeaderstats = layoutValues.MaxLeaderstats
@@ -337,7 +338,7 @@ function PlayerEntry:render()
 				if i > maxLeaderstats then
 					break
 				end
-				playerEntryChildren["GameStat_" ..gameStat.name] = Roact.createElement(StatEntry, {
+				playerEntryChildren["GameStat_" .. gameStat.name] = Roact.createElement(StatEntry, {
 					statName = gameStat.name,
 					statValue = self.props.playerStats[gameStat.name],
 					isTitleEntry = self.props.titlePlayerEntry,
@@ -413,7 +414,10 @@ end
 PlayerEntry = RoactRodux.UNSTABLE_connect2(mapStateToProps, mapDispatchToProps)(PlayerEntry)
 
 return Roact.forwardRef(function(props, ref)
-	return Roact.createElement(PlayerEntry, Cryo.Dictionary.join(props, {
-		forwardRef = ref,
-	}))
+	return Roact.createElement(
+		PlayerEntry,
+		Cryo.Dictionary.join(props, {
+			forwardRef = ref,
+		})
+	)
 end)

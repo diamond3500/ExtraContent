@@ -6,7 +6,7 @@ local AppStorageService = game:GetService("AppStorageService")
 local useLocalization = require(CorePackages.Workspace.Packages.Localization).Hooks.useLocalization
 
 local React = require(CorePackages.Packages.React)
-local Cryo = require(CorePackages.Cryo)
+local Cryo = require(CorePackages.Packages.Cryo)
 local UIBlox = require(CorePackages.Packages.UIBlox)
 local withTooltip = UIBlox.App.Dialog.TooltipV2.withTooltip
 local TooltipOrientation = UIBlox.App.Dialog.Enum.TooltipOrientation
@@ -18,15 +18,12 @@ local LuauPolyfill = require(CorePackages.Packages.LuauPolyfill)
 local clearTimeout = LuauPolyfill.clearTimeout
 local setTimeout = LuauPolyfill.setTimeout
 
-type FtuxTooltipDismissalReason =
-	"timeout"
-	| "chatIconClicked"
-	| "menuOpened"
+type FtuxTooltipDismissalReason = "timeout" | "chatIconClicked" | "menuOpened"
 
 local defaultProps = {
-    showDelay = 1000,
-    dismissDelay = 7000,
-    onDismissed = function(_: boolean, _: FtuxTooltipDismissalReason?) end,
+	showDelay = 1000,
+	dismissDelay = 7000,
+	onDismissed = function(_: boolean, _: FtuxTooltipDismissalReason?) end,
 }
 type ChatIconFtuxTooltipProps = {
 	iconClickedSignal: SignalLib.Signal,
@@ -42,7 +39,7 @@ type ChatIconFtuxTooltipProps = {
 }
 
 return function(incomingProps: ChatIconFtuxTooltipProps)
-    local props = Cryo.Dictionary.union(defaultProps, incomingProps)
+	local props = Cryo.Dictionary.union(defaultProps, incomingProps)
 	local tooltipDelayPassed, setTooltipDelayPassed = React.useState(false)
 	local dismissed, setDismissed = React.useState(false)
 	local showTimerRef = React.useRef(setTimeout(function() end, props.showDelay))
@@ -74,7 +71,7 @@ return function(incomingProps: ChatIconFtuxTooltipProps)
 		setDismissed(true)
 	end, { setDismissed, shouldShowTooltip } :: { any })
 
-    -- dismiss tooltip if the menu is opened or chat clicked
+	-- dismiss tooltip if the menu is opened or chat clicked
 	React.useEffect(function()
 		local connections = {
 			GuiService.MenuOpened:Connect(function()

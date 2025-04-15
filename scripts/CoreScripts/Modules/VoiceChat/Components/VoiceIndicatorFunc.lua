@@ -16,7 +16,7 @@ local Roact = require(CorePackages.Packages.Roact)
 local React = require(CorePackages.Packages.React)
 local ReactIs = require(CorePackages.Packages.ReactIs)
 
-local UIBlox = require(CorePackages.UIBlox)
+local UIBlox = require(CorePackages.Packages.UIBlox)
 local useSelectionCursor = UIBlox.App.SelectionImage.useSelectionCursor
 local CursorKind = UIBlox.App.SelectionImage.CursorKind
 
@@ -24,7 +24,8 @@ local useVoiceState = require(RobloxGui.Modules.VoiceChat.Hooks.useVoiceState)
 local Constants = require(RobloxGui.Modules.InGameChat.BubbleChat.Constants)
 local VoiceChatServiceManager = require(RobloxGui.Modules.VoiceChat.VoiceChatServiceManager).default
 
-local GetFFlagRemoveInGameChatBubbleChatReferences = require(RobloxGui.Modules.Flags.GetFFlagRemoveInGameChatBubbleChatReferences)
+local GetFFlagRemoveInGameChatBubbleChatReferences =
+	require(RobloxGui.Modules.Flags.GetFFlagRemoveInGameChatBubbleChatReferences)
 
 if GetFFlagRemoveInGameChatBubbleChatReferences() then
 	Constants = require(RobloxGui.Modules.VoiceChat.Constants) :: any
@@ -80,7 +81,7 @@ type VoiceIndicatorProps = {
 	selectable: boolean?,
 	userId: number | string,
 	disable: boolean?,
-	showConnectingShimmer: boolean?
+	showConnectingShimmer: boolean?,
 }
 
 local function createTweenShimmeringEffect(shimmerGradientRef: any)
@@ -159,17 +160,19 @@ local function VoiceIndicator(props: VoiceIndicatorProps)
 		Visible = visible,
 		[Roact.Event.Activated] = props.onClicked,
 	}, {
-		ShimmerGradient = if showShimmer then Roact.createElement("UIGradient", {
-			Color = ColorSequence.new({
-				ColorSequenceKeypoint.new(0, Color3.new(0.6, 0.6, 0.6)),
-				ColorSequenceKeypoint.new(0.5, Color3.new(0.8, 0.8, 0.8)),
-				ColorSequenceKeypoint.new(1, Color3.new(0.6, 0.6, 0.6)),
-			}),
-			Enabled = isConnecting,
-			Rotation = -45,
-			Offset = Vector2.new(-1, 0),
-			[Roact.Ref] = shimmerGradientRef
-		}) else nil,
+		ShimmerGradient = if showShimmer
+			then Roact.createElement("UIGradient", {
+				Color = ColorSequence.new({
+					ColorSequenceKeypoint.new(0, Color3.new(0.6, 0.6, 0.6)),
+					ColorSequenceKeypoint.new(0.5, Color3.new(0.8, 0.8, 0.8)),
+					ColorSequenceKeypoint.new(1, Color3.new(0.6, 0.6, 0.6)),
+				}),
+				Enabled = isConnecting,
+				Rotation = -45,
+				Offset = Vector2.new(-1, 0),
+				[Roact.Ref] = shimmerGradientRef,
+			})
+			else nil,
 	})
 end
 

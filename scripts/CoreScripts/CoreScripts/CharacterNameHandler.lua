@@ -5,8 +5,6 @@ local CoreGui = game:GetService("CoreGui")
 local ApolloClient = require(CoreGui.RobloxGui.Modules.ApolloClient)
 local UserProfiles = require(CorePackages.Workspace.Packages.UserProfiles)
 
-local FFlagInExperienceNameQueryEnabled = require(CorePackages.Workspace.Packages.SharedFlags).FFlagInExperienceNameQueryEnabled
-
 local playerConnections = {}
 
 local Connections = {
@@ -17,15 +15,13 @@ local Connections = {
 }
 type Profile = {
 	names: {
-		-- TODO: Remove combinedName after FFlagInExperienceNameQueryEnabled is cleaned up
-		combinedName: string,
 		inExperienceCombinedName: string,
 		displayName: string,
 	},
 }
 
 local function setName(humanoid: Humanoid, player: Player, profile: Profile)
-	local combinedName = if FFlagInExperienceNameQueryEnabled then profile.names.inExperienceCombinedName else profile.names.combinedName
+	local combinedName = profile.names.inExperienceCombinedName
 	local displayName = profile.names.displayName
 	if profile.names.displayName == humanoid.DisplayName then
 		humanoid.InternalDisplayName = combinedName
@@ -81,7 +77,7 @@ local function setCurrentPlayersNames()
 		playersFormatted[tostring(player.UserId)] = player
 	end
 	ApolloClient:query({
-		query = if FFlagInExperienceNameQueryEnabled then UserProfiles.Queries.userProfilesInExperienceNamesByUserIds else UserProfiles.Queries.userProfilesAllNamesByUserIds,
+		query = UserProfiles.Queries.userProfilesInExperienceNamesByUserIds,
 		variables = {
 			userIds = playerIds,
 		},
@@ -95,7 +91,7 @@ end
 
 local function onPlayerAdded(player: Player)
 	ApolloClient:query({
-		query = if FFlagInExperienceNameQueryEnabled then UserProfiles.Queries.userProfilesInExperienceNamesByUserIds else UserProfiles.Queries.userProfilesAllNamesByUserIds,
+		query = UserProfiles.Queries.userProfilesInExperienceNamesByUserIds,
 		variables = {
 			userIds = { tostring(player.UserId) },
 		},

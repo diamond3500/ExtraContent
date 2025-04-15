@@ -22,7 +22,9 @@ local PolicyService = game:GetService("PolicyService")
 local RunService = game:GetService("RunService")
 local CoreGui = game:GetService("CoreGui")
 local RobloxGui = CoreGui:WaitForChild("RobloxGui")
-local Url = require(RobloxGui.Modules.Common.Url)
+local CorePackages = game:GetService("CorePackages")
+
+local Url = require(CorePackages.Workspace.Packages.CoreScriptsCommon).Url
 local ServerUtil = require(RobloxGui.Modules.Server.ServerUtil)
 
 local function Install()

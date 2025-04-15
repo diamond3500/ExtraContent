@@ -9,6 +9,8 @@ local AnimatedGradient = require(script.Parent.AnimatedGradient)
 local CursorType = require(Foundation.Enums.CursorType)
 type CursorType = CursorType.CursorType
 
+--selene: allow(roblox_internal_custom_color)
+local WHITE = Color3.new(1, 1, 1)
 local NAV_HIGHLIGHT_HEIGHT = 3
 
 type SlicedImage = {
@@ -136,8 +138,9 @@ local Cursor = React.forwardRef(function(props: Props, ref: React.Ref<Frame>)
 			Position = UDim2.new(0, 0, 1, -NAV_HIGHLIGHT_HEIGHT),
 			Size = UDim2.new(1, 0, 0, NAV_HIGHLIGHT_HEIGHT),
 			BorderSizePixel = 1,
-			BackgroundColor3 = Color3.new(1, 1, 1),
-			BorderColor3 = Color3.new(1, 1, 1),
+			BackgroundColor3 = WHITE,
+			BackgroundTransparency = 0,
+			BorderColor3 = WHITE,
 			ref = ref,
 		})
 	elseif props.cursorType == CursorType.Invisible then
@@ -154,7 +157,7 @@ local Cursor = React.forwardRef(function(props: Props, ref: React.Ref<Frame>)
 			return React.createElement(Image, {
 				Image = cursorDetails.Image,
 				imageStyle = {
-					Color3 = Color3.new(1, 1, 1),
+					Color3 = WHITE,
 				},
 				Size = size,
 				ref = ref,
@@ -175,7 +178,7 @@ local Cursor = React.forwardRef(function(props: Props, ref: React.Ref<Frame>)
 			return React.createElement(Image, {
 				Image = cursorDetails.Image,
 				imageStyle = {
-					Color3 = Color3.new(1, 1, 1),
+					Color3 = WHITE,
 				},
 				slice = {
 					center = cursorDetails.SliceCenter,

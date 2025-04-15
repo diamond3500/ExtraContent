@@ -1,103 +1,247 @@
 local Chrome = script:FindFirstAncestor("Chrome")
 
 local CoreGui = game:GetService("CoreGui")
+local StarterGui = game:GetService("StarterGui")
 local CorePackages = game:GetService("CorePackages")
 local TextChatService = game:GetService("TextChatService")
 local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 local Chat = game:GetService("Chat")
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
 
 local ChromeService = require(Chrome.Service)
-local ChromeUtils = require(Chrome.Service.ChromeUtils)
-local ViewportUtil = require(Chrome.Service.ViewportUtil)
+local ChromeUtils = require(Chrome.ChromeShared.Service.ChromeUtils)
+local ChromeIntegrationUtils = require(Chrome.Integrations.ChromeIntegrationUtils)
+local FocusSelectExpChat = require(Chrome.ChromeShared.Utility.FocusSelectExpChat)
+local ViewportUtil = require(Chrome.ChromeShared.Service.ViewportUtil)
 local MappedSignal = ChromeUtils.MappedSignal
+local AvailabilitySignalState = ChromeUtils.AvailabilitySignalState
 local CommonIcon = require(Chrome.Integrations.CommonIcon)
 local GameSettings = UserSettings().GameSettings
 local GuiService = game:GetService("GuiService")
 
-local AppChat = require(CorePackages.Workspace.Packages.AppChat)
 local SharedFlags = require(CorePackages.Workspace.Packages.SharedFlags)
+local FFlagConsoleChatOnExpControls = SharedFlags.FFlagConsoleChatOnExpControls
+
+local AppChat = require(CorePackages.Workspace.Packages.AppChat)
 local InExperienceAppChatExperimentation = AppChat.App.InExperienceAppChatExperimentation
+local InExperienceAppChatModal = AppChat.App.InExperienceAppChatModal
+local getFFlagAppChatCoreUIConflictFix = SharedFlags.getFFlagAppChatCoreUIConflictFix
 
 local ChatSelector = require(RobloxGui.Modules.ChatSelector)
-local EnabledPinnedChat = require(Chrome.Flags.GetFFlagEnableChromePinnedChat)()
 local GetFFlagEnableAppChatInExperience = SharedFlags.GetFFlagEnableAppChatInExperience
-local GetFFlagAddChromeActivatedEvents = require(Chrome.Flags.GetFFlagAddChromeActivatedEvents)
+local GetFFlagFixMappedSignalRaceCondition = SharedFlags.GetFFlagFixMappedSignalRaceCondition
+local getFFlagExpChatGetLabelAndIconFromUtil = SharedFlags.getFFlagExpChatGetLabelAndIconFromUtil
+local getFFlagExposeChatWindowToggled = SharedFlags.getFFlagExposeChatWindowToggled
+local getExperienceChatVisualConfig = require(CorePackages.Workspace.Packages.ExpChat).getExperienceChatVisualConfig
+local GetFFlagChatActiveChangedSignal =
+	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagChatActiveChangedSignal
+local GetFFlagSimpleChatUnreadMessageCount = SharedFlags.GetFFlagSimpleChatUnreadMessageCount
+local GetFFlagDisableLegacyChatSimpleUnreadMessageCount = SharedFlags.GetFFlagDisableLegacyChatSimpleUnreadMessageCount
+
+local FFlagShowChatButtonWhenChatForceOpened = game:DefineFastFlag("ShowChatButtonWhenChatForceOpened", false)
+local FFlagHideChatButtonForChatDisabledUsers = game:DefineFastFlag("HideChatButtonForChatDisabledUsers", false)
+local FFlagAlwaysShowChatButtonWhenWindowIsVisible =
+	game:DefineFastFlag("AlwaysShowChatButtonWhenWindowIsVisibleV2", false)
+
+local SocialExperiments
+local TenFootInterfaceExpChatExperimentation
+if FFlagConsoleChatOnExpControls then
+	SocialExperiments = require(CorePackages.Workspace.Packages.SocialExperiments)
+	TenFootInterfaceExpChatExperimentation = SocialExperiments.TenFootInterfaceExpChatExperimentation
+end
 
 local unreadMessages = 0
 -- note: do not rely on ChatSelector:GetVisibility after startup; it's state is incorrect if user opens via keyboard shortcut
 local chatVisibility: boolean = ChatSelector:GetVisibility()
 local chatChromeIntegration
 
-local chatVisibilitySignal = MappedSignal.new(ChatSelector.VisibilityStateChanged, function()
+local chatSelectorVisibilitySignal = ChatSelector.VisibilityStateChanged
+local function localUserCanChat()
+	if not RunService:IsStudio() then
+		local success, localUserCanChat = pcall(function()
+			return Chat:CanUserChatAsync(Players.LocalPlayer and Players.LocalPlayer.UserId or 0)
+		end)
+		return success and localUserCanChat
+	end
+	return true
+end
+
+-- MappedSignal doesn't seem to fire in the event where the in-experience menu is closed, but does when it's opened, causing
+-- the chat button to be hidden when the window is open. Using the signal directly fixes this issue
+if FFlagAlwaysShowChatButtonWhenWindowIsVisible then
+	chatSelectorVisibilitySignal:connect(function(visible)
+		if visible then
+			chatChromeIntegration.availability:pinned()
+		end
+	end)
+end
+
+if getFFlagExposeChatWindowToggled() then
+	local chatWindowToggled = ChatSelector.ChatWindowToggled
+	chatWindowToggled:connect(function(visible)
+		if visible then
+			chatChromeIntegration.availability:pinned()
+		end
+	end)
+end
+
+local chatVisibilitySignal = MappedSignal.new(chatSelectorVisibilitySignal, function()
 	return chatVisibility
 end, function(visibility)
-	if not GuiService.MenuIsOpen then
-		-- chat is inhibited (visibility = false) during menu open; not user intent; don't save
-		GameSettings.ChatVisible = visibility :: boolean
+	-- TODO: On flag removal, remove visibility as a param
+	local isVisible = if GetFFlagFixMappedSignalRaceCondition() then ChatSelector.GetVisibility() else visibility
+
+	-- Is there a less imperative way to do this?
+	if FFlagHideChatButtonForChatDisabledUsers and not isVisible and not localUserCanChat() then
+		chatChromeIntegration.availability:unavailable()
 	end
 
-	chatVisibility = visibility :: boolean
-	if visibility and unreadMessages and chatChromeIntegration.notification then
-		unreadMessages = 0
-		chatChromeIntegration.notification:clear()
+	if not GuiService.MenuIsOpen then
+		-- chat is inhibited (visibility = false) during menu open; not user intent; don't save
+		GameSettings.ChatVisible = isVisible :: boolean
+	end
+
+	chatVisibility = isVisible :: boolean
+	if GetFFlagSimpleChatUnreadMessageCount() then
+		if isVisible and chatChromeIntegration.notification then
+			chatChromeIntegration.notification:clear()
+		end
+	else
+		if isVisible and unreadMessages and chatChromeIntegration.notification then
+			unreadMessages = 0
+			chatChromeIntegration.notification:clear()
+		end
 	end
 end)
+
+local dismissCallback = function(menuWasOpen)
+	if getFFlagAppChatCoreUIConflictFix() then
+		if InExperienceAppChatModal:getVisible() then
+			InExperienceAppChatModal.default:setVisible(false)
+		end
+
+		ChatSelector:SetVisible(true)
+	else
+		if menuWasOpen then
+			if not chatVisibility then
+				ChatSelector:ToggleVisibility()
+			end
+		else
+			ChatSelector:ToggleVisibility()
+		end
+	end
+	if FFlagConsoleChatOnExpControls and TenFootInterfaceExpChatExperimentation.getIsEnabled() then
+		FocusSelectExpChat(chatChromeIntegration.id)
+	end
+end
 
 chatChromeIntegration = ChromeService:register({
 	id = "chat",
 	label = "CoreScripts.TopBar.Chat",
 	activated = function(self)
 		if chatVisibility then
-			ChatSelector:ToggleVisibility()
+			if getFFlagAppChatCoreUIConflictFix() then
+				ChatSelector:SetVisible(false)
+			else
+				ChatSelector:ToggleVisibility()
+			end
 		else
-			ChromeUtils.dismissRobloxMenuAndRun(function(menuWasOpen)
-				if menuWasOpen then
-					if not chatVisibility then
-						ChatSelector:ToggleVisibility()
-					end
-				else
-					ChatSelector:ToggleVisibility()
-				end
+			ChromeIntegrationUtils.dismissRobloxMenuAndRun(function(menuWasOpen)
+				dismissCallback(menuWasOpen)
 			end)
 		end
 	end,
-	isActivated = if GetFFlagAddChromeActivatedEvents()
-		then function()
-			return chatVisibilitySignal:get()
+	isActivated = function()
+		return chatVisibilitySignal:get()
+	end,
+	selected = if FFlagConsoleChatOnExpControls
+		then function(self)
+			local chatSelectConn
+			chatSelectConn = UserInputService.InputEnded:Connect(function(input: InputObject)
+				local key = input.KeyCode
+				if key == Enum.KeyCode.DPadDown then
+					FocusSelectExpChat(chatChromeIntegration.id)
+				end
+				if chatSelectConn and ChromeService:selectedItem():get() ~= self.id then
+					chatSelectConn:Disconnect()
+				end
+			end)
 		end
 		else nil,
 	components = {
 		Icon = function(props)
-			if
-				GetFFlagEnableAppChatInExperience()
-				and InExperienceAppChatExperimentation.default.variant.ShowInExperienceChatNewIcon
-			then
-				return CommonIcon("icons/menu/publicChatOff", "icons/menu/publicChatOn", chatVisibilitySignal)
+			if getFFlagExpChatGetLabelAndIconFromUtil() then
+				local visualConfig = getExperienceChatVisualConfig()
+				return CommonIcon(visualConfig.icon.off, visualConfig.icon.on, chatVisibilitySignal)
 			else
-				return CommonIcon("icons/menu/chat_off", "icons/menu/chat_on", chatVisibilitySignal)
+				if
+					GetFFlagEnableAppChatInExperience()
+					and InExperienceAppChatExperimentation.default.variant.ShowInExperienceChatNewIcon
+				then
+					return CommonIcon("icons/menu/publicChatOff", "icons/menu/publicChatOn", chatVisibilitySignal)
+				else
+					return CommonIcon("icons/menu/chat_off", "icons/menu/chat_on", chatVisibilitySignal)
+				end
 			end
 		end,
 	},
 })
 
-chatChromeIntegration.notification:fireCount(unreadMessages)
-TextChatService.MessageReceived:Connect(function()
-	if not chatVisibility then
-		unreadMessages += 1
-		chatChromeIntegration.notification:fireCount(unreadMessages)
-	end
-end)
+if GetFFlagSimpleChatUnreadMessageCount() then
+	-- TextChatService
+	TextChatService.MessageReceived:Connect(function()
+		if not chatVisibility and chatChromeIntegration.notification:isEmpty() then
+			chatChromeIntegration.notification:fireCount(1)
+		end
+	end)
 
-local lastMessagesChangedValue = 0
-ChatSelector.MessagesChanged:connect(function(messages: number)
-	if not chatVisibility then
-		unreadMessages += messages - lastMessagesChangedValue
-		chatChromeIntegration.notification:fireCount(unreadMessages)
+	-- Legacy Chat
+	if not GetFFlagDisableLegacyChatSimpleUnreadMessageCount() then
+		ChatSelector.MessagesChanged:connect(function(messages: number)
+			if not chatVisibility and chatChromeIntegration.notification:isEmpty() then
+				chatChromeIntegration.notification:fireCount(1)
+			end
+		end)
 	end
-	lastMessagesChangedValue = messages
-end)
+else
+	TextChatService.MessageReceived:Connect(function()
+		if not chatVisibility then
+			unreadMessages += 1
+			chatChromeIntegration.notification:fireCount(unreadMessages)
+		end
+	end)
+
+	local lastMessagesChangedValue = 0
+	ChatSelector.MessagesChanged:connect(function(messages: number)
+		if not chatVisibility then
+			unreadMessages += messages - lastMessagesChangedValue
+			chatChromeIntegration.notification:fireCount(unreadMessages)
+		end
+		lastMessagesChangedValue = messages
+	end)
+end
+
+if GetFFlagChatActiveChangedSignal() then
+	ChatSelector.ChatActiveChanged:connect(function(visible: boolean)
+		if visible then
+			local canLocalUserChat = localUserCanChat()
+			if not canLocalUserChat then
+				chatChromeIntegration.availability:available()
+			end
+		end
+	end)
+elseif FFlagShowChatButtonWhenChatForceOpened then
+	StarterGui:RegisterSetCore("ChatActive", function(visible)
+		if visible then
+			local canLocalUserChat = localUserCanChat()
+			if not canLocalUserChat then
+				chatChromeIntegration.availability:available()
+			end
+		end
+	end)
+end
 
 coroutine.wrap(function()
 	local LocalPlayer = Players.LocalPlayer
@@ -107,21 +251,21 @@ coroutine.wrap(function()
 	end
 
 	local canChat = true
-	if not RunService:IsStudio() then
-		local success, localUserCanChat = pcall(function()
-			return Chat:CanUserChatAsync(LocalPlayer and LocalPlayer.UserId or 0)
-		end)
-		canChat = success and localUserCanChat
+	if FFlagShowChatButtonWhenChatForceOpened then
+		canChat = localUserCanChat()
+	else
+		if not RunService:IsStudio() then
+			local success, localUserCanChat = pcall(function()
+				return Chat:CanUserChatAsync(LocalPlayer and LocalPlayer.UserId or 0)
+			end)
+			canChat = success and localUserCanChat
+		end
 	end
 
 	if canChat and chatChromeIntegration.availability then
 		ChromeUtils.setCoreGuiAvailability(chatChromeIntegration, Enum.CoreGuiType.Chat, function(enabled)
 			if enabled then
-				if EnabledPinnedChat then
-					chatChromeIntegration.availability:pinned()
-				else
-					chatChromeIntegration.availability:available()
-				end
+				chatChromeIntegration.availability:pinned()
 			else
 				chatChromeIntegration.availability:unavailable()
 			end
@@ -135,6 +279,29 @@ coroutine.wrap(function()
 		ChatSelector:SetVisible(willEnableChat)
 	end
 end)()
+
+if FFlagConsoleChatOnExpControls then
+	-- APPEXP-2427: Remove once legacy chat is fully deprecated
+	local function UnavailableNotOnTCSConsole()
+		if not GuiService:IsTenFootInterface() then
+			return
+		end
+
+		local chatIsAvailable = chatChromeIntegration.availability:get() ~= AvailabilitySignalState.Unavailable
+
+		if TextChatService.ChatVersion ~= Enum.ChatVersion.TextChatService and chatIsAvailable then
+			chatChromeIntegration.availability:unavailable()
+		end
+	end
+
+	if game:IsLoaded() then
+		UnavailableNotOnTCSConsole()
+	else
+		game.Loaded:Connect(function()
+			UnavailableNotOnTCSConsole()
+		end)
+	end
+end
 
 -- dev test code
 function _simulateChat()

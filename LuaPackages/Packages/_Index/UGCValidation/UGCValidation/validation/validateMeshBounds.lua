@@ -4,10 +4,7 @@ local root = script.Parent.Parent
 
 local Types = require(root.util.Types)
 local pcallDeferred = require(root.util.pcallDeferred)
-local getFFlagUGCValidationShouldYield = require(root.flags.getFFlagUGCValidationShouldYield)
 local getFFlagUGCLCQualityReplaceLua = require(root.flags.getFFlagUGCLCQualityReplaceLua)
-local getEngineFeatureUGCValidateEditableMeshAndImage =
-	require(root.flags.getEngineFeatureUGCValidateEditableMeshAndImage)
 
 local getFFlagUGCValidatePartSizeWithinRenderSizeLimits =
 	require(root.flags.getFFlagUGCValidatePartSizeWithinRenderSizeLimits)
@@ -15,7 +12,8 @@ local Analytics = require(root.Analytics)
 
 local DEFAULT_OFFSET = Vector3.new(0, 0, 0)
 
-local FFlagUGCValidationPositionCheck = game:DefineFastFlag("UGCValidationPositionCheck", false)
+local FFlagUGCValidationScaleMinimum = game:DefineFastFlag("UGCValidationScaleMinimum", false)
+local FIntUGCValidationScaleMinimumThousandths = game:DefineFastInt("UGCValidationScaleMinimumThousandths", 10) -- 1 = 0.001
 
 local function pointInBounds(worldPos, boundsCF, boundsSize)
 	local objectPos = boundsCF:PointToObjectSpace(worldPos)
@@ -62,52 +60,47 @@ local function validateMeshBounds(
 	local boundsOffset = boundsInfo.offset or DEFAULT_OFFSET
 	local boundsCF = handle.CFrame * attachment.CFrame * CFrame.new(boundsOffset)
 
-	if FFlagUGCValidationPositionCheck then
+	if
+		handle.Position.X > 10000
+		or handle.Position.X < -10000
+		or handle.Position.Y > 10000
+		or handle.Position.Y < -10000
+		or handle.Position.Z > 10000
+		or handle.Position.Z < -10000
+	then
+		return false, { "Position is outside of bounds" }
+	end
+	if
+		boundsCF.Position.X > 10000
+		or boundsCF.Position.X < -10000
+		or boundsCF.Position.Y > 10000
+		or boundsCF.Position.Y < -10000
+		or boundsCF.Position.Z > 10000
+		or boundsCF.Position.Z < -10000
+	then
+		return false, { "Position is outside of bounds" }
+	end
+
+	if FFlagUGCValidationScaleMinimum then
 		if
-			handle.Position.X > 10000
-			or handle.Position.X < -10000
-			or handle.Position.Y > 10000
-			or handle.Position.Y < -10000
-			or handle.Position.Z > 10000
-			or handle.Position.Z < -10000
+			meshScale.X < FIntUGCValidationScaleMinimumThousandths / 1000
+			or meshScale.Y < FIntUGCValidationScaleMinimumThousandths / 1000
+			or meshScale.Z < FIntUGCValidationScaleMinimumThousandths / 1000
 		then
-			return false, { "Position is outside of bounds" }
-		end
-		if
-			boundsCF.Position.X > 10000
-			or boundsCF.Position.X < -10000
-			or boundsCF.Position.Y > 10000
-			or boundsCF.Position.Y < -10000
-			or boundsCF.Position.Z > 10000
-			or boundsCF.Position.Z < -10000
-		then
-			return false, { "Position is outside of bounds" }
+			return false, { "Mesh scale is too small" }
 		end
 	end
 
 	if getFFlagUGCLCQualityReplaceLua() then
-		local success, result
-		if getEngineFeatureUGCValidateEditableMeshAndImage() and getFFlagUGCValidationShouldYield() then
-			success, result = pcallDeferred(function()
-				return UGCValidationService:ValidateEditableMeshBounds(
-					meshInfo.editableMesh,
-					meshScale,
-					boundsOffset,
-					attachment.CFrame,
-					handle.CFrame
-				)
-			end, validationContext)
-		else
-			success, result = pcall(function()
-				return UGCValidationService:ValidateMeshBounds(
-					meshInfo.contentId,
-					meshScale,
-					boundsOffset,
-					attachment.CFrame,
-					handle.CFrame
-				)
-			end)
-		end
+		local success, result = pcallDeferred(function()
+			return UGCValidationService:ValidateEditableMeshBounds(
+				meshInfo.editableMesh,
+				meshScale,
+				boundsOffset,
+				attachment.CFrame,
+				handle.CFrame
+			)
+		end, validationContext)
 
 		if not success then
 			if nil ~= isServer and isServer then
@@ -116,28 +109,20 @@ local function validateMeshBounds(
 				-- which would mean the asset failed validation
 				error("Failed to execute validateMeshBounds check")
 			end
-			Analytics.reportFailure(Analytics.ErrorType.validateMeshBounds_FailedToExecute)
+			Analytics.reportFailure(Analytics.ErrorType.validateMeshBounds_FailedToExecute, nil, validationContext)
 			return false, { "Failed to execute validateMeshBounds check" }
 		end
 
 		if not result then
-			Analytics.reportFailure(Analytics.ErrorType.validateMeshBounds_TooLarge)
+			Analytics.reportFailure(Analytics.ErrorType.validateMeshBounds_TooLarge, nil, validationContext)
 			return false, getErrors(meshInfo.context :: string, assetTypeName, boundsSize)
 		end
 	else
-		local success, verts
-		if getEngineFeatureUGCValidateEditableMeshAndImage() then
-			success, verts = pcall(function()
-				return UGCValidationService:GetEditableMeshVerts(meshInfo.editableMesh)
-			end)
-		else
-			success, verts = pcall(function()
-				return UGCValidationService:GetMeshVerts(meshInfo.contentId)
-			end)
-		end
-
+		local success, verts = pcall(function()
+			return UGCValidationService:GetEditableMeshVerts(meshInfo.editableMesh)
+		end)
 		if not success then
-			Analytics.reportFailure(Analytics.ErrorType.validateMeshBounds_FailedToLoadMesh)
+			Analytics.reportFailure(Analytics.ErrorType.validateMeshBounds_FailedToLoadMesh, nil, validationContext)
 			if nil ~= isServer and isServer then
 				-- there could be many reasons that an error occurred, the asset is not necessarilly incorrect, we just didn't get as
 				-- far as testing it, so we throw an error which means the RCC will try testing the asset again, rather than returning false
@@ -161,7 +146,7 @@ local function validateMeshBounds(
 		for _, vertPos in pairs(verts) do
 			local worldPos = handle.CFrame:PointToWorldSpace(vertPos * meshScale)
 			if not pointInBounds(worldPos, boundsCF, boundsSize) then
-				Analytics.reportFailure(Analytics.ErrorType.validateMeshBounds_TooLarge)
+				Analytics.reportFailure(Analytics.ErrorType.validateMeshBounds_TooLarge, nil, validationContext)
 				return false, getErrors(meshInfo.context :: string, assetTypeName, boundsSize)
 			end
 		end
@@ -169,7 +154,7 @@ local function validateMeshBounds(
 
 	if getFFlagUGCValidatePartSizeWithinRenderSizeLimits() then
 		if not isSizeWithinBounds(handle, boundsSize) then
-			Analytics.reportFailure(Analytics.ErrorType.validateMeshBounds_TooLarge)
+			Analytics.reportFailure(Analytics.ErrorType.validateMeshBounds_TooLarge, nil, validationContext)
 			return false, getErrors(handle:GetFullName(), assetTypeName, boundsSize)
 		end
 	end

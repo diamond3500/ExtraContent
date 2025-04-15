@@ -5,6 +5,7 @@ local CorePackages = game:GetService("CorePackages")
 local ContentProvider = game:GetService("ContentProvider")
 local GuiService = game:GetService("GuiService")
 local Base64 = require(Root.Utils.Base64)
+local PurchaseFlow = require(Root.Enums.PurchaseFlow)
 
 local MarketplaceService = game:GetService("MarketplaceService")
 local PlatformService = nil
@@ -17,7 +18,7 @@ local GetFStringVNGWebshopUrl =
 local FFlagEnablePreSignedVngShopRedirectUrl =
 	require(CorePackages.Workspace.Packages.SharedFlags).FFlagEnablePreSignedVngShopRedirectUrl
 
-local PurchasePromptDeps = require(CorePackages.PurchasePromptDeps)
+local PurchasePromptDeps = require(CorePackages.Workspace.Packages.PurchasePromptDeps)
 local UrlBuilder = PurchasePromptDeps.UrlBuilder.UrlBuilder
 
 local BASE_URL = string.gsub(ContentProvider.BaseUrl:lower(), "/m.", "/www.")
@@ -51,10 +52,19 @@ function PlatformInterface.new()
 		end
 	end
 
+	function service.startRobuxUpsellWebByFlow(purchaseFlow, productId: string)
+		if purchaseFlow == PurchaseFlow.RobuxUpsellV2 or purchaseFlow == PurchaseFlow.LargeRobuxUpsell then
+			GuiService:OpenBrowserWindow(("%supgrades/paymentmethods?ap=%s"):format(BASE_URL, productId))
+		else
+			GuiService:OpenBrowserWindow(("%sUpgrades/Robux.aspx?product_id=%s"):format(BASE_URL, productId))
+		end
+	end
+
 	function service.openSecuritySettings(challengeResponse: string?)
 		if challengeResponse then
 			--[[ Encodes the challenge response as Base64 prior to attaching it as 
-			a query parameter to the webview URL, for formatting and compatibility purposes. ]]--
+			a query parameter to the webview URL, for formatting and compatibility purposes. ]]
+			--
 			local encodedChallengeResponse = Base64.Encode(challengeResponse)
 			local url = ("%smy/account?challenge=%s#!/security"):format(BASE_URL, encodedChallengeResponse)
 			GuiService:OpenBrowserWindow(url)

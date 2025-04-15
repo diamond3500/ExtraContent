@@ -1,7 +1,7 @@
 --!nonstrict
 local CorePackages = game:GetService("CorePackages")
-local Roact = require(CorePackages.Roact)
-local RoactRodux = require(CorePackages.RoactRodux)
+local Roact = require(CorePackages.Packages.Roact)
+local RoactRodux = require(CorePackages.Packages.RoactRodux)
 local TextService = game:GetService("TextService")
 
 local SetActiveTab = require(script.Parent.Parent.Actions.SetActiveTab)
@@ -21,12 +21,8 @@ local function initTabList(tabList)
 	local totalLength = 0
 	local count = 0
 	for name, _ in pairs(tabList) do
-		local textVector = TextService:GetTextSize(
-			name,
-			Constants.DefaultFontSize.TabBar,
-			Constants.Font.TabBar,
-			Vector2.new(0, 0)
-		)
+		local textVector =
+			TextService:GetTextSize(name, Constants.DefaultFontSize.TabBar, Constants.Font.TabBar, Vector2.new(0, 0))
 		textWidths[name] = textVector.X
 		totalLength = totalLength + textVector.X
 		count = count + 1
@@ -80,7 +76,7 @@ function TabRowContainer:render()
 	local totalTabCount = self.state.totalTabCount
 	local nodes = {}
 
-	local padding = (currWindowWidth - totalTextLength)  / totalTabCount
+	local padding = (currWindowWidth - totalTextLength) / totalTabCount
 
 	-- the remainder is used to center the row of tabList so the
 	-- snap when crossing integer boundaries is less noticeable
@@ -114,10 +110,8 @@ function TabRowContainer:render()
 					onSelection = self.onTabButtonClicked,
 				})
 			end
-
 		else
-
-			for name,tab in pairs(tabList) do
+			for name, tab in pairs(tabList) do
 				if textWidths[name] then
 					nodes[name] = Roact.createElement(TabRowButton, {
 						index = tab.layoutOrder,
@@ -160,7 +154,7 @@ local function mapDispatchToProps(dispatch)
 	return {
 		dispatchSetActiveTab = function(index, hasClientServer)
 			dispatch(SetActiveTab(index, hasClientServer))
-		end
+		end,
 	}
 end
 

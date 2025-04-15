@@ -18,23 +18,24 @@ A `Tile` is a surface that displays content and actions on a single topic. The `
 ```lua
 local Foundation = require(Packages.Foundation)
 local Tile = Foundation.Tile
+local MediaType = Foundation.Enums.MediaType
+local MediaShape = Foundation.Enums.MediaShape
+
 local Button = Foundation.Button
-local ButtonSize = Foundation.Enums.ButtonSize
+local InputSize = Foundation.Enums.InputSize
 local ButtonVariant = Foundation.Enums.ButtonVariant
 ...
 local tokens = useTokens()
 
 return React.createElement(Tile.Root, {
-    fillDirection = Enum.FillDirection.Vertical,
-    fillBehavior = FillBehavior.Fill,
+    FillDirection = Enum.FillDirection.Vertical,
     Size = UDim2.fromOffset(150, 275),
     spacing = tokens.Gap.Small,
-    backgroundStyle = tokens.Color.Shift.Shift_200,
 }, {
     Tile.Media = React.createElement(Tile.Media, {
-        mediaId = 123456,
-        mediaType = MediaType.Asset,
-        aspectRatio = 1,
+        id = 123456,
+        type = MediaType.Asset,
+        shape = MediaShape.Square,
         background = tokens.Color.Shift.Shift_200,
     }),
     TileContent = React.createElement(Tile.Content, {
@@ -62,7 +63,7 @@ return React.createElement(Tile.Root, {
         }, {
             Button = React.createElement(Button, {
                 text = "Purchase",
-                size = ButtonSize.Small,
+                size = InputSize.Small,
                 variant = ButtonVariant.Emphasis,
                 fillBehavior = FillBehavior.Fill,
             }),

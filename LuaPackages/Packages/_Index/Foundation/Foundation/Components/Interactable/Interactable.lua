@@ -7,6 +7,7 @@ local React = require(Packages.React)
 local ReactIs = require(Packages.ReactIs)
 
 local Types = require(Foundation.Components.Types)
+local Flags = require(Foundation.Utility.Flags)
 local useGuiControlState = require(Foundation.Utility.Control.useGuiControlState)
 local withDefaults = require(Foundation.Utility.withDefaults)
 local useCursor = require(Foundation.Providers.Cursor.useCursor)
@@ -27,7 +28,6 @@ type ColorStyleValue = Types.ColorStyleValue
 export type InteractableProps = {
 	component: (React.ReactElement | string)?,
 	isDisabled: boolean?,
-	userInteractionEnabled: boolean?,
 	onActivated: () -> ()?,
 	onStateChanged: StateChangedCallback?,
 	stateLayer: Types.StateLayer?,
@@ -42,6 +42,7 @@ local defaultProps = {
 	userInteractionEnabled = true,
 }
 
+--selene: allow(roblox_internal_custom_color)
 local DEFAULT_GRAY = Color3.fromRGB(163, 162, 165)
 
 local function Interactable(interactableProps: InteractableProps, forwardedRef: React.Ref<GuiObject>?)
@@ -54,10 +55,16 @@ local function Interactable(interactableProps: InteractableProps, forwardedRef: 
 
 	local onStateChanged = React.useCallback(function(newState: ControlState)
 		if controlState:getValue() == ControlState.Default and guiObjectRef.current ~= nil then
-			if guiObjectRef.current.BackgroundColor3 ~= DEFAULT_GRAY or guiObjectRef.current.Transparency ~= 0 then
+			local guiObjectColor3 = if Flags.FoundationMigrateStylingV2
+				then guiObjectRef.current:GetStyled("BackgroundColor3")
+				else guiObjectRef.current.BackgroundColor3
+			local guiObjectTransparency = if Flags.FoundationMigrateStylingV2
+				then guiObjectRef.current:GetStyled("BackgroundTransparency")
+				else guiObjectRef.current.BackgroundTransparency
+			if guiObjectColor3 ~= DEFAULT_GRAY or guiObjectTransparency ~= 0 then
 				realBackgroundStyle.current = {
-					Color3 = guiObjectRef.current.BackgroundColor3,
-					Transparency = guiObjectRef.current.BackgroundTransparency,
+					Color3 = guiObjectColor3,
+					Transparency = guiObjectTransparency,
 				}
 			end
 		end
@@ -66,12 +73,6 @@ local function Interactable(interactableProps: InteractableProps, forwardedRef: 
 			props.onStateChanged(newState)
 		end
 	end, { props.onStateChanged })
-
-	local onActivated = React.useCallback(function()
-		if not props.isDisabled and props.userInteractionEnabled and props.onActivated ~= nil then
-			props.onActivated()
-		end
-	end, { props.isDisabled :: any, props.onActivated })
 
 	local originalBackgroundStyle = React.useMemo(function(): ColorStyle
 		return getOriginalBackgroundStyle(props.BackgroundColor3, props.BackgroundTransparency)
@@ -139,13 +140,15 @@ local function Interactable(interactableProps: InteractableProps, forwardedRef: 
 		return guiObjectRef.current
 	end, {})
 
-	React.useEffect(function()
-		if props.isDisabled then
-			guiStateTable.events.Disabled()
-		else
-			guiStateTable.events.Enabled()
-		end
-	end, { props.isDisabled :: any, guiStateTable })
+	if not Flags.FoundationInteractableUseGuiState then
+		React.useEffect(function()
+			if props.isDisabled then
+				guiStateTable.events.Disabled()
+			else
+				guiStateTable.events.Enabled()
+			end
+		end, { props.isDisabled :: any, guiStateTable })
+	end
 
 	local mergedProps: any = Cryo.Dictionary.union(props, {
 		BackgroundColor3 = backgroundStyleBinding:map(function(backgroundStyle)
@@ -155,7 +158,11 @@ local function Interactable(interactableProps: InteractableProps, forwardedRef: 
 			return backgroundStyle.Transparency
 		end),
 		Active = not props.isDisabled,
-		[React.Event.Activated] = if not props.isDisabled then onActivated else nil,
+		Interactable = if Flags.FoundationInteractableUseGuiState then not props.isDisabled else nil,
+		[React.Event.Activated] = if not props.isDisabled
+				and (Flags.FoundationInteractableUseGuiState or props.userInteractionEnabled)
+			then props.onActivated
+			else nil,
 		ref = wrappedRef,
 		SelectionImageObject = props.SelectionImageObject or cursor,
 	})

@@ -2,7 +2,7 @@
 local UserInputService = game:GetService("UserInputService")
 local CorePackages = game:GetService("CorePackages")
 
-local InGameMenuDependencies = require(CorePackages.InGameMenuDependencies)
+local InGameMenuDependencies = require(CorePackages.Packages.InGameMenuDependencies)
 local Roact = InGameMenuDependencies.Roact
 local UIBlox = InGameMenuDependencies.UIBlox
 
@@ -49,7 +49,7 @@ local function verticalControlsList(props)
 		})
 
 		for i, control in ipairs(localized) do
-			listChildren["controlLabel_"..i] = Roact.createElement(ThemedTextLabel, {
+			listChildren["controlLabel_" .. i] = Roact.createElement(ThemedTextLabel, {
 				fontKey = "Header2",
 				themeKey = "TextEmphasis",
 				TextXAlignment = props.TextXAlignment,
@@ -80,26 +80,26 @@ local function GamepadControls(props)
 			BackgroundTransparency = 1,
 			Image = isXbox and Assets.Images.GamepadXbox or Assets.Images.Gamepad,
 			Size = UDim2.new(0, GAMEPAD_IMAGE_WIDTH, 0, GAMEPAD_IMAGE_HEIGHT),
-			Position = UDim2.new(0.5, GAMEPAD_ICONS_WIDTH/2, 0.5, 0),
+			Position = UDim2.new(0.5, GAMEPAD_ICONS_WIDTH / 2, 0.5, 0),
 			AnchorPoint = Vector2.new(0.5, 0.5),
 			[React.Tag] = "data-testid=GamepadInstructions",
 		}, {
 			LeftControlsList = Roact.createElement(verticalControlsList, {
 				TextXAlignment = Enum.TextXAlignment.Right,
 				Position = UDim2.new(0, -TEXT_X_PADDING, 0, TEXT_Y_OFFSET),
-				controls = Controls.gamepadLabels.left
+				controls = Controls.gamepadLabels.left,
 			}),
 			RightControlsList = Roact.createElement(verticalControlsList, {
 				TextXAlignment = Enum.TextXAlignment.Left,
-				Position = UDim2.new(1, TEXT_X_PADDING-GAMEPAD_ICONS_WIDTH, 0, TEXT_Y_OFFSET),
-				controls = Controls.gamepadLabels.right
+				Position = UDim2.new(1, TEXT_X_PADDING - GAMEPAD_ICONS_WIDTH, 0, TEXT_Y_OFFSET),
+				controls = Controls.gamepadLabels.right,
 			}),
 			RightIconsControlslIst = Roact.createElement(verticalControlsList, {
 				TextXAlignment = Enum.TextXAlignment.Left,
 				Position = UDim2.new(1, TEXT_X_PADDING, 0, CONTROL_CAMERA_TEXT_Y_OFFSET),
-				controls = Controls.gamepadLabels.camera
-			})
-		})
+				controls = Controls.gamepadLabels.camera,
+			}),
+		}),
 	})
 end
 

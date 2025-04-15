@@ -3,7 +3,7 @@ local CorePackages = game:GetService("CorePackages")
 
 local ExperienceStateCaptureService = game:GetService("ExperienceStateCaptureService")
 
-local TnSIXPWrapper = require(root.IXP.TnSIXPWrapper)
+local Constants = require(root.Components.Constants)
 local GetFFlagSelectInSceneReportMenu =
 	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagSelectInSceneReportMenu
 local isInSelectInSceneReportMenuOverrideList = require(root.Utility.isInSelectInSceneReportMenuOverrideList)
@@ -15,7 +15,7 @@ if GetFFlagSelectInSceneReportMenu() then
 	end)
 end
 
-return function()
+return function(analyticsDispatch: (action: { type: string }) -> ())
 	----------------------------------------------------
 	-- Required in order to even try the other checks --
 	if not GetFFlagSelectInSceneReportMenu() then
@@ -34,8 +34,18 @@ return function()
 
 	if game:GetEngineFeature("ExperienceStateCaptureMinMemEnabled") then
 		if not ExperienceStateCaptureService:CanEnterCaptureMode() then
+			-- log if user's device meets memory requirement for select in scene
+			-- can change per experience
+			analyticsDispatch({
+				type = Constants.AnalyticsActions.SetMemoryRequirementMet,
+				memoryRequirementMet = 0,
+			})
 			return false
 		end
+		analyticsDispatch({
+			type = Constants.AnalyticsActions.SetMemoryRequirementMet,
+			memoryRequirementMet = 1,
+		})
 	end
 
 	if not game:GetEngineFeature("ExperienceStateCaptureHiddenSelection") then
@@ -46,10 +56,6 @@ return function()
 	-- Gating access to the feature --
 	if overrideEnabled then
 		return true
-	end
-
-	if not TnSIXPWrapper.getSelectInSceneEnabled() then
-		return false
 	end
 
 	return true

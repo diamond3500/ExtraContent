@@ -1,6 +1,6 @@
 local CorePackages = game:GetService("CorePackages")
 
-local Rodux = require(CorePackages.Rodux)
+local Rodux = require(CorePackages.Packages.Rodux)
 
 local Reducers = script.Parent
 
@@ -11,11 +11,11 @@ local Layout = require(Reducers.Layout)
 local Locale = require(Reducers.Locale)
 
 local EmotesMenuReducer = Rodux.combineReducers({
-    displayOptions = DisplayOptions,
-    emotesPage = EmotesPage,
-    emotesWheel = EmotesWheel,
-    layout = Layout,
-    locale = Locale,
+	displayOptions = DisplayOptions,
+	emotesPage = EmotesPage,
+	emotesWheel = EmotesWheel,
+	layout = Layout,
+	locale = Locale,
 })
 
 return EmotesMenuReducer

@@ -1,9 +1,9 @@
 --!nonstrict
 local CorePackages = game:GetService("CorePackages")
 
-local Roact = require(CorePackages.Roact)
+local Roact = require(CorePackages.Packages.Roact)
 local t = require(CorePackages.Packages.t)
-local UIBlox = require(CorePackages.UIBlox)
+local UIBlox = require(CorePackages.Packages.UIBlox)
 
 local withStyle = UIBlox.Style.withStyle
 local ImageSetLabel = UIBlox.Core.ImageSet.ImageSetLabel
@@ -72,11 +72,11 @@ function CheckboxRow:render()
 
 			text = Roact.createElement("TextLabel", {
 				BackgroundTransparency = 1,
-				Size = UDim2.new(1, -(self.props.height+HORIZONTAL_PADDING)*4, 1, 0),
+				Size = UDim2.new(1, -(self.props.height + HORIZONTAL_PADDING) * 4, 1, 0),
 				Text = self.props.descriptionText,
 				TextColor3 = textTheme.Color,
 				TextTransparency = textTheme.Transparency,
-				TextSize = style.Font.Header2.RelativeSize*baseSize,
+				TextSize = style.Font.Header2.RelativeSize * baseSize,
 				Font = style.Font.Header2.Font,
 				TextXAlignment = Enum.TextXAlignment.Left,
 				LayoutOrder = 2,

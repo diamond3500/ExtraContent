@@ -7,10 +7,10 @@ local CoreGui = game:GetService("CoreGui")
 local Modules = CoreGui.RobloxGui.Modules
 local ShareGame = Modules.Settings.Pages.ShareGame
 
-local UIBlox = require(CorePackages.UIBlox)
+local UIBlox = require(CorePackages.Packages.UIBlox)
 local OpenTypeSupport = UIBlox.Utility.OpenTypeSupport
 
-local Constants = require(Modules.Common.Constants)
+local Constants = require(CorePackages.Workspace.Packages.CoreScriptsCommon).Constants
 local Theme = require(Modules.Settings.Theme)
 local AppFonts = require(CorePackages.Workspace.Packages.Style).AppFonts
 local InviteEvents = require(CorePackages.Workspace.Packages.GameInvite).GameInviteEvents

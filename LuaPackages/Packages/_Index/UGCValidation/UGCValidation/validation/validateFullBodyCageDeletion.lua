@@ -3,12 +3,8 @@ local UGCValidationService = game:GetService("UGCValidationService")
 local root = script.Parent.Parent
 local Types = require(root.util.Types)
 local pcallDeferred = require(root.util.pcallDeferred)
-local getFFlagUGCValidationShouldYield = require(root.flags.getFFlagUGCValidationShouldYield)
 
 local Analytics = require(root.Analytics)
-
-local getEngineFeatureUGCValidateEditableMeshAndImage =
-	require(root.flags.getEngineFeatureUGCValidateEditableMeshAndImage)
 
 local function validateFullBodyCageDeletion(
 	meshInfo: Types.MeshInfo,
@@ -18,16 +14,9 @@ local function validateFullBodyCageDeletion(
 
 	local isServer = validationContext.isServer
 
-	local success, result
-	if getEngineFeatureUGCValidateEditableMeshAndImage() and getFFlagUGCValidationShouldYield() then
-		success, result = pcallDeferred(function()
-			return UGCValidationService:ValidateEditableMeshFullBodyCageDeletion(meshInfo.editableMesh)
-		end, validationContext)
-	else
-		success, result = pcall(function()
-			return UGCValidationService:ValidateFullBodyCageDeletion(meshInfo.contentId)
-		end)
-	end
+	local success, result = pcallDeferred(function()
+		return UGCValidationService:ValidateEditableMeshFullBodyCageDeletion(meshInfo.editableMesh)
+	end, validationContext)
 
 	if not success then
 		if nil ~= isServer and isServer then
@@ -41,7 +30,11 @@ local function validateFullBodyCageDeletion(
 				)
 			)
 		end
-		Analytics.reportFailure(Analytics.ErrorType.validateFullBodyCageDeletion_FailedToExecute)
+		Analytics.reportFailure(
+			Analytics.ErrorType.validateFullBodyCageDeletion_FailedToExecute,
+			nil,
+			validationContext
+		)
 		return false,
 			{
 				string.format(
@@ -52,7 +45,11 @@ local function validateFullBodyCageDeletion(
 	end
 
 	if not result then
-		Analytics.reportFailure(Analytics.ErrorType.validateFullBodyCageDeletion_GeometryRemoved)
+		Analytics.reportFailure(
+			Analytics.ErrorType.validateFullBodyCageDeletion_GeometryRemoved,
+			nil,
+			validationContext
+		)
 		return false,
 			{
 				string.format(

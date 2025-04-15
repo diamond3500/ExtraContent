@@ -2,8 +2,8 @@
 local CorePackages = game:GetService("CorePackages")
 local Players = game:GetService("Players")
 
-local Roact = require(CorePackages.Roact)
-local RoactRodux = require(CorePackages.RoactRodux)
+local Roact = require(CorePackages.Packages.Roact)
+local RoactRodux = require(CorePackages.Packages.RoactRodux)
 
 local Components = script.Parent.Parent
 local PlayerList = Components.Parent
@@ -25,7 +25,7 @@ function SocialConnector:render()
 			callback = function(player, friendStatus)
 				self.props.setPlayerFriendStatus(player, friendStatus)
 			end,
-		})
+		}),
 	})
 end
 

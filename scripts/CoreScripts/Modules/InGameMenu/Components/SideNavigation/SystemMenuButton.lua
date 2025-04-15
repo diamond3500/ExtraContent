@@ -1,7 +1,7 @@
 local CorePackages = game:GetService("CorePackages")
 local GuiService = game:GetService("GuiService")
 
-local InGameMenuDependencies = require(CorePackages.InGameMenuDependencies)
+local InGameMenuDependencies = require(CorePackages.Packages.InGameMenuDependencies)
 local t = InGameMenuDependencies.t
 local Roact = InGameMenuDependencies.Roact
 
@@ -26,7 +26,8 @@ SystemMenuButton.defaultProps = {
 }
 
 function SystemMenuButton:tryCaptureFocus(prevProps)
-	if (self.props.canCaptureFocus and not prevProps.canCaptureFocus)
+	if
+		(self.props.canCaptureFocus and not prevProps.canCaptureFocus)
 		or (self.props.canCaptureFocus and self.props.on ~= prevProps.on and self.state.isIconFocused)
 	then
 		GuiService.SelectedCoreObject = self.iconRef:getValue()

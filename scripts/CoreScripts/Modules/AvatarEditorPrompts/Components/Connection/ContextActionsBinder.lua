@@ -2,8 +2,8 @@ local CorePackages = game:GetService("CorePackages")
 local ContextActionService = game:GetService("ContextActionService")
 local GuiService = game:GetService("GuiService")
 
-local Roact = require(CorePackages.Roact)
-local RoactRodux = require(CorePackages.RoactRodux)
+local Roact = require(CorePackages.Packages.Roact)
+local RoactRodux = require(CorePackages.Packages.RoactRodux)
 local t = require(CorePackages.Packages.t)
 
 local Connection = script.Parent
@@ -35,22 +35,17 @@ function ContextActionsBinder:bindActions()
 
 	self.actionsBound = true
 
-	ContextActionService:BindCoreAction(
-		CLOSE_AVATAR_EDITOR_PROMPT_NAME,
-		function(actionName, inputState, inputObject)
-			if GuiService.MenuIsOpen then
-				return Enum.ContextActionResult.Pass
-			end
+	ContextActionService:BindCoreAction(CLOSE_AVATAR_EDITOR_PROMPT_NAME, function(actionName, inputState, inputObject)
+		if GuiService.MenuIsOpen then
+			return Enum.ContextActionResult.Pass
+		end
 
-			if inputState ~= Enum.UserInputState.Begin then
-				return Enum.ContextActionResult.Pass
-			end
-			self.props.closeOpenPrompt()
-			return Enum.ContextActionResult.Sink
-		end,
-		false,
-		Enum.KeyCode.Escape
-	)
+		if inputState ~= Enum.UserInputState.Begin then
+			return Enum.ContextActionResult.Pass
+		end
+		self.props.closeOpenPrompt()
+		return Enum.ContextActionResult.Sink
+	end, false, Enum.KeyCode.Escape)
 end
 
 function ContextActionsBinder:unbindActions()

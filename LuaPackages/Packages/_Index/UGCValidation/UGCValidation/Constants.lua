@@ -7,6 +7,8 @@ local DEPRECATED_Constants = require(root.DEPRECATED_Constants)
 local getEngineFeatureEngineUGCValidationEnableGetValidationRules =
 	require(root.flags.getEngineFeatureEngineUGCValidationEnableGetValidationRules)
 
+local getEngineFeatureRemoveProxyWrap = require(root.flags.getEngineFeatureRemoveProxyWrap)
+
 if not getEngineFeatureEngineUGCValidationEnableGetValidationRules() then
 	return DEPRECATED_Constants
 end
@@ -19,7 +21,11 @@ local getFFlagUGCValidateSurfaceAppearanceAlphaMode = require(root.flags.getFFla
 local getFFlagUGCValidateAddSpecificPropertyRequirements =
 	require(root.flags.getFFlagUGCValidateAddSpecificPropertyRequirements)
 local getFFlagFixPackageIDFieldName = require(root.flags.getFFlagFixPackageIDFieldName)
+local getEngineFeatureUGCValidateFullBodyBoundsAvatarRules =
+	require(root.flags.getEngineFeatureUGCValidateFullBodyBoundsAvatarRules)
 local getFFlagUGCValidateConfigurableFullBodyBounds = require(root.flags.getFFlagUGCValidateConfigurableFullBodyBounds)
+local getFFlagFixValidateTransparencyProperty = require(root.flags.getFFlagFixValidateTransparencyProperty)
+local getFFlagUGCValidateWrapLayersEnabled = require(root.flags.getFFlagUGCValidateWrapLayersEnabled)
 
 -- switch this to Cryo.List.toSet when available
 local function convertArrayToTable(array)
@@ -169,7 +175,9 @@ Constants.ASSET_STATUS = {
 Constants.ASSET_TYPE_INFO = {}
 ValidationRulesUtil:getAccessoryRules(Constants.ASSET_TYPE_INFO)
 
-if getFFlagUGCValidateConfigurableFullBodyBounds() then
+if getEngineFeatureUGCValidateFullBodyBoundsAvatarRules() then
+	Constants.FULL_BODY_BOUNDS = ValidationRulesUtil:getFullBodyRulesBounds()
+elseif getFFlagUGCValidateConfigurableFullBodyBounds() then
 	Constants.FULL_BODY_BOUNDS = ConstantBounds.getFullBodyBounds()
 end
 
@@ -181,11 +189,41 @@ Constants.AvatarPartScaleTypes = {
 
 ValidationRulesUtil:getBodyPartRules(Constants.ASSET_TYPE_INFO)
 
+Constants.BODYPART_TO_PARENT = {
+	-- "Parent" here is in regards to the way parts are rigged together in a single asset. Full tree in AssetTraversalUtils.assetHierarchy
+	-- nil indicates this is the root of the asset, it has no parent in the asset
+	-- head asset
+	["Head"] = nil, -- root
+	-- torso
+	["LowerTorso"] = nil, --
+	["UpperTorso"] = "LowerTorso",
+	-- left arm
+	["LeftUpperArm"] = nil,
+	["LeftLowerArm"] = "LeftUpperArm",
+	["LeftHand"] = "LeftLowerArm",
+	-- left leg
+	["LeftUpperLeg"] = nil,
+	["LeftLowerLeg"] = "LeftUpperLeg",
+	["LeftLeg"] = "LeftLowerLeg",
+	-- right arm
+	["RightUpperArm"] = nil,
+	["RightLowerArm"] = "RightUpperArm",
+	["RightHand"] = "RightLowerArm",
+	-- right leg
+	["RightUpperLeg"] = nil,
+	["RightLowerLeg"] = "RightUpperLeg",
+	["RightLeg"] = "RightLowerLeg",
+}
+
 Constants.RenderVsWrapMeshMaxDiff = ValidationRulesUtil:getRules().MeshRules.CageMeshMaxDistanceFromRenderMesh
 
 if getFFlagUGCValidateAddSpecificPropertyRequirements() then
 	-- this is used to specify that we don't care about a property's value
 	Constants.PROPERTIES_UNRESTRICTED = {}
+end
+
+if getFFlagFixValidateTransparencyProperty() then
+	Constants.PROP_PRECISE = {}
 end
 
 Constants.PROPERTIES = {
@@ -212,7 +250,7 @@ Constants.PROPERTIES = {
 		Reflectance = 0,
 		RootPriority = 0,
 		RotVelocity = Vector3.new(0, 0, 0),
-		Transparency = 0,
+		Transparency = if getFFlagFixValidateTransparencyProperty() then { 0, Constants.PROP_PRECISE } else 0,
 		Velocity = Vector3.new(0, 0, 0),
 
 		-- surface properties
@@ -248,6 +286,11 @@ Constants.PROPERTIES = {
 	SurfaceAppearance = if getFFlagUGCValidateSurfaceAppearanceAlphaMode()
 		then {
 			AlphaMode = Enum.AlphaMode.Overlay,
+		}
+		else nil,
+	WrapLayer = if getFFlagUGCValidateWrapLayersEnabled()
+		then {
+			Enabled = true,
 		}
 		else nil,
 }
@@ -367,7 +410,9 @@ end
 Constants.GUIDAttributeName = "RBXGUID"
 Constants.GUIDAttributeMaxLength = 100
 
-Constants.ProxyWrapAttributeName = "RBX_WRAP_DEFORMER_PROXY"
+if not getEngineFeatureRemoveProxyWrap() then
+	Constants.ProxyWrapAttributeName = "RBX_WRAP_DEFORMER_PROXY"
+end
 Constants.AlternateMeshIdAttributeName = "RBX_ALT_MESH_ID"
 
 return Constants

@@ -1,4 +1,5 @@
 --!nonstrict
+-- moving this file to LuaApps, please replicate any changes in the LuaApps file as well
 local DetailsPage = script.Parent
 local Template = DetailsPage.Parent
 local App = Template.Parent
@@ -266,4 +267,4 @@ function DetailsPageHeader:render()
 	end)
 end
 
-return DetailsPageHeader
+return if UIBloxConfig.moveDetailsPageToLuaApps then nil else DetailsPageHeader

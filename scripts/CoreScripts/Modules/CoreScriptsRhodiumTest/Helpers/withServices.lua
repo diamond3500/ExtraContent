@@ -3,9 +3,9 @@ local HttpService = game:GetService("HttpService")
 local CoreGui = game:GetService("CoreGui")
 local CorePackages = game:GetService("CorePackages")
 local Modules = CoreGui.RobloxGui.Modules
-local Roact = require(CorePackages.Roact)
-local Rodux = require(CorePackages.Rodux)
-local RoactRodux = require(CorePackages.RoactRodux)
+local Roact = require(CorePackages.Packages.Roact)
+local Rodux = require(CorePackages.Packages.Rodux)
+local RoactRodux = require(CorePackages.Packages.RoactRodux)
 
 local UIBlox = require(CorePackages.Packages.UIBlox)
 local AppStyleProvider = UIBlox.App.Style.AppStyleProvider
@@ -51,11 +51,11 @@ return function(test, component, reducer, initialStoreState, props)
 			style = {
 				themeName = StyleConstants.ThemeName.Dark,
 				fontName = StyleConstants.FontName.Gotham,
-			}
+			},
 		}, {
-			Root = Roact.createElement(component, props)
-		})
-	}) 
+			Root = Roact.createElement(component, props),
+		}),
+	})
 	local name = tostring(component)
 
 	local root = Roact.createElement("ScreenGui", {

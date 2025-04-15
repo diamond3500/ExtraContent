@@ -2,19 +2,20 @@ local CoreGui = game:GetService("CoreGui")
 local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 local CorePackages = game:GetService("CorePackages")
 
-local Roact = require(CorePackages.Roact)
+local Roact = require(CorePackages.Packages.Roact)
 local t = require(CorePackages.Packages.t)
-local Promise = require(CorePackages.Promise)
-local enumerate = require(CorePackages.enumerate)
+local Promise = require(CorePackages.Packages.Promise)
+local enumerate = require(CorePackages.Packages.enumerate)
 
-local UIBlox = require(CorePackages.UIBlox)
+local UIBlox = require(CorePackages.Packages.UIBlox)
 local withStyle = UIBlox.Core.Style.withStyle
 
-local BlockingUtility = require(RobloxGui.Modules.BlockingUtility)
-local RobloxTranslator = require(RobloxGui.Modules.RobloxTranslator)
+local BlockingUtility = require(CorePackages.Workspace.Packages.BlockingUtility)
+local RobloxTranslator = require(CorePackages.Workspace.Packages.RobloxTranslator)
 local VoiceChatServiceManager = require(RobloxGui.Modules.VoiceChat.VoiceChatServiceManager).default
 local Constants = require(RobloxGui.Modules.VoiceChat.Constants)
-local GetFFlagVoiceARUnblockingUnmutingEnabled = require(RobloxGui.Modules.Flags.GetFFlagVoiceARUnblockingUnmutingEnabled)
+local GetFFlagVoiceARUnblockingUnmutingEnabled =
+	require(RobloxGui.Modules.Flags.GetFFlagVoiceARUnblockingUnmutingEnabled)
 
 local ReportActionSelection = require(script.Parent.ReportActionSelection)
 local ReportActionAreYouSure = require(script.Parent.ReportActionAreYouSure)
@@ -29,9 +30,7 @@ local ReportPages = enumerate("ReportPages", {
 
 local ReportConfirmationContainer = Roact.PureComponent:extend("ReportConfirmationContainer")
 
-local noOp = function()
-
-end
+local noOp = function() end
 
 ReportConfirmationContainer.defaultProps = {
 	blockingUtility = BlockingUtility,
@@ -69,13 +68,13 @@ function ReportConfirmationContainer:init()
 	if self.props.onSizeChanged then
 		self.props.onSizeChanged:Connect(function(size)
 			self:setState({
-				absoluteWidth = size.X
+				absoluteWidth = size.X,
 			})
 		end)
 	end
 	local targetVoiceParticipant = voiceParticipants[tostring(player.UserId)]
 
-	self.userFullName = player.DisplayName.."(@"..player.Name..")"
+	self.userFullName = player.DisplayName .. "(@" .. player.Name .. ")"
 
 	self.onMuteCheckboxActivated = function(isFlipped)
 		self:setState({
@@ -101,7 +100,11 @@ function ReportConfirmationContainer:init()
 					blockeeUserId = player.UserId,
 				})
 			end
-		elseif not blockFlipped and self.state.targetInitiallyBlocked and GetFFlagVoiceARUnblockingUnmutingEnabled() then
+		elseif
+			not blockFlipped
+			and self.state.targetInitiallyBlocked
+			and GetFFlagVoiceARUnblockingUnmutingEnabled()
+		then
 			local success = self.props.blockingUtility:UnblockPlayerAsync(player)
 
 			if success then
@@ -118,14 +121,24 @@ function ReportConfirmationContainer:init()
 			self.props.reportAbuseAnalytics:reportEventAndIncrement("muteUser")
 
 			if voiceParticipant and not voiceParticipant.isMutedLocally then
-				self.props.voiceChatServiceManager:ToggleMutePlayer(player.UserId, Constants.VOICE_CONTEXT_TYPE.REPORT_MENU)
+				self.props.voiceChatServiceManager:ToggleMutePlayer(
+					player.UserId,
+					Constants.VOICE_CONTEXT_TYPE.REPORT_MENU
+				)
 			end
-		elseif not muteFlipped and self.state.targetInitiallyVoiceMuted and GetFFlagVoiceARUnblockingUnmutingEnabled() then
+		elseif
+			not muteFlipped
+			and self.state.targetInitiallyVoiceMuted
+			and GetFFlagVoiceARUnblockingUnmutingEnabled()
+		then
 			self.props.blockingUtility:UnmutePlayer(player)
 			self.props.reportAbuseAnalytics:reportEventAndIncrement("unmuteUser")
 
 			if voiceParticipant and voiceParticipant.isMutedLocally then
-				self.props.voiceChatServiceManager:ToggleMutePlayer(player.UserId, Constants.VOICE_CONTEXT_TYPE.REPORT_MENU)
+				self.props.voiceChatServiceManager:ToggleMutePlayer(
+					player.UserId,
+					Constants.VOICE_CONTEXT_TYPE.REPORT_MENU
+				)
 			end
 		end
 
@@ -140,9 +153,13 @@ function ReportConfirmationContainer:init()
 
 		--in the case where you don't mute or block, this should end the menu flow.
 		--it should also end the flow if you've already muted/blocked the user, no need to re-confirm
-		if (not blockFlipped and not muteFlipped)
-			or (muteFlipped == self.state.targetInitiallyVoiceMuted
-			and blockFlipped == self.state.targetInitiallyBlocked) then
+		if
+			(not blockFlipped and not muteFlipped)
+			or (
+				muteFlipped == self.state.targetInitiallyVoiceMuted
+				and blockFlipped == self.state.targetInitiallyBlocked
+			)
+		then
 			self.processMuteAndBlocking()
 		else
 			self:setState({
@@ -210,8 +227,14 @@ function ReportConfirmationContainer:render()
 			titleText = RobloxTranslator:FormatByKey("Feature.SettingsHub.Heading.Report.ThanksForReport"),
 			subtitleText = RobloxTranslator:FormatByKey("Feature.SettingsHub.ReportSubmitted.ThankYou"),
 			instructionText = RobloxTranslator:FormatByKey("Feature.SettingsHub.Label.Report.OtherActionsHeader"),
-			muteText = RobloxTranslator:FormatByKey("Feature.SettingsHub.ReportSubmitted.MutePlayer", {Player = self.userFullName}),
-			blockText = RobloxTranslator:FormatByKey("Feature.SettingsHub.ReportSubmitted.BlockPlayer", {Player = self.userFullName}),
+			muteText = RobloxTranslator:FormatByKey(
+				"Feature.SettingsHub.ReportSubmitted.MutePlayer",
+				{ Player = self.userFullName }
+			),
+			blockText = RobloxTranslator:FormatByKey(
+				"Feature.SettingsHub.ReportSubmitted.BlockPlayer",
+				{ Player = self.userFullName }
+			),
 			doneText = RobloxTranslator:FormatByKey("Feature.SettingsHub.Action.Report.Done"),
 			showVoiceMuting = self.props.isVoiceReport,
 			isVoiceMuted = savedMuteState or self.state.targetInitiallyVoiceMuted,
@@ -224,12 +247,30 @@ function ReportConfirmationContainer:render()
 		})
 
 		local confirmActionsPage = Roact.createElement(ReportActionAreYouSure, {
-			mutedTitleText = RobloxTranslator:FormatByKey("Feature.SettingsHub.ReportSubmitted.MutePlayer", {Player = self.userFullName}),
-			blockedTitleText = RobloxTranslator:FormatByKey("Feature.SettingsHub.ReportSubmitted.BlockPlayer", {Player = self.userFullName}),
-			mutedAndBlockedTitleText = RobloxTranslator:FormatByKey("Feature.SettingsHub.ReportSubmitted.Label.MuteAndBlockPlayer", {DisplayName = self.userFullName}),
-			mutedSubtitleText = RobloxTranslator:FormatByKey("Feature.SettingsHub.ReportSubmitted.MutedSubtitleText", {Player = self.userFullName}),
-			blockedSubtitleText = RobloxTranslator:FormatByKey("Feature.SettingsHub.ReportSubmitted.BlockedSubtitleText", {Player = self.userFullName}),
-			mutedAndBlockedSubtitleText = RobloxTranslator:FormatByKey("Feature.SettingsHub.ReportSubmitted.Label.MuteAndBlockWarning", {Player = self.userFullName}),
+			mutedTitleText = RobloxTranslator:FormatByKey(
+				"Feature.SettingsHub.ReportSubmitted.MutePlayer",
+				{ Player = self.userFullName }
+			),
+			blockedTitleText = RobloxTranslator:FormatByKey(
+				"Feature.SettingsHub.ReportSubmitted.BlockPlayer",
+				{ Player = self.userFullName }
+			),
+			mutedAndBlockedTitleText = RobloxTranslator:FormatByKey(
+				"Feature.SettingsHub.ReportSubmitted.Label.MuteAndBlockPlayer",
+				{ DisplayName = self.userFullName }
+			),
+			mutedSubtitleText = RobloxTranslator:FormatByKey(
+				"Feature.SettingsHub.ReportSubmitted.MutedSubtitleText",
+				{ Player = self.userFullName }
+			),
+			blockedSubtitleText = RobloxTranslator:FormatByKey(
+				"Feature.SettingsHub.ReportSubmitted.BlockedSubtitleText",
+				{ Player = self.userFullName }
+			),
+			mutedAndBlockedSubtitleText = RobloxTranslator:FormatByKey(
+				"Feature.SettingsHub.ReportSubmitted.Label.MuteAndBlockWarning",
+				{ Player = self.userFullName }
+			),
 			cancelText = RobloxTranslator:FormatByKey("InGame.InspectMenu.Action.Cancel"),
 			confirmText = RobloxTranslator:FormatByKey("InGame.InspectMenu.Action.Confirm"),
 			isMuted = self.state.muteFlipped,

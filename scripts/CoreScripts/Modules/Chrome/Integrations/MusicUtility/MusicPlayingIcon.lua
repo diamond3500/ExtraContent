@@ -5,7 +5,7 @@ local CorePackages = game:GetService("CorePackages")
 local ChromeService = require(Chrome.Service)
 local React = require(CorePackages.Packages.React)
 local Songbird = require(CorePackages.Workspace.Packages.Songbird)
-local ContainerSlotSignal = require(Chrome.Service.ContainerSlotSignal)
+local ContainerSlotSignal = require(Chrome.ChromeShared.Service.ContainerSlotSignal)
 
 return ChromeService:register({
 	initialAvailability = ChromeService.AvailabilitySignal.Available,

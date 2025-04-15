@@ -15,6 +15,7 @@ local useCursor = require(Foundation.Providers.Cursor.useCursor)
 local useTokens = require(Foundation.Providers.Style.useTokens)
 local withCommonProps = require(Foundation.Utility.withCommonProps)
 local withDefaults = require(Foundation.Utility.withDefaults)
+local getInputTextSize = require(Foundation.Utility.getInputTextSize)
 
 local lerp = require(Foundation.Utility.lerp)
 local StateLayerAffordance = require(Foundation.Enums.StateLayerAffordance)
@@ -23,8 +24,8 @@ type ControlState = ControlState.ControlState
 
 local useToggleVariants = require(script.Parent.useToggleVariants)
 
-local ToggleSize = require(Foundation.Enums.ToggleSize)
-type ToggleSize = ToggleSize.ToggleSize
+local InputSize = require(Foundation.Enums.InputSize)
+type InputSize = InputSize.InputSize
 
 local InputLabelSize = require(Foundation.Enums.InputLabelSize)
 type InputLabelSize = InputLabelSize.InputLabelSize
@@ -55,11 +56,11 @@ type Props = {
 	onActivated: (boolean) -> (),
 	-- A label for the toggle. To omit, set it to an empty string.
 	label: string,
-	size: ToggleSize?,
+	size: InputSize?,
 } & Types.CommonProps
 
 local defaultProps = {
-	size = ToggleSize.Large,
+	size = InputSize.Medium,
 }
 
 local function Toggle(toggleProps: Props, ref: React.Ref<GuiObject>?)
@@ -238,7 +239,7 @@ local function Toggle(toggleProps: Props, ref: React.Ref<GuiObject>?)
 			InputLabel = React.createElement(InputLabel, {
 				Text = props.label,
 				textStyle = isHovering:map(getLabelStyle),
-				size = variantProps.label.size,
+				size = getInputTextSize(props.size, true),
 				LayoutOrder = 0,
 			}),
 			Toggle = toggle,

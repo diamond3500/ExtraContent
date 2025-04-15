@@ -1,7 +1,7 @@
 local CorePackages = game:GetService("CorePackages")
 local UserInputService = game:GetService("UserInputService")
-local LogService =  game:GetService("LogService")
-local Roact = require(CorePackages.Roact)
+local LogService = game:GetService("LogService")
+local Roact = require(CorePackages.Packages.Roact)
 
 local DataConsumer = require(script.Parent.Parent.DataConsumer)
 
@@ -40,14 +40,12 @@ function DevConsoleCommandLine:didMount()
 					cmdIndex = newIndex
 
 					rbx.Text = cmdHistory:reverseAt(newIndex) or ""
-
 				elseif input.KeyCode == Enum.KeyCode.Down then
 					local newIndex = cmdIndex - 1
 					newIndex = math.max(0, newIndex)
 					cmdIndex = newIndex
 
 					rbx.Text = cmdHistory:reverseAt(newIndex) or ""
-
 				elseif input.KeyCode == Enum.KeyCode.Return then
 					if #rbx.Text:gsub("%s+", "") > 0 then
 						local prevText = cmdHistory:reverseAt(1)
@@ -135,8 +133,7 @@ function DevConsoleCommandLine:render()
 
 			[Roact.Ref] = self.textbox,
 			TextBoxFocusLost = self.onFocusLost,
-		})
-
+		}),
 	})
 end
 

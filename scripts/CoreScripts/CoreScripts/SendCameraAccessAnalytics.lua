@@ -3,7 +3,7 @@ local VideoCaptureService = game:GetService("VideoCaptureService")
 local AnalyticsService = game:GetService("RbxAnalyticsService")
 local CoreGui = game:GetService("CoreGui")
 
-local Cryo = require(CorePackages.Cryo)
+local Cryo = require(CorePackages.Packages.Cryo)
 local getCamMicPermissions = require(CoreGui.RobloxGui.Modules.Settings.getCamMicPermissions)
 local PermissionsProtocol = require(CorePackages.Workspace.Packages.PermissionsProtocol).PermissionsProtocol.default
 local cameraDevicesHelper = require(CoreGui.RobloxGui.Modules.Settings.cameraDevicesHelper)

@@ -23,9 +23,8 @@ local FIRST_PERSON_DISTANCE_MIN = 0.5
 local CommonUtils = script.Parent.Parent:WaitForChild("CommonUtils")
 local FlagUtil = require(CommonUtils:WaitForChild("FlagUtil"))
 
-local FFlagUserFixCameraOffsetJitter = FlagUtil.getUserFlag("UserFixCameraOffsetJitter2")
 local FFlagUserCameraInputDt = FlagUtil.getUserFlag("UserCameraInputDt")
-
+local FFlagUserFixCameraFPError = FlagUtil.getUserFlag("UserFixCameraFPError")
 
 --[[ Services ]]--
 local PlayersService = game:GetService("Players")
@@ -134,11 +133,9 @@ function ClassicCamera:Update(dt)
 			local newLookCFrame: CFrame = self:CalculateNewLookCFrameFromArg(overrideCameraLookVector, rotateInput)
 
 			local offset: Vector3 = self:GetMouseLockOffset()
-			if FFlagUserFixCameraOffsetJitter then
-				-- in mouse lock mode, the offset is applied to the camera instead of to the subject position
-				if humanoid then
-					offset += humanoid.CameraOffset
-				end
+			-- in mouse lock mode, the offset is applied to the camera instead of to the subject position
+			if humanoid then
+				offset += humanoid.CameraOffset
 			end
 			local cameraRelativeOffset: Vector3 = offset.X * newLookCFrame.RightVector + offset.Y * newLookCFrame.UpVector + offset.Z * newLookCFrame.LookVector
 
@@ -202,12 +199,22 @@ function ClassicCamera:Update(dt)
 
 			local cameraFocusP = newCameraFocus.p
 			local newLookVector = self:CalculateNewLookVectorFromArg(overrideCameraLookVector, rotateInput)
-			newCameraCFrame = CFrame.new(cameraFocusP - (zoom * newLookVector), cameraFocusP)
+			
+			if FFlagUserFixCameraFPError then
+				newCameraCFrame = CFrame.lookAlong(cameraFocusP - (zoom * newLookVector), newLookVector)
+			else
+				newCameraCFrame = CFrame.new(cameraFocusP - (zoom * newLookVector), cameraFocusP)
+			end
 		else -- is FollowCamera
 			local newLookVector = self:CalculateNewLookVectorFromArg(overrideCameraLookVector, rotateInput)
 
 			newCameraFocus = CFrame.new(subjectPosition)
-			newCameraCFrame = CFrame.new(newCameraFocus.p - (zoom * newLookVector), newCameraFocus.p) + Vector3.new(0, cameraHeight, 0)
+
+			if FFlagUserFixCameraFPError then
+				newCameraCFrame = CFrame.lookAlong(newCameraFocus.p - (zoom * newLookVector), newLookVector)
+			else
+				newCameraCFrame = CFrame.new(newCameraFocus.p - (zoom * newLookVector), newCameraFocus.p) + Vector3.new(0, cameraHeight, 0)
+			end
 		end
 
 		local toggleOffset = self:GetCameraToggleOffset(timeDelta)

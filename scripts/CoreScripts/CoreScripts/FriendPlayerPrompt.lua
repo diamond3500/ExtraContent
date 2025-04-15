@@ -25,7 +25,7 @@ local PromptCreator = require(CoreGuiModules.PromptCreator)
 local SocialUtil = require(CoreGuiModules.SocialUtil)
 local FriendingUtility = require(CoreGuiModules.FriendingUtility)
 
-local RobloxTranslator = require(CoreGuiModules.RobloxTranslator)
+local RobloxTranslator = require(CorePackages.Workspace.Packages.RobloxTranslator)
 
 local LegacyThumbnailUrls = require(CoreGuiModules.Common.LegacyThumbnailUrls)
 local FFlagRemoveHardCodedFriendLimitPrompt = require(CoreGuiModules.Flags.FFlagRemoveHardCodedFriendLimitPrompt)

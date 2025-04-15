@@ -1,10 +1,7 @@
 local Foundation = script:FindFirstAncestor("Foundation")
 
-local ToggleSize = require(Foundation.Enums.ToggleSize)
-type ToggleSize = ToggleSize.ToggleSize
-
-local InputLabelSize = require(Foundation.Enums.InputLabelSize)
-type InputLabelSize = InputLabelSize.InputLabelSize
+local InputSize = require(Foundation.Enums.InputSize)
+type InputSize = InputSize.InputSize
 
 local composeStyleVariant = require(Foundation.Utility.composeStyleVariant)
 type VariantProps = composeStyleVariant.VariantProps
@@ -30,9 +27,6 @@ type ToggleVariantProps = {
 		size: UDim2,
 		padding: number,
 	},
-	label: {
-		size: InputLabelSize,
-	},
 }
 
 local function computeProps(props: {
@@ -40,7 +34,6 @@ local function computeProps(props: {
 	knobSize: number,
 	knobShadowPadding: number,
 	cornerRadius: number,
-	labelSize: InputLabelSize,
 })
 	local padding = (props.size.height - props.knobSize) / 2
 	local shadowSize = props.knobSize + 2 * props.knobShadowPadding
@@ -58,9 +51,6 @@ local function computeProps(props: {
 			size = UDim2.fromOffset(shadowSize, shadowSize),
 			padding = props.knobShadowPadding,
 		},
-		label = {
-			size = props.labelSize,
-		},
 	}
 end
 
@@ -73,27 +63,37 @@ local function variantsFactory(tokens: Tokens)
 			tag = "anchor-center-left",
 		},
 	}
-	local sizes: { [ToggleSize]: VariantProps } = {
-		[ToggleSize.Medium] = computeProps({
+	local sizes: { [InputSize]: VariantProps } = {
+		[InputSize.XSmall] = computeProps({
+			size = { width = tokens.Size.Size_700, height = tokens.Size.Size_300 },
+			knobSize = tokens.Size.Size_200,
+			cornerRadius = tokens.Radius.Large,
+			knobShadowPadding = tokens.Padding.XXSmall,
+		}),
+		[InputSize.Small] = computeProps({
+			size = { width = tokens.Size.Size_800, height = tokens.Size.Size_400 },
+			knobSize = tokens.Size.Size_300,
+			cornerRadius = tokens.Radius.Large,
+			knobShadowPadding = tokens.Padding.XSmall,
+		}),
+		[InputSize.Medium] = computeProps({
 			size = { width = tokens.Size.Size_1000, height = tokens.Size.Size_500 },
 			knobSize = tokens.Size.Size_400,
 			cornerRadius = tokens.Radius.Large,
 			knobShadowPadding = tokens.Padding.XSmall,
-			labelSize = InputLabelSize.Medium,
 		}),
-		[ToggleSize.Large] = computeProps({
+		[InputSize.Large] = computeProps({
 			size = { width = tokens.Size.Size_1600, height = tokens.Size.Size_900 },
 			knobSize = tokens.Size.Size_700,
 			cornerRadius = tokens.Radius.Circle,
 			knobShadowPadding = tokens.Padding.Small,
-			labelSize = InputLabelSize.Large,
 		}),
 	}
 
 	return { common = common, sizes = sizes }
 end
 
-return function(tokens: Tokens, size: ToggleSize): ToggleVariantProps
+return function(tokens: Tokens, size: InputSize): ToggleVariantProps
 	local props = VariantsContext.useVariants("Toggle", variantsFactory, tokens)
 	return composeStyleVariant(props.common, props.sizes[size])
 end

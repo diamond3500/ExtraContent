@@ -7,10 +7,11 @@
 --]]
 
 local CoreGuiService = game:GetService('CoreGui')
+local CorePackages = game:GetService("CorePackages")
 
 local StatsUtils = require(CoreGuiService.RobloxGui.Modules.Stats.StatsUtils)
 
-local RobloxTranslator = require(CoreGuiService.RobloxGui.Modules.RobloxTranslator)
+local RobloxTranslator = require(CorePackages.Workspace.Packages.RobloxTranslator)
 
 function LocalizedGetKey(key)
   local rtv = key

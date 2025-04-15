@@ -4,11 +4,11 @@ local CoreGui = game:GetService("CoreGui")
 local Players = game:GetService("Players")
 local GuiService = game:GetService("GuiService")
 
-local Roact = require(CorePackages.Roact)
-local RoactRodux = require(CorePackages.RoactRodux)
+local Roact = require(CorePackages.Packages.Roact)
+local RoactRodux = require(CorePackages.Packages.RoactRodux)
 local t = require(CorePackages.Packages.t)
 local Otter = require(CorePackages.Packages.Otter)
-local UIBlox = require(CorePackages.UIBlox)
+local UIBlox = require(CorePackages.Packages.UIBlox)
 
 local Components = script.Parent.Parent
 local Connection = Components.Connection
@@ -22,7 +22,7 @@ local FriendDropDownButton = require(script.Parent.FriendDropDownButton)
 local LocalPlayer = Players.LocalPlayer
 
 local RobloxGui = CoreGui:WaitForChild("RobloxGui")
-local RobloxTranslator = require(RobloxGui.Modules.RobloxTranslator)
+local RobloxTranslator = require(CorePackages.Workspace.Packages.RobloxTranslator)
 
 local Images = UIBlox.App.ImageSet.Images
 
@@ -208,7 +208,8 @@ function PlayerDropDown:render()
 		dropDownHeight = dropDownHeight - layoutValues.DropDownButtonPadding
 
 		local dropDownPosition = self.dropDownPosition
-		dropDownPosition = dropDownPosition + (layoutValues.DropDownHeaderBackgroundSize - layoutValues.DropDownHeaderSizeY)
+		dropDownPosition = dropDownPosition
+			+ (layoutValues.DropDownHeaderBackgroundSize - layoutValues.DropDownHeaderSizeY)
 		if dropDownPosition + dropDownHeight > self.props.maxPositionBoundY then
 			dropDownPosition = dropDownPosition - (dropDownPosition + dropDownHeight - self.props.maxPositionBoundY)
 		elseif dropDownPosition < self.props.minPositionBoundY then
@@ -219,7 +220,12 @@ function PlayerDropDown:render()
 			LayoutOrder = self.props.layoutOrder,
 			AnchorPoint = Vector2.new(1, 0),
 			Position = UDim2.new(0, 0, 0, dropDownPosition),
-			Size = UDim2.new(0, layoutValues.PlayerDropDownSizeX + layoutValues.PlayerDropDownOffset, 0, dropDownHeight),
+			Size = UDim2.new(
+				0,
+				layoutValues.PlayerDropDownSizeX + layoutValues.PlayerDropDownOffset,
+				0,
+				dropDownHeight
+			),
 			BackgroundTransparency = 1,
 			ClipsDescendants = true,
 		}, {
@@ -229,7 +235,7 @@ function PlayerDropDown:render()
 				ClipsDescendants = true,
 
 				[Roact.Ref] = self.innerFrameRef,
-			}, dropDownButtons)
+			}, dropDownButtons),
 		})
 	end)
 end
@@ -269,9 +275,9 @@ end
 
 local function mapStateToProps(state)
 	local selectedPlayer = state.playerDropDown.selectedPlayer
-	local isVisible = if GetFFlagFixDropDownVisibility() 
-		then state.playerDropDown.isVisible and state.displayOptions.isVisible 
-		else state.playerDropDown.isVisible 
+	local isVisible = if GetFFlagFixDropDownVisibility()
+		then state.playerDropDown.isVisible and state.displayOptions.isVisible
+		else state.playerDropDown.isVisible
 
 	return {
 		selectedPlayer = selectedPlayer,

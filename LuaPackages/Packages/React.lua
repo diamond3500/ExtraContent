@@ -17,6 +17,7 @@ export type ElementType = Package.ElementType
 export type Element<C> = Package.Element<C> 
 export type Key = Package.Key
 export type Ref<ElementType> = Package.Ref<ElementType> 
+export type RefObject<T = any> = Package.RefObject<T > 
 export type Node = Package.Node
 export type Context<T> = Package.Context<T> 
 export type ElementProps<C> = Package.ElementProps<C> 

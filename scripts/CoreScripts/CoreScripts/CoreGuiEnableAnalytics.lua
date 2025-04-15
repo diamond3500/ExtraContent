@@ -13,15 +13,25 @@ local CorePackages = game:GetService("CorePackages")
 -- Modules
 local EventStream = require(CorePackages.Workspace.Packages.Analytics).AnalyticsReporters.EventStream
 
+-- Flags
+local FFlagCoreGuiAnalyticSessionTime = game:DefineFastFlag("CoreGuiAnalyticSessionTime", false)
+
 local CoreGuiEnableAnalytics = {}
 CoreGuiEnableAnalytics.__index = CoreGuiEnableAnalytics
 
 function CoreGuiEnableAnalytics.new()
 	local self = {}
 	self.evenStream = EventStream.new(AnalyticsService)
+	if FFlagCoreGuiAnalyticSessionTime then
+		self.playSessionStart = os.clock()
+	end
 
 	-- sends an analytic event with coregui type and associated enabled value along with other session data
 	self.sendCoreGuiAnalytic = function (coreGuiType:Enum.CoreGuiType, enabled)
+		local playSessionDurationMs = nil
+		if FFlagCoreGuiAnalyticSessionTime then
+			playSessionDurationMs = math.round((os.clock() - self.playSessionStart) * 1000) -- in ms
+		end
 		local eventContext = "core_gui_type"
 		local eventName = "core_gui_type"
 		local payload = {
@@ -29,7 +39,9 @@ function CoreGuiEnableAnalytics.new()
 			universeid = tostring(game.GameId),
 			type = tostring(coreGuiType.Name), 
 			enabled  = tostring(enabled),
-			sessionid = AnalyticsService:GetSessionId()}
+			sessionid = AnalyticsService:GetSessionId(),
+			playSessionDurationMs = tostring(playSessionDurationMs),
+		}
 		self.evenStream:sendEventDeferred(eventContext, eventName, payload)
 	end
 

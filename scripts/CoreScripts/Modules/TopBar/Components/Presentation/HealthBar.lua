@@ -1,10 +1,11 @@
 --!nonstrict
 local CorePackages = game:GetService("CorePackages")
 local CoreGui = game:GetService("CoreGui")
+local StarterGui = game:GetService("StarterGui")
 local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 
-local Roact = require(CorePackages.Roact)
-local RoactRodux = require(CorePackages.RoactRodux)
+local Roact = require(CorePackages.Packages.Roact)
+local RoactRodux = require(CorePackages.Packages.RoactRodux)
 local t = require(CorePackages.Packages.t)
 
 local Components = script.Parent.Parent
@@ -18,17 +19,16 @@ local FFlagEnableChromeBackwardsSignalAPI = require(TopBar.Flags.GetFFlagEnableC
 local SetKeepOutArea = require(TopBar.Actions.SetKeepOutArea)
 local RemoveKeepOutArea = require(TopBar.Actions.RemoveKeepOutArea)
 
-local GetFFlagFixChromeReferences = require(RobloxGui.Modules.Flags.GetFFlagFixChromeReferences)
-local GetFFlagUpdateHealthBar = require(RobloxGui.Modules.Flags.GetFFlagUpdateHealthBar)
+local GetFFlagFixChromeReferences = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagFixChromeReferences
+local FFlagMountCoreGuiHealthBar = require(TopBar.Flags.FFlagMountCoreGuiHealthBar)
 
 local Chrome = TopBar.Parent.Chrome
 local ChromeEnabled = require(Chrome.Enabled)
-local ChromeService = if GetFFlagFixChromeReferences() then 
-	if ChromeEnabled() then require(Chrome.Service) else nil
+local ChromeService = if GetFFlagFixChromeReferences()
+	then if ChromeEnabled() then require(Chrome.Service) else nil
 	else if ChromeEnabled then require(Chrome.Service) else nil
 
-local UseUpdatedHealthBar = GetFFlagUpdateHealthBar() and ChromeEnabled()
-
+local UseUpdatedHealthBar = ChromeEnabled()
 
 local HEALTHBAR_SIZE = UDim2.new(0, 80, 0, 6)
 if UseUpdatedHealthBar then
@@ -50,7 +50,7 @@ HealthBar.validateProps = t.strictInterface({
 	layoutOrder = t.optional(t.integer),
 
 	screenSize = t.Vector2,
-	healthEnabled = t.boolean,
+	healthEnabled = if FFlagMountCoreGuiHealthBar then nil else t.boolean,
 	health = t.number,
 	maxHealth = t.number,
 
@@ -80,7 +80,7 @@ local function getHealthBarColor(healthPercent)
 	end
 
 	-- Shepard's Interpolation
-	local numeratorSum = Vector3.new(0,0,0)
+	local numeratorSum = Vector3.new(0, 0, 0)
 	local denominatorSum = 0
 	for colorSampleValue, samplePoint in pairs(healthColorToPosition) do
 		local distance = healthPercent - samplePoint
@@ -88,7 +88,7 @@ local function getHealthBarColor(healthPercent)
 			-- If we are exactly on an existing sample value then we don't need to interpolate
 			return Color3.new(colorSampleValue.x, colorSampleValue.y, colorSampleValue.z)
 		else
-			local wi = 1 / (distance*distance)
+			local wi = 1 / (distance * distance)
 			numeratorSum = numeratorSum + wi * colorSampleValue
 			denominatorSum = denominatorSum + wi
 		end
@@ -99,42 +99,39 @@ end
 
 function HealthBar:init()
 	self.rootRef = Roact.createRef()
-	if ChromeService then
+	if FFlagMountCoreGuiHealthBar then
+		local function getHealthEnabled()
+			return StarterGui:GetCoreGuiEnabled(Enum.CoreGuiType.Health)
+		end
+
+		local coreGuiChangedSignalConn = StarterGui.CoreGuiChangedSignal:Connect(
+			function(coreGuiType: Enum.CoreGuiType, enabled: boolean)
+				if coreGuiType == Enum.CoreGuiType.Health or coreGuiType == Enum.CoreGuiType.All then
+					self:setState({
+						mount = enabled,
+					})
+				end
+			end
+		)
 		self:setState({
-			chromeMenuOpen = ChromeService:status():get() == ChromeService.MenuStatus.Open
+			mount = getHealthEnabled(),
+			coreGuiChangedSignalConn = coreGuiChangedSignalConn,
 		})
 	end
 end
 
-function HealthBar:didMount()
-	if not UseUpdatedHealthBar then
-		if ChromeService then
-			self.chromeMenuStatusConn = ChromeService:status():connect(function()
-				self:setState({
-					chromeMenuOpen = ChromeService:status():get() == ChromeService.MenuStatus.Open
-				})
-			end)
-		end
-	end
-end
-
 function HealthBar:onUnmount()
-	if not UseUpdatedHealthBar then
-		if self.chromeMenuStatusConn then
-			self.chromeMenuStatusConn:Disconnect()
-			self.chromeMenuStatusConn = nil
-		end
+	if FFlagMountCoreGuiHealthBar then
+		self.state.coreGuiChangedSignalConn:Disconnect()
 	end
 end
 
-function HealthBar:render()
-	local healthVisible = self.props.healthEnabled
-		and self.props.health < self.props.maxHealth
-
-	if UseUpdatedHealthBar then
-		healthVisible = healthVisible
+function HealthBar:renderHealth()
+	local healthVisible = nil
+	if FFlagMountCoreGuiHealthBar then
+		healthVisible = self.props.health < self.props.maxHealth
 	else
-		healthVisible = healthVisible and not self.state.chromeMenuOpen
+		healthVisible = self.props.healthEnabled and self.props.health < self.props.maxHealth
 	end
 
 	local healthPercent = 1
@@ -236,19 +233,34 @@ function HealthBar:render()
 				SliceCenter = sliceCenter,
 				Size = UDim2.fromScale(healthPercent, 1),
 			}),
-		})
+		}),
 	})
 end
 
-local function mapStateToProps(state)
-	return {
-		screenSize = state.displayOptions.screenSize,
-		health = state.health.currentHealth,
-		maxHealth = state.health.maxHealth,
-		healthEnabled = state.coreGuiEnabled[Enum.CoreGuiType.Health],
-	}
+function HealthBar:render()
+	if FFlagMountCoreGuiHealthBar then
+		return if self.state.mount then self:renderHealth() else nil
+	else
+		return self:renderHealth()
+	end
 end
 
+local function mapStateToProps(state)
+	if FFlagMountCoreGuiHealthBar then
+		return {
+			screenSize = state.displayOptions.screenSize,
+			health = state.health.currentHealth,
+			maxHealth = state.health.maxHealth,
+		}
+	else
+		return {
+			screenSize = state.displayOptions.screenSize,
+			health = state.health.currentHealth,
+			maxHealth = state.health.maxHealth,
+			healthEnabled = state.coreGuiEnabled[Enum.CoreGuiType.Health],
+		}
+	end
+end
 
 local function mapDispatchToProps(dispatch)
 	return {

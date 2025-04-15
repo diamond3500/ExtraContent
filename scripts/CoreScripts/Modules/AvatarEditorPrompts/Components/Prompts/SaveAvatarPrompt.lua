@@ -2,16 +2,16 @@
 local CorePackages = game:GetService("CorePackages")
 local CoreGui = game:GetService("CoreGui")
 
-local Roact = require(CorePackages.Roact)
-local RoactRodux = require(CorePackages.RoactRodux)
+local Roact = require(CorePackages.Packages.Roact)
+local RoactRodux = require(CorePackages.Packages.RoactRodux)
 local t = require(CorePackages.Packages.t)
-local UIBlox = require(CorePackages.UIBlox)
+local UIBlox = require(CorePackages.Packages.UIBlox)
 
 local InteractiveAlert = UIBlox.App.Dialog.Alert.InteractiveAlert
 local ButtonType = UIBlox.App.Button.Enum.ButtonType
 
 local RobloxGui = CoreGui:WaitForChild("RobloxGui")
-local RobloxTranslator = require(RobloxGui.Modules.RobloxTranslator)
+local RobloxTranslator = require(CorePackages.Workspace.Packages.RobloxTranslator)
 
 local Components = script.Parent.Parent
 local AvatarEditorPrompts = Components.Parent
@@ -68,7 +68,7 @@ function SaveAvatarPrompt:init()
 		local maxAllowedContentHeight = self.props.screenSize.Y - (SCREEN_SIZE_PADDING * 2) - alertNoContentHeight
 
 		local halfWidth = self.middleContentRef:getValue().AbsoluteSize.X / 2
-		local viewportMaxSize = halfWidth - ( VIEWPORT_SIDE_PADDING * 2) + (VIEWPORT_MAX_TOP_PADDING * 2)
+		local viewportMaxSize = halfWidth - (VIEWPORT_SIDE_PADDING * 2) + (VIEWPORT_MAX_TOP_PADDING * 2)
 
 		if maxAllowedContentHeight > viewportMaxSize then
 			maxAllowedContentHeight = viewportMaxSize

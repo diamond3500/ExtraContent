@@ -3,6 +3,8 @@
 
 local root = script.Parent.Parent
 
+local getEngineFeatureRemoveProxyWrap = require(root.flags.getEngineFeatureRemoveProxyWrap)
+
 local AssetService = game:GetService("AssetService")
 
 local Types = require(root.util.Types)
@@ -114,35 +116,71 @@ local function getTextureContentMap(instance, contentIdToContentMap)
 end
 
 local function getCageMeshContent(instance, allowEditableInstances)
-	local proxyMeshPart = instance:FindFirstChild("WrapProxy")
-	if proxyMeshPart and allowEditableInstances and checkForProxyWrap(proxyMeshPart) then
-		return (proxyMeshPart :: MeshPart).MeshContent
+	if not getEngineFeatureRemoveProxyWrap() then
+		local proxyMeshPart = instance:FindFirstChild("WrapProxy")
+		if proxyMeshPart and allowEditableInstances and checkForProxyWrap(proxyMeshPart) then
+			return (proxyMeshPart :: MeshPart).MeshContent
+		end
 	end
 
 	return (instance :: any).CageMeshContent
 end
 
 local function getMeshContentMap(instance, contentIdToContentMap, allowEditableInstances)
-	if instance:IsA("MeshPart") and not checkForProxyWrap(instance) then
-		addContent(contentIdToContentMap, "MeshId", (instance :: MeshPart).MeshContent, "EditableMesh")
-	elseif instance:IsA("WrapTarget") then
-		addContent(
-			contentIdToContentMap,
-			"CageMeshId",
-			getCageMeshContent(instance, allowEditableInstances),
-			"EditableMesh"
-		)
-	elseif instance:IsA("WrapLayer") then
-		addContent(
-			contentIdToContentMap,
-			"CageMeshId",
-			getCageMeshContent(instance, allowEditableInstances),
-			"EditableMesh"
-		)
-		addContent(contentIdToContentMap, "ReferenceMeshId", (instance :: any).ReferenceMeshContent, "EditableMesh")
-	elseif instance:IsA("SpecialMesh") then
-		-- selene: allow(undefined_variable) | Content global will be added later
-		addContent(contentIdToContentMap, "MeshId", Content.fromUri((instance :: SpecialMesh).MeshId), "EditableMesh")
+	if getEngineFeatureRemoveProxyWrap() then
+		if instance:IsA("MeshPart") then
+			addContent(contentIdToContentMap, "MeshId", (instance :: MeshPart).MeshContent, "EditableMesh")
+		elseif instance:IsA("WrapTarget") then
+			addContent(
+				contentIdToContentMap,
+				"CageMeshId",
+				getCageMeshContent(instance, allowEditableInstances),
+				"EditableMesh"
+			)
+		elseif instance:IsA("WrapLayer") then
+			addContent(
+				contentIdToContentMap,
+				"CageMeshId",
+				getCageMeshContent(instance, allowEditableInstances),
+				"EditableMesh"
+			)
+			addContent(contentIdToContentMap, "ReferenceMeshId", (instance :: any).ReferenceMeshContent, "EditableMesh")
+		elseif instance:IsA("SpecialMesh") then
+			-- selene: allow(undefined_variable) | Content global will be added later
+			addContent(
+				contentIdToContentMap,
+				"MeshId",
+				Content.fromUri((instance :: SpecialMesh).MeshId),
+				"EditableMesh"
+			)
+		end
+	else
+		if instance:IsA("MeshPart") and not checkForProxyWrap(instance) then
+			addContent(contentIdToContentMap, "MeshId", (instance :: MeshPart).MeshContent, "EditableMesh")
+		elseif instance:IsA("WrapTarget") then
+			addContent(
+				contentIdToContentMap,
+				"CageMeshId",
+				getCageMeshContent(instance, allowEditableInstances),
+				"EditableMesh"
+			)
+		elseif instance:IsA("WrapLayer") then
+			addContent(
+				contentIdToContentMap,
+				"CageMeshId",
+				getCageMeshContent(instance, allowEditableInstances),
+				"EditableMesh"
+			)
+			addContent(contentIdToContentMap, "ReferenceMeshId", (instance :: any).ReferenceMeshContent, "EditableMesh")
+		elseif instance:IsA("SpecialMesh") then
+			-- selene: allow(undefined_variable) | Content global will be added later
+			addContent(
+				contentIdToContentMap,
+				"MeshId",
+				Content.fromUri((instance :: SpecialMesh).MeshId),
+				"EditableMesh"
+			)
+		end
 	end
 end
 

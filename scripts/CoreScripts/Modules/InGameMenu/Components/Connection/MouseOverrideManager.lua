@@ -2,10 +2,10 @@ local CorePackages = game:GetService("CorePackages")
 local UserInputService = game:GetService("UserInputService")
 local VRService = game:GetService("VRService")
 
-local Symbol = require(CorePackages.Symbol)
+local Symbol = require(CorePackages.Workspace.Packages.AppCommonLib).Symbol
 local MouseIconOverrideService = require(CorePackages.InGameServices.MouseIconOverrideService)
 
-local InGameMenuDependencies = require(CorePackages.InGameMenuDependencies)
+local InGameMenuDependencies = require(CorePackages.Packages.InGameMenuDependencies)
 local Roact = InGameMenuDependencies.Roact
 local RoactRodux = InGameMenuDependencies.RoactRodux
 local t = InGameMenuDependencies.t
@@ -35,7 +35,8 @@ function MouseOverrideManager:render()
 		callback = function()
 			-- Another menu that overrides the mouse icon behaviour has closed.
 			-- But we are still open so we need to keep re-override the icon behaviour.
-			if (self.props.menuOpen or isExitModalOpen)
+			if
+				(self.props.menuOpen or isExitModalOpen)
 				and UserInputService.OverrideMouseIconBehavior == Enum.OverrideMouseIconBehavior.None
 			then
 				self:updateMouseIconOverride()

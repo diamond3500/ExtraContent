@@ -6,7 +6,8 @@ local ChromeService = require(Chrome.Service)
 local React = require(CorePackages.Packages.React)
 local Songbird = require(CorePackages.Workspace.Packages.Songbird)
 
-local GetFFlagChromePeekArchitecture = require(Chrome.Parent.Flags.GetFFlagChromePeekArchitecture)
+local GetFFlagChromePeekArchitecture =
+	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagChromePeekArchitecture
 
 local function onDismiss()
 	ChromeService:dismissCurrentPeek()

@@ -6,7 +6,7 @@ local Root = script.Parent.Parent.Parent
 local GuiService = game:GetService("GuiService")
 local CorePackages = game:GetService("CorePackages")
 
-local PurchasePromptDeps = require(CorePackages.PurchasePromptDeps)
+local PurchasePromptDeps = require(CorePackages.Workspace.Packages.PurchasePromptDeps)
 local Roact = PurchasePromptDeps.Roact
 
 local retryAfterUpsell = require(Root.Thunks.retryAfterUpsell)
@@ -36,9 +36,6 @@ local function mapDispatchToProps(dispatch)
 	}
 end
 
-BrowserPurchaseFinishedConnector = connectToStore(
-	nil,
-	mapDispatchToProps
-)(BrowserPurchaseFinishedConnector)
+BrowserPurchaseFinishedConnector = connectToStore(nil, mapDispatchToProps)(BrowserPurchaseFinishedConnector)
 
 return BrowserPurchaseFinishedConnector

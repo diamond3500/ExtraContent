@@ -3,8 +3,8 @@ local CorePackages = game:GetService("CorePackages")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 
-local Cryo = require(CorePackages.Cryo)
-local Roact = require(CorePackages.Roact)
+local Cryo = require(CorePackages.Packages.Cryo)
+local Roact = require(CorePackages.Packages.Roact)
 local t = require(CorePackages.Packages.t)
 
 local PAN_EXIT_DELAY = 0.1

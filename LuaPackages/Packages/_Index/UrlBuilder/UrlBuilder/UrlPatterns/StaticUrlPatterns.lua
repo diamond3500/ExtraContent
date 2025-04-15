@@ -1,5 +1,3 @@
-local FFlagUseNewAboutUrls = game:DefineFastFlag("UseNewAboutUrls", false)
-
 return function(UrlBuilder)
 	local function isQQ()
 		return string.find(UrlBuilder.fromString("corp:")(), "qq.com")
@@ -11,14 +9,17 @@ return function(UrlBuilder)
 		trades = UrlBuilder.fromString("www:trades"),
 		profile = UrlBuilder.fromString("www:users/profile"),
 		friends = UrlBuilder.fromString("www:users/friends"),
-		groups = UrlBuilder.fromString("www:my/groups"),
+		groups = UrlBuilder.fromString("www:my/communities"),
 		inventory = UrlBuilder.fromString("www:users/inventory"),
 		messages = UrlBuilder.fromString("www:my/messages"),
 		feed = UrlBuilder.fromString("www:feeds/inapp"),
 		develop = UrlBuilder.fromString("www:develop"),
 		creatorHub = UrlBuilder.fromString("create:"),
 		blog = UrlBuilder.fromString("blog:"),
-		giftCards = UrlBuilder.fromString("www:giftcards"),
+		giftCards = function(source)
+			local sourceCode = source or ""
+			return UrlBuilder.fromString("www:giftcards?ref={source}")({ source = sourceCode })
+		end,
 		amazonStore = UrlBuilder.fromString("https://www.amazon.com/roblox"),
 		help = UrlBuilder.fromString(isQQ() and "corp:faq" or "www:help"),
 		appealsPortal = {
@@ -34,28 +35,22 @@ return function(UrlBuilder)
 			sendVerificationEmail = UrlBuilder.fromString("accountSettings:v1/email/verify"),
 		},
 		about = {
-			us = if FFlagUseNewAboutUrls
-				then function(locale)
+			us = function(locale)
+				local localeCode = locale or ""
+				return UrlBuilder.fromString("www:info/about-us?locale={localeCode}")({ localeCode = localeCode })
+			end,
+			careers = function(locale)
+				if isQQ() then
+					return UrlBuilder.fromString("corp:careers.html")
+				else
 					local localeCode = locale or ""
-					return UrlBuilder.fromString("www:info/about-us?locale={localeCode}")({ localeCode = localeCode })
+					return UrlBuilder.fromString("www:info/jobs?locale={localeCode}")({ localeCode = localeCode })
 				end
-				else UrlBuilder.fromString("corp:"),
-			careers = if FFlagUseNewAboutUrls
-				then function(locale)
-					if isQQ() then
-						return UrlBuilder.fromString("corp:careers.html")
-					else
-						local localeCode = locale or ""
-						return UrlBuilder.fromString("www:info/jobs?locale={localeCode}")({ localeCode = localeCode })
-					end
-				end
-				else UrlBuilder.fromString(isQQ() and "corp:careers.html" or "corp:careers"),
-			parents = if FFlagUseNewAboutUrls
-				then function(locale)
-					local localeCode = locale or ""
-					return UrlBuilder.fromString("www:info/parents?locale={localeCode}")({ localeCode = localeCode })
-				end
-				else UrlBuilder.fromString("corp:parents"),
+			end,
+			parents = function(locale)
+				local localeCode = locale or ""
+				return UrlBuilder.fromString("www:info/parents?locale={localeCode}")({ localeCode = localeCode })
+			end,
 			terms = function(params)
 				if isQQ() and params.useGameQQUrls then
 					return UrlBuilder.fromString("https://game.qq.com/contract.shtml")()
@@ -96,6 +91,6 @@ return function(UrlBuilder)
 			clearUnread = UrlBuilder.fromString("notifications:stream-notifications/clear-unread"),
 			unreadCount = UrlBuilder.fromString("notifications:stream-notifications/unread-count"),
 		},
-		securityAlert = UrlBuilder.fromString("www:security-feedback-v2?payload={payload}&username={username}"),
+		securityAlert = UrlBuilder.fromString("www:security-feedback?payload={payload}&username={username}"),
 	}
 end

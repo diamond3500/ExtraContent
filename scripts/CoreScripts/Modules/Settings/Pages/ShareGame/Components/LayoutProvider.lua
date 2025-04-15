@@ -1,16 +1,15 @@
 local CorePackages = game:GetService("CorePackages")
-local AppTempCommon = CorePackages.AppTempCommon
 
 local Modules = game:GetService("CoreGui").RobloxGui.Modules
 local UserInputService = game:GetService("UserInputService")
 
-local Roact = require(CorePackages.Roact)
-local RoactRodux = require(CorePackages.RoactRodux)
+local Roact = require(CorePackages.Packages.Roact)
+local RoactRodux = require(CorePackages.Packages.RoactRodux)
 
 local ShareGame = Modules.Settings.Pages.ShareGame
 local Constants = require(ShareGame.Constants)
 
-local SetDeviceOrientation = require(AppTempCommon.LuaApp.Actions.SetDeviceOrientation)
+local SetDeviceOrientation = require(CorePackages.Workspace.Packages.DeviceOrientationRodux).Actions.SetDeviceOrientation
 local SetIsSmallTouchScreen = require(ShareGame.Actions.SetIsSmallTouchScreen)
 local SetDeviceLayout = require(ShareGame.Actions.SetDeviceLayout)
 
@@ -62,8 +61,8 @@ function LayoutProvider:setObservedCamera(camera)
 end
 
 function LayoutProvider:checkDeviceOrientation(viewportSize)
-	local deviceOrientation = viewportSize.X > viewportSize.Y and
-		Constants.DeviceOrientation.LANDSCAPE or Constants.DeviceOrientation.PORTRAIT
+	local deviceOrientation = viewportSize.X > viewportSize.Y and Constants.DeviceOrientation.LANDSCAPE
+		or Constants.DeviceOrientation.PORTRAIT
 
 	if self._deviceOrientation ~= deviceOrientation then
 		self._deviceOrientation = deviceOrientation
@@ -72,8 +71,8 @@ function LayoutProvider:checkDeviceOrientation(viewportSize)
 end
 
 function LayoutProvider:checkDeviceIsSmallTouchScreen(viewportSize)
-	local isSmallTouchScreen = UserInputService.TouchEnabled and
-		(viewportSize.X < SMALL_DEVICE_WIDTH or viewportSize.Y < SMALL_DEVICE_HEIGHT)
+	local isSmallTouchScreen = UserInputService.TouchEnabled
+		and (viewportSize.X < SMALL_DEVICE_WIDTH or viewportSize.Y < SMALL_DEVICE_HEIGHT)
 
 	if self._isSmallTouchScreen ~= isSmallTouchScreen then
 		self._isSmallTouchScreen = isSmallTouchScreen

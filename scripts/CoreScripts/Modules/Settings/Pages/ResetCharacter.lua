@@ -23,10 +23,16 @@ local utility = require(RobloxGui.Modules.Settings.Utility)
 local Theme = require(RobloxGui.Modules.Settings.Theme)
 local Create = require(CorePackages.Workspace.Packages.AppCommonLib).Create
 
+local ChromeEnabled = require(RobloxGui.Modules.Chrome.Enabled)()
+local ChromeService = if ChromeEnabled then require(RobloxGui.Modules.Chrome.Service) else nil
+local ChromeConstants = if ChromeEnabled then require(RobloxGui.Modules.Chrome.ChromeShared.Unibar.Constants) else nil
+
 ------------ Variables -------------------
 local PageInstance = nil
 RobloxGui:WaitForChild("Modules"):WaitForChild("TenFootInterface")
 local isTenFootInterface = require(RobloxGui.Modules.TenFootInterface):IsEnabled()
+
+local FFlagEnableChromeShortcutBar = require(CorePackages.Workspace.Packages.SharedFlags).FFlagEnableChromeShortcutBar
 
 local Constants = require(RobloxGui.Modules:WaitForChild("InGameMenu"):WaitForChild("Resources"):WaitForChild("Constants"))
 
@@ -138,6 +144,10 @@ local function Initialize()
 		end
 	end
 
+	if FFlagEnableChromeShortcutBar then
+		this.ResetFunction = onResetFunction
+	end
+
 	this.ResetCharacterButton = utility:MakeStyledButton("ResetCharacter", "Reset", nil, onResetFunction)
 	this.ResetCharacterButton.NextSelectionRight = nil
 	this.ResetCharacterButton.Parent = resetButtonContainer
@@ -160,7 +170,13 @@ local isOpen = false
 PageInstance.Displayed.Event:connect(function()
 	isOpen = true
 	GuiService.SelectedCoreObject = PageInstance.ResetCharacterButton
-	ContextActionService:BindCoreAction(RESET_CHARACTER_GAME_ACTION, PageInstance.DontResetCharFromHotkey, false, Enum.KeyCode.ButtonB)
+	if FFlagEnableChromeShortcutBar then 
+		if ChromeEnabled then 
+			ChromeService:setShortcutBar(ChromeConstants.TILTMENU_DIALOG_SHORTCUTBAR_ID)
+		end
+	else
+		ContextActionService:BindCoreAction(RESET_CHARACTER_GAME_ACTION, PageInstance.DontResetCharFromHotkey, false, Enum.KeyCode.ButtonB)
+	end
 end)
 
 PageInstance.Hidden.Event:connect(function()

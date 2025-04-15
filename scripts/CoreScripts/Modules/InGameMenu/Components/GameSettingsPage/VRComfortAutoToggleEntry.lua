@@ -1,7 +1,7 @@
 local CorePackages = game:GetService("CorePackages")
 local UserGameSettings = UserSettings():GetService("UserGameSettings")
 
-local InGameMenuDependencies = require(CorePackages.InGameMenuDependencies)
+local InGameMenuDependencies = require(CorePackages.Packages.InGameMenuDependencies)
 local Roact = InGameMenuDependencies.Roact
 local t = InGameMenuDependencies.t
 
@@ -53,7 +53,7 @@ function VRComfortAutoToggleEntry:init(props)
 	self.onExternalChange = function()
 		local newValue = UserGameSettings[props.derivedValueKey]
 		self:setState({
-			checked = newValue == props.checkedValue
+			checked = newValue == props.checkedValue,
 		})
 	end
 
@@ -64,7 +64,7 @@ function VRComfortAutoToggleEntry:init(props)
 				UserGameSettings[props.customValueKey] = not props.checkedValue
 			else
 				UserGameSettings[props.customValueKey] = props.checkedValue
-			end		
+			end
 			SendAnalytics(Constants.AnalyticsSettingsChangeName, nil, {}, true)
 		end
 	end
@@ -94,7 +94,7 @@ function VRComfortAutoToggleEntry:render()
 				})
 			end,
 		}),
-})
+	})
 end
 
 return VRComfortAutoToggleEntry

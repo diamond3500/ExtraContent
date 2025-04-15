@@ -1,9 +1,9 @@
 --!nonstrict
 local CorePackages = game:GetService("CorePackages")
 
-local Roact = require(CorePackages.Roact)
+local Roact = require(CorePackages.Packages.Roact)
 local t = require(CorePackages.Packages.t)
-local UIBlox = require(CorePackages.UIBlox)
+local UIBlox = require(CorePackages.Packages.UIBlox)
 
 local withStyle = UIBlox.Style.withStyle
 local TextButton = UIBlox.App.Button.TextButton
@@ -22,9 +22,7 @@ local DONE_BUTTON_CORNER_RADIUS = 4
 
 local ReportActionSelection = Roact.PureComponent:extend("ReportActionSelection")
 
-local noOp = function()
-
-end
+local noOp = function() end
 
 ReportActionSelection.defaultProps = {
 	titleText = "Thanks for your report!",

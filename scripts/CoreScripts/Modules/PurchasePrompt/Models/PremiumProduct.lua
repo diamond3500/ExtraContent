@@ -7,7 +7,7 @@
 local Root = script.Parent.Parent
 
 local CorePackages = game:GetService("CorePackages")
-local PurchasePromptDeps = require(CorePackages.PurchasePromptDeps)
+local PurchasePromptDeps = require(CorePackages.Workspace.Packages.PurchasePromptDeps)
 local t = PurchasePromptDeps.t
 
 local strict = require(Root.strict)
@@ -22,9 +22,9 @@ local checkJson = t.interface({
 	price = t.interface({
 		amount = t.number,
 		currency = t.interface({
-			currencySymbol = t.string
-		})
-	})
+			currencySymbol = t.string,
+		}),
+	}),
 })
 
 return function(jsonData)

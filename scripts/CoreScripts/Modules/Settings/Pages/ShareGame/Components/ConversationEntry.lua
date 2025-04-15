@@ -5,7 +5,7 @@ local AnalyticsService = game:GetService("RbxAnalyticsService")
 
 local Modules = game:GetService("CoreGui").RobloxGui.Modules
 
-local Roact = require(CorePackages.Roact)
+local Roact = require(CorePackages.Packages.Roact)
 
 local Theme = require(Modules.Settings.Theme)
 
@@ -126,8 +126,10 @@ function ConversationEntry:render()
 			presence = presence,
 			size = UDim2.new(
 				-- Make details fullwidth and subtract the width of its siblings
-				1, -(THUMBNAIL_SIZE + INVITE_BUTTON_WIDTH + CONTENTS_PADDING * 2),
-				1, 0
+				1,
+				-(THUMBNAIL_SIZE + INVITE_BUTTON_WIDTH + CONTENTS_PADDING * 2),
+				1,
+				0
 			),
 			layoutOrder = 1,
 			zIndex = zIndex,

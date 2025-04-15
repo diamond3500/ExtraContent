@@ -6,6 +6,7 @@ local BadgeSize = require(Foundation.Enums.BadgeSize)
 type BadgeSize = BadgeSize.BadgeSize
 
 local useTokens = require(Foundation.Providers.Style.useTokens)
+local Flags = require(Foundation.Utility.Flags)
 
 local Types = require(Foundation.Components.Types)
 type ColorStyleValue = Types.ColorStyleValue
@@ -16,23 +17,7 @@ type BadgeStyle = {
 	contentStyle: ColorStyleValue,
 }
 
-local function containerPadding(size, hasText, hasIcon): (string, string)
-	local horizontalPadding = ""
-	local verticalPadding = ""
-
-	if hasIcon then
-		verticalPadding = "padding-y-xxsmall"
-		horizontalPadding ..= " padding-left-xxsmall"
-
-		if not hasText then
-			horizontalPadding ..= " padding-right-xxsmall"
-		end
-	end
-
-	return horizontalPadding, verticalPadding
-end
-
-local textStyle = {
+local textStyle: { [BadgeSize]: string } = {
 	[BadgeSize.Small] = "text-caption-small",
 	[BadgeSize.Medium] = "text-label-small",
 }
@@ -60,22 +45,27 @@ return function(
 		},
 	}
 
-	local minSize = {
-		[BadgeSize.Small] = tokens.Typography.CaptionSmall.FontSize,
-		[BadgeSize.Medium] = tokens.Typography.LabelSmall.FontSize,
+	local minSize: { [BadgeSize]: number } = {
+		-- 12 - 4 (padding)
+		[BadgeSize.Small] = tokens.Size.Size_300 - tokens.Padding.XXSmall * 2,
+		-- 24 - 2 (stroke) - 4 (padding)
+		[BadgeSize.Medium] = tokens.Size.Size_600 - tokens.Stroke.Standard * 2 - tokens.Padding.XXSmall * 2,
 	}
 
-	local horizontalPadding, verticalPadding = containerPadding(size, hasText, hasIcon)
-
+	local containerPadding = if hasIcon or hasText then "padding-xxsmall" else ""
 	local textPadding = "padding-x-xsmall"
 	local fontStyle = textStyle[size]
 
 	-- Necessary to ensure that the ... fits inside badge
 	local maxSize = if hasIcon
 		then Vector2.new(
-			tokens.Size.Size_1600
-				- tokens.Semantic.Icon.Size.Small -- TODO(tokens): replace with non-semantic value
-				- tokens.Padding.XXSmall,
+			if Flags.FoundationDisableBadgeTruncation
+				then math.huge
+				else (
+					tokens.Size.Size_1600
+					- tokens.Semantic.Icon.Size.Small -- TODO(tokens): replace with non-semantic value
+					- tokens.Padding.XXSmall
+				),
 			math.huge
 		)
 		else nil
@@ -84,16 +74,20 @@ return function(
 		MaxSize = maxSize,
 	}
 
-	local containerMinSize = if hasText then minSize[size] else tokens.Size.Size_200
+	local containerMinSize = if hasText or hasIcon then minSize[size] else tokens.Size.Size_200
 
 	local containerSizeConstraint = {
 		MinSize = Vector2.new(containerMinSize, containerMinSize),
-		MaxSize = Vector2.new(tokens.Size.Size_1600, math.huge),
+		MaxSize = Vector2.new(
+			if Flags.FoundationDisableBadgeTruncation then math.huge else tokens.Size.Size_1600,
+			math.huge
+		),
 	}
 
-	local containerTags =
-		`auto-xy radius-circle row align-y-center align-x-center stroke-thick {horizontalPadding} {verticalPadding}`
-	local textTags = `auto-xy text-truncate-end {textPadding} {fontStyle}`
+	local containerTags = `auto-xy radius-circle row align-y-center align-x-center stroke-thick {containerPadding}`
+	local textTags = if Flags.FoundationDisableBadgeTruncation
+		then `auto-xy {textPadding} {fontStyle}`
+		else `auto-xy text-truncate-end {textPadding} {fontStyle}`
 
 	return badgeVariants[variant], containerSizeConstraint, textSizeConstraint, containerTags, textTags
 end

@@ -7,7 +7,7 @@ local MarketplaceService = game:GetService("MarketplaceService")
 local Players = game:GetService("Players")
 local CorePackages = game:GetService("CorePackages")
 
-local PurchasePromptDeps = require(CorePackages.PurchasePromptDeps)
+local PurchasePromptDeps = require(CorePackages.Workspace.Packages.PurchasePromptDeps)
 local Roact = PurchasePromptDeps.Roact
 
 local ErrorOccurred = require(Root.Actions.ErrorOccurred)
@@ -118,7 +118,7 @@ end
 MarketplaceServiceEventConnector = connectToStore(nil, function(dispatch)
 	local function onPurchaseRequest(player, assetId, equipIfPurchased, currencyType)
 		if player == Players.LocalPlayer then
-			dispatch(initiatePurchase(assetId, Enum.InfoType.Asset, equipIfPurchased, false, '', ''))
+			dispatch(initiatePurchase(assetId, Enum.InfoType.Asset, equipIfPurchased, false, "", ""))
 		end
 	end
 

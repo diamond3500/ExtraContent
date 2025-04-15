@@ -13,7 +13,7 @@ local localPlayer = Players.LocalPlayer
 local playerScripts = CoreUtility.waitForChildOfClass(localPlayer, "PlayerScripts")
 local DevComputerMovementModeChanged = localPlayer:GetPropertyChangedSignal("DevComputerMovementMode")
 
-local InGameMenuDependencies = require(CorePackages.InGameMenuDependencies)
+local InGameMenuDependencies = require(CorePackages.Packages.InGameMenuDependencies)
 local Roact = InGameMenuDependencies.Roact
 local t = InGameMenuDependencies.t
 
@@ -49,7 +49,7 @@ MovementModeEntry.validateProps = t.strictInterface({
 })
 
 MovementModeEntry.defaultProps = {
-	canOpen = true
+	canOpen = true,
 }
 
 function MovementModeEntry:init()
@@ -126,7 +126,7 @@ function MovementModeEntry:render()
 			AnchorPoint = Vector2.new(0, 0),
 		}),
 		Dropdown = withLocalization({
-			placeholder = disabled and DEV_MOVEMENT_MODE_LOCALIZATION_KEYS[self.state.developerComputerMode] or nil
+			placeholder = disabled and DEV_MOVEMENT_MODE_LOCALIZATION_KEYS[self.state.developerComputerMode] or nil,
 		})(function(localized)
 			return Roact.createElement(DropDownSelection, {
 				Size = UDim2.new(1, 0, 0, 44),

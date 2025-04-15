@@ -8,7 +8,7 @@ local CoreGui = game:GetService("CoreGui")
 
 local Roact = require(CorePackages.Packages.Roact)
 local t = require(CorePackages.Packages.t)
-local UIBlox = require(CorePackages.UIBlox)
+local UIBlox = require(CorePackages.Packages.UIBlox)
 local Cryo = require(CorePackages.Packages.Cryo)
 
 local ImageSetButton = UIBlox.Core.ImageSet.ImageSetButton

@@ -1,7 +1,7 @@
 --[[
 	The base prompt for other prompts like PublishAvatarPrompt or PublishAssetPrompt.
-    Other prompts can pass in body components that will be parented under a frame under
-    the NameTextBox. For example, they can pass in the Viewport, description text box,
+	Other prompts can pass in body components that will be parented under a frame under
+	the NameTextBox. For example, they can pass in the Viewport, description text box,
 	and item description rows.
 ]]
 local CorePackages = game:GetService("CorePackages")
@@ -12,17 +12,21 @@ local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local GuiService = game:GetService("GuiService")
 
-local Roact = require(CorePackages.Roact)
-local RoactRodux = require(CorePackages.RoactRodux)
+local Roact = require(CorePackages.Packages.Roact)
+local RoactRodux = require(CorePackages.Packages.RoactRodux)
 local t = require(CorePackages.Packages.t)
 local RobloxGui = CoreGui:WaitForChild("RobloxGui")
-local RobloxTranslator = require(RobloxGui.Modules.RobloxTranslator)
-local UIBlox = require(CorePackages.UIBlox)
+local RobloxTranslator = require(CorePackages.Workspace.Packages.RobloxTranslator)
+local UIBlox = require(CorePackages.Packages.UIBlox)
 local withStyle = UIBlox.Style.withStyle
 local FullPageModal = UIBlox.App.Dialog.Modal.FullPageModal
 local Overlay = UIBlox.App.Dialog.Overlay
 local ButtonType = UIBlox.App.Button.Enum.ButtonType
 local GamepadUtils = require(CorePackages.Workspace.Packages.AppCommonLib).Utils.GamepadUtils
+local MouseIconOverrideService = require(CorePackages.InGameServices.MouseIconOverrideService)
+local ExternalEventConnection = require(CorePackages.Workspace.Packages.RoactUtils).ExternalEventConnection
+local InputType = require(CorePackages.Workspace.Packages.InputType)
+local getInputGroup = require(CorePackages.Workspace.Packages.InputType).getInputGroup
 
 local Components = script.Parent
 local LabeledTextBox = require(Components.Common.LabeledTextBox)
@@ -35,8 +39,6 @@ local PreviewViewport = require(Components.Common.PreviewViewport)
 local ValidationErrorModal = require(Components.ValidationErrorModal)
 local PurchasePrompt = require(RobloxGui.Modules.PurchasePrompt)
 local Analytics = PurchasePrompt.PublishAssetAnalytics
-
-local FFlagCoreScriptPublishAssetAnalytics = require(RobloxGui.Modules.Flags.FFlagCoreScriptPublishAssetAnalytics)
 
 local NAME_HEIGHT_PIXELS = 30
 local DISCLAIMER_HEIGHT_PIXELS = 50
@@ -59,6 +61,13 @@ local BasePublishPrompt = Roact.PureComponent:extend("BasePublishPrompt")
 local STICK_MAX_SPEED = 1000
 -- full height is more than 1 because the footer covers part of the bottom
 local FULL_HEIGHT = UDim.new(1.5, 0)
+
+local CURSOR_OVERRIDE_KEY = "BasePublishPromptOverrideKey"
+
+local function isGamepadInput(inputType)
+	local inputGroup = getInputGroup(inputType)
+	return inputGroup == InputType.InputTypeConstants.Gamepad
+end
 
 BasePublishPrompt.validateProps = t.strictInterface({
 	screenSize = t.Vector2,
@@ -110,6 +119,7 @@ function BasePublishPrompt:init()
 		-- if showUnsavedDataWarning is false, show the prompt
 		-- if true, we are showing a warning that says data is lost when prompt is closed
 		showUnsavedDataWarning = false,
+		isGamepad = isGamepadInput(UserInputService:GetLastInputType()),
 	})
 	-- TODO: AVBURST-13016 Add back checking name for spaces or special characters after investigating
 	self.closePrompt = function()
@@ -122,9 +132,7 @@ function BasePublishPrompt:init()
 			showUnsavedDataWarning = true,
 		})
 
-		if FFlagCoreScriptPublishAssetAnalytics then
-			Analytics.sendButtonClicked(Analytics.Section.BuyCreationPage, Analytics.Element.X)
-		end
+		Analytics.sendButtonClicked(Analytics.Section.BuyCreationPage, Analytics.Element.X)
 	end
 
 	self.cancelClosePrompt = function()
@@ -183,20 +191,38 @@ function BasePublishPrompt:cleanupGamepad()
 	end
 end
 
+function BasePublishPrompt:overrideMouseIconBehavior()
+	local overrideStatus = if self.state.isGamepad
+		then Enum.OverrideMouseIconBehavior.ForceHide
+		else Enum.OverrideMouseIconBehavior.ForceShow
+
+	MouseIconOverrideService.push(CURSOR_OVERRIDE_KEY, overrideStatus)
+end
+
+function BasePublishPrompt:removeMouseIconBehaviorOverride()
+	MouseIconOverrideService.pop(CURSOR_OVERRIDE_KEY)
+end
+
 function BasePublishPrompt:didMount()
 	self:setUpGamepad()
 
 	-- Prompt should be visible when this component is mounted
 	self.props.SetPromptVisibility(true)
+
+	self:overrideMouseIconBehavior()
 end
 
-function BasePublishPrompt:didUpdate(prevProps)
+function BasePublishPrompt:didUpdate(prevProps, prevState)
 	--[[
 		When the purchase is confirmed via the economy prompt, the promptVisible
 		prop will change to false, so we close the prompt here.
 	]]
 	if prevProps.promptVisible ~= self.props.promptVisible and self.props.promptVisible == false then
 		self.closePrompt()
+	end
+
+	if self.state.isGamepad ~= prevState.isGamepad then
+		self:overrideMouseIconBehavior()
 	end
 end
 
@@ -305,6 +331,15 @@ function BasePublishPrompt:renderAlertLocalized(localized)
 			else localized[SUBMIT_TEXT]
 
 		return Roact.createFragment({
+			LastInputTypeConnection = Roact.createElement(ExternalEventConnection, {
+				event = UserInputService.LastInputTypeChanged :: RBXScriptSignal,
+				callback = function(lastInputType)
+					self:setState({
+						isGamepad = isGamepadInput(lastInputType),
+					})
+				end,
+			}),
+
 			-- Render transparent black frame over the whole screen to de-focus anything in the background.
 			BottomScrim = Roact.createElement("Frame", {
 				Position = overlayPosition,
@@ -319,6 +354,8 @@ function BasePublishPrompt:renderAlertLocalized(localized)
 					Size = UDim2.fromScale(1, 1),
 					BackgroundTransparency = 1,
 					Text = "",
+					-- Prevents mouse from being locked while rendered
+					Modal = true,
 				}),
 			}),
 
@@ -415,6 +452,8 @@ function BasePublishPrompt:render()
 end
 
 function BasePublishPrompt:willUnmount()
+	self:removeMouseIconBehaviorOverride()
+
 	self:cleanupGamepad()
 
 	-- Make sure state reflects that the prompt is no longer visible

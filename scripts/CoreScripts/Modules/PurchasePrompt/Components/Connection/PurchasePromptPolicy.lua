@@ -1,5 +1,5 @@
 local CorePackages = game:GetService("CorePackages")
-local PurchasePromptDeps = require(CorePackages.PurchasePromptDeps)
+local PurchasePromptDeps = require(CorePackages.Workspace.Packages.PurchasePromptDeps)
 local PolicyProvider = PurchasePromptDeps.PolicyProvider
 
 local implementation = PolicyProvider.GetPolicyImplementations.MemStorageService("app-policy")

@@ -2,12 +2,8 @@ local UGCValidationService = game:GetService("UGCValidationService")
 
 local root = script.Parent.Parent
 
-local getEngineFeatureUGCValidateEditableMeshAndImage =
-	require(root.flags.getEngineFeatureUGCValidateEditableMeshAndImage)
-
 local Types = require(root.util.Types)
 local pcallDeferred = require(root.util.pcallDeferred)
-local getFFlagUGCValidationShouldYield = require(root.flags.getFFlagUGCValidationShouldYield)
 local getFIntUGCValidationVertexDensityThreshold = require(root.flags.getFIntUGCValidationVertexDensityThreshold)
 
 local Analytics = require(root.Analytics)
@@ -20,16 +16,9 @@ local function validateMaxCubeDensity(
 	local startTime = tick()
 	local isServer = validationContext.isServer
 
-	local success, result
-	if getEngineFeatureUGCValidateEditableMeshAndImage() and getFFlagUGCValidationShouldYield() then
-		success, result = pcallDeferred(function()
-			return UGCValidationService:GetEditableMeshMaxNearbyVerticesCollisions(meshInfo.editableMesh, meshScale)
-		end, validationContext)
-	else
-		success, result = pcall(function()
-			return UGCValidationService:GetMaxNearbyVerticesCollisions(meshInfo.contentId, meshScale)
-		end)
-	end
+	local success, result = pcallDeferred(function()
+		return UGCValidationService:GetEditableMeshMaxNearbyVerticesCollisions(meshInfo.editableMesh, meshScale)
+	end, validationContext)
 
 	if not success then
 		if nil ~= isServer and isServer then
@@ -44,7 +33,7 @@ local function validateMaxCubeDensity(
 			)
 		end
 
-		Analytics.reportFailure(Analytics.ErrorType.validateVertexDensity_FailedToExecute)
+		Analytics.reportFailure(Analytics.ErrorType.validateVertexDensity_FailedToExecute, nil, validationContext)
 		return false,
 			{
 				string.format(
@@ -55,7 +44,7 @@ local function validateMaxCubeDensity(
 	end
 
 	if result > getFIntUGCValidationVertexDensityThreshold() then
-		Analytics.reportFailure(Analytics.ErrorType.validateVertexDensity_MaxDensityExceeded)
+		Analytics.reportFailure(Analytics.ErrorType.validateVertexDensity_MaxDensityExceeded, nil, validationContext)
 		return false,
 			{
 				"The maximum vertex density has been exceeded. Reduce the number of vertices that are very close to each other.",

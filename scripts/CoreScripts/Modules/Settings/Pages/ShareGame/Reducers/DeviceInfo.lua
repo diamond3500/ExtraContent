@@ -1,6 +1,5 @@
 --!nonstrict
 local CorePackages = game:GetService("CorePackages")
-local AppTempCommon = CorePackages.AppTempCommon
 
 local Modules = game:GetService("CoreGui").RobloxGui.Modules
 local ShareGame = Modules.Settings.Pages.ShareGame
@@ -9,7 +8,7 @@ local Immutable = require(CorePackages.Workspace.Packages.AppCommonLib).Immutabl
 local Constants = require(ShareGame.Constants)
 
 local SetDeviceLayout = require(ShareGame.Actions.SetDeviceLayout)
-local SetDeviceOrientation = require(AppTempCommon.LuaApp.Actions.SetDeviceOrientation)
+local SetDeviceOrientation = require(CorePackages.Workspace.Packages.DeviceOrientationRodux).Actions.SetDeviceOrientation
 local SetIsSmallTouchScreen = require(ShareGame.Actions.SetIsSmallTouchScreen)
 
 return function(state, action)

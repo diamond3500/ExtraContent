@@ -11,7 +11,7 @@ local loggingProtocol = require(CorePackages.Workspace.Packages.LoggingProtocol)
 
 local isNewInGameMenuEnabled = require(RobloxGui.Modules.isNewInGameMenuEnabled)
 local SendAnalytics = require(InGameMenu.Utility.SendAnalytics)
-local Constants = require(script.Parent.Constants)
+local Constants = require(CorePackages.Workspace.Packages.CoreScriptsCommon).Constants
 local ConstantsV1 = require(InGameMenu.Resources.Constants)
 
 local FFlagEnableInGameMenuDurationLogger = require(script.Parent.Flags.GetFFlagEnableInGameMenuDurationLogger)()

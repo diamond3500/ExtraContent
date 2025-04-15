@@ -17,14 +17,6 @@ local Images = UIBlox.App.ImageSet.Images
 local ImageSetButton = UIBlox.Core.ImageSet.ImageSetButton
 local useStyle = UIBlox.Core.Style.useStyle
 
-local GetFFlagIrisUseLocalizationProvider =
-	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagIrisUseLocalizationProvider
-
-local RobloxTranslator
-if not GetFFlagIrisUseLocalizationProvider() then
-	RobloxTranslator = require(RobloxGui.Modules.RobloxTranslator)
-end
-
 local BUTTON_SIZE = 32
 local DIVIDER_WIDTH = 1
 local BUTTON_PADDING = 8
@@ -39,20 +31,11 @@ export type Props = {
 }
 
 local getTitleFromPage = function(currentPage)
-	if GetFFlagIrisUseLocalizationProvider() then
-		if currentPage == Pages.FriendList then
-			return "Feature.Call.Label.StartNewCall"
-		elseif currentPage == Pages.CallHistory then
-			return "Feature.Call.Label.RecentCalls"
-		end
-	else
-		if currentPage == Pages.FriendList then
-			return RobloxTranslator:FormatByKey("Feature.Call.Label.StartNewCall")
-		elseif currentPage == Pages.CallHistory then
-			return RobloxTranslator:FormatByKey("Feature.Call.Label.RecentCalls")
-		end
+	if currentPage == Pages.FriendList then
+		return "Feature.Call.Label.StartNewCall"
+	elseif currentPage == Pages.CallHistory then
+		return "Feature.Call.Label.RecentCalls"
 	end
-
 	return ""
 end
 
@@ -63,12 +46,9 @@ local ContactListHeader = function(props: Props)
 	local theme = style.Theme
 	local font = style.Font
 
-	local localized
-	if GetFFlagIrisUseLocalizationProvider() then
-		localized = useLocalization({
-			titleLabel = getTitleFromPage(props.currentPage),
-		})
-	end
+	local localized = useLocalization({
+		titleLabel = getTitleFromPage(props.currentPage),
+	})
 
 	local navigateToCallHistory = React.useCallback(function()
 		analytics.fireEvent(EventNamesEnum.PhoneBookNavigate, {
@@ -139,9 +119,7 @@ local ContactListHeader = function(props: Props)
 			Size = UDim2.new(1, -(BUTTON_PADDING + TEXT_PADDING + DIVIDER_WIDTH + BUTTON_SIZE * 2), 0, 24),
 			BackgroundTransparency = 1,
 			Font = font.Header1.Font,
-			Text = if GetFFlagIrisUseLocalizationProvider()
-				then localized.titleLabel
-				else getTitleFromPage(props.currentPage),
+			Text = localized.titleLabel,
 			TextColor3 = theme.TextEmphasis.Color,
 			TextSize = font.Header1.RelativeSize * font.BaseSize,
 			TextTransparency = theme.TextEmphasis.Transparency,

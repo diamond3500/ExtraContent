@@ -7,22 +7,19 @@
 
 local root = script.Parent.Parent
 
+local getEngineFeatureRemoveProxyWrap = require(root.flags.getEngineFeatureRemoveProxyWrap)
+
 local Analytics = require(root.Analytics)
 
 local Types = require(root.util.Types)
 local checkForProxyWrap = require(root.util.checkForProxyWrap)
 local FailureReasonsAccumulator = require(root.util.FailureReasonsAccumulator)
 
-local getEngineFeatureUGCValidateEditableMeshAndImage =
-	require(root.flags.getEngineFeatureUGCValidateEditableMeshAndImage)
-
 local function validateSurfaceAppearances(
 	instance: Instance,
 	validationContext: Types.ValidationContext
 ): (boolean, { string }?)
-	local allowEditableInstances = if getEngineFeatureUGCValidateEditableMeshAndImage()
-		then validationContext.allowEditableInstances
-		else false
+	local allowEditableInstances = validationContext.allowEditableInstances
 	-- full tree of instance + descendants
 	local allDescendants: { Instance } = instance:GetDescendants()
 	table.insert(allDescendants, instance)
@@ -30,8 +27,14 @@ local function validateSurfaceAppearances(
 	local reasonsAccumulator = FailureReasonsAccumulator.new()
 
 	for _, descendant in pairs(allDescendants) do
-		if not descendant:IsA("MeshPart") or (allowEditableInstances and checkForProxyWrap(descendant)) then
-			continue
+		if getEngineFeatureRemoveProxyWrap() then
+			if not descendant:IsA("MeshPart") then
+				continue
+			end
+		else
+			if not descendant:IsA("MeshPart") or (allowEditableInstances and checkForProxyWrap(descendant)) then
+				continue
+			end
 		end
 
 		local meshPartHasTexture = (descendant :: MeshPart).TextureID ~= ""
@@ -44,13 +47,21 @@ local function validateSurfaceAppearances(
 
 		if meshPartHasTexture then
 			if surfaceAppearance then
-				Analytics.reportFailure(Analytics.ErrorType.validateSurfaceAppearances_MeshPartHasTexture)
+				Analytics.reportFailure(
+					Analytics.ErrorType.validateSurfaceAppearances_MeshPartHasTexture,
+					nil,
+					validationContext
+				)
 				reasonsAccumulator:updateReasons(false, {
 					`TextureID and SurfaceAppearance are both defined for MeshPart ({(descendant :: Instance):GetFullName()}). Publishing will only use SurfaceApperance.`,
 				})
 			end
 		elseif not surfaceAppearance then
-			Analytics.reportFailure(Analytics.ErrorType.validateSurfaceAppearances_MissingSurfaceAppearance)
+			Analytics.reportFailure(
+				Analytics.ErrorType.validateSurfaceAppearances_MissingSurfaceAppearance,
+				nil,
+				validationContext
+			)
 			reasonsAccumulator:updateReasons(false, {
 				`({(descendant :: Instance):GetFullName()}) has an empty TextureID and no child SurfaceAppearance instance. You need to define at least one of them.`,
 			})

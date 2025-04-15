@@ -1,10 +1,10 @@
 local CorePackages = game:GetService("CorePackages")
 local InspectAndBuyFolder = script.Parent.Parent
 local AppFonts = require(CorePackages.Workspace.Packages.Style).AppFonts
-local UIBlox = require(CorePackages.UIBlox)
+local UIBlox = require(CorePackages.Packages.UIBlox)
 local Images = UIBlox.App.ImageSet.Images
 local ImageSetLabel = UIBlox.Core.ImageSet.ImageSetLabel
-local Roact = require(CorePackages.Roact)
+local Roact = require(CorePackages.Packages.Roact)
 
 local LimitedLabel = Roact.PureComponent:extend("LimitedLabel")
 

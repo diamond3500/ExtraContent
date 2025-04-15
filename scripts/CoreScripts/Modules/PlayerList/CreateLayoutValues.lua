@@ -1,6 +1,6 @@
 local CorePackages = game:GetService("CorePackages")
 
-local UIBlox = require(CorePackages.UIBlox)
+local UIBlox = require(CorePackages.Packages.UIBlox)
 local Images = UIBlox.App.ImageSet.Images
 
 local SCREEN_SIDE_PADDING = 4
@@ -78,7 +78,7 @@ return function(isTenFoot)
 		LayoutValues.PlayerEntryPadding = 8
 		LayoutValues.PlayerEntryNamePadding = 8
 		LayoutValues.TeamEntryTextPadding = 5
-		LayoutValues.StatTextPadding =0
+		LayoutValues.StatTextPadding = 0
 
 		LayoutValues.PlayerNameSize = UDim2.new(1, -88, 1, 0)
 		LayoutValues.PlayerNameTextSize = 32
@@ -191,7 +191,7 @@ return function(isTenFoot)
 		[Enum.MembershipType.Premium] = Images["icons/status/premium_small"],
 	}
 
-	LayoutValues.CustomPlayerIcons = {	-- Admins with special icons
+	LayoutValues.CustomPlayerIcons = { -- Admins with special icons
 		[7210880] = "rbxassetid://134032333", -- Jeditkacheff
 		[13268404] = "rbxassetid://113059239", -- Sorcus
 		[261] = "rbxassetid://105897927", -- shedlestky
@@ -211,8 +211,7 @@ return function(isTenFoot)
 
 	setmetatable(LayoutValues, {
 		__index = function(self, key)
-			error(string.format("%q is not a valid member of LayoutValues",
-				tostring(key)), 2)
+			error(string.format("%q is not a valid member of LayoutValues", tostring(key)), 2)
 		end,
 	})
 

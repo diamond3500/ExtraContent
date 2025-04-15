@@ -4,14 +4,14 @@ local CorePackages = game:GetService("CorePackages")
 local ContextActionService = game:GetService("ContextActionService")
 local GuiService = game:GetService("GuiService")
 
-local Roact = require(CorePackages.Roact)
+local Roact = require(CorePackages.Packages.Roact)
 local t = require(CorePackages.Packages.t)
 
-local FitFrame = require(CorePackages.FitFrame)
+local FitFrame = require(CorePackages.Packages.FitFrame)
 local FitFrameVertical = FitFrame.FitFrameVertical
 local FitTextLabel = FitFrame.FitTextLabel
 
-local UIBlox = require(CorePackages.UIBlox)
+local UIBlox = require(CorePackages.Packages.UIBlox)
 local InteractiveAlert = UIBlox.App.Dialog.Alert.InteractiveAlert
 local ButtonType = UIBlox.App.Button.Enum.ButtonType
 
@@ -20,7 +20,7 @@ local Images = UIBlox.App.ImageSet.Images
 local ImageSetLabel = UIBlox.Core.ImageSet.ImageSetLabel
 
 local Modules = CoreGui.RobloxGui.Modules
-local RobloxTranslator = require(Modules.RobloxTranslator)
+local RobloxTranslator = require(CorePackages.Workspace.Packages.RobloxTranslator)
 local InGameMenuConstants = require(Modules.InGameMenuConstants)
 
 local TITLE_TEXT_KEY = "InGame.ConnectionError.Heading.VRDisconnected"
@@ -100,7 +100,7 @@ function DisconnectedDialog:render()
 						Text = bodyText,
 						TextSize = fonts.BaseSize * fonts.Body.RelativeSize,
 						TextColor3 = theme.TextDefault.Color,
-					})
+					}),
 				})
 			end,
 			buttonStackInfo = {
@@ -136,7 +136,7 @@ function DisconnectedDialog:render()
 				}, {
 					Alert = alert,
 				}),
-			})
+			}),
 		})
 	end)
 end
@@ -147,13 +147,17 @@ function DisconnectedDialog:bindActions()
 		DISABLE_MENU_SHORTCUT_ACTION_NAME,
 		function() end,
 		false,
-		Enum.KeyCode.ButtonStart, Enum.KeyCode.Escape)
+		Enum.KeyCode.ButtonStart,
+		Enum.KeyCode.Escape
+	)
 	-- Bind Enter / Gamepad ButtonA to confirm restart
 	ContextActionService:BindCoreAction(
 		CONFIRM_ACTION_NAME,
 		self.onConfirmBindingAction,
 		false,
-		Enum.KeyCode.Return, Enum.KeyCode.ButtonA)
+		Enum.KeyCode.Return,
+		Enum.KeyCode.ButtonA
+	)
 end
 
 function DisconnectedDialog:unbindActions()

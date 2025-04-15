@@ -3,7 +3,7 @@ local TextService = game:GetService("TextService")
 local CorePackages = game:GetService("CorePackages")
 local ContextActionService = game:GetService("ContextActionService")
 
-local InGameMenuDependencies = require(CorePackages.InGameMenuDependencies)
+local InGameMenuDependencies = require(CorePackages.Packages.InGameMenuDependencies)
 local Roact = InGameMenuDependencies.Roact
 local UIBlox = InGameMenuDependencies.UIBlox
 local t = InGameMenuDependencies.t
@@ -121,7 +121,7 @@ function InfoDialog:render()
 						Size = UDim2.new(1, 0, 1, 0),
 						Text = props.bodyText,
 						TextWrapped = true,
-					})
+					}),
 				}),
 				ConfirmButton = Roact.createElement(Button, {
 					buttonType = ButtonType.PrimarySystem,
@@ -143,8 +143,7 @@ function InfoDialog:bindActions()
 		end
 	end
 
-	ContextActionService:BindCoreAction(
-		MODAL_DISMISS_ACTION, dismissFunc, false, Enum.KeyCode.Escape)
+	ContextActionService:BindCoreAction(MODAL_DISMISS_ACTION, dismissFunc, false, Enum.KeyCode.Escape)
 end
 
 function InfoDialog:unbindActions()

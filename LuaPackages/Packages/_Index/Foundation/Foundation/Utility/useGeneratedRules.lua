@@ -8,10 +8,10 @@ local Device = require(Foundation.Enums.Device)
 type Theme = Theme.Theme
 type Device = Device.Device
 
-local function useGeneratedRules(theme: Theme, device: Device, colorUpdate: boolean)
+local function useGeneratedRules(theme: Theme, device: Device)
 	return React.useMemo(function(): any
-		return getGeneratedRules(theme, device, colorUpdate)
-	end, { theme :: any, device, colorUpdate })
+		return getGeneratedRules(theme, device)
+	end, { theme :: any, device })
 end
 
 return useGeneratedRules

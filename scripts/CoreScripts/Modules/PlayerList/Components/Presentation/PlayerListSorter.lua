@@ -2,9 +2,9 @@
 local CorePackages = game:GetService("CorePackages")
 local CoreGui = game:GetService("CoreGui")
 
-local Roact = require(CorePackages.Roact)
-local RoactRodux = require(CorePackages.RoactRodux)
-local Cryo = require(CorePackages.Cryo)
+local Roact = require(CorePackages.Packages.Roact)
+local RoactRodux = require(CorePackages.Packages.RoactRodux)
+local Cryo = require(CorePackages.Packages.Cryo)
 local t = require(CorePackages.Packages.t)
 
 local RobloxGui = CoreGui:WaitForChild("RobloxGui")
@@ -133,12 +133,8 @@ function PlayerListSorter:render()
 	local sortedPlayers = self.state.sortedPlayers
 
 	if not Cryo.isEmpty(self.props.teams) then
-		local teamScores = buildTeamScores(
-			self.props.gameStats,
-			self.props.teams,
-			self.props.players,
-			self.props.playerStats
-		)
+		local teamScores =
+			buildTeamScores(self.props.gameStats, self.props.teams, self.props.players, self.props.playerStats)
 		local showNeutralTeam = shouldShowNeutralTeam(self.props.players)
 		local sortedTeams = buildSortedTeams(teamScores, primaryStat, self.props.teams, showNeutralTeam)
 

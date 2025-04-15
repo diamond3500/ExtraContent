@@ -1,6 +1,6 @@
 local CorePackages = game:GetService("CorePackages")
-local Roact = require(CorePackages.Roact)
-local RoactRodux = require(CorePackages.RoactRodux)
+local Roact = require(CorePackages.Packages.Roact)
+local RoactRodux = require(CorePackages.Packages.RoactRodux)
 
 local Components = script.Parent.Parent.Parent.Components
 local ClientLog = require(Components.Log.ClientLog)
@@ -21,7 +21,7 @@ local MainViewLog = Roact.PureComponent:extend("MainViewLog")
 function MainViewLog:init()
 	self.onUtilTabHeightChanged = function(utilTabHeight)
 		self:setState({
-			utilTabHeight = utilTabHeight
+			utilTabHeight = utilTabHeight,
 		})
 	end
 
@@ -66,14 +66,14 @@ function MainViewLog:init()
 	self.utilRef = Roact.createRef()
 
 	self.state = {
-		utilTabHeight = 0
+		utilTabHeight = 0,
 	}
 end
 
 function MainViewLog:didMount()
 	local utilSize = self.utilRef.current.Size
 	self:setState({
-		utilTabHeight = utilSize.Y.Offset
+		utilTabHeight = utilSize.Y.Offset,
 	})
 end
 
@@ -81,7 +81,7 @@ function MainViewLog:didUpdate()
 	local utilSize = self.utilRef.current.Size
 	if utilSize.Y.Offset ~= self.state.utilTabHeight then
 		self:setState({
-			utilTabHeight = utilSize.Y.Offset
+			utilTabHeight = utilSize.Y.Offset,
 		})
 	end
 end
@@ -106,7 +106,6 @@ function MainViewLog:render()
 
 	local utilTabHeight = self.state.utilTabHeight
 
-
 	local searchTerm
 	if isClientView then
 		searchTerm = self.props.ClientLogData:getSearchTerm()
@@ -129,14 +128,14 @@ function MainViewLog:render()
 	end
 
 	local initCheckBoxes = {}
-	for i, v in  ipairs(MsgTypeNamesOrdered) do
+	for i, v in ipairs(MsgTypeNamesOrdered) do
 		initCheckBoxes[i] = {
 			name = v,
 			state = currCheckBoxState[v],
 		}
 	end
 
-	elements ["UtilAndTab"] = Roact.createElement(UtilAndTab, {
+	elements["UtilAndTab"] = Roact.createElement(UtilAndTab, {
 		windowWidth = size.X.Offset,
 		formFactor = formFactor,
 		tabList = tabList,
@@ -172,21 +171,20 @@ function MainViewLog:render()
 		BackgroundColor3 = Constants.Color.BaseGray,
 		BackgroundTransparency = 1,
 		LayoutOrder = 3,
-
 	}, elements)
 end
 
 local function mapStateToProps(state, props)
 	return {
-		isClientView = state.MainView.isClientView
+		isClientView = state.MainView.isClientView,
 	}
 end
 
 local function mapDispatchToProps(dispatch)
 	return {
-		dispatchSetActiveTab = function (tabListIndex, isClientView)
+		dispatchSetActiveTab = function(tabListIndex, isClientView)
 			dispatch(SetActiveTab(tabListIndex, isClientView))
-		end
+		end,
 	}
 end
 

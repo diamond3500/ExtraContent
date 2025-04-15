@@ -1,7 +1,7 @@
 local CorePackages = game:GetService("CorePackages")
 local GuiService = game:GetService("GuiService")
 
-local InGameMenuDependencies = require(CorePackages.InGameMenuDependencies)
+local InGameMenuDependencies = require(CorePackages.Packages.InGameMenuDependencies)
 local Roact = InGameMenuDependencies.Roact
 local RoactRodux = InGameMenuDependencies.RoactRodux
 local t = InGameMenuDependencies.t
@@ -83,7 +83,7 @@ function InviteFriendsList:renderListEntries()
 			visibleEntryCount = visibleEntryCount + 1
 		end
 
-		friendList["friend_"..index] = Roact.createElement(PlayerLabel, {
+		friendList["friend_" .. index] = Roact.createElement(PlayerLabel, {
 			username = playerInfo.Username,
 			displayName = playerInfo.DisplayName,
 			userId = playerInfo.Id,
@@ -100,7 +100,7 @@ function InviteFriendsList:renderListEntries()
 				if not (isPending or isSuccess or inviteAnimationInProgress) then
 					self.props.dispatchInviteUserToPlaceId(userId, PLACE_ID)
 				end
-			end
+			end,
 		}, {
 			InviteButton = Roact.createElement(SendInviteButton, {
 				userInviteStatus = userInviteStatus,
@@ -113,7 +113,7 @@ function InviteFriendsList:renderListEntries()
 				animationEnded = function()
 					self.inviteAnimationInProgress[playerInfo.Id] = nil
 				end,
-			})
+			}),
 		})
 
 		layoutOrder = layoutOrder + 1
@@ -165,7 +165,7 @@ function InviteFriendsList:render()
 			Position = UDim2.new(0, 0, 0, listOffset),
 			Size = UDim2.new(1, 0, 1, -listOffset),
 			CanvasSize = UDim2.new(1, 0, 0, visibleEntryCount * (PLAYER_LABEL_HEIGHT + 1)),
-		}, listEntries)
+		}, listEntries),
 	})
 
 	local shouldForgetPreviousSelection = nil -- can be inlined when GetFFlagIGMGamepadSelectionHistory is removed
@@ -179,9 +179,12 @@ function InviteFriendsList:render()
 				isFocused = self.props.canCaptureFocus and isRooted,
 				shouldForgetPreviousSelection = shouldForgetPreviousSelection,
 				didFocus = GetFFlagIGMGamepadSelectionHistory() and function(previousSelection)
-					GuiService.SelectedCoreObject = previousSelection or self:getFirstVisiblePlayerRef() or self.props.searchBoxRef:getValue()
+					GuiService.SelectedCoreObject = previousSelection
+						or self:getFirstVisiblePlayerRef()
+						or self.props.searchBoxRef:getValue()
 				end or function()
-					GuiService.SelectedCoreObject = self:getFirstVisiblePlayerRef() or self.props.searchBoxRef:getValue()
+					GuiService.SelectedCoreObject = self:getFirstVisiblePlayerRef()
+						or self.props.searchBoxRef:getValue()
 				end,
 			}, {
 				FriendsList = friendsList,
@@ -201,23 +204,20 @@ function InviteFriendsList:getFirstVisiblePlayerRef()
 	return nil
 end
 
-return RoactRodux.UNSTABLE_connect2(
-	function(state, props)
-		local shouldForgetPreviousSelection = nil -- can be inlined when flag is removed
-		if GetFFlagIGMGamepadSelectionHistory() then
-			shouldForgetPreviousSelection = state.menuPage == Constants.MainPagePageKey or state.currentZone == 0
-		end
-
-		return {
-			invitesState = state.invites,
-			shouldForgetPreviousSelection = shouldForgetPreviousSelection,
-		}
-	end,
-	function(dispatch)
-		return {
-			dispatchInviteUserToPlaceId = function(userId, placeId)
-				dispatch(InviteUserToPlaceId(userId, placeId))
-			end
-		}
+return RoactRodux.UNSTABLE_connect2(function(state, props)
+	local shouldForgetPreviousSelection = nil -- can be inlined when flag is removed
+	if GetFFlagIGMGamepadSelectionHistory() then
+		shouldForgetPreviousSelection = state.menuPage == Constants.MainPagePageKey or state.currentZone == 0
 	end
-)(InviteFriendsList)
+
+	return {
+		invitesState = state.invites,
+		shouldForgetPreviousSelection = shouldForgetPreviousSelection,
+	}
+end, function(dispatch)
+	return {
+		dispatchInviteUserToPlaceId = function(userId, placeId)
+			dispatch(InviteUserToPlaceId(userId, placeId))
+		end,
+	}
+end)(InviteFriendsList)

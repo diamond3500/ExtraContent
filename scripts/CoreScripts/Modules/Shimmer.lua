@@ -4,7 +4,7 @@ local CorePackages = game:GetService("CorePackages")
 local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 local Create = require(CorePackages.Workspace.Packages.AppCommonLib).Create
 local TweenService = game:GetService("TweenService")
-local Constants = require(RobloxGui.Modules.Common.Constants)
+local Constants = require(CorePackages.Workspace.Packages.CoreScriptsCommon).Constants
 
 local tweenInfo = TweenInfo.new(1, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1, false, 0)
 

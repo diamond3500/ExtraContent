@@ -5,7 +5,7 @@
 
 local CorePackages = game:GetService("CorePackages")
 
-local InGameMenuDependencies = require(CorePackages.InGameMenuDependencies)
+local InGameMenuDependencies = require(CorePackages.Packages.InGameMenuDependencies)
 local Roact = InGameMenuDependencies.Roact
 local Cryo = InGameMenuDependencies.Cryo
 local UIBlox = InGameMenuDependencies.UIBlox
@@ -31,15 +31,23 @@ local function makeAssetImageComponent(component)
 			imageProps = imageData
 		end
 
-		local mergedProps = Cryo.Dictionary.join(props, {
-			imageKey = Cryo.None,
-		}, imageProps, {
-			BackgroundTransparency = 1,
-		})
+		local mergedProps = Cryo.Dictionary.join(
+			props,
+			{
+				imageKey = Cryo.None,
+			},
+			imageProps,
+			{
+				BackgroundTransparency = 1,
+			}
+		)
 
-		return Roact.createElement(component, Cryo.Dictionary.join(mergedProps, {
-			[Roact.Ref] = ref,
-		}))
+		return Roact.createElement(
+			component,
+			Cryo.Dictionary.join(mergedProps, {
+				[Roact.Ref] = ref,
+			})
+		)
 	end)
 end
 

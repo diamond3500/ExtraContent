@@ -15,14 +15,6 @@ local LayoutValues = require(Connection.LayoutValues)
 local WithLayoutValues = LayoutValues.WithLayoutValues
 local usePlayerCombinedName = require(PlayerList.Hooks.usePlayerCombinedName)
 
-local UserProfiles = require(CorePackages.Workspace.Packages.UserProfiles)
-local getInExperienceCombinedNameFromId = UserProfiles.Selectors.getInExperienceCombinedNameFromId
-
-local ApolloClient = require(CoreGui.RobloxGui.Modules.ApolloClient)
-local getIsUserProfileOnLeaderboardEnabled = require(RobloxGui.Modules.Flags.getIsUserProfileOnLeaderboardEnabled)
-local FFlagRefactorPlayerNameTag = require(PlayerList.Flags.FFlagRefactorPlayerNameTag)
-local FFlagInExperienceNameQueryEnabled = require(CorePackages.Workspace.Packages.SharedFlags).FFlagInExperienceNameQueryEnabled
-
 local playerInterface = require(RobloxGui.Modules.Interfaces.playerInterface)
 
 local PlayerNameTag = React.PureComponent:extend("PlayerNameTag")
@@ -32,7 +24,7 @@ PlayerNameTag.validateProps = t.strictInterface({
 	isTitleEntry = t.boolean,
 	isHovered = t.boolean,
 	layoutOrder = t.integer,
-	name = if FFlagRefactorPlayerNameTag then t.string else nil,
+	name = t.string,
 	textStyle = t.strictInterface({
 		Color = t.Color3,
 		Transparency = t.number,
@@ -62,28 +54,6 @@ type Props = {
 		Font: Enum.Font,
 	},
 }
-
-if not FFlagRefactorPlayerNameTag then
-	function PlayerNameTag:init()
-		if getIsUserProfileOnLeaderboardEnabled() then
-			self:setState({
-				name = self.props.player.DisplayName,
-			})
-
-			ApolloClient:query({
-				query = if FFlagInExperienceNameQueryEnabled then UserProfiles.Queries.userProfilesInExperienceNamesByUserIds else UserProfiles.Queries.userProfilesCombinedNameByUserIds,
-				variables = {
-					userIds = { tostring(self.props.player.UserId) },
-				},
-			}):andThen(function(response)
-				local name = if FFlagInExperienceNameQueryEnabled then getInExperienceCombinedNameFromId(response.data, self.props.player.UserId) else response.data.userProfiles[1].names.combinedName
-				self:setState({
-					name = name,
-				})
-			end, function() end)
-		end
-	end
-end
 
 function PlayerNameTag:render()
 	return WithLayoutValues(function(layoutValues)
@@ -157,11 +127,7 @@ function PlayerNameTag:render()
 							ClipsDescendants = false,
 							Size = UDim2.fromScale(0, 1),
 							Font = playerNameFont,
-							Text = if FFlagRefactorPlayerNameTag
-								then self.props.name
-								else if getIsUserProfileOnLeaderboardEnabled()
-									then self.state.name
-									else self.props.player.Name,
+							Text = self.props.name,
 							TextSize = textSize,
 							TextColor3 = self.props.textStyle.Color,
 							TextTransparency = self.props.textStyle.Transparency,
@@ -187,11 +153,7 @@ function PlayerNameTag:render()
 						AutomaticSize = Enum.AutomaticSize.X,
 						Size = UDim2.fromScale(0, 1),
 						Font = playerNameFont,
-						Text = if FFlagRefactorPlayerNameTag
-							then self.props.name
-							else if getIsUserProfileOnLeaderboardEnabled()
-								then self.state.name
-								else self.props.player.DisplayName,
+						Text = self.props.name,
 						TextSize = textSize,
 						TextColor3 = self.props.textStyle.Color,
 						TextTransparency = self.props.textStyle.Transparency,
@@ -221,8 +183,4 @@ local function PlayerNameTagContainer(props: Props)
 	}))
 end
 
-if FFlagRefactorPlayerNameTag then
-	return PlayerNameTagContainer
-else
-	return PlayerNameTag
-end
+return PlayerNameTagContainer

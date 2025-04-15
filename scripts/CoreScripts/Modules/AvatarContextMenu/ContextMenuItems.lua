@@ -19,22 +19,24 @@ local TextChatService = game:GetService("TextChatService")
 -- MODULES
 local RobloxGui = CoreGuiService:WaitForChild("RobloxGui")
 local CoreGuiModules = RobloxGui:WaitForChild("Modules")
-local RobloxTranslator = require(RobloxGui.Modules.RobloxTranslator)
+local RobloxTranslator = require(CorePackages.Workspace.Packages.RobloxTranslator)
 local GameTranslator = require(RobloxGui.Modules.GameTranslator)
 local AvatarMenuModules = CoreGuiModules:WaitForChild("AvatarContextMenu")
 local ContextMenuUtil = require(AvatarMenuModules:WaitForChild("ContextMenuUtil"))
 local ThemeHandler = require(AvatarMenuModules.ThemeHandler)
 
-local BlockingUtility = require(CoreGuiModules.BlockingUtility)
+local BlockingUtility = require(CorePackages.Workspace.Packages.BlockingUtility)
 local t = require(CorePackages.Packages.t)
 local ArgCheck = require(CorePackages.Workspace.Packages.ArgCheck)
-local ExperienceChat = require(CorePackages.ExperienceChat)
+local ExperienceChat = require(CorePackages.Workspace.Packages.ExpChat)
 
 -- FLAGS
-local FFlagAvatarContextMenuItemsChatButtonRefactor
-	= require(CoreGuiModules.Flags.FFlagAvatarContextMenuItemsChatButtonRefactor)
-local FFlagWaveEmoteOnAvatarContextMenuWithExpChat = require(CoreGuiModules.Common.Flags.FFlagWaveEmoteOnAvatarContextMenuWithExpChat)
-local FFlagWhisperEmoteOnAvatarContextMenuWithExpChat = require(CoreGuiModules.Common.Flags.FFlagWhisperEmoteOnAvatarContextMenuWithExpChat)
+local FFlagAvatarContextMenuItemsChatButtonRefactor =
+	require(CoreGuiModules.Flags.FFlagAvatarContextMenuItemsChatButtonRefactor)
+local FFlagWaveEmoteOnAvatarContextMenuWithExpChat =
+	require(CoreGuiModules.Common.Flags.FFlagWaveEmoteOnAvatarContextMenuWithExpChat)
+local FFlagWhisperEmoteOnAvatarContextMenuWithExpChat =
+	require(CoreGuiModules.Common.Flags.FFlagWhisperEmoteOnAvatarContextMenuWithExpChat)
 -- VARIABLES
 
 local LocalPlayer = PlayersService.LocalPlayer
@@ -47,7 +49,7 @@ local EnabledContextMenuItems = {
 	[Enum.AvatarContextMenuOption.Chat] = true,
 	[Enum.AvatarContextMenuOption.Friend] = true,
 	[Enum.AvatarContextMenuOption.Emote] = true,
-	[Enum.AvatarContextMenuOption.InspectMenu] = true
+	[Enum.AvatarContextMenuOption.InspectMenu] = true,
 }
 
 local CustomContextMenuItems = {}
@@ -131,7 +133,6 @@ function ContextMenuItems:RegisterCoreMethods()
 			else
 				error("AddAvatarContextMenuOption second table entry must be a BindableEvent")
 			end
-
 		elseif typeof(args) == "EnumItem" then
 			if self:IsContextAvatarEnumItem(args) then
 				self:EnableDefaultMenuItem(args)
@@ -163,7 +164,9 @@ function ContextMenuItems:CreateCustomMenuItems()
 	for buttonText, itemInfo in pairs(CustomContextMenuItems) do
 		AnalyticsService:TrackEvent("Game", "AvatarContextMenuCustomButton", "name: " .. tostring(buttonText))
 		local function customButtonFunc()
-			if self.CloseMenuFunc then self:CloseMenuFunc() end
+			if self.CloseMenuFunc then
+				self:CloseMenuFunc()
+			end
 
 			itemInfo.event:Fire(self.SelectedPlayer)
 		end
@@ -203,16 +206,16 @@ function ContextMenuItems:CreateFriendButton(status, isBlocked)
 		friendLabel:Destroy()
 		friendLabel = nil
 	end
-    if friendStatusChangedConn then
-        friendStatusChangedConn:disconnect()
-    end
+	if friendStatusChangedConn then
+		friendStatusChangedConn:disconnect()
+	end
 	local friendLabelText = nil
 
 	local addFriendFunc = function()
 		if friendLabelText and friendLabel.Selectable then
-            friendLabel.Selectable = false
-            friendLabelText.TextTransparency = addFriendDisabledTransparency
-            friendLabelText.Text = friendRequestPendingString
+			friendLabel.Selectable = false
+			friendLabelText.TextTransparency = addFriendDisabledTransparency
+			friendLabelText.Text = friendRequestPendingString
 			AnalyticsService:ReportCounter("AvatarContextMenu-RequestFriendship")
 			AnalyticsService:TrackEvent("Game", "RequestFriendship", "AvatarContextMenu")
 			LocalPlayer:RequestFriendship(self.SelectedPlayer)
@@ -259,7 +262,9 @@ end
 
 function ContextMenuItems:CreateInspectAndBuyButton()
 	local function browseItems()
-		if self.CloseMenuFunc then self:CloseMenuFunc() end
+		if self.CloseMenuFunc then
+			self:CloseMenuFunc()
+		end
 
 		-- If the developer disables the menu while someone is already looking at the ACM
 		-- the button doesn't disappear, so we need to check again.
@@ -317,10 +322,12 @@ end
 
 function ContextMenuItems:CreateEmoteButton()
 	local function wave()
-		if self.CloseMenuFunc then self:CloseMenuFunc() end
+		if self.CloseMenuFunc then
+			self:CloseMenuFunc()
+		end
 
 		AnalyticsService:ReportCounter("AvatarContextMenu-Wave")
-        AnalyticsService:TrackEvent("Game", "AvatarContextMenuWave", "placeId: " .. tostring(game.PlaceId))
+		AnalyticsService:TrackEvent("Game", "AvatarContextMenuWave", "placeId: " .. tostring(game.PlaceId))
 
 		PlayersService:Chat("/e wave")
 
@@ -363,10 +370,12 @@ function ContextMenuItems:CreateChatButton(props)
 			return
 		end
 
-		if self.CloseMenuFunc then self:CloseMenuFunc() end
+		if self.CloseMenuFunc then
+			self:CloseMenuFunc()
+		end
 
 		AnalyticsService:ReportCounter("AvatarContextMenu-Chat")
-        AnalyticsService:TrackEvent("Game", "AvatarContextMenuChat", "placeId: " .. tostring(game.PlaceId))
+		AnalyticsService:TrackEvent("Game", "AvatarContextMenuChat", "placeId: " .. tostring(game.PlaceId))
 
 		if isWhisperEnabledForExpChat and isExperienceChatOn(self.TextChatService) then
 			local textChannel: TextChannel? = findFirstTextChannel()
@@ -411,7 +420,9 @@ function ContextMenuItems:CreateChatButton(props)
 		ArgCheck.assert(IChatButtonProps(props))
 		canChat = props.localPlayerChatEnabled
 	else
-		local success, canLocalUserChat = pcall(function() return Chat:CanUserChatAsync(LocalPlayer.UserId) end)
+		local success, canLocalUserChat = pcall(function()
+			return Chat:CanUserChatAsync(LocalPlayer.UserId)
+		end)
 		canChat = success and (RunService:IsStudio() or canLocalUserChat)
 	end
 
@@ -455,7 +466,9 @@ function ContextMenuItems:RemoveLastButtonUnderline()
 end
 
 function ContextMenuItems:BuildContextMenuItems(player, props)
-	if not player then return end
+	if not player then
+		return
+	end
 
 	local friendStatus = ContextMenuUtil:GetFriendStatus(player)
 	local isBlocked = BlockingUtility:IsPlayerBlockedByUserId(player.UserId)
@@ -488,17 +501,17 @@ function ContextMenuItems:SetCloseMenuFunc(closeMenuFunc)
 end
 
 function ContextMenuItems.new(menuItemFrame, config)
-    local obj = setmetatable({}, ContextMenuItems)
+	local obj = setmetatable({}, ContextMenuItems)
 
-    obj.MenuItemFrame = menuItemFrame
-    obj.SelectedPlayer = nil
-    obj.TextChatService = (config and config.TextChatService) or TextChatService
-    obj:RegisterCoreMethods()
+	obj.MenuItemFrame = menuItemFrame
+	obj.SelectedPlayer = nil
+	obj.TextChatService = (config and config.TextChatService) or TextChatService
+	obj:RegisterCoreMethods()
 
-    -- If disabled in a script, sometimes it registers before we can receive the signal.
-    ContextMenuItems:UpdateInspectMenuEnabled()
+	-- If disabled in a script, sometimes it registers before we can receive the signal.
+	ContextMenuItems:UpdateInspectMenuEnabled()
 
-    return obj
+	return obj
 end
 
 GuiService.InspectMenuEnabledChangedSignal:Connect(function(enabled)

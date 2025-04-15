@@ -10,6 +10,7 @@ export type Type = {
 	rootPlaceId: string,
 	creator: CreatorModel.Type,
 	maxPlayers: number,
+	playing: number,
 }
 
 local GameModel = {}
@@ -37,6 +38,7 @@ function GameModel.mock(mergeTable)
 		rootPlaceId = mergeTable.rootPlaceId or "rootPlaceId",
 		creator = CreatorModel.mock(mergeTable.creator),
 		maxPlayers = mergeTable.maxPlayers or 6,
+		playing = mergeTable.playing or 1000,
 	})
 
 	return self
@@ -51,6 +53,7 @@ function GameModel.format(gameData)
 		rootPlaceId = tostring(gameData.rootPlaceId),
 		creator = CreatorModel.format(gameData.creator),
 		maxPlayers = gameData.maxPlayers,
+		playing = gameData.playing,
 	})
 
 	return self
@@ -64,6 +67,7 @@ GameModel.isValid = t.strictInterface({
 	rootPlaceId = t.string,
 	creator = CreatorModel.isValid,
 	maxPlayers = t.number,
+	playing = t.number,
 })
 
 return GameModel

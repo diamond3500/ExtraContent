@@ -1,6 +1,6 @@
 --!nonstrict
 local CorePackages = game:GetService("CorePackages")
-local Roact = require(CorePackages.Roact)
+local Roact = require(CorePackages.Packages.Roact)
 
 local Components = script.Parent.Parent.Parent.Components
 local DataConsumer = require(script.Parent.Parent.Parent.Components.DataConsumer)
@@ -29,7 +29,7 @@ local entryCellSize = {}
 local currOffset = 0
 
 for _, cellWidth in ipairs(CELL_WIDTHS) do
-	table.insert(cellOffset,UDim2.new(currOffset, CELL_PADDING, 0, 0))
+	table.insert(cellOffset, UDim2.new(currOffset, CELL_PADDING, 0, 0))
 	table.insert(headerCellSize, UDim2.new(cellWidth, -CELL_PADDING, 0, HEADER_HEIGHT))
 	table.insert(entryCellSize, UDim2.new(cellWidth, -CELL_PADDING, 0, ENTRY_HEIGHT))
 	currOffset = currOffset + cellWidth
@@ -37,8 +37,7 @@ end
 
 local verticalOffsets = {}
 for i, offset in ipairs(cellOffset) do
-	verticalOffsets[i] = UDim2.new(offset.X.Scale, offset.X.Offset - CELL_PADDING,
-		offset.Y.Scale, offset.Y.Offset)
+	verticalOffsets[i] = UDim2.new(offset.X.Scale, offset.X.Offset - CELL_PADDING, offset.Y.Scale, offset.Y.Offset)
 end
 
 local ServerScripts = Roact.Component:extend("ServerScripts")
@@ -112,7 +111,7 @@ function ServerScripts:init(props)
 		local currSortType = props.ServerScriptsData:getSortType()
 		if sortType == currSortType then
 			self:setState({
-				reverseSort = not self.state.reverseSort
+				reverseSort = not self.state.reverseSort,
 			})
 		else
 			props.ServerScriptsData:setSortType(sortType)
@@ -122,10 +121,10 @@ function ServerScripts:init(props)
 		end
 	end
 
-	self.getOnButtonPress = function (name)
+	self.getOnButtonPress = function(name)
 		return function(rbx, input)
 			self:setState({
-				expandIndex = self.state.expandIndex ~= name and name
+				expandIndex = self.state.expandIndex ~= name and name,
 			})
 		end
 	end
@@ -216,7 +215,6 @@ function ServerScripts:render()
 
 	if canvasPos and absScrollSize then
 		for ind, scriptData in pairs(scriptData) do
-
 			if not searchTerm or string.find(scriptData.name:lower(), searchTerm:lower()) ~= nil then
 				searchCount = searchCount + 1
 				local includeEntry = true
@@ -230,7 +228,8 @@ function ServerScripts:render()
 					if Active is checked, only render active scripts
 					if Inactive is check, only render inactive scripts
 					if Both are checked, render all
-				]]--
+				]]
+				--
 
 				if isActiveChecked ~= isInactiveChecked then
 					if currEntry.data[1] > 0 and isInactiveChecked then
@@ -246,7 +245,8 @@ function ServerScripts:render()
 
 					if canvasHeight + frameHeight >= canvasPos.Y then
 						if usedFrameSpace < absScrollSize.Y then
-							local activityBoxColor = currEntry.data[1] > 0 and Constants.Color.ActiveBox or Constants.Color.InactiveBox
+							local activityBoxColor = currEntry.data[1] > 0 and Constants.Color.ActiveBox
+								or Constants.Color.InactiveBox
 							local layoutOrder = reverseSort and totalEntries - ind or ind
 							local newElement = Roact.createElement(ServerScriptsEntry, {
 								scriptData = scriptData,

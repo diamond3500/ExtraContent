@@ -1,5 +1,5 @@
 local CorePackages = game:GetService("CorePackages")
-local Rodux = require(CorePackages.Rodux)
+local Rodux = require(CorePackages.Packages.Rodux)
 local CrossExperienceVoice = require(CorePackages.Workspace.Packages.CrossExperienceVoice)
 local CrossExperience = require(CorePackages.Workspace.Packages.CrossExperience)
 local createPersistenceMiddleware = CrossExperience.Middlewares.createPersistenceMiddleware

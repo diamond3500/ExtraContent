@@ -1,18 +1,18 @@
 local Root = script.Parent.Parent
 
 local CorePackages = game:GetService("CorePackages")
-local PurchasePromptDeps = require(CorePackages.PurchasePromptDeps)
+local PurchasePromptDeps = require(CorePackages.Workspace.Packages.PurchasePromptDeps)
 local enumerate = PurchasePromptDeps.enumerate
 
 local addRawValueMethodToEnum = require(Root.Utils.addRawValueMethodToEnum)
 
 local rawKeyToRawValue = {
-    None = "None",
-    Product = "Product",
-    RobuxUpsell = "RobuxUpsell",
-    RobuxUpsellV2 = "RobuxUpsellV2",
-    LargeRobuxUpsell = "LargeRobuxUpsell",
-    PremiumUpsell = "PremiumUpsell",
+	None = "None",
+	Product = "Product",
+	RobuxUpsell = "RobuxUpsell",
+	RobuxUpsellV2 = "RobuxUpsellV2",
+	LargeRobuxUpsell = "LargeRobuxUpsell",
+	PremiumUpsell = "PremiumUpsell",
 }
 
 -- The values here correspond to values in the requested web view.

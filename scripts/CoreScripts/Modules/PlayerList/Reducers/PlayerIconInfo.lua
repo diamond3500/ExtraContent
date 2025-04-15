@@ -1,8 +1,8 @@
 --!nonstrict
 local CorePackages = game:GetService("CorePackages")
 
-local Rodux = require(CorePackages.Rodux)
-local Cryo = require(CorePackages.Cryo)
+local Rodux = require(CorePackages.Packages.Rodux)
+local Cryo = require(CorePackages.Packages.Cryo)
 
 local Actions = script.Parent.Parent.Actions
 local AddPlayer = require(Actions.AddPlayer)
@@ -15,8 +15,7 @@ local PlayerIconInfo = Rodux.createReducer({}, {
 	[AddPlayer.name] = function(state, action)
 		return Cryo.Dictionary.join(state, {
 			[action.userId] = {
-				isPlaceOwner = game.CreatorType == Enum.CreatorType.User
-					and action.userId == game.CreatorId,
+				isPlaceOwner = game.CreatorType == Enum.CreatorType.User and action.userId == game.CreatorId,
 				avatarIcon = nil,
 				specialGroupIcon = nil,
 			},

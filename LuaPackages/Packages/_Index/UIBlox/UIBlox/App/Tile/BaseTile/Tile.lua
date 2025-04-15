@@ -264,9 +264,7 @@ function Tile:render()
 
 				local maxTitleTextHeight = math.ceil(titleFontSize * titleTextLineCount)
 				local upscaledTitleFontSize = titleFontSize + textSizeOffset
-				if UIBloxConfig.refactorTileTextHeights then
-					maxTitleTextHeight = math.ceil(upscaledTitleFontSize * titleTextLineCount)
-				end
+				maxTitleTextHeight = math.ceil(upscaledTitleFontSize * titleTextLineCount)
 
 				local footerHeight = tileHeight
 					- (tileWidth / (self.props.thumbnailAspectRatio or 1))
@@ -280,9 +278,7 @@ function Tile:render()
 				-- include subtitle space even if subtitle is empty string
 				if addSubtitleSpace then
 					titleTextSize = Vector2.new(0, maxTitleTextHeight)
-					subtitleTextHeight = if UIBloxConfig.refactorTileTextHeights
-						then math.ceil(subtitleFontSize) + textSizeOffset
-						else math.ceil(subtitleFontSize)
+					subtitleTextHeight = math.ceil(subtitleFontSize) + textSizeOffset
 					footerHeight = footerHeight - subtitleTextHeight
 				else
 					if useMaxTitleHeight then
@@ -303,15 +299,11 @@ function Tile:render()
 							titleFont,
 							Vector2.new(tileWidth, maxTitleTextHeight)
 						)
-						titleTextSize = if UIBloxConfig.refactorTileTextHeights
-							then Vector2.new(titleTextSize.X, math.min(titleTextSize.Y, maxTitleTextHeight))
-							else titleTextSize -- title should not exceed max title height
+						titleTextSize = Vector2.new(titleTextSize.X, math.min(titleTextSize.Y, maxTitleTextHeight))
 					end
 
 					if subtitle ~= nil and subtitle ~= "" then
-						subtitleTextHeight = if UIBloxConfig.refactorTileTextHeights
-							then math.ceil(subtitleFontSize) + textSizeOffset
-							else math.ceil(subtitleFontSize)
+						subtitleTextHeight = math.ceil(subtitleFontSize) + textSizeOffset
 						footerHeight = footerHeight - subtitleTextHeight
 					end
 				end
@@ -431,9 +423,7 @@ function Tile:render()
 								useMaxHeight = useMaxTitleHeight,
 								titleFontStyle = titleFontStyle,
 								richText = titleRichText,
-								horizontalAlignment = if UIBloxConfig.imageTextLabelTextXAlignment
-									then horizontalAlignment
-									else nil,
+								horizontalAlignment = horizontalAlignment,
 							}),
 							Subtitle = (subtitle ~= "" and subtitle ~= nil) and React.createElement(StyledTextLabel, {
 								size = UDim2.new(0, 0, 0, subtitleTextHeight),

@@ -4,8 +4,8 @@ local GameSettings = Settings.GameSettings
 
 local getClientReplicator = require(script.Parent.Parent.Parent.Util.getClientReplicator)
 
-local Roact = require(CorePackages.Roact)
-local RoactRodux = require(CorePackages.RoactRodux)
+local Roact = require(CorePackages.Packages.Roact)
+local RoactRodux = require(CorePackages.Packages.RoactRodux)
 
 local Components = script.Parent.Parent.Parent.Components
 
@@ -24,21 +24,21 @@ local BUTTON_SELECTED = Constants.Color.SelectedBlue
 local BUTTON_COLOR = Constants.Color.UnselectedGray
 
 local ROW_HEIGHT = 30
-local OFFSET = .10
-local ROW_VALUE_WIDTH = .8
+local OFFSET = 0.10
+local ROW_VALUE_WIDTH = 0.8
 
 local ServerProfilerInteraface = Roact.Component:extend("ServerProfilerInteraface")
 
 function ServerProfilerInteraface:init()
 	self.onUtilTabHeightChanged = function(utilTabHeight)
 		self:setState({
-			utilTabHeight = utilTabHeight
+			utilTabHeight = utilTabHeight,
 		})
 	end
 
 	self.onFocusLostFrameRate = function(rbx, enterPressed, inputThatCausedFocusLoss)
 		GameSettings.RCCProfilerRecordFrameRate = rbx.Text
-		-- the gamesetting value will handle value limits and valid text, 
+		-- the gamesetting value will handle value limits and valid text,
 		-- therefore we need to reset the textbox Text the correct value after
 		-- GameSettings has updated it.
 		rbx.Text = GameSettings.RCCProfilerRecordFrameRate
@@ -46,7 +46,7 @@ function ServerProfilerInteraface:init()
 
 	self.onFocusLostTimeFrame = function(rbx, enterPressed, inputThatCausedFocusLoss)
 		GameSettings.RCCProfilerRecordTimeFrame = rbx.Text
-		-- the gamesetting value will handle value limits and valid text, 
+		-- the gamesetting value will handle value limits and valid text,
 		-- therefore we need to reset the textbox Text the correct value after
 		-- GameSettings has updated it.
 		rbx.Text = GameSettings.RCCProfilerRecordTimeFrame
@@ -69,7 +69,7 @@ function ServerProfilerInteraface:init()
 		return function()
 			GameSettings.OnScreenProfilerEnabled = screenProfilerEnabled
 			self:setState({
-				clientProfilerEnabled = screenProfilerEnabled
+				clientProfilerEnabled = screenProfilerEnabled,
 			})
 		end
 	end
@@ -92,7 +92,6 @@ function ServerProfilerInteraface:render()
 	local frameRate = self.state.frameRate
 	local timeFrame = self.state.timeFrame
 	local clientProfilerEnabled = self.state.clientProfilerEnabled
-
 
 	local displayOutputFilePath = (not waitingForRecording) and #lastFileOutputLocation > 0
 
@@ -137,7 +136,7 @@ function ServerProfilerInteraface:render()
 
 		FPSTextBox = Roact.createElement("TextBox", {
 			Size = textbox_size,
-			Position = UDim2.new((1 - ROW_VALUE_WIDTH)/2, BUTTON_WIDTH, 0, ROW_HEIGHT * 1.25),
+			Position = UDim2.new((1 - ROW_VALUE_WIDTH) / 2, BUTTON_WIDTH, 0, ROW_HEIGHT * 1.25),
 			Text = frameRate,
 			Font = FONT,
 			TextSize = TEXT_SIZE,
@@ -149,7 +148,6 @@ function ServerProfilerInteraface:render()
 
 			[Roact.Event.FocusLost] = self.onFocusLostFrameRate,
 		}),
-
 
 		LabelTimeFrame = Roact.createElement("TextLabel", {
 			Size = UDim2.new(0, BUTTON_WIDTH, 0, ROW_HEIGHT),
@@ -165,7 +163,7 @@ function ServerProfilerInteraface:render()
 
 		TimeFrameTextBox = Roact.createElement("TextBox", {
 			Size = textbox_size,
-			Position = UDim2.new((1 - ROW_VALUE_WIDTH)/2, BUTTON_WIDTH, 0, ROW_HEIGHT * 2.25),
+			Position = UDim2.new((1 - ROW_VALUE_WIDTH) / 2, BUTTON_WIDTH, 0, ROW_HEIGHT * 2.25),
 			Text = timeFrame,
 			Font = FONT,
 			TextSize = TEXT_SIZE,
@@ -176,11 +174,11 @@ function ServerProfilerInteraface:render()
 			BackgroundTransparency = 0,
 
 			[Roact.Event.FocusLost] = self.onFocusLostTimeFrame,
-		},{
+		}, {
 			-- placed here to better position this element
 			GetDumpButton = Roact.createElement("TextButton", {
-				Size = UDim2.new(0, BUTTON_WIDTH * .7, 0, ROW_HEIGHT),
-				Position = UDim2.new(1, -BUTTON_WIDTH * .7, 1, ROW_HEIGHT),
+				Size = UDim2.new(0, BUTTON_WIDTH * 0.7, 0, ROW_HEIGHT),
+				Position = UDim2.new(1, -BUTTON_WIDTH * 0.7, 1, ROW_HEIGHT),
 				Text = waitingForRecording and "Recording" or "Start Recording",
 				Font = FONT,
 				TextSize = TEXT_SIZE,
@@ -188,12 +186,12 @@ function ServerProfilerInteraface:render()
 				TextXAlignment = Enum.TextXAlignment.Center,
 				TextYAlignment = Enum.TextYAlignment.Center,
 				BackgroundColor3 = waitingForRecording and BUTTON_UNSELECTED or BUTTON_SELECTED,
-				BackgroundTransparency = waitingForRecording and .3 or 0,
+				BackgroundTransparency = waitingForRecording and 0.3 or 0,
 				AutoButtonColor = not waitingForRecording,
 				Active = not waitingForRecording,
 
 				[Roact.Event.Activated] = self.requestRCCProfilerData,
-			})
+			}),
 		}),
 
 		OutputPath = displayOutputFilePath and Roact.createElement("TextLabel", {
@@ -205,10 +203,9 @@ function ServerProfilerInteraface:render()
 			TextColor3 = Constants.Color.Text,
 			TextXAlignment = Enum.TextXAlignment.Center,
 			TextYAlignment = Enum.TextYAlignment.Center,
-		})
+		}),
 	})
 end
-
 
 local function mapStateToProps(state, props)
 	return {

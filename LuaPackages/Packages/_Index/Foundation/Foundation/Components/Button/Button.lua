@@ -1,11 +1,16 @@
 local Foundation = script:FindFirstAncestor("Foundation")
 local Packages = Foundation.Parent
 
+local Motion = require(Packages.Motion)
+local useMotion = Motion.useMotion
+local AnimatePresence = Motion.AnimatePresence
+
 local React = require(Packages.React)
 local ReactOtter = require(Packages.ReactOtter)
 
-local ButtonSize = require(Foundation.Enums.ButtonSize)
-type ButtonSize = ButtonSize.ButtonSize
+local Spinner = require(script.Parent.Spinner)
+local InputSize = require(Foundation.Enums.InputSize)
+type InputSize = InputSize.InputSize
 
 local ButtonVariant = require(Foundation.Enums.ButtonVariant)
 type ButtonVariant = ButtonVariant.ButtonVariant
@@ -16,15 +21,19 @@ type FillBehavior = FillBehavior.FillBehavior
 local ControlState = require(Foundation.Enums.ControlState)
 type ControlState = ControlState.ControlState
 
-local useTokens = require(Foundation.Providers.Style.useTokens)
-local useButtonVariants = require(script.Parent.useButtonVariants)
-local useCursor = require(Foundation.Providers.Cursor.useCursor)
 local Types = require(Foundation.Components.Types)
-local Icon = require(Foundation.Components.Icon)
+local Image = require(Foundation.Components.Image)
 local View = require(Foundation.Components.View)
 local Text = require(Foundation.Components.Text)
+local Flags = require(Foundation.Utility.Flags)
+
 local withDefaults = require(Foundation.Utility.withDefaults)
 local withCommonProps = require(Foundation.Utility.withCommonProps)
+
+local useButtonVariants = require(script.Parent.useButtonVariants)
+local useButtonMotionStates = require(script.Parent.useButtonMotionStates)
+local useTokens = require(Foundation.Providers.Style.useTokens)
+local useCursor = require(Foundation.Providers.Cursor.useCursor)
 
 type StateChangedCallback = Types.StateChangedCallback
 
@@ -54,8 +63,34 @@ local function onProgressChange(progress: number)
 	})
 end
 
-local function getTransparency(transparency: number, isDisabled: boolean)
-	return if isDisabled then transparency + (1 - transparency) * DISABLED_TRANSPARENCY else transparency
+-- Remove with removal of FoundationButtonEnableLoadingState
+local function getTransparency(transparency: number?, isDisabled: boolean?): number?
+	assert(
+		not Flags.FoundationButtonEnableLoadingState,
+		"FoundationButtonEnableLoadingState must be disabled in getTransparency"
+	)
+	if transparency ~= nil and isDisabled then
+		return transparency + (1 - transparency) * DISABLED_TRANSPARENCY
+	end
+
+	return transparency
+end
+
+-- Rename with removal of FoundationButtonEnableLoadingState
+local function getTransparencyFromBinding(
+	transparency: number?,
+	disabledTransparency: React.Binding<number>
+): React.Binding<number>
+	assert(
+		Flags.FoundationButtonEnableLoadingState,
+		"FoundationButtonEnableLoadingState must be enabled in getTransparencyFromBinding"
+	)
+	return disabledTransparency:map(function(disabledValue)
+		if transparency ~= nil then
+			return transparency + (1 - transparency) * disabledValue
+		end
+		return disabledValue
+	end)
 end
 
 type ButtonProps = {
@@ -63,8 +98,9 @@ type ButtonProps = {
 	icon: string?,
 	onActivated: () -> (),
 	isDisabled: boolean?,
+	isLoading: boolean?,
 	variant: ButtonVariant?,
-	size: ButtonSize?,
+	size: InputSize?,
 	-- Width of the button. `fillBehavior` is preferred and works better with flex layouts. Intended for cross-directional scaled sizing.
 	width: UDim?,
 	fillBehavior: FillBehavior?,
@@ -72,12 +108,13 @@ type ButtonProps = {
 	-- This will only take effect on component mount and visually show on buttons
 	-- whose variants use a filled background (Standard and Emphasis).
 	inputDelay: number?,
-} & Types.CommonProps
+} & Types.SelectionProps & Types.CommonProps
 
 local defaultProps = {
 	isDisabled = false,
+	isLoading = false,
 	variant = ButtonVariant.Standard,
-	size = ButtonSize.Small,
+	size = if Flags.FoundationEnableNewButtonSizes then InputSize.Medium else InputSize.Small,
 	width = UDim.new(0, 0),
 	inputDelay = 0,
 }
@@ -92,7 +129,7 @@ local function Button(buttonProps: ButtonProps, ref: React.Ref<GuiObject>?)
 		setIsDelaying(false)
 	end)
 
-	-- Support inputDelay on component mount
+	-- UIBLOX-1801: Support inputDelay at times other than just component mount
 	React.useEffect(function()
 		if inputDelay > 0 then
 			setGoal(ReactOtter.ease(1, {
@@ -106,10 +143,34 @@ local function Button(buttonProps: ButtonProps, ref: React.Ref<GuiObject>?)
 	local variantProps = useButtonVariants(tokens, props.size, props.variant)
 
 	local cursor = useCursor({
-		radius = UDim.new(0, tokens.Radius.Medium),
+		radius = UDim.new(0, variantProps.container.radius),
 		offset = tokens.Size.Size_200,
 		borderWidth = tokens.Stroke.Thicker,
 	})
+
+	local motionStates = useButtonMotionStates(variantProps.content.style.Transparency, DISABLED_TRANSPARENCY)
+	local disabledValues, animateDisabledValues = useMotion(motionStates.Default)
+	local values, animate = useMotion(motionStates.Default)
+
+	React.useEffect(function()
+		if Flags.FoundationButtonEnableLoadingState then
+			if props.isLoading then
+				animate(motionStates.Loading)
+			else
+				animate(motionStates.Default)
+			end
+		end
+	end, { props.isLoading })
+
+	React.useEffect(function()
+		if Flags.FoundationButtonEnableLoadingState then
+			if props.isDisabled then
+				animateDisabledValues(motionStates.Disabled)
+			else
+				animateDisabledValues(motionStates.Default)
+			end
+		end
+	end, { props.isDisabled })
 
 	local hasText = props.text and props.text ~= ""
 
@@ -124,8 +185,22 @@ local function Button(buttonProps: ButtonProps, ref: React.Ref<GuiObject>?)
 	return React.createElement(
 		View,
 		withCommonProps(props, {
-			GroupTransparency = if props.isDisabled and not isDelaying then DISABLED_TRANSPARENCY else nil,
-			backgroundStyle = variantProps.container.background,
+			AutomaticSize = if props.width.Scale == 0 then Enum.AutomaticSize.X else nil,
+			cornerRadius = UDim.new(0, variantProps.container.radius),
+			backgroundStyle = if Flags.FoundationButtonEnableLoadingState and variantProps.container.style
+				then getTransparencyFromBinding(variantProps.container.style.Transparency, disabledValues.transparency):map(
+					function(transparency)
+						return {
+							Color3 = variantProps.container.style.Color3,
+							Transparency = transparency,
+						}
+					end
+				)
+				elseif variantProps.container.style then {
+					Color3 = variantProps.container.style.Color3,
+					Transparency = getTransparency(variantProps.container.style.Transparency, props.isDisabled),
+				}
+				else nil,
 			flexItem = if props.fillBehavior
 				then {
 					FlexMode = if props.fillBehavior == FillBehavior.Fill
@@ -136,7 +211,12 @@ local function Button(buttonProps: ButtonProps, ref: React.Ref<GuiObject>?)
 			stroke = if variantProps.container.stroke
 				then {
 					Color = variantProps.container.stroke.Color,
-					Transparency = getTransparency(variantProps.container.stroke.Transparency, props.isDisabled),
+					Transparency = if Flags.FoundationButtonEnableLoadingState
+						then getTransparencyFromBinding(
+							variantProps.container.stroke.Transparency,
+							disabledValues.transparency
+						)
+						else getTransparency(variantProps.container.stroke.Transparency, props.isDisabled),
 				}
 				else nil,
 			Size = UDim2.new(
@@ -145,24 +225,71 @@ local function Button(buttonProps: ButtonProps, ref: React.Ref<GuiObject>?)
 				0,
 				variantProps.container.height
 			),
-			-- Allow focus to be set if inputDelay is responsible for disabling the button
+			-- Allow focus to be set if inputDelay or isLoading is responsible for disabling the button
 			selection = {
 				Selectable = not props.isDisabled,
 				SelectionImageObject = cursor,
+				NextSelectionUp = props.NextSelectionUp,
+				NextSelectionDown = props.NextSelectionDown,
+				NextSelectionLeft = props.NextSelectionLeft,
+				NextSelectionRight = props.NextSelectionRight,
 			},
 			onActivated = props.onActivated,
 			onStateChanged = setControlState :: StateChangedCallback,
-			isDisabled = props.isDisabled or isDelaying,
+			isDisabled = props.isDisabled or props.isLoading or isDelaying,
+			stateLayer = variantProps.container.stateLayer,
 			tag = variantProps.container.tag,
 			ref = ref,
 		}),
 		{
-			Icon = if props.icon
-				then React.createElement(Icon, {
-					name = props.icon,
-					size = variantProps.icon.size,
-					style = variantProps.icon.style,
+			Icon = if not Flags.FoundationButtonEnableLoadingState and props.icon
+				then React.createElement(Image, {
+					Image = props.icon,
+					Size = variantProps.icon.size,
+					imageStyle = {
+						Color3 = variantProps.content.style.Color3,
+						Transparency = getTransparency(variantProps.content.style.Transparency, props.isDisabled),
+					},
 					LayoutOrder = 1,
+				})
+				else nil,
+			-- If there is an icon, render icon and spinner in place of eachother.
+			-- Otherwise, render a Folder to exempt from layout, and use exclusively for loading spinnner.
+			IconWrapper = if Flags.FoundationButtonEnableLoadingState and (props.icon or props.isLoading)
+				then React.createElement(if not props.icon then "Folder" else View, {
+					Size = if props.icon then variantProps.icon.size else nil,
+				}, {
+					PresenceWrapper = React.createElement(AnimatePresence, {}, {
+						Spinner = if props.isLoading
+							then React.createElement(Spinner, {
+								Size = variantProps.icon.size,
+								style = disabledValues.transparency:map(function(transparency)
+									return {
+										Color3 = variantProps.content.style.Color3,
+										Transparency = transparency,
+									}
+								end),
+							})
+							else nil,
+						Icon = if not props.isLoading and props.icon
+							then React.createElement(Image, {
+								Image = props.icon,
+								Size = variantProps.icon.size,
+								imageStyle = disabledValues.transparency:map(function(transparency)
+									return {
+										Color3 = variantProps.content.style.Color3,
+										Transparency = transparency,
+									}
+								end),
+								AnchorPoint = Vector2.new(0.5, 0.5),
+								Position = UDim2.fromScale(0.5, 0.5),
+							}, {
+								UIScale = React.createElement("UIScale", {
+									Scale = values.iconScale,
+								}),
+							})
+							else nil,
+					}),
 				})
 				else nil,
 			Text = if hasText
@@ -170,6 +297,22 @@ local function Button(buttonProps: ButtonProps, ref: React.Ref<GuiObject>?)
 					Text = controlState:map(formatText) :: any,
 					RichText = if BUTTON_VARIANT_TO_RICH_TEXT_FORMAT[props.variant] ~= nil then true else false,
 					tag = variantProps.text.tag,
+					textStyle = if Flags.FoundationButtonEnableLoadingState
+						then React.joinBindings({ disabledValues.transparency, values.textTransparency })
+							:map(function(transparencies)
+								local disabledTransparency: number = transparencies[1]
+								local textTransparency: number = transparencies[2]
+								return {
+									Color3 = variantProps.content.style.Color3,
+									Transparency = if props.icon
+										then disabledTransparency
+										else textTransparency + disabledTransparency,
+								}
+							end)
+						else {
+							Color3 = variantProps.content.style.Color3,
+							Transparency = getTransparency(variantProps.content.style.Transparency, props.isDisabled),
+						},
 					LayoutOrder = 2,
 				})
 				else nil,

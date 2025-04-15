@@ -19,8 +19,8 @@ local addUsersFromList = function(state, newUsers)
 
 		users[userId] = UserModel.new({
 			id = userId,
-			username = user.name,
-			displayName = user.displayName,
+			username = user.name or "",
+			displayName = user.displayName or "",
 			hasVerifiedBadge = user.hasVerifiedBadge,
 			created = user.created,
 		})

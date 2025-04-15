@@ -5,24 +5,26 @@
 local CorePackages = game:GetService("CorePackages")
 local RunService = game:GetService("RunService")
 
-local Roact = require(CorePackages.Roact)
+local Roact = require(CorePackages.Packages.Roact)
 
-local UIBlox = require(CorePackages.UIBlox)
+local UIBlox = require(CorePackages.Packages.UIBlox)
 local withStyle = UIBlox.Style.withStyle
 local ImageSetLabel = UIBlox.Core.ImageSet.ImageSetLabel
 local t = require(CorePackages.Packages.t)
 local UIBloxImages = UIBlox.App.ImageSet.Images
 local ShimmerPanel = UIBlox.App.Loading.ShimmerPanel
 local Constants = require(script.Parent.Parent.Parent.Constants)
-local CharacterUtility = require(CorePackages.Thumbnailing).CharacterUtility
-local CameraUtility = require(CorePackages.Thumbnailing).CameraUtility
-local CFrameUtility = require(CorePackages.Thumbnailing).CFrameUtility
-local EmoteUtility = require(CorePackages.Thumbnailing).EmoteUtility
+local CharacterUtility = require(CorePackages.Packages.Thumbnailing).CharacterUtility
+local CameraUtility = require(CorePackages.Packages.Thumbnailing).CameraUtility
+local CFrameUtility = require(CorePackages.Packages.Thumbnailing).CFrameUtility
+local EmoteUtility = require(CorePackages.Packages.Thumbnailing).EmoteUtility
 
 local IconButton = UIBlox.App.Button.IconButton
 local IconSize = UIBlox.App.ImageSet.Enum.IconSize
 local PreviewExpandIcon = UIBloxImages["icons/actions/previewExpand"]
 local DropShadow = UIBloxImages["component_assets/dropshadow_25"]
+
+local FFlagFixPublishAvatarVRViewports = require(script.Parent.Parent.Parent.FFlagFixPublishAvatarVRViewports)
 
 local VIEWPORT_HEIGHT = 240
 local DEFAULT_CAMERA_FOV = 30
@@ -46,6 +48,10 @@ function ObjectViewport:createCamera()
 	local camera = Instance.new("Camera")
 	camera.CameraType = Enum.CameraType.Scriptable
 	camera.Parent = self.worldModelRef:getValue()
+	if FFlagFixPublishAvatarVRViewports then
+		camera.HeadLocked = true
+		camera.VRTiltAndRollEnabled = true
+	end
 	return camera
 end
 

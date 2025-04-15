@@ -131,6 +131,9 @@ local function unhookSoundEvents(sound: Sound)
 			connection:Disconnect()
 		end
 	end
+  if GetFFlagEnableSoundSessionTelemetry() then
+    playingSounds:removeSound(sound.SoundId, sound:GetDebugId(10))
+  end
 	trackedSounds[sound] = nil
 end
 

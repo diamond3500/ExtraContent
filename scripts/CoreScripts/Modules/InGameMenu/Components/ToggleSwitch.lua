@@ -1,7 +1,7 @@
 --!nonstrict
 local CorePackages = game:GetService("CorePackages")
 
-local InGameMenuDependencies = require(CorePackages.InGameMenuDependencies)
+local InGameMenuDependencies = require(CorePackages.Packages.InGameMenuDependencies)
 local Roact = InGameMenuDependencies.Roact
 local UIBlox = InGameMenuDependencies.UIBlox
 local Otter = InGameMenuDependencies.Otter
@@ -65,7 +65,10 @@ function ToggleSwitch:renderWithSelectionCursor(getSelectionCursor)
 			imageKey = "ToggleOutline",
 			AnchorPoint = self.props.AnchorPoint,
 			ImageColor3 = style.Theme.SecondaryDefault.Color,
-			ImageTransparency = divideTransparency(style.Theme.SecondaryDefault.Transparency, self.props.disabled and 4 or 1),
+			ImageTransparency = divideTransparency(
+				style.Theme.SecondaryDefault.Transparency,
+				self.props.disabled and 4 or 1
+			),
 			NextSelectionUp = self.props.NextSelectionUp,
 			[Roact.Event.Activated] = self.props.onToggled,
 			[Roact.Ref] = self.props.buttonRef,
@@ -88,7 +91,7 @@ function ToggleSwitch:renderWithSelectionCursor(getSelectionCursor)
 				imageKey = "ToggleKnob",
 				ImageTransparency = divideTransparency(0, self.props.disabled and 4 or 1),
 				ZIndex = 2,
-			})
+			}),
 		})
 	end)
 end

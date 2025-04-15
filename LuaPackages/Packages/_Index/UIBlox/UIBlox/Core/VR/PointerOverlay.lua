@@ -44,6 +44,22 @@ local defaultProps: PointerOverlayProps = {
 	UpdateEvent = RunService.Heartbeat,
 }
 
+local function setLaserPointerModeBasedOnUserCFrame(LaserPointer, VRService)
+	if
+		VRService:GetUserCFrameEnabled(Enum.UserCFrame.RightHand)
+		and VRService:GetUserCFrameEnabled(Enum.UserCFrame.LeftHand)
+	then
+		LaserPointer.current:setMode(LaserPointer.current.Mode["DualPointer"])
+	elseif
+		not VRService:GetUserCFrameEnabled(Enum.UserCFrame.RightHand)
+		and not VRService:GetUserCFrameEnabled(Enum.UserCFrame.LeftHand)
+	then
+		LaserPointer.current:setMode(LaserPointer.current.Mode["Disabled"])
+	else
+		LaserPointer.current:setMode(LaserPointer.current.Mode["Pointer"])
+	end
+end
+
 local function PointerOverlay(providedProps: PointerOverlayProps)
 	local props = Object.assign({}, defaultProps, providedProps)
 
@@ -64,7 +80,11 @@ local function PointerOverlay(providedProps: PointerOverlayProps)
 	local VREnabledCallback = React.useCallback(function()
 		if not LaserPointer.current then
 			LaserPointer.current = LaserPointerComponent.new()
-			LaserPointer.current:setMode(LaserPointer.current.Mode["DualPointer"])
+			if UIBloxConfig.enableBetterLaserPointerMode then
+				setLaserPointerModeBasedOnUserCFrame(LaserPointer, VRService)
+			else
+				LaserPointer.current:setMode(LaserPointer.current.Mode["DualPointer"])
+			end
 			LaserPointer.current:setEnableAmbidexterousPointer(true)
 			LeftControllerModel.current = VRControllerModel.new(Enum.UserCFrame.LeftHand)
 			RightControllerModel.current = VRControllerModel.new(Enum.UserCFrame.RightHand)
@@ -109,7 +129,11 @@ local function PointerOverlay(providedProps: PointerOverlayProps)
 		)
 		if LaserPointer.current then
 			if overlayEnabled then
-				LaserPointer.current:setMode(LaserPointer.current.Mode["DualPointer"])
+				if UIBloxConfig.enableBetterLaserPointerMode then
+					setLaserPointerModeBasedOnUserCFrame(LaserPointer, VRService)
+				else
+					LaserPointer.current:setMode(LaserPointer.current.Mode["DualPointer"])
+				end
 			else
 				LaserPointer.current:setMode(LaserPointer.current.Mode["Disabled"])
 			end
@@ -121,6 +145,10 @@ local function PointerOverlay(providedProps: PointerOverlayProps)
 			RightControllerModel.current:setEnabled(overlayEnabled)
 		end
 	end, { LeftControllerModel, RightControllerModel, LaserPointer, LaserPointerComponent, VRControllerModel })
+
+	local VRUserCFrameEnabledCallback = React.useCallback(function()
+		setLaserPointerModeBasedOnUserCFrame(LaserPointer, VRService)
+	end, { LaserPointer })
 
 	-- Runs on first render, in case we start with VREnabled = true
 	React.useEffect(function()
@@ -151,6 +179,12 @@ local function PointerOverlay(providedProps: PointerOverlayProps)
 			event = VRService:GetPropertyChangedSignal("VREnabled"),
 			callback = VREnabledCallback,
 		}),
+		VRUserCFrameEnabledConnection = if UIBloxConfig.enableBetterLaserPointerMode
+			then React.createElement(EventConnection, {
+				event = VRService.UserCFrameEnabled,
+				callback = VRUserCFrameEnabledCallback,
+			})
+			else nil,
 		VRSessionStateConnection = if vrSessionStateAvailable
 			then React.createElement(EventConnection, {
 				event = vrSessionStateSignal,

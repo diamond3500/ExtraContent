@@ -3,7 +3,7 @@ local CorePackages = game:GetService("CorePackages")
 local CoreGui = game:GetService("CoreGui")
 local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 
-local Roact = require(CorePackages.Roact)
+local Roact = require(CorePackages.Packages.Roact)
 
 local ShareGame = RobloxGui.Modules.Settings.Pages.ShareGame
 local Constants = require(ShareGame.Constants)
@@ -58,7 +58,7 @@ function ConversationDetails:render()
 		presenceTextComponent = Roact.createElement("TextLabel", {
 			BackgroundTransparency = 1,
 			Size = UDim2.new(1, 0, 0, PRESENCE_TEXT_SIZE),
-			Text =  RobloxTranslator:FormatByKey(Constants.PresenceTextKey[presence]),
+			Text = RobloxTranslator:FormatByKey(Constants.PresenceTextKey[presence]),
 			Font = PRESENCE_FONT,
 			TextColor3 = Constants.PresenceColors[presence],
 			TextSize = PRESENCE_TEXT_SIZE,
@@ -79,7 +79,7 @@ function ConversationDetails:render()
 			HorizontalAlignment = Enum.HorizontalAlignment.Left,
 			VerticalAlignment = Enum.VerticalAlignment.Center,
 			SortOrder = Enum.SortOrder.LayoutOrder,
-			Padding = UDim.new(0, LIST_PADDING)
+			Padding = UDim.new(0, LIST_PADDING),
 		}),
 		Title = Roact.createElement("TextLabel", {
 			BackgroundTransparency = 1,

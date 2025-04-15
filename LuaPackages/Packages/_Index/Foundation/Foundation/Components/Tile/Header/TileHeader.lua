@@ -3,8 +3,6 @@ local Packages = Foundation.Parent
 
 local React = require(Packages.React)
 
-local FillBehavior = require(Foundation.Enums.FillBehavior)
-local useTileLayout = require(Foundation.Components.Tile.useTileLayout)
 local View = require(Foundation.Components.View)
 local Text = require(Foundation.Components.Text)
 local Skeleton = require(Foundation.Components.Skeleton)
@@ -88,7 +86,6 @@ end
 type TileHeaderProps = {
 	title: string | TypographyProps,
 	subtitle: (string | TypographyProps)?,
-	spacing: number?,
 	TextXAlignment: Enum.TextXAlignment?,
 }
 
@@ -99,7 +96,6 @@ local defaultProps = {
 local function TileHeader(tileHeaderProps: TileHeaderProps)
 	local props = withDefaults(tileHeaderProps, defaultProps)
 	local tokens = useTokens()
-	local tileLayout = useTileLayout()
 
 	local title = getTypographyComponent(
 		props.title,
@@ -112,17 +108,14 @@ local function TileHeader(tileHeaderProps: TileHeaderProps)
 
 	return React.createElement(View, {
 		flexItem = {
-			FlexMode = if tileLayout.fillBehavior == FillBehavior.Fit
-				then Enum.UIFlexMode.Shrink
-				else Enum.UIFlexMode.Grow,
+			FlexMode = Enum.UIFlexMode.Shrink,
 		},
 		layout = {
 			HorizontalAlignment = Enum.HorizontalAlignment.Left,
 			FillDirection = Enum.FillDirection.Vertical,
-			Padding = UDim.new(0, props.spacing or tokens.Padding.XSmall),
 			SortOrder = Enum.SortOrder.LayoutOrder,
 		},
-		tag = "auto-y size-full-0",
+		tag = "auto-y size-full-0 gap-xxsmall",
 	}, {
 		Title = title,
 		Subtitle = if props.subtitle ~= nil

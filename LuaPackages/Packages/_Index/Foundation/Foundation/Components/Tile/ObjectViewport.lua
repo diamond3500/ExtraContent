@@ -9,6 +9,7 @@ local React = require(Packages.React)
 local ReactUtils = require(Packages.ReactUtils)
 local EventConnection = ReactUtils.EventConnection
 local withDefaults = require(Foundation.Utility.withDefaults)
+local useTokens = require(Foundation.Providers.Style.useTokens)
 
 local RunService = game:GetService("RunService")
 
@@ -42,6 +43,7 @@ local defaultProps = {
 
 local function ObjectViewport(objectViewportProps: Props)
 	local props = withDefaults(objectViewportProps, defaultProps)
+	local tokens = useTokens()
 
 	local model, setModel = React.useState(props.model :: Model?)
 	local cameraRef = React.useRef(nil :: Camera?)
@@ -103,13 +105,12 @@ local function ObjectViewport(objectViewportProps: Props)
 
 		ViewportFrame = React.createElement("ViewportFrame", {
 			BackgroundTransparency = 1,
-			BackgroundColor3 = Color3.new(0, 0, 0),
 			Size = UDim2.new(1, 25, 1, 25),
 			Position = UDim2.fromScale(0.5, 0.5),
 			AnchorPoint = Vector2.new(0.5, 0.5),
-			LightColor = Color3.fromRGB(240, 240, 240),
+			LightColor = tokens.Color.Extended.Gray.Gray_200.Color3,
 			LightDirection = Vector3.new(1, 1, 1),
-			Ambient = Color3.fromRGB(240, 240, 240),
+			Ambient = tokens.Color.Extended.Gray.Gray_200.Color3,
 			CurrentCamera = cameraRef,
 		}, {
 			Camera = React.createElement("Camera", {

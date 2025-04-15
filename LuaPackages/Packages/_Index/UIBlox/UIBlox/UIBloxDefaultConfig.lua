@@ -1,7 +1,4 @@
 return {
-	-- New color palettes of color system 1.1
-	useNewThemeColorPalettes = false,
-
 	-- enable trace level log
 	enableTraceLevelLog = false,
 
@@ -21,17 +18,11 @@ return {
 	-- active
 	hideHeaderActionBarWhenStickyBarActive = false,
 
-	-- Use RobloxGuiFocusedChanged event to respond to blur and loading of GenericButton
-	useRobloxGuiFocusedChangedEventInGenericButton = false,
-
 	-- In ResponsiveGrid, don't default displayLines to nil. Instead use an empty range
 	responsiveGridDisplayLinesNonNil = false,
 
 	-- Use SurfaceGuiWithAdornee for Panel3D
 	refactorPanel3D = false,
-
-	-- Add a ref that points to ScrollingFrame in ResponsiveBaseRow
-	responsiveBaseRowScrollingFrameRef = false,
 
 	-- use new refactored interactable
 	refactorInteractable = false,
@@ -71,9 +62,6 @@ return {
 	-- Indicate whether the fix for button loading shimmer panel not covering edges is enabled
 	enableButtonLoadingShimmerPanelFix = false,
 
-	-- Use GetTextSize and AutomaticSize to add support for larger than default text in Tile and TileName
-	refactorTileTextHeights = false,
-
 	-- Bugfix for HeaderBar title flickering
 	fixHeaderBarTitleFlickering = false,
 
@@ -86,17 +74,8 @@ return {
 	-- Defer loading component’s code until it is rendered for the first time
 	enableCreateLazyComponent = false,
 
-	-- Some components expose calculate functions as member function, move it out as a separate function
-	useSeparatedCalcFunction = false,
-
 	-- Add the option to pass in callbacks for AccordionView that run on expansion and collapse
 	addCallbacksToAccordionView = false,
-
-	-- Define size and reposition ModalTitle s.t text does not overflow container bounds
-	resizeModalTitle = false,
-
-	-- Use textSizeOffset to better support large text in TileContentPanel
-	useTextSizeOffsetTileContentPanel = false,
 
 	-- Add the option to pass in a visibility property for Experience Details Page components
 	addEdpComponentVisibility = false,
@@ -107,17 +86,17 @@ return {
 	-- Use colors from Foundation tokens
 	useFoundationColors = false,
 
+	-- Use new Foundation components
+	useFoundationSkeleton = false,
+
+	-- Use Foundation button
+	useFoundationButton = false,
+
+	-- Use Foundation provider
+	useFoundationProvider = false,
+
 	-- Update FullPageModal sizing on mount
 	didMountUpdateFullPageModal = false,
-
-	-- Removes math error absoluteSize setting statement
-	fixLayerCollectorProviderAbsoluteSize = false,
-
-	-- Set name text in playertile to richtext
-	enableRichTextPlayerTileName = false,
-
-	-- Enable useStyleMetadata hook
-	enableUseStyleMetadata = false,
 
 	-- Add optional action bar label to DetailsPageHeader
 	enableDetailsPageHeaderActionBarLabel = false,
@@ -125,14 +104,11 @@ return {
 	-- Fix gradient issue in ExpandableTextArea in color update
 	enableExpandableTextAreaGradientFix = false,
 
-	-- Fix incorrect padding in ItemTile overlay icons, switch to use design tokens
-	itemTileOverlayPaddingUseTokens = false,
-
 	-- Fix incorrect disabling of LaserPointer in PointerOverlay
 	fixLaserPointerDisable = false,
 
-	-- Enable the update of AppNav components
-	enableAppNavUpdate = false,
+	-- Enable the flex layout of AppNav
+	enableAppNavFlexLayout = false,
 
 	-- Enable Panel managed anchoring for Panel3D
 	enablePanelManagedAnchoring = false,
@@ -140,18 +116,39 @@ return {
 	-- Fix press state for modal bottom sheet
 	fixModalBottomSheetPressState = false,
 
-	-- Fix padding on GenericButton Hover background with standard sizes
-	fixGenericButtonHoverBackgroundPadding = false,
+	-- Fix the AppNav related test issues
+	fixAppNavTestIssues = false,
 
-	-- Enable custom hover image support
-	enableGenericButtonHoverImage = false,
+	-- Update NavigationBar & NavigationRail's backgrounds to be transparent
+	enableAppNavTransparentBackground = false,
 
-	-- Disable the default icon used in ExperienceActionRow
-	disableExperienceActionRowDefaultIcon = false,
+	-- Fix the AppNav NavigationBar/Rail animation issues
+	enableAppNavAnimationFix = false,
 
-	-- Enable ComboButton support in ActionBar
-	enableComboButtonInActionBar = false,
+	-- Fix the NavigationBarV2 bug
+	enableAppNavNavigationBarV2Fix = false,
 
-	-- Pass TextXAlignment property to ImageTextLabel
-	imageTextLabelTextXAlignment = false,
+	-- Enable the workaround to fix the text flickering engine bug
+	enableAppNavTextFlickerFix = false,
+
+	-- Enable better laser pointer mode
+	enableBetterLaserPointerMode = false,
+
+	-- Turn on scrolling for AnimatedFlatList, which is what Console EDP uses
+	enableAnimatedFlatListScrolling = false,
+
+	-- Remove Details Page files moved to LuaApps
+	moveDetailsPageToLuaApps = false,
+
+	-- Enable changes to align all EDP components
+	enableEdpComponentAlignment = false,
+
+	-- Add the option to pass in callback to MediaGalleryPreview that runs on thumbnail activation
+	addThumbnailCallbackToMediaGalleryPreview = false,
+
+	-- Remove Media Gallery files moved to LuaApps
+	moveMediaGalleryToLuaApps = false,
+
+	-- Allow to disable color mapping for the color experiment on SignUp/Login
+	allowDisableColorMapping = false,
 }

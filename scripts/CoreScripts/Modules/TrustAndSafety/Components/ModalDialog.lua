@@ -2,8 +2,8 @@
 local CorePackages = game:GetService("CorePackages")
 local ContextActionService = game:GetService("ContextActionService")
 
-local Roact = require(CorePackages.Roact)
-local UIBlox = require(CorePackages.UIBlox)
+local Roact = require(CorePackages.Packages.Roact)
+local UIBlox = require(CorePackages.Packages.UIBlox)
 local t = require(CorePackages.Packages.t)
 
 local TnsModule = script.Parent.Parent
@@ -92,10 +92,7 @@ function ModalDialog:render()
 	-- It's similar to ModalWindow. If the screen size is smaller than the max
 	-- width of the Modal, then it will act as a popup from the bottom of the
 	-- screen, anything larger and it behaves similarly to an Alert.
-	local size = Vector2.new(
-		math.min(props.screenSize.X, MAX_WIDTH),
-		math.min(props.screenSize.Y, MAX_HEIGHT)
-	)
+	local size = Vector2.new(math.min(props.screenSize.X, MAX_WIDTH), math.min(props.screenSize.Y, MAX_HEIGHT))
 	local anchorPoint, position
 	if props.screenSize.X < MAX_WIDTH then
 		anchorPoint = Vector2.new(0.5, 1)
@@ -128,7 +125,7 @@ function ModalDialog:render()
 				[Roact.Event.Activated] = self.onOverlayActivated,
 			}),
 			Dialog = Roact.createElement(ImageSetLabel, {
-				Active = true,	-- block the input to overlay
+				Active = true, -- block the input to overlay
 				AnchorPoint = anchorPoint,
 				BackgroundTransparency = 1,
 				Image = Assets.Images.RoundedRect.Image,
@@ -164,7 +161,7 @@ function ModalDialog:render()
 					BackgroundTransparency = 1,
 					LayoutOrder = 3,
 					Size = UDim2.new(1, 0, 0, contentHeight),
-					ZIndex = 10,	-- contents may cover action bar
+					ZIndex = 10, -- contents may cover action bar
 				}, {
 					Contents = props.contents,
 				}),

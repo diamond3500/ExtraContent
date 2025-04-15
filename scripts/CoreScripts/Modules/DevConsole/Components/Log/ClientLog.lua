@@ -1,5 +1,5 @@
 local CorePackages = game:GetService("CorePackages")
-local Roact = require(CorePackages.Roact)
+local Roact = require(CorePackages.Packages.Roact)
 
 local DataConsumer = require(script.Parent.Parent.DataConsumer)
 local LogOutput = require(script.Parent.LogOutput)

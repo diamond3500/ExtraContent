@@ -1,6 +1,6 @@
 local CorePackages = game:GetService("CorePackages")
 
-local Action = require(CorePackages.Rodux).makeActionCreator
+local Action = require(CorePackages.Packages.Rodux).makeActionCreator
 local maybeAssert = require(script.Parent.Parent.Helpers.maybeAssert)
 local Types = require(script.Parent.Parent.Types)
 

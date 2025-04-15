@@ -15,9 +15,6 @@ local FailureReasonsAccumulator = require(root.util.FailureReasonsAccumulator)
 local ParseContentIds = require(root.util.ParseContentIds)
 local getEditableImageFromContext = require(root.util.getEditableImageFromContext)
 
-local getEngineFeatureUGCValidateEditableMeshAndImage =
-	require(root.flags.getEngineFeatureUGCValidateEditableMeshAndImage)
-
 local function validateDescendantTextureMetrics(
 	rootInstance: Instance,
 	validationContext: Types.ValidationContext
@@ -34,14 +31,12 @@ local function validateDescendantTextureMetrics(
 			contentId = data.instance[data.fieldName],
 		} :: Types.TextureInfo
 
-		if getEngineFeatureUGCValidateEditableMeshAndImage() then
-			local getEditableImageSuccess, editableImage =
-				getEditableImageFromContext(data.instance, data.fieldName, validationContext)
-			if not getEditableImageSuccess then
-				return false, { "Failed to load texture data" }
-			end
-			textureInfo.editableImage = editableImage
+		local getEditableImageSuccess, editableImage =
+			getEditableImageFromContext(data.instance, data.fieldName, validationContext)
+		if not getEditableImageSuccess then
+			return false, { "Failed to load texture data" }
 		end
+		textureInfo.editableImage = editableImage :: EditableImage
 		if not sizeAlreadyTested[data.id] then
 			reasonsAccumulator:updateReasons(validateTextureSize(textureInfo, nil, validationContext))
 			if data.id then

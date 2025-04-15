@@ -3,7 +3,7 @@ local CorePackages = game:GetService("CorePackages")
 local CoreGui = game:GetService("CoreGui")
 local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 
-local Roact = require(CorePackages.Roact)
+local Roact = require(CorePackages.Packages.Roact)
 local Constants = require(RobloxGui.Modules.Settings.Pages.ShareGame.Constants)
 
 local SearchBox = Roact.Component:extend("SearchBox")
@@ -51,7 +51,6 @@ function SearchBox:render()
 	local visible = self.props.visible
 	local zIndex = self.props.zIndex
 
-
 	local isTextWritten = self.state.isTextWritten
 	return Roact.createElement("ImageLabel", {
 		BackgroundTransparency = 1,
@@ -78,16 +77,13 @@ function SearchBox:render()
 			ImageRectOffset = SEARCH_ICON_SPRITE_FRAME.offset,
 			ImageRectSize = SEARCH_ICON_SPRITE_FRAME.size,
 			Size = UDim2.new(0, SEARCH_ICON_SIZE, 0, SEARCH_ICON_SIZE),
-			ZIndex = zIndex
+			ZIndex = zIndex,
 		}),
 		SearchField = Roact.createElement("TextBox", {
 			BackgroundTransparency = 1,
 			AnchorPoint = Vector2.new(0, 0.5),
 			Position = UDim2.new(0, SEARCH_ICON_SIZE + SEARCH_FIELD_MARGINS, 0.5, 0),
-			Size = UDim2.new(
-				1, -(SEARCH_ICON_SIZE + CLEAR_ICON_SIZE + SEARCH_FIELD_MARGINS * 2),
-				1, 0
-			),
+			Size = UDim2.new(1, -(SEARCH_ICON_SIZE + CLEAR_ICON_SIZE + SEARCH_FIELD_MARGINS * 2), 1, 0),
 			ClearTextOnFocus = false,
 			PlaceholderColor3 = Constants.Color.GRAY3,
 			PlaceholderText = RobloxTranslator:FormatByKey("Feature.SettingsHub.Label.SearchForFriendsPlaceholder"),
@@ -116,7 +112,7 @@ function SearchBox:render()
 				if onTextBoxFocusLost then
 					onTextBoxFocusLost(rbx.Text)
 				end
-			end
+			end,
 		}),
 		ClearButton = Roact.createElement("ImageButton", {
 			BackgroundTransparency = 1,
@@ -136,8 +132,8 @@ function SearchBox:render()
 					-- recapture it.
 					self.searchField:CaptureFocus()
 				end
-			end
-		})
+			end,
+		}),
 	})
 end
 
@@ -149,7 +145,7 @@ function SearchBox:didMount()
 		self.textBoxChangedConnection = searchField:GetPropertyChangedSignal("Text"):Connect(function()
 			local text = searchField.Text
 			self:setState({
-				isTextWritten = text:len() > 0
+				isTextWritten = text:len() > 0,
 			})
 			onTextChanged(text)
 		end)

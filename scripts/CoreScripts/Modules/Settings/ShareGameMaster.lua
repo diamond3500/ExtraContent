@@ -1,9 +1,9 @@
 local CorePackages = game:GetService("CorePackages")
 local Modules = game:GetService("CoreGui").RobloxGui.Modules
 
-local Roact = require(CorePackages.Roact)
-local Rodux = require(CorePackages.Rodux)
-local RoactRodux = require(CorePackages.RoactRodux)
+local Roact = require(CorePackages.Packages.Roact)
+local Rodux = require(CorePackages.Packages.Rodux)
+local RoactRodux = require(CorePackages.Packages.RoactRodux)
 
 local ShareGame = Modules.Settings.Pages.ShareGame
 local App = require(ShareGame.Components.App)
@@ -16,19 +16,18 @@ local ShareGameMaster = {}
 
 function ShareGameMaster.createApp(parentGui, analytics)
 	local self = {}
-	self.store = if GetFFlagEnableSharedInviteStore() then
-		InviteStore else Rodux.Store.new(AppReducer, nil, { Rodux.thunkMiddleware })
+	self.store = if GetFFlagEnableSharedInviteStore()
+		then InviteStore
+		else Rodux.Store.new(AppReducer, nil, { Rodux.thunkMiddleware })
 
-	self._instanceHandle = Roact.mount(
-		Roact.createElement(RoactRodux.StoreProvider, {
-			store = self.store
-		}, {
-			App = Roact.createElement(App, {
-				analytics = analytics,
-				pageTarget = parentGui,
-			})
-		})
-	)
+	self._instanceHandle = Roact.mount(Roact.createElement(RoactRodux.StoreProvider, {
+		store = self.store,
+	}, {
+		App = Roact.createElement(App, {
+			analytics = analytics,
+			pageTarget = parentGui,
+		}),
+	}))
 	return self
 end
 

@@ -6,7 +6,7 @@ local CoreGui = game:GetService("CoreGui")
 local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 local UserGameSettings = UserSettings():GetService("UserGameSettings")
 
-local InGameMenuDependencies = require(CorePackages.InGameMenuDependencies)
+local InGameMenuDependencies = require(CorePackages.Packages.InGameMenuDependencies)
 local Roact = InGameMenuDependencies.Roact
 local UIBlox = InGameMenuDependencies.UIBlox
 local Promise = InGameMenuDependencies.Promise
@@ -23,7 +23,8 @@ local GetDefaultQualityLevel = require(CorePackages.Workspace.Packages.AppCommon
 
 local renderWithCoreScriptsStyleProvider = require(RobloxGui.Modules.Common.renderWithCoreScriptsStyleProvider)
 
-local GetFIntFullscreenTitleBarTriggerDelayMillis = require(InGameMenu.Flags.GetFIntFullscreenTitleBarTriggerDelayMillis)
+local GetFIntFullscreenTitleBarTriggerDelayMillis =
+	require(InGameMenu.Flags.GetFIntFullscreenTitleBarTriggerDelayMillis)
 
 local LEAVE_GAME_FRAME_WAITS = 2
 

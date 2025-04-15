@@ -2,8 +2,8 @@ local CorePackages = game:GetService("CorePackages")
 local UserInputService = game:GetService("UserInputService")
 local TextService = game:GetService("TextService")
 
-local Cryo = require(CorePackages.Cryo)
-local Roact = require(CorePackages.Roact)
+local Cryo = require(CorePackages.Packages.Cryo)
+local Roact = require(CorePackages.Packages.Roact)
 
 local TEXTBOX_RIGHTSIDE_THRESHOLD = 0.9
 
@@ -18,20 +18,20 @@ function ScrollingTextBox:init(props)
 			-- cursorposition returns 1 for the left most cursor position
 			local fontDims = self.state.fontDims
 			local cursorPos = self.textboxRef.current.CursorPosition - 1
-			local innerCursorPos = cursorPos - (math.ceil(self.state.innerXOffset/fontDims.X))
+			local innerCursorPos = cursorPos - (math.ceil(self.state.innerXOffset / fontDims.X))
 
-			local maxCursorPos = math.floor(self.clipBox.current.AbsoluteSize.X * TEXTBOX_RIGHTSIDE_THRESHOLD / fontDims.X)
+			local maxCursorPos =
+				math.floor(self.clipBox.current.AbsoluteSize.X * TEXTBOX_RIGHTSIDE_THRESHOLD / fontDims.X)
 
 			if innerCursorPos > maxCursorPos then
 				local newOffset = (cursorPos - maxCursorPos) * fontDims.X
 				self:setState({
-					innerXOffset = newOffset
+					innerXOffset = newOffset,
 				})
-
 			elseif innerCursorPos < 0 then
 				local newOffset = cursorPos * fontDims.X
 				self:setState({
-					innerXOffset = newOffset
+					innerXOffset = newOffset,
 				})
 			end
 		end
@@ -117,7 +117,10 @@ function ScrollingTextBox:render()
 end
 
 return Roact.forwardRef(function(props, ref)
-	return Roact.createElement(ScrollingTextBox, Cryo.Dictionary.join(props, {
-		forwardRef = ref,
-	}))
+	return Roact.createElement(
+		ScrollingTextBox,
+		Cryo.Dictionary.join(props, {
+			forwardRef = ref,
+		})
+	)
 end)

@@ -93,4 +93,15 @@ function ValidationRulesUtil:getBodyPartRules(dest)
 	end
 end
 
+function ValidationRulesUtil:getFullBodyRulesBounds()
+	local result = {}
+	for scaleType, boundsInfo in self:getRules().FullBodyRules.Bounds do
+		result[scaleType] = {
+			minSize = boundsInfo.MinSize,
+			maxSize = boundsInfo.MaxSize,
+		}
+	end
+	return result
+end
+
 return ValidationRulesUtil

@@ -1,6 +1,6 @@
 local CorePackages = game:GetService("CorePackages")
-local Roact = require(CorePackages.Roact)
-local RoactRodux = require(CorePackages.RoactRodux)
+local Roact = require(CorePackages.Packages.Roact)
+local RoactRodux = require(CorePackages.Packages.RoactRodux)
 
 local Components = script.Parent.Parent.Parent.Components
 local ServerScripts = require(Components.Scripts.ServerScripts)
@@ -14,7 +14,7 @@ local PADDING = Constants.GeneralFormatting.MainRowPadding
 
 local BOX_NAMES = {
 	"Active",
-	"Inactive"
+	"Inactive",
 }
 
 local MainViewScripts = Roact.PureComponent:extend("MainViewScripts")
@@ -22,13 +22,13 @@ local MainViewScripts = Roact.PureComponent:extend("MainViewScripts")
 function MainViewScripts:init()
 	self.onUtilTabHeightChanged = function(utilTabHeight)
 		self:setState({
-			utilTabHeight = utilTabHeight
+			utilTabHeight = utilTabHeight,
 		})
 	end
 
 	self.onCheckBoxChanged = function(field, newState)
 		local update = {
-			[field] = newState
+			[field] = newState,
 		}
 		self.props.dispatchServerScriptsUpdateSearchFilter(nil, update)
 	end
@@ -48,7 +48,7 @@ end
 function MainViewScripts:didMount()
 	local utilSize = self.utilRef.current.Size
 	self:setState({
-		utilTabHeight = utilSize.Y.Offset
+		utilTabHeight = utilSize.Y.Offset,
 	})
 end
 
@@ -56,7 +56,7 @@ function MainViewScripts:didUpdate()
 	local utilSize = self.utilRef.current.Size
 	if utilSize.Y.Offset ~= self.state.utilTabHeight then
 		self:setState({
-			utilTabHeight = utilSize.Y.Offset
+			utilTabHeight = utilSize.Y.Offset,
 		})
 	end
 end
@@ -69,7 +69,7 @@ function MainViewScripts:render()
 
 	local utilTabHeight = self.state.utilTabHeight
 
-	local searchTerm =  self.props.serverSearchTerm
+	local searchTerm = self.props.serverSearchTerm
 
 	local initBoxState = {}
 	for i, name in ipairs(BOX_NAMES) do
@@ -79,7 +79,7 @@ function MainViewScripts:render()
 		end
 		initBoxState[i] = {
 			name = name,
-			state =  boxState,
+			state = boxState,
 		}
 	end
 
@@ -109,7 +109,7 @@ function MainViewScripts:render()
 			onSearchTermChanged = self.onSearchTermChanged,
 		}),
 
-		ServerScripts = utilTabHeight > 0  and Roact.createElement(ServerScripts, {
+		ServerScripts = utilTabHeight > 0 and Roact.createElement(ServerScripts, {
 			size = UDim2.new(1, 0, 1, -utilTabHeight),
 			searchTerm = searchTerm,
 			scriptFilters = scriptFilters,

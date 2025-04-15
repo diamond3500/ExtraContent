@@ -4,7 +4,7 @@ local React = require(Packages.React)
 local Dash = require(Packages.Dash)
 
 local Toggle = require(Foundation.Components.Toggle)
-local ToggleSize = require(Foundation.Enums.ToggleSize)
+local InputSize = require(Foundation.Enums.InputSize)
 
 local function Story(props)
 	local controls = props.controls
@@ -27,6 +27,6 @@ return {
 	controls = {
 		isDisabled = false,
 		label = "Label",
-		size = Dash.values(ToggleSize),
+		size = Dash.values(InputSize),
 	},
 }

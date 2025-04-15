@@ -9,8 +9,8 @@ local CorePackages = game:GetService("CorePackages")
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 
-local EmoteUtility = require(CorePackages.Thumbnailing).EmoteUtility
-local Roact = require(CorePackages.Roact)
+local EmoteUtility = require(CorePackages.Packages.Thumbnailing).EmoteUtility
+local Roact = require(CorePackages.Packages.Roact)
 local t = require(CorePackages.Packages.t)
 
 local EmoteThumbnailParameters = require(script.Parent.EmoteThumbnailParameters)

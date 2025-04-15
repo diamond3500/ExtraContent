@@ -1,9 +1,11 @@
 local CorePackages = game:GetService("CorePackages")
+local CoreGui = game:GetService("CoreGui")
+local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 
 local React = require(CorePackages.Packages.React)
-local Roact = require(CorePackages.Roact)
+local Roact = require(CorePackages.Packages.Roact)
 
-local UIBlox = require(CorePackages.UIBlox)
+local UIBlox = require(CorePackages.Packages.UIBlox)
 
 local Foundation = require(CorePackages.Packages.Foundation)
 local Badge = Foundation.Badge
@@ -21,15 +23,26 @@ local FFlagEnableChromeBackwardsSignalAPI = require(TopBar.Flags.GetFFlagEnableC
 local Constants = require(TopBar.Constants)
 local usePartyIcon = require(Chrome.Integrations.Party.usePartyIcon)
 
+local FFlagConnectIconImportAppSetting = game:DefineFastFlag("ConnectIconImportAppSetting", false)
+
+local SettingsHub = if FFlagConnectIconImportAppSetting then nil else require(RobloxGui.Modules.Settings.SettingsHub) :: any
+
 local AppChat = require(CorePackages.Workspace.Packages.AppChat)
 local InExperienceAppChatExperimentation = AppChat.App.InExperienceAppChatExperimentation
 local InExperienceAppChatModal = AppChat.App.InExperienceAppChatModal
 
+local FFlagAppChatRebrandInNonChrome =
+	require(CorePackages.Workspace.Packages.SharedFlags).FFlagAppChatRebrandInNonChrome
+
 local ICON_AREA_WIDTH = 30
 local AVATAR_SIZE = 26
 
-local ICON_OFF = Images["icons/menu/platformChatOff"]
-local ICON_ON = Images["icons/menu/platformChatOn"]
+local ICON_OFF = if FFlagAppChatRebrandInNonChrome
+	then Images["icons/menu/2-person-with-bubble"]
+	else Images["icons/menu/platformChatOff"]
+local ICON_ON = if FFlagAppChatRebrandInNonChrome
+	then Images["icons/menu/2-person-with-bubble-on"]
+	else Images["icons/menu/platformChatOn"]
 
 local ICON_SIZE = 30
 local BADGE_OFFSET_X = 19
@@ -41,32 +54,107 @@ type Props = {
 	removeKeepOutArea: (areaId: string) -> (),
 }
 
+local getSettingsHub = function()
+	if SettingsHub == nil then
+		SettingsHub = require(RobloxGui.Modules.Settings.SettingsHub)
+	end
+
+	return SettingsHub
+end
+
+local getCurrentSquadId = function(isIndependentAppChatContainer)
+	if isIndependentAppChatContainer then
+		return InExperienceAppChatModal.default.currentSquadId
+	else
+		return getSettingsHub().Instance.AppChatPage.CurrentSquadId
+	end
+end
+
+local getAppChatIsOpen = function(isIndependentAppChatContainer)
+	if isIndependentAppChatContainer then
+		return InExperienceAppChatModal.default:getVisible()
+	else
+		if FFlagConnectIconImportAppSetting then
+			local settingsHub = getSettingsHub()
+			return settingsHub.Instance.Pages.CurrentPage ~= nil and settingsHub.Instance.Pages.CurrentPage.Page.Name == settingsHub.Instance.AppChatPage.Page.Name
+		else
+			return SettingsHub.Instance.Pages.CurrentPage ~= nil and SettingsHub.Instance.Pages.CurrentPage.Page.Name == SettingsHub.Instance.AppChatPage.Page.Name
+		end
+	end
+end
+
 function ConnectIcon(props: Props)
+	local isIndependentAppChatContainer = InExperienceAppChatExperimentation.default:shouldUseIndependentAppChatContainer()
 	local buttonRef = React.useRef(nil) :: { current: GuiObject? }
-	local currentSquadId, setCurrentSquadId = React.useState(InExperienceAppChatModal.default.currentSquadId)
-	local isAppChatOpened, setIsAppChatOpened = React.useState(InExperienceAppChatModal:getVisible())
-	local isVisible = React.useCallback(function()
-		return currentSquadId ~= "" and InExperienceAppChatExperimentation.default and InExperienceAppChatExperimentation.default.getShowPlatformChatInNonChrome()
+	local currentSquadId, setCurrentSquadId = React.useState(getCurrentSquadId(isIndependentAppChatContainer))
+	local isAppChatOpened, setIsAppChatOpened = React.useState(getAppChatIsOpen(isIndependentAppChatContainer))
+	local isVisible = React.useMemo(function()
+		return currentSquadId ~= ""
 	end, { currentSquadId })
 
 	local partyIcon = usePartyIcon(ICON_SIZE, AVATAR_SIZE, if isAppChatOpened then ICON_ON else ICON_OFF)
+	React.useEffect(function()
+		setCurrentSquadId(getCurrentSquadId(isIndependentAppChatContainer))
+		if isIndependentAppChatContainer then
+			setCurrentSquadId(InExperienceAppChatModal.default.currentSquadId)
+			local connection = InExperienceAppChatModal.default.currentSquadIdSignal.Event:Connect(function(nextSquadId)
+				setCurrentSquadId(nextSquadId)
+			end)
+			return function()
+				connection:Disconnect()
+			end
+		else
+			if FFlagConnectIconImportAppSetting then
+				local settingsHub = getSettingsHub()
+				setCurrentSquadId(settingsHub.Instance.AppChatPage.CurrentSquadId)
+				local connection = settingsHub.Instance.AppChatPage.CurrentSquadIdSignal.Event:Connect(function(nextSquadId)
+					setCurrentSquadId(nextSquadId)
+				end)
+				return function()
+					connection:Disconnect()
+				end
+			else
+				setCurrentSquadId(SettingsHub.Instance.AppChatPage.CurrentSquadId)
+				local connection = SettingsHub.Instance.AppChatPage.CurrentSquadIdSignal.Event:Connect(function(nextSquadId)
+					setCurrentSquadId(nextSquadId)
+				end)
+				return function()
+					connection:Disconnect()
+				end
+			end
+		end
+	end, { isIndependentAppChatContainer })
 
 	React.useEffect(function()
-		local currentSquadIdConnection = InExperienceAppChatModal.default.currentSquadIdSignal.Event:Connect(
-			function(currentSquadId)
-				setCurrentSquadId(currentSquadId)
+		setIsAppChatOpened(getAppChatIsOpen(isIndependentAppChatContainer))
+		if isIndependentAppChatContainer then
+			local appChatVisibilityConnection = InExperienceAppChatModal.default.visibilitySignal.Event:Connect(
+				function(isVisible)
+					setIsAppChatOpened(isVisible)
+				end
+			)
+			return function()
+				appChatVisibilityConnection:Disconnect()
 			end
-		)
-		local appChatVisibilityConnection = InExperienceAppChatModal.default.visibilitySignal.Event:Connect(
-			function(isVisible)
-				setIsAppChatOpened(isVisible)
+		else
+			if FFlagConnectIconImportAppSetting then
+				local settingsHub = getSettingsHub()
+				local appChatVisibilityConnection = settingsHub.Instance.CurrentPageSignal:connect(function(pageName)
+					setIsAppChatOpened(SettingsHub.Instance.AppChatPage.Page.Name == pageName)
+				end)
+				return function()
+					appChatVisibilityConnection:disconnect()
+				end
+			else
+				local appChatVisibilityConnection = SettingsHub.Instance.CurrentPageSignal:connect(function(pageName)
+					setIsAppChatOpened(SettingsHub.Instance.AppChatPage.Page.Name == pageName)
+				end)
+				return function()
+					appChatVisibilityConnection:disconnect()
+				end
 			end
-		)
-		return function()
-			currentSquadIdConnection:Disconnect()
-			appChatVisibilityConnection:Disconnect()
 		end
-	end, { setCurrentSquadId, setIsAppChatOpened } :: { unknown })
+	end, { isIndependentAppChatContainer })
 
 	local onAreaChanged = React.useCallback(function(rbx: GuiObject)
 		if isVisible and rbx then
@@ -91,9 +179,34 @@ function ConnectIcon(props: Props)
 		end
 	end, { onAreaChanged })
 
-	local onActivated = React.useCallback(function()
+	local toggleIndependentAppChat = React.useCallback(function()
 		InExperienceAppChatModal:toggleVisibility()
 	end, {})
+
+	local toggleSettingsHubAppChat = React.useCallback(function()
+		if FFlagConnectIconImportAppSetting then
+			local settingsHub = getSettingsHub()
+			local isSettingsHubVisible = settingsHub:GetVisibility()
+			if isSettingsHubVisible and isAppChatOpened then
+				settingsHub.Instance:PopMenu(false, true)
+			else
+				if not isSettingsHubVisible then
+					settingsHub.Instance:SetVisibility(true, false)
+				end
+				settingsHub:SwitchToPage(settingsHub.Instance.AppChatPage)
+			end
+		else
+			local isSettingsHubVisible = SettingsHub:GetVisibility()
+			if isSettingsHubVisible and isAppChatOpened then
+				SettingsHub.Instance:PopMenu(false, true)
+			else
+				if not isSettingsHubVisible then
+					SettingsHub.Instance:SetVisibility(true, false)
+				end
+				SettingsHub:SwitchToPage(SettingsHub.Instance.AppChatPage)
+			end
+		end
+	end, { isAppChatOpened })
 
 	return Roact.createElement("TextButton", {
 		Text = "",
@@ -113,7 +226,7 @@ function ConnectIcon(props: Props)
 			iconSize = partyIcon.size:map(function(value)
 				return UDim2.fromOffset(value, value)
 			end),
-			onActivated = onActivated,
+			onActivated = if isIndependentAppChatContainer then toggleIndependentAppChat else toggleSettingsHubAppChat,
 			[Roact.Ref] = setButtonRef,
 		}),
 
@@ -125,8 +238,8 @@ function ConnectIcon(props: Props)
 		}, {
 			Badge = Roact.createElement(Badge, {
 				variant = BadgeVariant.Primary,
-			})
-		})
+			}),
+		}),
 	})
 end
 

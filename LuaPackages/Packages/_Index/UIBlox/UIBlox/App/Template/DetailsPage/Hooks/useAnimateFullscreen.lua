@@ -1,3 +1,4 @@
+-- moving this file to LuaApps, please replicate any changes in the LuaApps file as well
 local DetailsPage = script.Parent.Parent
 local Template = DetailsPage.Parent
 local App = Template.Parent
@@ -6,6 +7,8 @@ local Packages = UIBlox.Parent
 
 local React = require(Packages.React)
 local ReactOtter = require(Packages.ReactOtter)
+
+local UIBloxConfig = require(UIBlox.UIBloxConfig)
 
 local function useAnimateFullscreen(
 	isFullscreen: boolean,
@@ -39,4 +42,4 @@ local function useAnimateFullscreen(
 	return showFullscreen, transparencyValue
 end
 
-return useAnimateFullscreen
+return (if UIBloxConfig.moveDetailsPageToLuaApps then nil else useAnimateFullscreen) :: typeof(useAnimateFullscreen)

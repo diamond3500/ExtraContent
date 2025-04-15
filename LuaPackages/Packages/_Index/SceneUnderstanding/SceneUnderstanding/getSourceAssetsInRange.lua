@@ -31,7 +31,7 @@ local function getSourceAssetsInRange(position: Vector3, options: RangeQueryOpti
 	local candidates = {}
 	local internalOptions = RangeQueryOptions.new(options)
 
-	for _, part in workspace:GetPartBoundsInRadius(position, internalOptions.maxDistance) do
+	for _, part: Instance in workspace:GetPartBoundsInRadius(position, internalOptions.maxDistance) do
 		if isSourceAsset(part) or #findSourceAssetsFromDescendant(part) > 0 then
 			table.insert(candidates, part)
 		end

@@ -1,19 +1,17 @@
 --!nonstrict
 local CorePackages = game:GetService("CorePackages")
 local Players = game:GetService("Players")
-local CoreGui = game:GetService("CoreGui")
 local RbxAnalyticsService = game:GetService("RbxAnalyticsService")
 
-local Roact = require(CorePackages.Roact)
+local Roact = require(CorePackages.Packages.Roact)
 local t = require(CorePackages.Packages.t)
-local UIBlox = require(CorePackages.UIBlox)
+local UIBlox = require(CorePackages.Packages.UIBlox)
 
 local DropDownButtonAnimator = require(script.Parent.DropDownButtonAnimator)
 
 local Images = UIBlox.App.ImageSet.Images
 
-local RobloxGui = CoreGui:WaitForChild("RobloxGui")
-local RobloxTranslator = require(RobloxGui.Modules.RobloxTranslator)
+local RobloxTranslator = require(CorePackages.Workspace.Packages.RobloxTranslator)
 
 local LocalPlayer = Players.LocalPlayer
 
@@ -68,8 +66,10 @@ function FriendDropDownButton:render()
 		onActivated = function()
 			if playerRelationship.friendStatus == Enum.FriendStatus.Friend then
 				LocalPlayer:RevokeFriendship(selectedPlayer)
-			elseif playerRelationship.friendStatus == Enum.FriendStatus.Unknown
-				or playerRelationship.friendStatus == Enum.FriendStatus.NotFriend then
+			elseif
+				playerRelationship.friendStatus == Enum.FriendStatus.Unknown
+				or playerRelationship.friendStatus == Enum.FriendStatus.NotFriend
+			then
 				self.props.requestFriendship(selectedPlayer, false)
 			elseif playerRelationship.friendStatus == Enum.FriendStatus.FriendRequestSent then
 				RbxAnalyticsService:ReportCounter("PlayerDropDown-RevokeFriendship")
@@ -118,7 +118,7 @@ function FriendDropDownButton:didUpdate(prevProps, prevState)
 			unfriendConfirm = false,
 		})
 	end
-	if prevProps.selectedPlayer ~= self.props.selectedPlayer or prevProps.dropDownOpen ~= self.props.dropDownOpen  then
+	if prevProps.selectedPlayer ~= self.props.selectedPlayer or prevProps.dropDownOpen ~= self.props.dropDownOpen then
 		self:setState({
 			unfriendConfirm = false,
 		})

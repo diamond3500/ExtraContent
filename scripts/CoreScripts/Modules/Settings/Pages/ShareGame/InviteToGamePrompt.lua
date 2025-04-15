@@ -5,14 +5,13 @@ local GuiService = game:GetService("GuiService")
 
 local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 
-local Roact = require(CorePackages.Roact)
-local Rodux = require(CorePackages.Rodux)
+local Roact = require(CorePackages.Packages.Roact)
+local Rodux = require(CorePackages.Packages.Rodux)
 
 local Modules = RobloxGui.Modules
 local SettingsHubDirectory = Modules.Settings
 local Constants = require(Modules.Settings.Pages.ShareGame.Constants)
 local InviteEvents = require(CorePackages.Workspace.Packages.GameInvite).GameInviteEvents
-
 
 local ShareGameDirectory = SettingsHubDirectory.Pages.ShareGame
 local FullModalShareGameComponent = require(ShareGameDirectory.Components.FullModalShareGameComponent)
@@ -132,9 +131,8 @@ function InviteToGamePrompt:hide(sentToUserIds)
 	end
 
 	ContextActionService:UnbindCoreAction(HIDE_INVITE_CONTEXT_BIND)
-	GuiService.SelectedCoreObject = nil
-	-- AddSelectionParent/RemoveSelectionGroup is deprecated
-	;(GuiService :: any):RemoveSelectionGroup("invitePrompt")
+	GuiService.SelectedCoreObject = nil; -- AddSelectionParent/RemoveSelectionGroup is deprecated
+	(GuiService :: any):RemoveSelectionGroup("invitePrompt")
 end
 
 function InviteToGamePrompt:destruct()

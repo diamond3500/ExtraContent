@@ -4,11 +4,11 @@ local CoreGui = game:GetService("CoreGui")
 local Players = game:GetService("Players")
 local GuiService = game:GetService("GuiService")
 
-local Roact = require(CorePackages.Roact)
-local RoactRodux = require(CorePackages.RoactRodux)
+local Roact = require(CorePackages.Packages.Roact)
+local RoactRodux = require(CorePackages.Packages.RoactRodux)
 local t = require(CorePackages.Packages.t)
 local Otter = require(CorePackages.Packages.Otter)
-local UIBlox = require(CorePackages.UIBlox)
+local UIBlox = require(CorePackages.Packages.UIBlox)
 
 local Components = script.Parent.Parent
 local Connection = Components.Connection
@@ -22,7 +22,7 @@ local FriendDropDownButton = require(script.Parent.FriendDropDownButton)
 local LocalPlayer = Players.LocalPlayer
 
 local RobloxGui = CoreGui:WaitForChild("RobloxGui")
-local RobloxTranslator = require(RobloxGui.Modules.RobloxTranslator)
+local RobloxTranslator = require(CorePackages.Workspace.Packages.RobloxTranslator)
 
 local Images = UIBlox.App.ImageSet.Images
 
@@ -213,7 +213,7 @@ function PlayerDropDown:render()
 			transparency = self.transparency,
 		})
 
-		local maxDropDownHeight = 4*layoutValues.DropDownButtonSizeY + layoutValues.DropDownHeaderSizeY
+		local maxDropDownHeight = 4 * layoutValues.DropDownButtonSizeY + layoutValues.DropDownHeaderSizeY
 		local dropDownHeaderHeight = layoutValues.DropDownButtonPadding + layoutValues.DropDownHeaderSizeY
 		local dropDownHeight = dropDownHeaderHeight
 
@@ -255,11 +255,11 @@ function PlayerDropDown:render()
 			Container = Roact.createElement("Frame", {
 				LayoutOrder = self.props.layoutOrder,
 				AnchorPoint = Vector2.new(0.5, 0),
-				Position = UDim2.new(0.5, 0, 0.5, -maxDropDownHeight/2),
+				Position = UDim2.new(0.5, 0, 0.5, -maxDropDownHeight / 2),
 				Size = UDim2.new(0, layoutValues.PlayerDropDownSizeXMobile, 0, dropDownHeight),
 				BackgroundTransparency = 1,
 				ClipsDescendants = true,
-			}, dropDownButtons)
+			}, dropDownButtons),
 		})
 	end)
 end
@@ -291,8 +291,7 @@ function PlayerDropDown:didUpdate(previousProps, previousState)
 	self.buttonTransparencyMotor:setGoal(Otter.spring(self:getButtonTransparency(), MOTOR_OPTIONS))
 end
 
-function PlayerDropDown:didMount()
-end
+function PlayerDropDown:didMount() end
 
 function PlayerDropDown:willUnmount()
 	self.transparencyMotor:destroy()
@@ -307,9 +306,9 @@ end
 local function mapStateToProps(state)
 	local selectedPlayer = state.playerDropDown.selectedPlayer
 
-	local isVisible = if GetFFlagFixDropDownVisibility() 
-		then state.playerDropDown.isVisible and state.displayOptions.isVisible 
-		else state.playerDropDown.isVisible 
+	local isVisible = if GetFFlagFixDropDownVisibility()
+		then state.playerDropDown.isVisible and state.displayOptions.isVisible
+		else state.playerDropDown.isVisible
 
 	return {
 		selectedPlayer = selectedPlayer,

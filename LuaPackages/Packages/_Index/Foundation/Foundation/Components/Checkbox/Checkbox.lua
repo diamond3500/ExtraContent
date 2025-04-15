@@ -15,12 +15,13 @@ local useTokens = require(Foundation.Providers.Style.useTokens)
 local useCursor = require(Foundation.Providers.Cursor.useCursor)
 local withCommonProps = require(Foundation.Utility.withCommonProps)
 local withDefaults = require(Foundation.Utility.withDefaults)
+local getInputTextSize = require(Foundation.Utility.getInputTextSize)
 
 local useCheckboxVariants = require(script.Parent.useCheckboxVariants)
 type CheckboxState = useCheckboxVariants.CheckboxState
 
-local CheckboxSize = require(Foundation.Enums.CheckboxSize)
-type CheckboxSize = CheckboxSize.CheckboxSize
+local InputSize = require(Foundation.Enums.InputSize)
+type InputSize = InputSize.InputSize
 
 local ControlState = require(Foundation.Enums.ControlState)
 type ControlState = ControlState.ControlState
@@ -40,11 +41,11 @@ type Props = {
 	onActivated: (boolean) -> (),
 	-- A label for the checkbox. To omit, set it to an empty string.
 	label: string,
-	size: CheckboxSize?,
+	size: InputSize?,
 } & Types.CommonProps
 
 local defaultProps = {
-	size = CheckboxSize.Large,
+	size = InputSize.Medium,
 }
 
 local function Checkbox(checkboxProps: Props, ref: React.Ref<GuiObject>?)
@@ -151,7 +152,7 @@ local function Checkbox(checkboxProps: Props, ref: React.Ref<GuiObject>?)
 			InputLabel = React.createElement(InputLabel, {
 				Text = props.label,
 				textStyle = variantProps.label.style,
-				size = variantProps.label.size,
+				size = getInputTextSize(props.size, true),
 				LayoutOrder = 2,
 			}),
 		}

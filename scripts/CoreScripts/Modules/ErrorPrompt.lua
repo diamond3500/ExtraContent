@@ -11,12 +11,11 @@ local UserInputService = game:GetService("UserInputService")
 
 local Create = require(CorePackages.Workspace.Packages.AppCommonLib).Create
 local MouseIconOverrideService = require(CorePackages.InGameServices.MouseIconOverrideService)
-local Constants = require(RobloxGui.Modules.Common.Constants)
+local Constants = require(CorePackages.Workspace.Packages.CoreScriptsCommon).Constants
 local Shimmer = require(RobloxGui.Modules.Shimmer)
 
 local fflagLocalizeErrorCodeString = settings():GetFFlag("LocalizeErrorCodeString")
 local FFlagFixGamepadDisconnectHighlight = game:DefineFastFlag("FixGamepadDisconnectHighlight2", false)
-local FFlagErrorPromptResizesHeight = require(RobloxGui.Modules.Flags.FFlagErrorPromptResizesHeight)
 
 local DEFAULT_ERROR_PROMPT_KEY = "ErrorPrompt"
 
@@ -245,11 +244,7 @@ end
 
 function ErrorPrompt:_open(errorMsg, errorCode)
 	self:setErrorText(errorMsg, errorCode)
-	if FFlagErrorPromptResizesHeight() then
-		self:resizeHeight(RobloxGui.AbsoluteSize.Y)
-	else
-		self:resizeHeight()
-	end
+	self:_resizeHeight(RobloxGui.AbsoluteSize.Y)
 	if not self._isOpen then
 		MouseIconOverrideService.push("ErrorPromptOverride", Enum.OverrideMouseIconBehavior.ForceShow)
 		GuiService:SetMenuIsOpen(true, self._menuIsOpenKey)
@@ -262,7 +257,7 @@ function ErrorPrompt:_open(errorMsg, errorCode)
 		else
 			self._frame.PromptScale.Scale = 1
 		end
-		
+
 		if not FFlagFixGamepadDisconnectHighlight then
 			if VRService.VREnabled or GuiService:IsTenFootInterface() then
 				GuiService:Select(self._frame.MessageArea.ErrorFrame.ButtonArea)
@@ -437,14 +432,12 @@ function ErrorPrompt:primaryShimmerStop()
 end
 
 function ErrorPrompt:resizeWidthAndHeight(screenWidth, screenHeight)
-	self:resizeWidth(screenWidth)
-	self:resizeHeight(screenHeight)
+	self:_resizeWidth(screenWidth)
+	self:_resizeHeight(screenHeight)
 	self:_relayout()
 end
 
--- when FFlagErrorPromptResizesHeight() is removed rename to _resizeWidth. This
--- function should be "private"
-function ErrorPrompt:resizeWidth(screenWidth)
+function ErrorPrompt:_resizeWidth(screenWidth)
 	local currentWidth = self._frame.Size.X.Offset
 	local targetWidth = screenWidth - 2 * Constants.SIDE_MARGIN
 
@@ -465,15 +458,9 @@ function ErrorPrompt:resizeWidth(screenWidth)
 	end
 
 	self._frame.Size = UDim2.new(0, targetWidth, 0, self._frame.Size.Y.Offset)
-	if not FFlagErrorPromptResizesHeight() then
-		self:resizeHeight()
-		self:_relayout()
-	end
 end
 
--- when FFlagErrorPromptResizesHeight() is removed rename to _resizeHeight. This
--- function should be "private"
-function ErrorPrompt:resizeHeight(screenHeight)
+function ErrorPrompt:_resizeHeight(screenHeight)
 	local errorTextLabel = self._frame.MessageArea.ErrorFrame.ErrorMessage
 	local frameSize = Vector2.new(self._frame.Size.X.Offset - 2 * Constants.SIDE_PADDING, 1000)
 	local textLabelSize = TextService:GetTextSize(errorTextLabel.Text, errorTextLabel.TextSize, errorTextLabel.Font, frameSize)
@@ -485,11 +472,9 @@ function ErrorPrompt:resizeHeight(screenHeight)
 
 	-- User generated error messages can be long strings of \n\n. Cap the
 	-- vertical height so the button will always be visible
-	if FFlagErrorPromptResizesHeight() then
-		local maxHeight = screenHeight - 2 * Constants.VERTICAL_MARGIN
-		targetHeight = math.min(targetHeight, maxHeight)
-		targetHeight = math.max(targetHeight, Constants.ERROR_PROMPT_MIN_HEIGHT.Default)
-	end
+	local maxHeight = screenHeight - 2 * Constants.VERTICAL_MARGIN
+	targetHeight = math.min(targetHeight, maxHeight)
+	targetHeight = math.max(targetHeight, Constants.ERROR_PROMPT_MIN_HEIGHT.Default)
 
 	self._frame.Size = UDim2.new(0, self._frame.Size.X.Offset, 0, targetHeight)
 end

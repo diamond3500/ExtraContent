@@ -5,11 +5,9 @@
 	Make sure you add your layer data to IXPServiceWrapper:InitializeAsync in order to query layer data
 	In game UI shares the same init so you'll find this in StarterScript.lua (init script for all in game lua)
 ]]
-local Root = script.Parent.Parent
-local RobloxGui = game:GetService("CoreGui"):WaitForChild("RobloxGui")
-local CoreGuiModules = RobloxGui:WaitForChild("Modules")
+local CorePackages = game:GetService("CorePackages")
 
-local IXPServiceWrapper = require(CoreGuiModules.Common.IXPServiceWrapper)
+local IXPServiceWrapper = require(CorePackages.Workspace.Packages.IxpServiceWrapper).IXPServiceWrapper
 
 local ABTest = {}
 

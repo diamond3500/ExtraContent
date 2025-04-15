@@ -6,9 +6,9 @@ local RunService = game:GetService("RunService")
 local CorePackages = game:GetService("CorePackages")
 local Players = game:GetService("Players")
 
-local Roact = require(CorePackages.Roact)
-local Rodux = require(CorePackages.Rodux)
-local RoactRodux = require(CorePackages.RoactRodux)
+local Roact = require(CorePackages.Packages.Roact)
+local Rodux = require(CorePackages.Packages.Rodux)
+local RoactRodux = require(CorePackages.Packages.RoactRodux)
 
 local DevConsole = script.Parent.DevConsole
 local Constants = require(DevConsole.Constants)

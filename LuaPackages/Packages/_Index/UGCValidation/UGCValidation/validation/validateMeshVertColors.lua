@@ -3,12 +3,8 @@ local UGCValidationService = game:GetService("UGCValidationService")
 
 local root = script.Parent.Parent
 
-local getEngineFeatureUGCValidateEditableMeshAndImage =
-	require(root.flags.getEngineFeatureUGCValidateEditableMeshAndImage)
-
 local Types = require(root.util.Types)
 local pcallDeferred = require(root.util.pcallDeferred)
-local getFFlagUGCValidationShouldYield = require(root.flags.getFFlagUGCValidationShouldYield)
 
 local Analytics = require(root.Analytics)
 
@@ -21,22 +17,15 @@ local function validateMeshVertexColors(
 
 	local isServer = validationContext.isServer
 
-	local success, result
-	if getEngineFeatureUGCValidateEditableMeshAndImage() and getFFlagUGCValidationShouldYield() then
-		success, result = pcallDeferred(function()
-			return UGCValidationService:ValidateEditableMeshVertColors(
-				meshInfo.editableMesh :: EditableMesh,
-				checkTransparency
-			) -- ValidateMeshVertColors() checks the color as well as the alpha transparency
-		end, validationContext)
-	else
-		success, result = pcall(function()
-			return UGCValidationService:ValidateMeshVertColors(meshInfo.contentId :: string, checkTransparency) -- ValidateMeshVertColors() checks the color as well as the alpha transparency
-		end)
-	end
+	local success, result = pcallDeferred(function()
+		return UGCValidationService:ValidateEditableMeshVertColors(
+			meshInfo.editableMesh :: EditableMesh,
+			checkTransparency
+		) -- ValidateMeshVertColors() checks the color as well as the alpha transparency
+	end, validationContext)
 
 	if not success then
-		Analytics.reportFailure(Analytics.ErrorType.validateMeshVertexColors_FailedToLoadMesh)
+		Analytics.reportFailure(Analytics.ErrorType.validateMeshVertexColors_FailedToLoadMesh, nil, validationContext)
 		local message = string.format(
 			"Failed to load vertex color map for model mesh %s. Make sure it exists and try again.",
 			meshInfo.fullName
@@ -51,7 +40,11 @@ local function validateMeshVertexColors(
 	end
 
 	if not result then
-		Analytics.reportFailure(Analytics.ErrorType.validateMeshVertexColors_NonNeutralVertexColors)
+		Analytics.reportFailure(
+			Analytics.ErrorType.validateMeshVertexColors_NonNeutralVertexColors,
+			nil,
+			validationContext
+		)
 		return false,
 			{
 				string.format(

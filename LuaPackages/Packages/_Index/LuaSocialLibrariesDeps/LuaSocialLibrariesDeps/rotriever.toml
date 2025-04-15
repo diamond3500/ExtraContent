@@ -1,6 +1,6 @@
 [package]
 name = "LuaSocialLibrariesDeps"
-version = "1.5.4"
+version = "1.6.7"
 readme = "README.md"
 content_root = "src"
 files = ["*"]
@@ -126,7 +126,7 @@ version = "^0.5.0"
 
 [dependencies.RoduxUsers]
 target = "https://github.com/roblox/rodux-users"
-version = "^1.5.1"
+version = "^1.6.0"
 
 [dependencies.SocialLibraries]
 target = "https://github.com/roblox/social-libraries"

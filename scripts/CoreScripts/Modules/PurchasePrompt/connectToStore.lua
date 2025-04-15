@@ -6,15 +6,12 @@
 local Root = script.Parent
 
 local CorePackages = game:GetService("CorePackages")
-local PurchasePromptDeps = require(CorePackages.PurchasePromptDeps)
+local PurchasePromptDeps = require(CorePackages.Workspace.Packages.PurchasePromptDeps)
 local RoactRodux = PurchasePromptDeps.RoactRodux
 
 local function connectToStore(mapStateToProps, mapDispatchToProps)
 	return function(innerComponent)
-		local connectedComponent = RoactRodux.UNSTABLE_connect2(
-			mapStateToProps,
-			mapDispatchToProps
-		)(innerComponent)
+		local connectedComponent = RoactRodux.UNSTABLE_connect2(mapStateToProps, mapDispatchToProps)(innerComponent)
 
 		function connectedComponent.getUnconnected()
 			return innerComponent

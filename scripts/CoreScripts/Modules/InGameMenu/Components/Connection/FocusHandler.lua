@@ -11,7 +11,7 @@
 ]]
 
 local CorePackages = game:GetService("CorePackages")
-local InGameMenuDependencies = require(CorePackages.InGameMenuDependencies)
+local InGameMenuDependencies = require(CorePackages.Packages.InGameMenuDependencies)
 local t = InGameMenuDependencies.t
 local Roact = InGameMenuDependencies.Roact
 local Cryo = InGameMenuDependencies.Cryo
@@ -79,8 +79,10 @@ if GetFFlagIGMGamepadSelectionHistory() then
 			and not oldProps.shouldForgetPreviousSelection
 
 		local previousSelection = self.props.previousSelections[self.id]
-		if isSupposedToForgetPreviousSelection
-			or (previousSelection ~= nil and not previousSelection:IsDescendantOf(game)) then
+		if
+			isSupposedToForgetPreviousSelection
+			or (previousSelection ~= nil and not previousSelection:IsDescendantOf(game))
+		then
 			-- Something happened that should cause this focus handler to forget the previous selection
 			-- E.g. the dialog was closed, or the menu was closed
 			self.props.forgetLastSelectionForHandlerId(self.id)
@@ -94,17 +96,18 @@ if GetFFlagIGMGamepadSelectionHistory() then
 			and oldProps.candidateHandlerId ~= nil
 		local hasThisElementGainedFocus = self.props.currentHandlerId == self.id
 			and oldProps.currentHandlerId ~= self.id
-		local hasAnotherElementLostFocus = self.props.currentHandlerId == nil and oldProps.currentHandlerId ~= nil
+		local hasAnotherElementLostFocus = self.props.currentHandlerId == nil
+			and oldProps.currentHandlerId ~= nil
 			and oldProps.currentHandlerId ~= self.id
 
-		local shouldFillFocusVoid = hasAnotherElementLostFocus and not isAnotherElementSupposedToBeFocused
+		local shouldFillFocusVoid = hasAnotherElementLostFocus
+			and not isAnotherElementSupposedToBeFocused
 			and self.props.isFocused
 		local shouldAttemptStealingFocus = not oldProps.isFocused and self.props.isFocused
 
 		local shouldBlur = (oldProps.isFocused and not self.props.isFocused)
 			or (isAnotherElementSupposedToBeFocused and not wasAnotherElementSupposedToBeFocused)
-		local hasThisElementLostFocus = oldProps.currentHandlerId == self.id
-			and self.props.currentHandlerId ~= self.id
+		local hasThisElementLostFocus = oldProps.currentHandlerId == self.id and self.props.currentHandlerId ~= self.id
 
 		-- Should the element request focus
 		-- Or was it granted focus by the context provider, after requesting it?
@@ -161,15 +164,18 @@ if GetFFlagIGMGamepadSelectionHistory() then
 	local function FocusHandlerWithContext(props)
 		return Roact.createElement(FocusHandlerContext.Consumer, {
 			render = function(context)
-				return Roact.createElement(FocusHandler, Cryo.Dictionary.join(props, {
-					currentHandlerId = context.currentHandlerId,
-					previousSelections = context.previousSelections,
-					requestFocusForHandlerId = context.requestFocusForHandlerId,
-					forgetLastSelectionForHandlerId = context.forgetLastSelectionForHandlerId,
-					blurCurrentFocusHandler = context.blurCurrentFocusHandler,
-					candidateHandlerId = context.candidateHandlerId
-				}))
-			end
+				return Roact.createElement(
+					FocusHandler,
+					Cryo.Dictionary.join(props, {
+						currentHandlerId = context.currentHandlerId,
+						previousSelections = context.previousSelections,
+						requestFocusForHandlerId = context.requestFocusForHandlerId,
+						forgetLastSelectionForHandlerId = context.forgetLastSelectionForHandlerId,
+						blurCurrentFocusHandler = context.blurCurrentFocusHandler,
+						candidateHandlerId = context.candidateHandlerId,
+					})
+				)
+			end,
 		})
 	end
 	return FocusHandlerWithContext

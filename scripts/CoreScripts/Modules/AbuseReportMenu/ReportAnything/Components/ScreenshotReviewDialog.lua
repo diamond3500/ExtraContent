@@ -23,15 +23,17 @@ local Divider = require(RAFolder.Components.Divider)
 local RestartScreenshotDialog = require(RAFolder.Components.RestartScreenshotDialog)
 local ReportAnythingAnalytics = require(RAFolder.Utility.ReportAnythingAnalytics)
 
-local RobloxAppHooks = require(CorePackages.Workspace.Packages.RobloxAppHooks)
-local useUiModeInfo = RobloxAppHooks.useUiModeInfo
-local UiMode = require(CorePackages.Workspace.Packages.RobloxAppEnums).UiMode
+local Responsive = require(CorePackages.Workspace.Packages.Responsive)
+local usePreferredInput = Responsive.usePreferredInput
 
 local FocusNavigationUtils = require(CorePackages.Workspace.Packages.FocusNavigationUtils)
 local FocusNavigationCoreScriptsWrapper = FocusNavigationUtils.FocusNavigationCoreScriptsWrapper
+local FocusRoot = FocusNavigationUtils.FocusRoot
 local FocusNavigableSurfaceIdentifierEnum = FocusNavigationUtils.FocusNavigableSurfaceIdentifierEnum
 
 local RobloxTranslator = require(CorePackages.Workspace.Packages.RobloxTranslator)
+
+local FFlagCSFocusWrapperRefactor = require(CorePackages.Workspace.Packages.SharedFlags).FFlagCSFocusWrapperRefactor
 
 local TITLE_HEIGHT = 49
 local HEADER_HEIGHT = 48
@@ -104,7 +106,7 @@ local function ScreenshotReviewDialogSmallPortraitModeHeaderRight(props)
 end
 
 local function ScreenshotReviewDialog(props: Props)
-	local is10ftUI = useUiModeInfo().uiMode == UiMode.TenFoot
+	local isConsole = usePreferredInput() == Responsive.Input.Directional
 
 	if not RobloxTranslator then
 		return nil
@@ -172,19 +174,29 @@ local function ScreenshotReviewDialog(props: Props)
 				BackgroundTransparency = 1,
 			}, {
 				-- Add focus navigation wrapper so that the gamepad focus locks to the Restart Screenshot dialog
-				FocusNavigationCoreScriptsWrapper = React.createElement(FocusNavigationCoreScriptsWrapper, {
-					selectionGroupName = Constants.RestartScreenshotDialogRootName,
-					focusNavigableSurfaceIdentifier = FocusNavigableSurfaceIdentifierEnum.CentralOverlay,
-				}, {
-					DialogBody = React.createElement(RestartScreenshotDialog, {
-						ZIndex = 3,
-						isSmallPortraitMode = props.isSmallPortraitMode,
-						onCancel = function()
-							setShowRestartDialog(false)
-						end,
-						onRestart = onRetake,
-					}),
-				}),
+				FocusNavigationCoreScriptsWrapper = React.createElement(
+					if FFlagCSFocusWrapperRefactor then FocusRoot else FocusNavigationCoreScriptsWrapper,
+					if FFlagCSFocusWrapperRefactor
+						then {
+							surfaceIdentifier = FocusNavigableSurfaceIdentifierEnum.CentralOverlay,
+							isIsolated = true,
+							isAutoFocusRoot = true,
+						}
+						else {
+							selectionGroupName = Constants.RestartScreenshotDialogRootName,
+							focusNavigableSurfaceIdentifier = FocusNavigableSurfaceIdentifierEnum.CentralOverlay,
+						},
+					{
+						DialogBody = React.createElement(RestartScreenshotDialog, {
+							ZIndex = 3,
+							isSmallPortraitMode = props.isSmallPortraitMode,
+							onCancel = function()
+								setShowRestartDialog(false)
+							end,
+							onRestart = onRetake,
+						}),
+					}
+				),
 			}),
 			RestartDialogMask = isShowRestartDialog and React.createElement(ImageSetButton, {
 				Size = UDim2.fromScale(1, 1),
@@ -312,7 +324,7 @@ local function ScreenshotReviewDialog(props: Props)
 								}),
 								ScreenshotImage = React.createElement(ImageSetButton, {
 									Active = true,
-									Selectable = if is10ftUI then false else true, -- disable ability for focus navigation to select screenshot on console
+									Selectable = if isConsole then false else true, -- disable ability for focus navigation to select screenshot on console
 									Size = UDim2.fromScale(1, 1),
 									Image = props.screenshot,
 									ZIndex = 1,
@@ -378,7 +390,7 @@ local function ScreenshotReviewDialog(props: Props)
 										),
 									},
 								},
-								if is10ftUI
+								if isConsole
 									then nil
 									else {
 										buttonType = ButtonType.PrimarySystem,

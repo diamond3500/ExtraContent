@@ -1,7 +1,7 @@
 local CorePackages = game:GetService("CorePackages")
 local UserInputService = game:GetService("UserInputService")
 
-local InGameMenuDependencies = require(CorePackages.InGameMenuDependencies)
+local InGameMenuDependencies = require(CorePackages.Packages.InGameMenuDependencies)
 local Roact = InGameMenuDependencies.Roact
 local RoactRodux = InGameMenuDependencies.RoactRodux
 
@@ -42,13 +42,10 @@ function ControlLayoutSetter:willUnmount()
 	end
 end
 
-return RoactRodux.UNSTABLE_connect2(
-	nil,
-	function(dispatch)
-		return {
-			dispatchSetControlLayout = function(controlLayout)
-				dispatch(SetControlLayout(controlLayout))
-			end
-		}
-	end
-)(ControlLayoutSetter)
+return RoactRodux.UNSTABLE_connect2(nil, function(dispatch)
+	return {
+		dispatchSetControlLayout = function(controlLayout)
+			dispatch(SetControlLayout(controlLayout))
+		end,
+	}
+end)(ControlLayoutSetter)

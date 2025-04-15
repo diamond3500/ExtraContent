@@ -1,6 +1,6 @@
 --!nonstrict
 local CorePackages = game:GetService("CorePackages")
-local Roact = require(CorePackages.Roact)
+local Roact = require(CorePackages.Packages.Roact)
 
 local Constants = require(script.Parent.Parent.Constants)
 
@@ -44,7 +44,7 @@ local function TabRowButton(props)
 			Position = UDim2.new(0, 0, 1, 0),
 			BorderSizePixel = 0,
 			BackgroundColor3 = Constants.Color.HighlightBlue,
-		})
+		}),
 	})
 end
 

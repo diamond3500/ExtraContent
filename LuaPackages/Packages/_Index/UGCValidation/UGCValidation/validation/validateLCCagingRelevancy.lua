@@ -6,11 +6,7 @@ local Analytics = require(root.Analytics)
 
 local Types = require(root.util.Types)
 local pcallDeferred = require(root.util.pcallDeferred)
-local getFFlagUGCValidationShouldYield = require(root.flags.getFFlagUGCValidationShouldYield)
 local getFIntUGCLCCagingRelevancyMinimum = require(root.flags.getFIntUGCLCCagingRelevancyMinimum)
-
-local getEngineFeatureUGCValidateEditableMeshAndImage =
-	require(root.flags.getEngineFeatureUGCValidateEditableMeshAndImage)
 
 local function validateLCCagingRelevancy(
 	innerCageMeshInfo: Types.MeshInfo,
@@ -20,31 +16,18 @@ local function validateLCCagingRelevancy(
 	outerOffset: Vector3,
 	validationContext: Types.ValidationContext
 ): (boolean, { string }?)
-	local success, relevant, considered
-	if getEngineFeatureUGCValidateEditableMeshAndImage() and getFFlagUGCValidationShouldYield() then
-		success, relevant, considered = pcallDeferred(function()
-			return UGCValidationService:GetEditableCagingRelevancyMetrics(
-				innerCageMeshInfo.editableMesh,
-				outerCageMeshInfo.editableMesh,
-				meshInfo.editableMesh,
-				innerOffset,
-				outerOffset
-			)
-		end, validationContext)
-	else
-		success, relevant, considered = pcall(function()
-			return UGCValidationService:GetCagingRelevancyMetrics(
-				innerCageMeshInfo.contentId,
-				outerCageMeshInfo.contentId,
-				meshInfo.contentId,
-				innerOffset,
-				outerOffset
-			)
-		end)
-	end
+	local success, relevant, considered = pcallDeferred(function()
+		return UGCValidationService:GetEditableCagingRelevancyMetrics(
+			innerCageMeshInfo.editableMesh,
+			outerCageMeshInfo.editableMesh,
+			meshInfo.editableMesh,
+			innerOffset,
+			outerOffset
+		)
+	end, validationContext)
 
 	if not success then
-		Analytics.reportFailure(Analytics.ErrorType.validateCagingRelevancy_FailedToExecute)
+		Analytics.reportFailure(Analytics.ErrorType.validateCagingRelevancy_FailedToExecute, nil, validationContext)
 		return false,
 			{
 				string.format(
@@ -62,11 +45,11 @@ local function validateLCCagingRelevancy(
 	local score = math.floor(100 * relevant / considered)
 
 	if score < getFIntUGCLCCagingRelevancyMinimum() then
-		Analytics.reportFailure(Analytics.ErrorType.validateCagingRelevancy_IrrelevantCaging)
+		Analytics.reportFailure(Analytics.ErrorType.validateCagingRelevancy_IrrelevantCaging, nil, validationContext)
 		return false,
 			{
 				string.format(
-					"Validation detected %d%% of the outer cage edits don’t cover the accessory. Make sure you are moving the outer cage only where needed.",
+					"Validation detected %d%% of the outer cage edits do not cover the accessory. Make sure you are moving the outer cage only where needed.",
 					100 - score
 				),
 			}

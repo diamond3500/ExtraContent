@@ -30,7 +30,7 @@ local function initiateAvatarCreationFeePurchase(avatarPublishMetadata, guid, hu
 
 		return Promise.all({
 			accountInfo = getAccountInfo(network, externalSettings),
-			balanceInfo = getBalanceInfo(network, externalSettings),
+			balanceInfo = getBalanceInfo(network, externalSettings, true --[[overrideStudioMock]]),
 		})
 		:andThen(function(results)
 			local productInfo = {

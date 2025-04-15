@@ -7,24 +7,20 @@
 ]]
 local AnimationClipProvider = game:GetService("AnimationClipProvider")
 local CorePackages = game:GetService("CorePackages")
-local CoreGui = game:GetService("CoreGui")
 local UserInputService = game:GetService("UserInputService")
 local GuiService = game:GetService("GuiService")
 local Players = game:GetService("Players")
 local ContextActionService = game:GetService("ContextActionService")
 local RunService = game:GetService("RunService")
 
-local Roact = require(CorePackages.Roact)
+local Roact = require(CorePackages.Packages.Roact)
 local t = require(CorePackages.Packages.t)
-local UIBlox = require(CorePackages.UIBlox)
+local UIBlox = require(CorePackages.Packages.UIBlox)
 
 local ShimmerPanel = UIBlox.App.Loading.ShimmerPanel
 local EmptyState = UIBlox.App.Indicator.EmptyState
-local IconButton = UIBlox.App.Button.IconButton
-local IconSize = UIBlox.App.ImageSet.Enum.IconSize
 local Button = UIBlox.App.Button.Button
 local ButtonType = UIBlox.App.Button.Enum.ButtonType
-local StandardButtonSize = UIBlox.App.Button.Enum.StandardButtonSize
 local ShortcutBar = UIBlox.App.Navigation.ShortcutBar
 local InputType = UIBlox.Core.Enums.InputType
 local getInputGroup = require(CorePackages.Workspace.Packages.InputType).getInputGroup
@@ -32,8 +28,7 @@ local ExternalEventConnection = require(CorePackages.Workspace.Packages.RoactUti
 local InputTypeConstants = require(CorePackages.Workspace.Packages.InputType).InputTypeConstants
 local GamepadUtils = require(CorePackages.Workspace.Packages.AppCommonLib).Utils.GamepadUtils
 
-local RobloxGui = CoreGui:WaitForChild("RobloxGui")
-local RobloxTranslator = require(RobloxGui.Modules.RobloxTranslator)
+local RobloxTranslator = require(CorePackages.Workspace.Packages.RobloxTranslator)
 local InteractionFrame = require(script.Parent.InteractionFrame)
 local Constants = require(script.Parent.Parent.Parent.Constants)
 
@@ -41,10 +36,10 @@ local Images = UIBlox.App.ImageSet.Images
 local PreviewShrinkIcon = Images["icons/actions/previewShrink"]
 local ResetViewIcon = Images["icons/actions/reset"]
 
-local FFlagPublishAvatarPromptEnabled = require(script.Parent.Parent.Parent.FFlagPublishAvatarPromptEnabled)
+local FFlagFixPublishAvatarVRViewports = require(script.Parent.Parent.Parent.FFlagFixPublishAvatarVRViewports)
 
 local CAMERA_FOV = 30
-local INITIAL_ZOOM_FACTOR = if FFlagPublishAvatarPromptEnabled then 0.8 else 1
+local INITIAL_ZOOM_FACTOR = 0.8
 local ANIMATION_CLIP_INITIAL_ZOOM_FACTOR = 0.75
 local MAX_ZOOM_FACTOR = 10
 local MIN_ZOOM_FACTOR = 0.3
@@ -82,7 +77,7 @@ function PreviewViewport:init()
 	self:setState({
 		loadingState = LoadingState.LOADING,
 		isGamepad = isGamepadInput(UserInputService:GetLastInputType()),
-		cameraMoved = if FFlagPublishAvatarPromptEnabled then false else nil,
+		cameraMoved = false,
 	})
 
 	self.ref = Roact.createRef()
@@ -100,7 +95,7 @@ function PreviewViewport:init()
 		self.cameraPanInPixels = self.cameraPanInPixels + pixelDelta
 		self:clampOffsets()
 		self:updateCameraPosition()
-		if FFlagPublishAvatarPromptEnabled and not self.state.cameraMoved then
+		if not self.state.cameraMoved then
 			self:setState({ cameraMoved = true })
 		end
 	end
@@ -113,7 +108,7 @@ function PreviewViewport:init()
 
 		self:clampOffsets()
 		self:updateCameraPosition()
-		if FFlagPublishAvatarPromptEnabled and not self.state.cameraMoved then
+		if not self.state.cameraMoved then
 			self:setState({ cameraMoved = true })
 		end
 	end
@@ -140,7 +135,7 @@ function PreviewViewport:init()
 
 		-- self:clampOffsets doesn't need to be called here because y-axis doesn't have limits
 		self:updateCameraPosition()
-		if FFlagPublishAvatarPromptEnabled and not self.state.cameraMoved then
+		if not self.state.cameraMoved then
 			self:setState({ cameraMoved = true })
 		end
 	end
@@ -158,7 +153,7 @@ function PreviewViewport:init()
 		end
 		self.zoomFactor = newZoomFactor
 
-		if (not FFlagPublishAvatarPromptEnabled) or screenPixelPoint then
+		if screenPixelPoint then
 			-- we translate screen coordinates to camera's current view coordinates with the center as (0,0)
 			local pointFromCenter = screenPixelPoint - (self.absolutePosition + self.absoluteSize / 2)
 			pointFromCenter = pointFromCenter * Vector2.new(1, -1) * -1
@@ -168,7 +163,7 @@ function PreviewViewport:init()
 
 		self:clampOffsets()
 		self:updateCameraPosition()
-		if FFlagPublishAvatarPromptEnabled and not self.state.cameraMoved then
+		if not self.state.cameraMoved then
 			self:setState({ cameraMoved = true })
 		end
 	end
@@ -352,7 +347,7 @@ function PreviewViewport:resetCameraPosition()
 
 	self:updateCameraPosition()
 
-	if FFlagPublishAvatarPromptEnabled and self.state.cameraMoved then
+	if self.state.cameraMoved then
 		self:setState({ cameraMoved = false })
 	end
 end
@@ -470,70 +465,39 @@ function PreviewViewport:render()
 			end,
 		}) or nil,
 
-		ButtonFrame = if FFlagPublishAvatarPromptEnabled
-			then Roact.createElement("Frame", {
-				Size = UDim2.fromScale(1, 1),
-				Position = UDim2.fromScale(0, 0),
-				BackgroundTransparency = 1,
-			}, {
-				UIPadding = Roact.createElement("UIPadding", {
-					PaddingBottom = UDim.new(0, BUTTON_PADDING),
-					PaddingLeft = UDim.new(0, BUTTON_PADDING),
-					PaddingRight = UDim.new(0, BUTTON_PADDING),
-				}),
-				ResetViewButton = if showResetViewButton
-					then Roact.createElement(Button, {
-						buttonType = ButtonType.Secondary,
-						size = UDim2.fromOffset(ICON_SIZE, ICON_SIZE),
-						-- Lower left corner
-						position = UDim2.fromScale(0, 1),
-						anchorPoint = Vector2.new(0, 1),
-						icon = ResetViewIcon,
-						onActivated = self.onResetButtonPressed,
-					})
-					else nil,
-				ShrinkPreviewButton = Roact.createElement(Button, {
-					buttonType = ButtonType.PrimarySystem,
+		ButtonFrame = Roact.createElement("Frame", {
+			Size = UDim2.fromScale(1, 1),
+			Position = UDim2.fromScale(0, 0),
+			BackgroundTransparency = 1,
+		}, {
+			UIPadding = Roact.createElement("UIPadding", {
+				PaddingBottom = UDim.new(0, BUTTON_PADDING),
+				PaddingLeft = UDim.new(0, BUTTON_PADDING),
+				PaddingRight = UDim.new(0, BUTTON_PADDING),
+			}),
+			ResetViewButton = if showResetViewButton
+				then Roact.createElement(Button, {
+					buttonType = ButtonType.Secondary,
 					size = UDim2.fromOffset(ICON_SIZE, ICON_SIZE),
-					icon = PreviewShrinkIcon,
-					-- Lower right corner
-					position = UDim2.fromScale(1, 1),
-					anchorPoint = Vector2.new(1, 1),
-					onActivated = self.props.closePreviewView,
-				}),
-			})
-			else nil,
-
-		-- TODO: move buttons to a superview
-		ResetViewButton = if not FFlagPublishAvatarPromptEnabled
-			then (loadingState == LoadingState.SUCCESSFULLY_LOADED and not self.state.isGamepad) and Roact.createElement(
-				Button,
-				{
-					buttonType = ButtonType.PrimarySystem,
-					standardSize = StandardButtonSize.XSmall,
-					position = UDim2.new(0, 20, 1, -20),
+					-- Lower left corner
+					position = UDim2.fromScale(0, 1),
 					anchorPoint = Vector2.new(0, 1),
-					text = localized.resetViewButtonText,
-					onActivated = function()
-						self:resetCameraPosition()
-					end,
-				}
-			)
-			else nil,
-
-		ShrinkPreviewButton = if not FFlagPublishAvatarPromptEnabled
-			then Roact.createElement(IconButton, {
-				position = UDim2.new(1, -20, 1, -20),
-				anchorPoint = Vector2.new(1, 1),
+					icon = ResetViewIcon,
+					onActivated = self.onResetButtonPressed,
+				})
+				else nil,
+			ShrinkPreviewButton = Roact.createElement(Button, {
+				buttonType = ButtonType.PrimarySystem,
+				size = UDim2.fromOffset(ICON_SIZE, ICON_SIZE),
 				icon = PreviewShrinkIcon,
-				iconSize = IconSize.Medium,
-				onActivated = function()
-					self.props.closePreviewView()
-				end,
-			})
-			else nil,
+				-- Lower right corner
+				position = UDim2.fromScale(1, 1),
+				anchorPoint = Vector2.new(1, 1),
+				onActivated = self.props.closePreviewView,
+			}),
+		}),
 
-		TooltipHint = if FFlagPublishAvatarPromptEnabled and self.props.asset:IsA("Model")
+		TooltipHint = if self.props.asset:IsA("Model")
 			then Roact.createElement(ShortcutBar, {
 				position = UDim2.fromScale(0.5, 0.9),
 				anchorPoint = Vector2.new(0.5, 1),
@@ -576,6 +540,9 @@ function PreviewViewport:render()
 				Camera = Roact.createElement("Camera", {
 					CameraType = Enum.CameraType.Scriptable,
 					FieldOfView = CAMERA_FOV,
+
+					HeadLocked = if FFlagFixPublishAvatarVRViewports then true else nil,
+					VRTiltAndRollEnabled = if FFlagFixPublishAvatarVRViewports then true else nil,
 
 					CFrame = self.cameraCFrameBinding,
 					Focus = self.cameraFocusBinding,
@@ -630,9 +597,7 @@ function PreviewViewport:didMount()
 	self.isMounted = true
 	self.absolutePosition = self.ref.current.AbsolutePosition + topLeftInset
 	self:processAsset()
-	if FFlagPublishAvatarPromptEnabled then
-		self:setUpGamepad()
-	end
+	self:setUpGamepad()
 end
 
 function PreviewViewport:cleanupGamepad()
@@ -646,9 +611,7 @@ end
 
 function PreviewViewport:willUnmount()
 	self.isMounted = false
-	if FFlagPublishAvatarPromptEnabled then
-		self:cleanupGamepad()
-	end
+	self:cleanupGamepad()
 end
 
 function PreviewViewport:didUpdate(prevProps)

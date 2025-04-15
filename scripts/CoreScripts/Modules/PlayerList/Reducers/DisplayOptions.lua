@@ -3,8 +3,8 @@ local CorePackages = game:GetService("CorePackages")
 local VRService = game:GetService("VRService")
 local GuiService = game:GetService("GuiService")
 
-local Rodux = require(CorePackages.Rodux)
-local Cryo = require(CorePackages.Cryo)
+local Rodux = require(CorePackages.Packages.Rodux)
+local Cryo = require(CorePackages.Packages.Cryo)
 
 local Actions = script.Parent.Parent.Actions
 local SetPlayerListVisibility = require(Actions.SetPlayerListVisibility)

@@ -38,7 +38,7 @@ export type VoiceMuteSelfArgs = {
 }
 
 -- Only providing types for functions we might use
-type AnalyticsService = {
+export type AnalyticsService = {
 	-- Event Stream
 	SetRBXEvent: EventStreamFn,
 	SetRBXEventStream: EventStreamFn,

@@ -6,7 +6,7 @@ local AnalyticsService = game:GetService("RbxAnalyticsService")
 local CoreGui = game:GetService("CoreGui")
 local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 
-local InGameMenuDependencies = require(CorePackages.InGameMenuDependencies)
+local InGameMenuDependencies = require(CorePackages.Packages.InGameMenuDependencies)
 local Roact = InGameMenuDependencies.Roact
 local UIBlox = InGameMenuDependencies.UIBlox
 local Cryo = InGameMenuDependencies.Cryo
@@ -49,7 +49,7 @@ local Constants = require(InGameMenu.Resources.Constants)
 local SendAnalytics = require(InGameMenu.Utility.SendAnalytics)
 
 local VoiceChatServiceManager = require(RobloxGui.Modules.VoiceChat.VoiceChatServiceManager).default
-local BlockingUtility = require(RobloxGui.Modules.BlockingUtility)
+local BlockingUtility = require(CorePackages.Workspace.Packages.BlockingUtility)
 local BlockPlayer = require(RobloxGui.Modules.PlayerList.Thunks.BlockPlayer)
 local UnblockPlayer = require(RobloxGui.Modules.PlayerList.Thunks.UnblockPlayer)
 local TrustAndSafety = require(RobloxGui.Modules.TrustAndSafety)
@@ -298,21 +298,21 @@ function PlayersPage:getMoreActions(localized)
 			})
 			if self.props.voiceEnabled then
 				local voiceParticipant =
-					VoiceChatServiceManager.participants[tostring(
-						self.state.selectedPlayer.UserId
-					)]
+					VoiceChatServiceManager.participants[tostring(self.state.selectedPlayer.UserId)]
 				if voiceParticipant then
 					local isMuted = voiceParticipant.isMutedLocally
 					table.insert(moreActions, {
 						text = isMuted and "Unmute Player" or "Mute Player",
-						icon = GetFFlagEnableVoiceChatSpeakerIcons() and VoiceChatServiceManager:GetIcon(
-							isMuted and "Unmute" or "Mute",
-							"Misc"
-						) or VoiceChatServiceManager:GetIcon(isMuted and "Blank" or "Muted"),
+						icon = GetFFlagEnableVoiceChatSpeakerIcons()
+								and VoiceChatServiceManager:GetIcon(isMuted and "Unmute" or "Mute", "Misc")
+							or VoiceChatServiceManager:GetIcon(isMuted and "Blank" or "Muted"),
 						onActivated = function()
 							local player = self.state.selectedPlayer
 							log:debug("Muting Player {}", player.UserId)
-							VoiceChatServiceManager:ToggleMutePlayer(player.UserId, VoiceConstants.VOICE_CONTEXT_TYPE.IN_GAME_MENU)
+							VoiceChatServiceManager:ToggleMutePlayer(
+								player.UserId,
+								VoiceConstants.VOICE_CONTEXT_TYPE.IN_GAME_MENU
+							)
 							self:setState({
 								selectedPlayer = Roact.None,
 							})
@@ -359,13 +359,15 @@ function PlayersPage:renderFocusHandler(canCaptureFocus)
 			and not self.state.selectedPlayer
 			and (self.state.selectedPlayerRef or self.state.firstPlayerRef) ~= nil,
 		shouldForgetPreviousSelection = shouldForgetPreviousSelection,
-		didFocus = GetFFlagIGMGamepadSelectionHistory() and function(previousSelection)
-			-- Focus first player when landing on the page
-			GuiService.SelectedCoreObject = previousSelection or self.state.firstPlayerRef
-		end or function()
-			-- Focus first player when landing on the page
-			GuiService.SelectedCoreObject = self.state.selectedPlayerRef or self.state.firstPlayerRef
-		end,
+		didFocus = GetFFlagIGMGamepadSelectionHistory()
+				and function(previousSelection)
+					-- Focus first player when landing on the page
+					GuiService.SelectedCoreObject = previousSelection or self.state.firstPlayerRef
+				end
+			or function()
+				-- Focus first player when landing on the page
+				GuiService.SelectedCoreObject = self.state.selectedPlayerRef or self.state.firstPlayerRef
+			end,
 	})
 end
 

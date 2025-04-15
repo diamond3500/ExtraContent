@@ -8,7 +8,6 @@ local root = script.Parent.Parent
 
 local Types = require(root.util.Types)
 local pcallDeferred = require(root.util.pcallDeferred)
-local getFFlagUGCValidationShouldYield = require(root.flags.getFFlagUGCValidationShouldYield)
 
 local Analytics = require(root.Analytics)
 local Constants = require(root.Constants)
@@ -17,8 +16,6 @@ local getEngineFeatureEngineUGCValidateBodyParts = require(root.flags.getEngineF
 local getEngineFeatureEngineUGCValidateCalculateUniqueUV =
 	require(root.flags.getEngineFeatureEngineUGCValidateCalculateUniqueUV)
 local getFIntUniqueUVTolerance = require(root.flags.getFIntUniqueUVTolerance)
-local getEngineFeatureUGCValidateEditableMeshAndImage =
-	require(root.flags.getEngineFeatureUGCValidateEditableMeshAndImage)
 
 local UGCValidationService = game:GetService("UGCValidationService")
 
@@ -43,74 +40,38 @@ local function validateCageUVs(
 	local testPassed
 	local uniqueUVCount
 	if getEngineFeatureEngineUGCValidateCalculateUniqueUV() then
-		if getEngineFeatureUGCValidateEditableMeshAndImage() and getFFlagUGCValidationShouldYield() then
-			testExecutedSuccessfully, testPassed = pcallDeferred(function()
-				uniqueUVCount =
-					UGCValidationService:CalculateEditableMeshUniqueUVCount(meshInfo.editableMesh :: EditableMesh)
-				return math.abs(uniqueUVCount - requiredUVCount) <= getFIntUniqueUVTolerance()
-			end, validationContext)
-		else
-			testExecutedSuccessfully, testPassed = pcall(function()
-				uniqueUVCount = UGCValidationService:CalculateUniqueUVCount(meshInfo.contentId :: string)
-				return math.abs(uniqueUVCount - requiredUVCount) <= getFIntUniqueUVTolerance()
-			end)
-		end
+		testExecutedSuccessfully, testPassed = pcallDeferred(function()
+			uniqueUVCount =
+				UGCValidationService:CalculateEditableMeshUniqueUVCount(meshInfo.editableMesh :: EditableMesh)
+			return math.abs(uniqueUVCount - requiredUVCount) <= getFIntUniqueUVTolerance()
+		end, validationContext)
 	else
-		if getEngineFeatureUGCValidateEditableMeshAndImage() and getFFlagUGCValidationShouldYield() then
-			testExecutedSuccessfully, testPassed = pcallDeferred(function()
-				for tolIter = 0, getFIntUniqueUVTolerance() do
-					if
-						UGCValidationService:ValidateEditableMeshUniqueUVCount(
-							meshInfo.editableMesh :: EditableMesh,
-							requiredUVCount + tolIter
-						)
-					then
-						return true
-					end
-
-					if 0 == tolIter or (requiredUVCount - tolIter) < 0 then
-						continue
-					end
-
-					if
-						UGCValidationService:ValidateEditableMeshUniqueUVCount(
-							meshInfo.editableMesh :: EditableMesh,
-							requiredUVCount - tolIter
-						)
-					then
-						return true
-					end
+		testExecutedSuccessfully, testPassed = pcallDeferred(function()
+			for tolIter = 0, getFIntUniqueUVTolerance() do
+				if
+					UGCValidationService:ValidateEditableMeshUniqueUVCount(
+						meshInfo.editableMesh :: EditableMesh,
+						requiredUVCount + tolIter
+					)
+				then
+					return true
 				end
-				return false
-			end, validationContext)
-		else
-			testExecutedSuccessfully, testPassed = pcall(function()
-				for tolIter = 0, getFIntUniqueUVTolerance() do
-					if
-						UGCValidationService:ValidateUniqueUVCount(
-							meshInfo.contentId :: string,
-							requiredUVCount + tolIter
-						)
-					then
-						return true
-					end
 
-					if 0 == tolIter or (requiredUVCount - tolIter) < 0 then
-						continue
-					end
-
-					if
-						UGCValidationService:ValidateUniqueUVCount(
-							meshInfo.contentId :: string,
-							requiredUVCount - tolIter
-						)
-					then
-						return true
-					end
+				if 0 == tolIter or (requiredUVCount - tolIter) < 0 then
+					continue
 				end
-				return false
-			end)
-		end
+
+				if
+					UGCValidationService:ValidateEditableMeshUniqueUVCount(
+						meshInfo.editableMesh :: EditableMesh,
+						requiredUVCount - tolIter
+					)
+				then
+					return true
+				end
+			end
+			return false
+		end, validationContext)
 	end
 
 	if not testExecutedSuccessfully then
@@ -124,12 +85,12 @@ local function validateCageUVs(
 			-- which would mean the asset failed validation
 			error(errorMsg)
 		end
-		Analytics.reportFailure(Analytics.ErrorType.validateCageUVs_TestExecutedSuccessfully)
+		Analytics.reportFailure(Analytics.ErrorType.validateCageUVs_TestExecutedSuccessfully, nil, validationContext)
 		return false, { errorMsg }
 	end
 
 	if not testPassed then
-		Analytics.reportFailure(Analytics.ErrorType.validateCageUVs_TestPassed)
+		Analytics.reportFailure(Analytics.ErrorType.validateCageUVs_TestPassed, nil, validationContext)
 		return false,
 			{
 				string.format(

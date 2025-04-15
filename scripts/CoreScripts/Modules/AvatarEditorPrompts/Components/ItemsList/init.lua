@@ -2,11 +2,11 @@
 local CorePackages = game:GetService("CorePackages")
 local CoreGui = game:GetService("CoreGui")
 
-local Roact = require(CorePackages.Roact)
+local Roact = require(CorePackages.Packages.Roact)
 local RoactGamepad = require(CorePackages.Packages.RoactGamepad)
-local RoactRodux = require(CorePackages.RoactRodux)
+local RoactRodux = require(CorePackages.Packages.RoactRodux)
 local t = require(CorePackages.Packages.t)
-local UIBlox = require(CorePackages.UIBlox)
+local UIBlox = require(CorePackages.Packages.UIBlox)
 
 local VerticalScrollViewWithMargin = UIBlox.App.Container.VerticalScrollViewWithMargin
 local withStyle = UIBlox.Style.withStyle
@@ -20,7 +20,7 @@ local GetAssetsDifference = require(AvatarEditorPrompts.GetAssetsDifference)
 local AddAnalyticsInfo = require(AvatarEditorPrompts.Actions.AddAnalyticsInfo)
 
 local RobloxGui = CoreGui:WaitForChild("RobloxGui")
-local RobloxTranslator = require(RobloxGui.Modules.RobloxTranslator)
+local RobloxTranslator = require(CorePackages.Workspace.Packages.RobloxTranslator)
 
 local PADDING_BETWEEN = 10
 
@@ -76,7 +76,7 @@ function ItemsList:init()
 
 	self.onContentSizeChanged = function(rbx)
 		self:setState({
-			canvasSizeY = rbx.AbsoluteContentSize.Y
+			canvasSizeY = rbx.AbsoluteContentSize.Y,
 		})
 	end
 
@@ -148,54 +148,65 @@ function ItemsList:createEntriesList()
 
 	if #self.state.addedAssetNames > 0 then
 		local addingHeaderText = RobloxTranslator:FormatByKey("CoreScripts.AvatarEditorPrompts.Adding")
-		table.insert(list, Roact.createElement(
-			RoactGamepad.Focusable[ListSection], {
-			headerText = addingHeaderText,
-			items = self.state.addedAssetNames,
-			layoutOrder = 1,
-			isFirstSection = true,
-			isLastSection = #self.state.removedAssetNames == 0,
+		table.insert(
+			list,
+			Roact.createElement(RoactGamepad.Focusable[ListSection], {
+				headerText = addingHeaderText,
+				items = self.state.addedAssetNames,
+				layoutOrder = 1,
+				isFirstSection = true,
+				isLastSection = #self.state.removedAssetNames == 0,
 
-			NextSelectionDown = self.removedSectionRef,
-			[Roact.Ref] = self.addedSectionRef,
-		}))
+				NextSelectionDown = self.removedSectionRef,
+				[Roact.Ref] = self.addedSectionRef,
+			})
+		)
 
 		if #self.state.removedAssetNames > 0 then
 			--Add some padding
-			table.insert(list, Roact.createElement("Frame", {
-				BackgroundTransparency = 1,
-				Size = UDim2.new(1, 0, 0, PADDING_BETWEEN * 2),
-				LayoutOrder = 2,
-			}))
+			table.insert(
+				list,
+				Roact.createElement("Frame", {
+					BackgroundTransparency = 1,
+					Size = UDim2.new(1, 0, 0, PADDING_BETWEEN * 2),
+					LayoutOrder = 2,
+				})
+			)
 		end
 	end
 
 	if #self.state.removedAssetNames > 0 then
 		local removingHeaderText = RobloxTranslator:FormatByKey("CoreScripts.AvatarEditorPrompts.Removing")
-		table.insert(list, Roact.createElement(RoactGamepad.Focusable[ListSection], {
-			headerText = removingHeaderText,
-			items = self.state.removedAssetNames,
-			layoutOrder = 3,
-			isFirstSection = #self.state.addedAssetNames == 0,
-			isLastSection = true,
+		table.insert(
+			list,
+			Roact.createElement(RoactGamepad.Focusable[ListSection], {
+				headerText = removingHeaderText,
+				items = self.state.removedAssetNames,
+				layoutOrder = 3,
+				isFirstSection = #self.state.addedAssetNames == 0,
+				isLastSection = true,
 
-			NextSelectionUp = self.addedSectionRef,
-			[Roact.Ref] = self.removedSectionRef,
-		}))
+				NextSelectionUp = self.addedSectionRef,
+				[Roact.Ref] = self.removedSectionRef,
+			})
+		)
 	end
 
 	local noChangedAssets = #self.state.addedAssetNames == 0 and #self.state.removedAssetNames == 0
 	if noChangedAssets then
 		local noChangedAssetsText = RobloxTranslator:FormatByKey("CoreScripts.AvatarEditorPrompts.NoChangedAssets")
-		table.insert(list, Roact.createElement(RoactGamepad.Focusable[ListSection], {
-			headerText = noChangedAssetsText,
-			items = {},
-			layoutOrder = 1,
-			isFirstSection = true,
-			isLastSection = true,
+		table.insert(
+			list,
+			Roact.createElement(RoactGamepad.Focusable[ListSection], {
+				headerText = noChangedAssetsText,
+				items = {},
+				layoutOrder = 1,
+				isFirstSection = true,
+				isLastSection = true,
 
-			[Roact.Ref] = self.noChangedAssetsRef,
-		}))
+				[Roact.Ref] = self.noChangedAssetsRef,
+			})
+		)
 	end
 
 	return list
@@ -236,12 +247,12 @@ function ItemsList:renderItemsList()
 
 					Color = ColorSequence.new({
 						ColorSequenceKeypoint.new(0, theme.BackgroundUIDefault.Color),
-						ColorSequenceKeypoint.new(1, theme.BackgroundUIDefault.Color)
+						ColorSequenceKeypoint.new(1, theme.BackgroundUIDefault.Color),
 					}),
 
 					Transparency = NumberSequence.new({
 						NumberSequenceKeypoint.new(0, 0),
-						NumberSequenceKeypoint.new(1, 1)
+						NumberSequenceKeypoint.new(1, 1),
 					}),
 				}),
 			}),
@@ -265,12 +276,12 @@ function ItemsList:renderItemsList()
 
 					Color = ColorSequence.new({
 						ColorSequenceKeypoint.new(0, theme.BackgroundUIDefault.Color),
-						ColorSequenceKeypoint.new(1, theme.BackgroundUIDefault.Color)
+						ColorSequenceKeypoint.new(1, theme.BackgroundUIDefault.Color),
 					}),
 
 					Transparency = NumberSequence.new({
 						NumberSequenceKeypoint.new(0, 1),
-						NumberSequenceKeypoint.new(1, 0)
+						NumberSequenceKeypoint.new(1, 0),
 					}),
 				}),
 			}),

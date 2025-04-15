@@ -2,7 +2,7 @@
 local AvatarEditorService = game:GetService("AvatarEditorService")
 local CorePackages = game:GetService("CorePackages")
 
-local Promise = require(CorePackages.Promise)
+local Promise = require(CorePackages.Packages.Promise)
 
 -- Cache this here for convenience so if we get the result for the HumanoidViewport we can use it again for
 -- calling PerformSaveAvatar/PerformCreateOutfit without needing to pass it through the store.
@@ -22,7 +22,7 @@ local function removeDefaultClothing(humanoidDescription, resolve, reject)
 	local defaultShirtIds = avatarRules.DefaultClothingAssetLists.DefaultShirtAssetIds
 	local defaultPantsIds = avatarRules.DefaultClothingAssetLists.DefaultPantAssetIds
 
-	if (not defaultShirtIds) or (not defaultPantsIds) then
+	if (not defaultShirtIds) or not defaultPantsIds then
 		reject("No default clothing ids in avatar rules")
 		return
 	end

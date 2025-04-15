@@ -1,7 +1,7 @@
 local CorePackages = game:GetService("CorePackages")
 
 local React = require(CorePackages.Packages.React)
-local UIBlox = require(CorePackages.UIBlox)
+local UIBlox = require(CorePackages.Packages.UIBlox)
 local useStyle = UIBlox.Core.Style.useStyle
 
 local FTUX = script.Parent.Parent.Parent

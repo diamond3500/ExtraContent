@@ -115,7 +115,7 @@ local function assertPatternIsValid(pattern)
 		end
 	end
 	if pattern.hash ~= nil then
-		assert(type(pattern.hash) == "string", "invalid pattern: hash should be a string")
+		assert(type(pattern.hash) == "table", "invalid pattern: hash should be a table")
 	end
 end
 
@@ -195,6 +195,9 @@ local function simplifyPattern(pattern)
 	end
 	if type(patternquery) == "string" then
 		patternquery = buildElementsFromString(patternquery, true)
+	end
+	if type(patternhash) == "string" then
+		patternhash = buildElementsFromString(patternhash, false)
 	end
 	return {
 		base = patternbase,
@@ -319,8 +322,9 @@ function UrlBuilder.new(pattern)
 		if #query > 0 then
 			url = url .. "?" .. query
 		end
-		if pattern.hash and #pattern.hash > 0 then
-			url = url .. "#" .. pattern.hash
+ 		local hash = resolveElementList(pattern.hash, input, false)
+		if #hash > 0 then
+			url = url .. "#" .. hash
 		end
 		-- testing, for development use only
 		if expected then
@@ -361,7 +365,7 @@ function UrlBuilder.fromString(pattern)
 		base = StringTrim(patternbase),
 		path = StringTrim(patternpath),
 		query = StringTrim(patternquery),
-		hash = patternhash,
+		hash = StringTrim(patternhash),
 	})
 end
 

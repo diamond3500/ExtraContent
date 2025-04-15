@@ -2,7 +2,7 @@ local CorePackages = game:GetService("CorePackages")
 local CoreGui = game:GetService("CoreGui")
 local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 
-local Roact = require(CorePackages.Roact)
+local Roact = require(CorePackages.Packages.Roact)
 type RoactHandle = typeof(Roact.mount(...))
 
 local TrackerPrompt = require(RobloxGui.Modules.Tracker.TrackerPrompt)
@@ -19,13 +19,20 @@ TrackerMenu.__index = TrackerMenu
 
 function TrackerMenu:showPrompt(promptType)
 	if self.trackerPrompt then
-		Roact.update(self.trackerPrompt, Roact.createElement(TrackerPrompt, {
-			promptType = promptType,
-		}))
+		Roact.update(
+			self.trackerPrompt,
+			Roact.createElement(TrackerPrompt, {
+				promptType = promptType,
+			})
+		)
 	else
-		self.trackerPrompt = Roact.mount(Roact.createElement(TrackerPrompt, {
-			promptType = promptType,
-		}), CoreGui, "RobloxTrackerPromptGui")
+		self.trackerPrompt = Roact.mount(
+			Roact.createElement(TrackerPrompt, {
+				promptType = promptType,
+			}),
+			CoreGui,
+			"RobloxTrackerPromptGui"
+		)
 	end
 end
 

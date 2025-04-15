@@ -10,10 +10,11 @@ local Signal = require(CorePackages.Workspace.Packages.AppCommonLib).Signal
 local Sounds = require(CorePackages.Workspace.Packages.SoundManager).Sounds
 local SoundGroups = require(CorePackages.Workspace.Packages.SoundManager).SoundGroups
 local SoundManager = require(CorePackages.Workspace.Packages.SoundManager).SoundManager
+local useIsSpatial = require(CorePackages.Workspace.Packages.Responsive).useIsSpatial
 
 local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 
-local RobloxTranslator = require(RobloxGui.Modules.RobloxTranslator)
+local RobloxTranslator = require(CorePackages.Workspace.Packages.RobloxTranslator)
 
 local ContactList = RobloxGui.Modules.ContactList
 local dependencies = require(ContactList.dependencies)
@@ -45,9 +46,6 @@ local Players = game:GetService("Players")
 local localPlayer = Players.LocalPlayer :: Player
 local currentCamera = workspace.CurrentCamera :: Camera
 
-local EnableSocialServiceIrisInvite = game:GetEngineFeature("EnableSocialServiceIrisInvite")
-local EnableSocialServiceCallingRename = game:GetEngineFeature("EnableSocialServiceCallingRename")
-
 local SEARCH_BAR_HEIGHT = 36
 local HEADER_HEIGHT = 36
 local PADDING = 8
@@ -67,6 +65,7 @@ local function ContactListContainer()
 	local theme = style.Theme
 
 	local dispatch = useDispatch()
+	local isSpatialMode = useIsSpatial()
 
 	local contactListContainerRef = React.useRef(nil :: Frame?)
 	local contactListId, setContactListId = React.useState(0)
@@ -88,75 +87,55 @@ local function ContactListContainer()
 	end, {})
 	local currentPage = useSelector(selectCurrentPage)
 
-	if EnableSocialServiceIrisInvite then
-		React.useEffect(function()
-			local promptIrisInviteRequestedConn = SocialService.PromptIrisInviteRequested:Connect(
-				function(player: any, tag: string)
-					if localPlayer and localPlayer.UserId == player.UserId then
-						local UserInputService = game:GetService("UserInputService")
-						local platformEnum = UserInputService:GetPlatform()
-						if
-							not UserInputService.VREnabled
-							and (
-								platformEnum == Enum.Platform.Windows
-								or platformEnum == Enum.Platform.UWP
-								or platformEnum == Enum.Platform.OSX
-								or platformEnum == Enum.Platform.IOS
-								or platformEnum == Enum.Platform.Android
-							)
-						then
-							dispatch(SetCurrentTag(tag))
-							analytics.fireEvent(EventNamesEnum.PhoneBookNavigate, {
-								eventTimestampMs = os.time() * 1000,
-								startingPage = currentPage,
-								destinationPage = Pages.CallHistory,
-							})
-							dispatch(SetCurrentPage(Pages.CallHistory))
+	React.useEffect(function()
+		local promptIrisInviteRequestedConn = SocialService.PromptIrisInviteRequested:Connect(
+			function(player: any, tag: string)
+				if localPlayer and localPlayer.UserId == player.UserId then
+					if not isSpatialMode then
+						dispatch(SetCurrentTag(tag))
+						analytics.fireEvent(EventNamesEnum.PhoneBookNavigate, {
+							eventTimestampMs = os.time() * 1000,
+							startingPage = currentPage,
+							destinationPage = Pages.CallHistory,
+						})
+						dispatch(SetCurrentPage(Pages.CallHistory))
 
-							SoundManager:PlaySound(Sounds.Swipe.Name, { Volume = 0.5 }, SoundGroups.Iris)
-						else
-							dispatch(
-								OpenOrUpdateDialog(
-									RobloxTranslator:FormatByKey("Feature.Call.Error.Label.OhNo"),
-									RobloxTranslator:FormatByKey("Feature.Call.Error.Description.DeviceNotSupported"),
-									function()
-										SocialService:InvokeIrisInvitePromptClosed(localPlayer)
-									end
-								)
+						SoundManager:PlaySound(Sounds.Swipe.Name, { Volume = 0.5 }, SoundGroups.Iris)
+					else
+						dispatch(
+							OpenOrUpdateDialog(
+								RobloxTranslator:FormatByKey("Feature.Call.Error.Label.OhNo"),
+								RobloxTranslator:FormatByKey("Feature.Call.Error.Description.DeviceNotSupported"),
+								function()
+									SocialService:InvokeIrisInvitePromptClosed(localPlayer)
+								end
 							)
-						end
+						)
 					end
 				end
-			)
-
-			local closeEvent: any
-			if EnableSocialServiceCallingRename then
-				closeEvent = SocialService.PhoneBookPromptClosed
-			else
-				-- Fix a lint issue with game engine. We should be guarded with
-				-- the engine feature.
-				local InnerSocialService = game:GetService("SocialService") :: any
-				closeEvent = InnerSocialService.IrisInvitePromptClosed
 			end
-			local phoneBookPromptClosedConn = closeEvent:Connect(function(player: any)
-				if localPlayer and localPlayer.UserId == player.UserId then
-					analytics.fireEvent(EventNamesEnum.PhoneBookNavigate, {
-						eventTimestampMs = os.time() * 1000,
-						startingPage = tostring(currentPage),
-						destinationPage = nil,
-					})
-					dispatch(SetCurrentPage(nil))
-					-- Increment the id so we create a new PeekView for the next open.
-					setContactListId(contactListId + 1)
-				end
-			end)
+		)
 
-			return function()
-				promptIrisInviteRequestedConn:Disconnect()
-				phoneBookPromptClosedConn:Disconnect()
+		local closeEvent: any
+		closeEvent = SocialService.PhoneBookPromptClosed
+		local phoneBookPromptClosedConn = closeEvent:Connect(function(player: any)
+			if localPlayer and localPlayer.UserId == player.UserId then
+				analytics.fireEvent(EventNamesEnum.PhoneBookNavigate, {
+					eventTimestampMs = os.time() * 1000,
+					startingPage = tostring(currentPage),
+					destinationPage = nil,
+				})
+				dispatch(SetCurrentPage(nil))
+				-- Increment the id so we create a new PeekView for the next open.
+				setContactListId(contactListId + 1)
 			end
-		end, dependencyArray(contactListId, currentPage))
-	end
+		end)
+
+		return function()
+			promptIrisInviteRequestedConn:Disconnect()
+			phoneBookPromptClosedConn:Disconnect()
+		end
+	end, dependencyArray(contactListId, currentPage))
 
 	local dismissCallback = React.useCallback(function()
 		if not isSmallScreen and contactListContainerRef.current then
@@ -220,7 +199,7 @@ local function ContactListContainer()
 
 	local viewStateChanged = React.useCallback(function(viewState, prevViewState)
 		if viewState == PeekViewState.Closed then
-			if localPlayer and EnableSocialServiceIrisInvite then
+			if localPlayer then
 				SocialService:InvokeIrisInvitePromptClosed(localPlayer)
 			end
 

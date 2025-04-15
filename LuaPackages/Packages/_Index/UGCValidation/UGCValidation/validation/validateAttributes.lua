@@ -1,13 +1,12 @@
 local root = script.Parent.Parent
 
+local getEngineFeatureRemoveProxyWrap = require(root.flags.getEngineFeatureRemoveProxyWrap)
+
 local Analytics = require(root.Analytics)
 local Constants = require(root.Constants)
 
 local Types = require(root.util.Types)
 local checkForProxyWrap = require(root.util.checkForProxyWrap)
-
-local getEngineFeatureUGCValidateEditableMeshAndImage =
-	require(root.flags.getEngineFeatureUGCValidateEditableMeshAndImage)
 
 -- Root instances have a special allowed attribute to make them unique.
 -- This is because the validation result is stored on a per asset hash basis.
@@ -40,9 +39,7 @@ local function validateAttributes(
 	instance: Instance,
 	validationContext: Types.ValidationContext
 ): (boolean, { string }?)
-	local allowEditableInstances = if getEngineFeatureUGCValidateEditableMeshAndImage()
-		then validationContext.allowEditableInstances
-		else false
+	local allowEditableInstances = validationContext.allowEditableInstances
 	local attributesFailures = {}
 
 	if not hasOnlyAllowedAttribute(instance:GetAttributes(), allowEditableInstances) then
@@ -50,11 +47,17 @@ local function validateAttributes(
 	end
 
 	for _, descendant in ipairs(instance:GetDescendants()) do
-		if
-			allowEditableInstances
-			and (checkForProxyWrap(descendant) or descendant:GetAttribute(Constants.AlternateMeshIdAttributeName))
-		then
-			continue
+		if getEngineFeatureRemoveProxyWrap() then
+			if allowEditableInstances and descendant:GetAttribute(Constants.AlternateMeshIdAttributeName) then
+				continue
+			end
+		else
+			if
+				allowEditableInstances
+				and (checkForProxyWrap(descendant) or descendant:GetAttribute(Constants.AlternateMeshIdAttributeName))
+			then
+				continue
+			end
 		end
 		if next(descendant:GetAttributes()) :: any ~= nil then
 			table.insert(attributesFailures, descendant:GetFullName())
@@ -73,7 +76,7 @@ local function validateAttributes(
 		for _, name in pairs(attributesFailures) do
 			table.insert(reasons, name)
 		end
-		Analytics.reportFailure(Analytics.ErrorType.validateAttributes)
+		Analytics.reportFailure(Analytics.ErrorType.validateAttributes, nil, validationContext)
 		return false, reasons
 	end
 

@@ -2,6 +2,7 @@ local Foundation = script:FindFirstAncestor("Foundation")
 local Packages = Foundation.Parent
 local React = require(Packages.React)
 local Text = require(Foundation.Components.Text)
+local useTokens = require(Foundation.Providers.Style.useTokens)
 local ControlState = require(Foundation.Enums.ControlState)
 type ControlState = ControlState.ControlState
 
@@ -17,6 +18,7 @@ end
 
 local function StoryGuiState(props)
 	local guiState, setGuiState = React.useBinding(ControlState.Initialize :: ControlState)
+	local tokens = useTokens()
 
 	local function onStateChanged(new: ControlState)
 		setGuiState(new)
@@ -29,10 +31,7 @@ local function StoryGuiState(props)
 		fontStyle = {
 			FontSize = 20,
 		},
-		backgroundStyle = {
-			Transparency = 0,
-			Color3 = Color3.fromRGB(120, 0, 180),
-		},
+		backgroundStyle = tokens.Color.Extended.Purple.Purple_500,
 		tag = "col align-x-center align-y-center size-2800 content-default",
 		onStateChanged = onStateChanged,
 	})

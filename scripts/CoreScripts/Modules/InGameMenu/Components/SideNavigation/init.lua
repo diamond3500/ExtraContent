@@ -1,7 +1,7 @@
 local CorePackages = game:GetService("CorePackages")
 local GuiService = game:GetService("GuiService")
 
-local InGameMenuDependencies = require(CorePackages.InGameMenuDependencies)
+local InGameMenuDependencies = require(CorePackages.Packages.InGameMenuDependencies)
 local Roact = InGameMenuDependencies.Roact
 local RoactRodux = InGameMenuDependencies.RoactRodux
 local UIBlox = InGameMenuDependencies.UIBlox
@@ -62,8 +62,8 @@ function SideNavigation:init()
 	self.onContainerRendered = function(rbx)
 		if rbx then
 			-- AddSelectionParent is deprecated
-			(GuiService :: any):RemoveSelectionGroup(SELECTION_PARENT_NAME)
-			;(GuiService :: any):AddSelectionParent(SELECTION_PARENT_NAME, rbx)
+			(GuiService :: any):RemoveSelectionGroup(SELECTION_PARENT_NAME);
+			(GuiService :: any):AddSelectionParent(SELECTION_PARENT_NAME, rbx)
 		end
 	end
 end
@@ -205,8 +205,7 @@ return RoactRodux.UNSTABLE_connect2(function(state, props)
 		open = state.isMenuOpen,
 		currentZone = currentZone,
 	}
-end,
-function(dispatch)
+end, function(dispatch)
 	return {
 		closeMenu = function()
 			dispatch(CloseMenu)
@@ -216,6 +215,6 @@ function(dispatch)
 		end,
 		goToHomePage = function()
 			dispatch(SetCurrentPage(Constants.LeaveToAppPromptPageKey))
-		end
+		end,
 	}
 end)(SideNavigation)

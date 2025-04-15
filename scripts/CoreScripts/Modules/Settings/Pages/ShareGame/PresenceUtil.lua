@@ -1,7 +1,7 @@
 local CorePackages = game:GetService("CorePackages")
 local React = require(CorePackages.Packages.React)
 
-local UIBlox = require(CorePackages.UIBlox)
+local UIBlox = require(CorePackages.Packages.UIBlox)
 local ImageSetLabel = UIBlox.Core.ImageSet.ImageSetLabel
 local UIBloxIconSize = UIBlox.App.Constant.IconSize
 local Images = UIBlox.App.ImageSet.Images
@@ -17,8 +17,8 @@ local IconFormat: {
 	[string]: {
 		Image: string,
 		Color: Color3?,
-		Size: UDim2?
-	}
+		Size: UDim2?,
+	},
 } = {
 	[PresenceType.Online] = {
 		Image = "component_assets/circle_16",
@@ -35,7 +35,9 @@ local IconFormat: {
 
 local function GetIcon(presence: string)
 	local format = IconFormat[presence]
-	if not format then return end
+	if not format then
+		return
+	end
 	return React.createElement(ImageSetLabel, {
 		Image = Images[format.Image],
 		BackgroundTransparency = 1,
@@ -46,5 +48,5 @@ end
 
 return {
 	PresenceType = PresenceType,
-	GetIcon = GetIcon
+	GetIcon = GetIcon,
 }

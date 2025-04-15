@@ -2,8 +2,8 @@
 local CorePackages = game:GetService("CorePackages")
 local Players = game:GetService("Players")
 
-local Roact = require(CorePackages.Roact)
-local RoactRodux = require(CorePackages.RoactRodux)
+local Roact = require(CorePackages.Packages.Roact)
+local RoactRodux = require(CorePackages.Packages.RoactRodux)
 local t = require(CorePackages.Packages.t)
 
 local Components = script.Parent.Parent
@@ -18,7 +18,7 @@ local GetFFlagFixHealthDesync = require(TopBar.Flags.GetFFlagFixHealthDesync)
 local LocalPlayer = Players.LocalPlayer
 while not LocalPlayer do
 	Players:GetPropertyChangedSignal("LocalPlayer"):Wait()
-    LocalPlayer = Players.LocalPlayer
+	LocalPlayer = Players.LocalPlayer
 end
 
 local HealthConnector = Roact.PureComponent:extend("HealthConnector")
@@ -29,7 +29,7 @@ HealthConnector.validateProps = t.strictInterface({
 })
 
 function HealthConnector:init()
-	if GetFFlagFixHealthDesync() then 
+	if GetFFlagFixHealthDesync() then
 		self:setState({
 			character = nil,
 			humanoid = nil,
@@ -49,7 +49,7 @@ function HealthConnector:init()
 end
 
 function HealthConnector:didMount()
-	if GetFFlagFixHealthDesync() then 
+	if GetFFlagFixHealthDesync() then
 		local character = LocalPlayer.Character
 		local humanoid = nil
 		if character then

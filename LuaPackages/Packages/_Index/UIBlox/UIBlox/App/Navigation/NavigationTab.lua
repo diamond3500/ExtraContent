@@ -1,3 +1,5 @@
+local TextService = game:GetService("TextService")
+
 local UIBlox = script.Parent.Parent.Parent
 local Packages = UIBlox.Parent
 
@@ -8,11 +10,13 @@ local StateLayer = require(UIBlox.Core.Control.StateLayer)
 local useStyle = require(UIBlox.Core.Style.useStyle)
 local ImageSetLabel = require(UIBlox.Core.ImageSet.ImageSetComponent).Label
 local Badge = require(UIBlox.App.Indicator.Badge)
-local BadgeVariant = require(UIBlox.App.Indicator.Enum.BadgeVariant)
 local NavigationTabLayout = require(UIBlox.App.Navigation.Enum.NavigationTabLayout)
 local ImagesTypes = require(UIBlox.App.ImageSet.ImagesTypes)
 local StyleTypes = require(UIBlox.App.Style.StyleTypes)
 local UIBloxConfig = require(UIBlox.UIBloxConfig)
+
+local HUGE_VECTOR = Vector2.new(math.huge, math.huge)
+local LABEL_PADDING = 2
 
 export type NavigationTabLayoutType = NavigationTabLayout.Type
 export type ImageSetImage = ImagesTypes.ImageSetImage
@@ -35,6 +39,8 @@ export type Props = {
 	isChecked: boolean?,
 	-- Value for the badge, can be string, integer oe BadgeStates.isEnumValue
 	badgeValue: any?,
+	-- Badge variant for different color options
+	badgeVariant: any?,
 	-- Layout style of the component
 	layout: NavigationTabLayoutType?,
 	-- Anchor point
@@ -59,20 +65,30 @@ local defaultProps = {
 local NavigationTab = React.forwardRef(function(providedProps: Props, ref: React.Ref<Frame>)
 	local props = Cryo.Dictionary.join(defaultProps, providedProps)
 	local tokens = useStyle().Tokens
-	local absSize, setAbsSize
-	local contentsSize, setContentsSize
-	if UIBloxConfig.enableAppNavUpdate then
-		contentsSize, setContentsSize = React.useBinding(UDim2.new())
-	else
-		absSize, setAbsSize = React.useState(UDim2.new())
-	end
+	local contentsSize, setContentsSize = React.useBinding(UDim2.new())
 	local onAbsSizeChanged = React.useCallback(function(rbx)
-		if UIBloxConfig.enableAppNavUpdate then
-			setContentsSize(UDim2.fromOffset(rbx.AbsoluteSize.X, rbx.AbsoluteSize.Y))
-		else
-			setAbsSize(UDim2.fromOffset(rbx.AbsoluteSize.X, rbx.AbsoluteSize.Y))
+		setContentsSize(UDim2.fromOffset(rbx.AbsoluteSize.X, rbx.AbsoluteSize.Y))
+	end, {})
+	-- calculate labelSize
+	local labelSize
+	if UIBloxConfig.enableAppNavTextFlickerFix then
+		local fontSize
+		if props.labelTypography then
+			fontSize = props.labelTypography.FontSize
+			if fontSize ~= nil and typeof(fontSize) ~= "number" then
+				-- fontSize can be a binding
+				fontSize = fontSize:getValue()
+			end
 		end
-	end, { setAbsSize, setContentsSize } :: { any })
+		labelSize = React.useMemo(function(): UDim2?
+			if props.hasLabel and props.labelText and props.labelTypography then
+				local textSize =
+					TextService:GetTextSize(props.labelText, fontSize, props.labelTypography.Font, HUGE_VECTOR)
+				return UDim2.new(0, textSize.X + LABEL_PADDING, 0, textSize.Y + LABEL_PADDING)
+			end
+			return nil
+		end, { props.hasLabel, props.labelText, props.labelTypography, fontSize })
+	end
 
 	-- iconComponent
 	local iconComponent
@@ -86,45 +102,26 @@ local NavigationTab = React.forwardRef(function(providedProps: Props, ref: React
 			else tokens.Semantic.Color.Icon.Default
 		iconComponent = React.createElement(ImageSetLabel, {
 			BackgroundTransparency = 1,
-			Size = if UIBloxConfig.enableAppNavUpdate then iconSize else UDim2.fromScale(1, 1),
+			Size = iconSize,
 			Image = iconImage,
 			ScaleType = Enum.ScaleType.Fit,
 			ImageColor3 = iconColor.Color3,
 			ImageTransparency = iconColor.Transparency,
 		})
 	end
-	local iconFrame
-	if UIBloxConfig.enableAppNavUpdate then
-		if props.layout == NavigationTabLayout.Stacked and props.badgeValue ~= nil then
-			iconComponent = React.createElement("Frame", {
-				BackgroundTransparency = 1,
-				Size = iconSize,
-				LayoutOrder = 1,
-			}, {
-				Icon = iconComponent,
-				Badge = React.createElement(Badge, {
-					position = UDim2.fromScale(1, 0),
-					anchorPoint = Vector2.new(0.6, 0.35),
-					value = props.badgeValue,
-					badgeVariant = BadgeVariant.Alert,
-				}),
-			})
-		end
-	else
-		iconFrame = React.createElement("Frame", {
+	if props.layout == NavigationTabLayout.Stacked and props.badgeValue ~= nil then
+		iconComponent = React.createElement("Frame", {
 			BackgroundTransparency = 1,
-			Size = UDim2.fromOffset(tokens.Global.Size_350, tokens.Global.Size_350),
+			Size = iconSize,
 			LayoutOrder = 1,
 		}, {
 			Icon = iconComponent,
-			Badge = if (props.layout == NavigationTabLayout.Stacked and props.badgeValue ~= nil)
-				then React.createElement(Badge, {
-					position = UDim2.fromScale(1, 0),
-					anchorPoint = Vector2.new(0.6, 0.35),
-					value = props.badgeValue,
-					badgeVariant = BadgeVariant.Alert,
-				})
-				else nil,
+			Badge = React.createElement(Badge, {
+				position = UDim2.fromScale(1, 0),
+				anchorPoint = Vector2.new(0.6, 0.35),
+				value = props.badgeValue,
+				badgeVariant = props.badgeVariant,
+			}),
 		})
 	end
 
@@ -135,7 +132,10 @@ local NavigationTab = React.forwardRef(function(providedProps: Props, ref: React
 			then tokens.Semantic.Color.Text.Emphasis
 			else tokens.Semantic.Color.Text.Default
 		labelComponent = React.createElement("TextLabel", {
-			AutomaticSize = Enum.AutomaticSize.XY,
+			AutomaticSize = if UIBloxConfig.enableAppNavTextFlickerFix and labelSize
+				then nil
+				else Enum.AutomaticSize.XY,
+			Size = if UIBloxConfig.enableAppNavTextFlickerFix then labelSize else nil,
 			BackgroundTransparency = 1,
 			LayoutOrder = 2,
 			TextXAlignment = Enum.TextXAlignment.Center,
@@ -171,7 +171,7 @@ local NavigationTab = React.forwardRef(function(providedProps: Props, ref: React
 				SortOrder = Enum.SortOrder.LayoutOrder,
 				Padding = UDim.new(0, tokens.Global.Space_50),
 			}),
-			Icon = if UIBloxConfig.enableAppNavUpdate then iconComponent else iconFrame,
+			Icon = iconComponent,
 			Label = labelComponent,
 		})
 	elseif props.layout == NavigationTabLayout.Inline then
@@ -205,13 +205,13 @@ local NavigationTab = React.forwardRef(function(providedProps: Props, ref: React
 			UICorner = React.createElement("UICorner", {
 				CornerRadius = cornerRadius,
 			}),
-			Icon = if UIBloxConfig.enableAppNavUpdate then iconComponent else iconFrame,
+			Icon = iconComponent,
 			Label = labelComponent,
 			Badge = if props.badgeValue ~= nil
 				then React.createElement(Badge, {
 					layoutOrder = 3,
 					value = props.badgeValue,
-					badgeVariant = BadgeVariant.Alert,
+					badgeVariant = props.badgeVariant,
 				})
 				else nil,
 		})
@@ -220,7 +220,7 @@ local NavigationTab = React.forwardRef(function(providedProps: Props, ref: React
 	-- return
 	return React.createElement("Frame", {
 		ref = ref,
-		Size = if UIBloxConfig.enableAppNavUpdate then contentsSize else absSize,
+		Size = contentsSize,
 		BackgroundTransparency = 1,
 		AnchorPoint = props.anchorPoint,
 		Position = props.position,
@@ -230,7 +230,6 @@ local NavigationTab = React.forwardRef(function(providedProps: Props, ref: React
 		StateLayer = React.createElement(StateLayer, {
 			affordance = "Background" :: StateLayer.Affordance,
 			cornerRadius = cornerRadius,
-			size = if UIBloxConfig.enableAppNavUpdate then nil else absSize,
 			zIndex = 10,
 			onActivated = props.onActivated,
 			onStateChanged = props.onStateChanged,

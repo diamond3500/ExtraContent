@@ -1,4 +1,5 @@
 --!nonstrict
+-- moving this file to LuaApps, please replicate any changes in the LuaApps file as well
 local DetailsPage = script.Parent
 local Template = DetailsPage.Parent
 local App = Template.Parent
@@ -32,7 +33,9 @@ DetailsPageBody.validateProps = t.strictInterface({
 	subTitleText = t.optional(t.string),
 	renderInfoContent = t.optional(t.callback),
 
-	componentList = t.optional(validateDetailsPageComponentList),
+	componentList = t.optional(
+		if UIBloxConfig.moveDetailsPageToLuaApps then t.table else validateDetailsPageComponentList
+	),
 	dualPanelBreakpoint = t.optional(t.number),
 	sideMargin = t.optional(t.number),
 	bodyClipsDescendants = t.optional(t.boolean),
@@ -243,4 +246,4 @@ function DetailsPageBody:willUnmount()
 	self.mounted = false
 end
 
-return DetailsPageBody
+return if UIBloxConfig.moveDetailsPageToLuaApps then nil else DetailsPageBody

@@ -2,6 +2,7 @@
 local root = script.Parent.Parent
 
 local Types = require(root.util.Types)
+local Analytics = require(root.Analytics)
 local Constants = require(root.Constants)
 
 local validateCoplanarIntersection = require(root.validation.validateCoplanarIntersection)
@@ -16,12 +17,13 @@ local validateProperties = require(root.validation.validateProperties)
 local validateAttributes = require(root.validation.validateAttributes)
 local validateMeshVertColors = require(root.validation.validateMeshVertColors)
 local validateSingleInstance = require(root.validation.validateSingleInstance)
-local validateCanLoad = require(root.validation.validateCanLoad)
 local validateThumbnailConfiguration = require(root.validation.validateThumbnailConfiguration)
 local validateAccessoryName = require(root.validation.validateAccessoryName)
 local validateScaleType = require(root.validation.validateScaleType)
 local validateTotalSurfaceArea = require(root.validation.validateTotalSurfaceArea)
+local validateRigidMeshNotSkinned = require(root.validation.validateRigidMeshNotSkinned)
 
+local RigidOrLayeredAllowed = require(root.util.RigidOrLayeredAllowed)
 local createAccessorySchema = require(root.util.createAccessorySchema)
 local getAttachment = require(root.util.getAttachment)
 local getAccessoryScale = require(root.util.getAccessoryScale)
@@ -33,10 +35,12 @@ local getFFlagUGCValidateCoplanarTriTestAccessory = require(root.flags.getFFlagU
 local getFFlagUGCValidateMeshVertColors = require(root.flags.getFFlagUGCValidateMeshVertColors)
 local getFFlagUGCValidateThumbnailConfiguration = require(root.flags.getFFlagUGCValidateThumbnailConfiguration)
 local getFFlagUGCValidationNameCheck = require(root.flags.getFFlagUGCValidationNameCheck)
+local getEngineFeatureEngineUGCValidateRigidNonSkinned =
+	require(root.flags.getEngineFeatureEngineUGCValidateRigidNonSkinned)
+
 local FFlagLegacyAccessoryCheckAvatarPartScaleType =
 	game:DefineFastFlag("LegacyAccessoryCheckAvatarPartScaleType", false)
-local getEngineFeatureUGCValidateEditableMeshAndImage =
-	require(root.flags.getEngineFeatureUGCValidateEditableMeshAndImage)
+local FFlagLegacyAccessoryCheckCategory = game:DefineFastFlag("LegacyAccessoryCheckCategory", false)
 local getFFlagUGCValidateTotalSurfaceAreaTestAccessory =
 	require(root.flags.getFFlagUGCValidateTotalSurfaceAreaTestAccessory)
 
@@ -45,6 +49,21 @@ local function validateLegacyAccessory(validationContext: Types.ValidationContex
 	local assetTypeEnum = validationContext.assetTypeEnum
 	local isServer = validationContext.isServer
 	local allowUnreviewedAssets = validationContext.allowUnreviewedAssets
+
+	if FFlagLegacyAccessoryCheckCategory and not RigidOrLayeredAllowed.isRigidAccessoryAllowed(assetTypeEnum) then
+		Analytics.reportFailure(
+			Analytics.ErrorType.validateLegacyAccessory_AssetTypeNotAllowedAsRigidAccessory,
+			nil,
+			validationContext
+		)
+		return false,
+			{
+				string.format(
+					"Asset type '%s' is not a rigid accessory category. It can only be used with layered clothing.",
+					assetTypeEnum.Name
+				),
+			}
+	end
 
 	local assetInfo = Constants.ASSET_TYPE_INFO[assetTypeEnum]
 
@@ -65,7 +84,7 @@ local function validateLegacyAccessory(validationContext: Types.ValidationContex
 	end
 
 	if getFFlagUGCValidationNameCheck() and isServer then
-		success, reasons = validateAccessoryName(instance)
+		success, reasons = validateAccessoryName(instance, validationContext)
 		if not success then
 			return false, reasons
 		end
@@ -89,32 +108,30 @@ local function validateLegacyAccessory(validationContext: Types.ValidationContex
 	reasons = {}
 
 	local hasMeshContent = meshInfo.contentId ~= nil and meshInfo.contentId ~= ""
-	if getEngineFeatureUGCValidateEditableMeshAndImage() then
-		local getEditableMeshSuccess, editableMesh = getEditableMeshFromContext(mesh, "MeshId", validationContext)
-		if not getEditableMeshSuccess then
-			if not meshInfo.contentId then
-				hasMeshContent = false
-				validationResult = false
-				table.insert(reasons, {
+	local getEditableMeshSuccess, editableMesh = getEditableMeshFromContext(mesh, "MeshId", validationContext)
+	if not getEditableMeshSuccess then
+		if not meshInfo.contentId then
+			hasMeshContent = false
+			validationResult = false
+			table.insert(reasons, {
+				string.format(
+					"Missing meshId on legacy accessory '%s'. Make sure you are using a valid meshId and try again.\n",
+					instance.Name
+				),
+			})
+		else
+			return false,
+				{
 					string.format(
-						"Missing meshId on legacy accessory '%s'. Make sure you are using a valid meshId and try again.\n",
+						"Failed to load mesh for legacy accessory '%s'. Make sure mesh exists and try again.",
 						instance.Name
 					),
-				})
-			else
-				return false,
-					{
-						string.format(
-							"Failed to load mesh for legacy accessory '%s'. Make sure mesh exists and try again.",
-							instance.Name
-						),
-					}
-			end
+				}
 		end
-
-		meshInfo.editableMesh = editableMesh
-		hasMeshContent = true
 	end
+
+	meshInfo.editableMesh = editableMesh
+	hasMeshContent = true
 
 	local textureInfo = {
 		fullName = mesh:GetFullName(),
@@ -122,53 +139,33 @@ local function validateLegacyAccessory(validationContext: Types.ValidationContex
 		contentId = mesh.TextureId,
 	} :: Types.TextureInfo
 
-	if getEngineFeatureUGCValidateEditableMeshAndImage() then
-		local getEditableImageSuccess, editableImage = getEditableImageFromContext(mesh, "TextureId", validationContext)
-		if not getEditableImageSuccess then
-			return false,
-				{
-					string.format(
-						"Failed to load texture for legacy accessory '%s'. Make sure texture exists and try again.",
-						instance.Name
-					),
-				}
-		end
-
-		textureInfo.editableImage = editableImage
-	else
-		if isServer then
-			local textureSuccess
-			local meshSuccess
-			local _canLoadFailedReason: any = {}
-			textureSuccess, _canLoadFailedReason = validateCanLoad(mesh.TextureId)
-			meshSuccess, _canLoadFailedReason = validateCanLoad(mesh.MeshId)
-			if not textureSuccess or not meshSuccess then
-				-- Failure to load assets should be treated as "inconclusive".
-				-- Validation didn't succeed or fail, we simply couldn't run validation because the assets couldn't be loaded.
-				error(
-					string.format(
-						"Failed to load children assets (Meshes, Textures, etc.) for '%s'. Make sure the assets exist and try again.",
-						instance.Name
-					)
-				)
-			end
-		end
+	local getEditableImageSuccess, editableImage = getEditableImageFromContext(mesh, "TextureId", validationContext)
+	if not getEditableImageSuccess then
+		return false,
+			{
+				string.format(
+					"Failed to load texture for legacy accessory '%s'. Make sure texture exists and try again.",
+					instance.Name
+				),
+			}
 	end
+
+	textureInfo.editableImage = editableImage
 
 	local failedReason: any = {}
-	success, failedReason = validateMaterials(instance)
+	success, failedReason = validateMaterials(instance, validationContext)
 	if not success then
 		table.insert(reasons, table.concat(failedReason, "\n"))
 		validationResult = false
 	end
 
-	success, failedReason = validateProperties(instance)
+	success, failedReason = validateProperties(instance, nil, validationContext)
 	if not success then
 		table.insert(reasons, table.concat(failedReason, "\n"))
 		validationResult = false
 	end
 
-	success, failedReason = validateTags(instance)
+	success, failedReason = validateTags(instance, validationContext)
 	if not success then
 		table.insert(reasons, table.concat(failedReason, "\n"))
 		validationResult = false
@@ -188,7 +185,7 @@ local function validateLegacyAccessory(validationContext: Types.ValidationContex
 
 	local partScaleType = handle:FindFirstChild("AvatarPartScaleType")
 	if partScaleType and partScaleType:IsA("StringValue") then
-		success, failedReason = validateScaleType(partScaleType)
+		success, failedReason = validateScaleType(partScaleType, validationContext)
 		if not success then
 			table.insert(reasons, table.concat(failedReason, "\n"))
 			validationResult = false
@@ -196,7 +193,7 @@ local function validateLegacyAccessory(validationContext: Types.ValidationContex
 	end
 
 	if getFFlagUGCValidateThumbnailConfiguration() then
-		success, failedReason = validateThumbnailConfiguration(instance, handle, meshInfo, meshScale)
+		success, failedReason = validateThumbnailConfiguration(instance, handle, meshInfo, meshScale, validationContext)
 		if not success then
 			table.insert(reasons, table.concat(failedReason, "\n"))
 			validationResult = false
@@ -262,6 +259,14 @@ local function validateLegacyAccessory(validationContext: Types.ValidationContex
 
 		if getFFlagUGCValidateCoplanarTriTestAccessory() then
 			success, failedReason = validateCoplanarIntersection(meshInfo, meshScale, validationContext)
+			if not success then
+				table.insert(reasons, table.concat(failedReason, "\n"))
+				validationResult = false
+			end
+		end
+
+		if getEngineFeatureEngineUGCValidateRigidNonSkinned() then
+			success, failedReason = validateRigidMeshNotSkinned(meshInfo.contentId, validationContext)
 			if not success then
 				table.insert(reasons, table.concat(failedReason, "\n"))
 				validationResult = false

@@ -3,7 +3,7 @@ local Foundation = script:FindFirstAncestor("Foundation")
 local Logger = require(Foundation.Utility.Logger)
 local useTokens = require(Foundation.Providers.Style.useTokens)
 
-local function useScaledValue(value: number): string
+local function useScaledValue(value: number): number
 	local tokens = useTokens()
 
 	if value <= tokens.Size.Size_3000 then

@@ -3,7 +3,7 @@ local CorePackages = game:GetService("CorePackages")
 
 local InGameMenu = script.Parent.Parent
 
-local InGameMenuDependencies = require(CorePackages.InGameMenuDependencies)
+local InGameMenuDependencies = require(CorePackages.Packages.InGameMenuDependencies)
 local UIBlox = InGameMenuDependencies.UIBlox
 local Images = UIBlox.App.ImageSet.Images
 

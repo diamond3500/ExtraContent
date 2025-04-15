@@ -1,10 +1,11 @@
 local Foundation = script:FindFirstAncestor("Foundation")
 local Packages = Foundation.Parent
 local React = require(Packages.React)
+local Dash = require(Packages.Dash)
 
 local Checkbox = require(Foundation.Components.Checkbox)
-local CheckboxSize = require(Foundation.Enums.CheckboxSize)
-type CheckboxSize = CheckboxSize.CheckboxSize
+local InputSize = require(Foundation.Enums.InputSize)
+type InputSize = InputSize.InputSize
 
 local function Story(props)
 	local controls = props.controls
@@ -27,10 +28,6 @@ return {
 	controls = {
 		isDisabled = false,
 		label = "Label",
-		size = {
-			CheckboxSize.Large,
-			CheckboxSize.Medium,
-			CheckboxSize.Small,
-		} :: { CheckboxSize },
+		size = Dash.values(InputSize),
 	},
 }

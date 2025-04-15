@@ -8,7 +8,6 @@ local root = script.Parent.Parent
 
 local Types = require(root.util.Types)
 local pcallDeferred = require(root.util.pcallDeferred)
-local getFFlagUGCValidationShouldYield = require(root.flags.getFFlagUGCValidationShouldYield)
 
 local Analytics = require(root.Analytics)
 local Constants = require(root.Constants)
@@ -19,9 +18,6 @@ local getEditableMeshFromContext = require(root.util.getEditableMeshFromContext)
 local getExpectedPartSize = require(root.util.getExpectedPartSize)
 
 local FailureReasonsAccumulator = require(root.util.FailureReasonsAccumulator)
-
-local getEngineFeatureUGCValidateEditableMeshAndImage =
-	require(root.flags.getEngineFeatureUGCValidateEditableMeshAndImage)
 
 local getFFlagUGCValidateCageOrigin = require(root.flags.getFFlagUGCValidateCageOrigin)
 local getFIntUGCValidateBodyPartMaxCageOrigin = require(root.flags.getFIntUGCValidateBodyPartMaxCageOrigin)
@@ -46,14 +42,12 @@ local function getMeshInfoHelper(
 		scale = meshScale,
 	} :: Types.MeshInfo
 
-	if getEngineFeatureUGCValidateEditableMeshAndImage() then
-		local success, editableMesh = getEditableMeshFromContext(inst, fieldName, validationContext)
-		if not success then
-			return false, meshInfo
-		end
-
-		meshInfo.editableMesh = editableMesh
+	local success, editableMesh = getEditableMeshFromContext(inst, fieldName, validationContext)
+	if not success then
+		return false, meshInfo
 	end
+
+	meshInfo.editableMesh = editableMesh :: EditableMesh
 
 	return true, meshInfo
 end
@@ -115,32 +109,25 @@ local function calculateMeshSize(
 		context = meshHandle.Name,
 	} :: Types.MeshInfo
 
-	if getEngineFeatureUGCValidateEditableMeshAndImage() then
-		local getEditableMeshSuccess, editableMesh = getEditableMeshFromContext(meshHandle, "MeshId", validationContext)
-		if not getEditableMeshSuccess then
-			return false,
-				{
-					string.format(
-						"Mesh for '%s' failed to load. Make sure the mesh exists and try again.",
-						meshInfo.fullName
-					),
-				}
-		end
-
-		meshInfo.editableMesh = editableMesh
+	local getEditableMeshSuccess, editableMesh = getEditableMeshFromContext(meshHandle, "MeshId", validationContext)
+	if not getEditableMeshSuccess then
+		return false,
+			{
+				string.format(
+					"Mesh for '%s' failed to load. Make sure the mesh exists and try again.",
+					meshInfo.fullName
+				),
+			}
 	end
 
-	local success, meshSize
-	if getFFlagUGCValidationShouldYield() then
-		success, meshSize = pcallDeferred(function()
-			return getMeshSize(meshInfo)
-		end, validationContext)
-	else
-		success, meshSize = pcall(getMeshSize, meshInfo)
-	end
+	meshInfo.editableMesh = editableMesh :: EditableMesh
+
+	local success, meshSize = pcallDeferred(function()
+		return getMeshSize(meshInfo)
+	end, validationContext)
 
 	if not success then
-		Analytics.reportFailure(Analytics.ErrorType.validateBodyPartMeshBounds_FailedToLoadMesh)
+		Analytics.reportFailure(Analytics.ErrorType.validateBodyPartMeshBounds_FailedToLoadMesh, nil, validationContext)
 		local errorMessage = "Failed to read mesh"
 		if validationContext.isServer then
 			-- there could be many reasons that an error occurred, the asset is not necessarilly incorrect, we just didn't get as
@@ -154,15 +141,18 @@ local function calculateMeshSize(
 end
 
 -- if the CageOrigin is far from the origin, then layered clothing can get fitted to the character, but it will be visibly offset from the character
-local function validateCageOrigin(meshHandle: MeshPart): (boolean, { string }?)
+local function validateCageOrigin(
+	meshHandle: MeshPart,
+	validationContext: Types.ValidationContext
+): (boolean, { string }?)
 	assert(getFFlagUGCValidateCageOrigin())
 
 	local wrapTarget = meshHandle:FindFirstChildWhichIsA("WrapTarget")
 	-- the existance of all required Instances has been checked prior to calling this function where the asset is checked against the schema
 	assert(wrapTarget, "Missing WrapTarget child for " .. meshHandle.Name)
 
-	Analytics.reportFailure(Analytics.ErrorType.validateBodyPart_CageOriginOutOfBounds)
 	if wrapTarget.CageOrigin.Position.Magnitude > maxBodyPartCageOrigin :: number then
+		Analytics.reportFailure(Analytics.ErrorType.validateBodyPart_CageOriginOutOfBounds, nil, validationContext)
 		return false,
 			{
 				string.format(
@@ -187,16 +177,11 @@ local function validateInternal(
 		return success, failureReasons
 	end
 
-	local meshScale
-	if getEngineFeatureUGCValidateEditableMeshAndImage() then
-		meshScale = getExpectedPartSize(meshHandle, validationContext) / meshSize
-	else
-		meshScale = meshHandle.Size / meshSize :: Vector3
-	end
+	local meshScale = getExpectedPartSize(meshHandle, validationContext) / meshSize
 
 	local reasonsAccumulator = FailureReasonsAccumulator.new()
 	if getFFlagUGCValidateCageOrigin() then
-		reasonsAccumulator:updateReasons(validateCageOrigin(meshHandle))
+		reasonsAccumulator:updateReasons(validateCageOrigin(meshHandle, validationContext))
 	end
 	reasonsAccumulator:updateReasons(validateWrapTargetComparison(meshScale, meshHandle, validationContext))
 

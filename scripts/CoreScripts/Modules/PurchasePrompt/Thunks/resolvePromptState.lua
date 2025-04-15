@@ -50,6 +50,45 @@ local requiredServices = {
 	Network,
 }
 
+local GetFFlagEnabledEnhancedRobuxUpsell = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagEnabledEnhancedRobuxUpsell
+
+-- Helper functions to reduce code duplication
+-- Using this one in the new flag to test it out
+local function handleSuccessfulUpsellProduct(store, analytics, product, state)
+	-- Check if the user cancel the purchase before this could return
+	if not hasPendingRequest(store:getState()) then
+		return
+	end
+
+	analytics.signalProductPurchaseUpsellShown(product.id, state.requestType, product.providerId)
+	store:dispatch(
+		PromptNativeUpsell(
+			product.providerId,
+			product.id,
+			product.robuxAmount,
+			product.robuxAmountBeforeBonus
+		)
+	)
+	store:dispatch(sendCounter(Counter.UpsellModalShown))
+end
+
+-- Using this one in the new flag to test it out
+local function handleFailedUpsellProduct(store, state)
+	-- Check if the user cancel the purchase before this could return
+	if not hasPendingRequest(store:getState()) then
+		return
+	end
+
+	-- No upsell item will provide sufficient funds to make this purchase
+	if store:getState().purchaseFlow == PurchaseFlow.LargeRobuxUpsell then
+		store:dispatch(SetPromptState(PromptState.LargeRobuxUpsell))
+		store:dispatch(sendCounter(Counter.UpsellModalShown))
+	else
+		store:dispatch(ErrorOccurred(PurchaseError.NotEnoughRobuxXbox))
+		store:dispatch(sendCounter(Counter.UpsellGenericModalShown))
+	end
+end
+
 local function resolvePromptState(productInfo, accountInfo, balanceInfo, alreadyOwned, isRobloxPurchase, expectedPrice)
 	return Thunk.new(script.Name, requiredServices, function(store, services)
 		local state = store:getState()
@@ -111,15 +150,48 @@ local function resolvePromptState(productInfo, accountInfo, balanceInfo, already
 				end
 			end
 
+			if GetFFlagEnabledEnhancedRobuxUpsell then
+				local universeId = game.GameId
+				local itemProductId = productInfo.ProductId
+				local itemName = productInfo.DisplayName
+
+				-- Check if we have the required parameters for enhanced flow
+				if universeId ~= nil and itemProductId ~= nil then
+					-- Enhanced version with universeId and itemId
+					-- Item Name can be nil
+					return getRobuxUpsellProduct(network, price, robuxBalance, paymentPlatform, itemProductId, itemName, universeId):andThen(
+						function(product)
+							return handleSuccessfulUpsellProduct(store, analytics, product, state)
+						end,
+						function()
+							return handleFailedUpsellProduct(store, state)
+						end
+					)
+				end
+			end
+			
+			-- Fall back to original implementation if:
+			-- 1. Feature flag is disabled, OR
+			-- 2. Required parameters (universeId, itemProductId) are missing
 			return getRobuxUpsellProduct(network, price, robuxBalance, paymentPlatform):andThen(
 				function(product: RobuxUpsell.Product)
 					-- Check if the user cancel the purchase before this could return
 					if not hasPendingRequest(store:getState()) then
 						return
 					end
-
+					
+					-- Keeping original analytics signal for now
+					-- TODO: Remove this once we have confirmed the new flow is working
 					analytics.signalProductPurchaseUpsellShown(product.id, state.requestType, product.providerId)
-					store:dispatch(PromptNativeUpsell(product.providerId, product.id, product.robuxAmount))
+					store:dispatch(
+						PromptNativeUpsell(
+							product.providerId,
+							product.id,
+							product.robuxAmount,
+							product.robuxAmountBeforeBonus,
+							product.price
+						)
+					)
 					store:dispatch(sendCounter(Counter.UpsellModalShown))
 				end,
 				function()

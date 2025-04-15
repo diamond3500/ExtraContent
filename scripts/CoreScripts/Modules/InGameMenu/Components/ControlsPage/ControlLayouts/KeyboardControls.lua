@@ -1,7 +1,7 @@
 --!nonstrict
 local CorePackages = game:GetService("CorePackages")
 
-local InGameMenuDependencies = require(CorePackages.InGameMenuDependencies)
+local InGameMenuDependencies = require(CorePackages.Packages.InGameMenuDependencies)
 local Roact = InGameMenuDependencies.Roact
 
 local InGameMenu = script.Parent.Parent.Parent.Parent
@@ -30,7 +30,7 @@ local function KeyboardControls(props)
 	})
 	controlsChildren.Padding = Roact.createElement("UIPadding", {
 		PaddingLeft = UDim.new(0, MIN_SIDE_PADDING),
-		PaddingRight = UDim.new(0, MIN_SIDE_PADDING)
+		PaddingRight = UDim.new(0, MIN_SIDE_PADDING),
 	})
 	controlsChildren.SizeConstraint = Roact.createElement("UISizeConstraint", {
 		MaxSize = Vector2.new(CONTENT_MAX_WIDTH + (MIN_SIDE_PADDING * 2), math.huge),
@@ -46,7 +46,7 @@ local function KeyboardControls(props)
 		local groupTitle = controlsGroup.title
 		numHeaders = numHeaders + 1
 
-		controlsChildren[groupTitle.."_header"] = Roact.createElement(ControlEntryHeader, {
+		controlsChildren[groupTitle .. "_header"] = Roact.createElement(ControlEntryHeader, {
 			title = groupTitle,
 			LayoutOrder = layoutOrder,
 		})
@@ -55,7 +55,7 @@ local function KeyboardControls(props)
 
 		for controlIndex, controlAction in ipairs(controlsGroup.controls) do
 			numEntries = numEntries + 1
-			controlsChildren[groupTitle.."_"..controlIndex] = Roact.createElement(ControlEntry, {
+			controlsChildren[groupTitle .. "_" .. controlIndex] = Roact.createElement(ControlEntry, {
 				LayoutOrder = layoutOrder,
 				actionDescription = controlAction.desc,
 				inputs = controlAction.inputs,
@@ -81,9 +81,9 @@ local function KeyboardControls(props)
 				Size = UDim2.new(1, 0, 1, 0),
 				BackgroundTransparency = 1,
 				AnchorPoint = Vector2.new(0.5, 0),
-				Position = UDim2.new(0.5, 0, 0, 0)
-			}, controlsChildren)
-		})
+				Position = UDim2.new(0.5, 0, 0, 0),
+			}, controlsChildren),
+		}),
 	})
 end
 

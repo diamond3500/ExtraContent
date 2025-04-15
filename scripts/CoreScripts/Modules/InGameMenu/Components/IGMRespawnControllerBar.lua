@@ -1,6 +1,6 @@
 local CorePackages = game:GetService("CorePackages")
 
-local InGameMenuDependencies = require(CorePackages.InGameMenuDependencies)
+local InGameMenuDependencies = require(CorePackages.Packages.InGameMenuDependencies)
 local Roact = InGameMenuDependencies.Roact
 local t = InGameMenuDependencies.t
 
@@ -31,7 +31,7 @@ function IGMRespawnControllerBar:render()
 						text = localize.respawn,
 						keyCode = Enum.KeyCode.ButtonA,
 					},
-				}
+				},
 			})
 		end)
 	end

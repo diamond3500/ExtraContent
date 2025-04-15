@@ -4,16 +4,8 @@ local root = script.Parent.Parent
 
 local Types = require(root.util.Types)
 
-local getEngineFeatureUGCValidateEditableMeshAndImage =
-	require(root.flags.getEngineFeatureUGCValidateEditableMeshAndImage)
-
 local function getMeshSize(meshInfo: Types.MeshInfo)
-	local verts
-	if getEngineFeatureUGCValidateEditableMeshAndImage() then
-		verts = UGCValidationService:GetEditableMeshVerts(meshInfo.editableMesh)
-	else
-		verts = UGCValidationService:GetMeshVerts(meshInfo.contentId)
-	end
+	local verts = UGCValidationService:GetEditableMeshVerts(meshInfo.editableMesh)
 
 	local minX, maxX = math.huge, -math.huge
 	local minY, maxY = math.huge, -math.huge

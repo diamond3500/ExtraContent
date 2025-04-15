@@ -4,12 +4,12 @@ local CorePackages = game:GetService("CorePackages")
 local Players = game:GetService("Players")
 local HttpRbxApiService = game:GetService("HttpRbxApiService")
 local React = require(CorePackages.Packages.React)
-local RoactRodux = require(CorePackages.RoactRodux)
+local RoactRodux = require(CorePackages.Packages.RoactRodux)
 
 local Modules = CoreGui.RobloxGui.Modules
 local renderWithCoreScriptsStyleProvider = require(Modules.Common.renderWithCoreScriptsStyleProvider)
 local ShareGame = Modules.Settings.Pages.ShareGame
-local Colors = require(Modules.Common.Constants).COLORS
+local Colors = require(CorePackages.Workspace.Packages.CoreScriptsCommon).Constants.COLORS
 local ShareGameConstants = require(ShareGame.Constants)
 local InviteEvents = require(CorePackages.Workspace.Packages.GameInvite).GameInviteEvents
 local InviteStatus = ShareGameConstants.InviteStatus
@@ -32,7 +32,7 @@ local GetFFlagThrottleInviteSendEndpoint = require(Modules.Flags.GetFFlagThrottl
 local GetFIntThrottleInviteSendEndpointDelay = require(Modules.Flags.GetFIntThrottleInviteSendEndpointDelay)
 local GetFFlagSingleUserInvitePageKeybind = require(Modules.Settings.Flags.GetFFlagSingleUserInvitePageKeybind)
 
-local UIBlox = require(CorePackages.UIBlox)
+local UIBlox = require(CorePackages.Packages.UIBlox)
 local Button = UIBlox.App.Button.Button
 local ButtonType = UIBlox.App.Button.Enum.ButtonType
 local StyledTextLabel = UIBlox.App.Text.StyledTextLabel
@@ -144,7 +144,7 @@ local InviteSingleUserContainer = function(props)
 			props.isVisible,
 			onInvite,
 			onCloseButtonActivated,
-		} :: {any})
+		} :: { any })
 	end
 
 	if GetFFlagThrottleInviteSendEndpoint() then

@@ -6,12 +6,11 @@
 
 local root = script.Parent.Parent
 
-local getEngineFeatureUGCValidationRequiredFolderContext =
-	require(root.flags.getEngineFeatureUGCValidationRequiredFolderContext)
-
 local Analytics = require(root.Analytics)
 local Constants = require(root.Constants)
 local ConstantsInterface = require(root.ConstantsInterface)
+
+local getFFlagUGCValidateMeshMin = require(root.flags.getFFlagUGCValidateMeshMin)
 
 local Types = require(root.util.Types)
 local FailureReasonsAccumulator = require(root.util.FailureReasonsAccumulator)
@@ -19,6 +18,8 @@ local validateWithSchema = require(root.util.validateWithSchema)
 
 local validateAssetBounds = require(root.validation.validateAssetBounds)
 local validateSingleInstance = require(root.validation.validateSingleInstance)
+local ValidateBodyBlockingTests = require(root.util.ValidateBodyBlockingTests)
+
 local createDynamicHeadMeshPartSchema = require(root.util.createDynamicHeadMeshPartSchema)
 local createLimbsAndTorsoSchema = require(root.util.createLimbsAndTorsoSchema)
 local resetPhysicsData = require(root.util.resetPhysicsData)
@@ -133,7 +134,7 @@ local function validateMeshIds(
 				validationContext
 			)
 			if not parseSuccess then
-				Analytics.reportFailure(Analytics.ErrorType.validateFullBody_MeshIdsMissing)
+				Analytics.reportFailure(Analytics.ErrorType.validateFullBody_MeshIdsMissing, nil, validationContext)
 				return false,
 					{
 						"Unable to run full body validation due to previous errors detected while processing individual body parts",
@@ -153,7 +154,7 @@ local function validateInstanceHierarchy(
 	if not validateCorrectAssetTypesExist(fullBodyData) then
 		local errorMsg =
 			"Full body check did not receive the correct set of body part Asset Types (i.e. Head, Torso, LeftArm, RightArm, LeftLeg, RightLeg). Make sure the body model is valid and try again."
-		Analytics.reportFailure(Analytics.ErrorType.validateFullBody_IncorrectAssetTypeSet)
+		Analytics.reportFailure(Analytics.ErrorType.validateFullBody_IncorrectAssetTypeSet, nil, validationContext)
 		if isServer then
 			-- this is a code issue, where the wrong set of assets have been sent, this is not a fault on the UGC creator
 			error(errorMsg)
@@ -162,7 +163,7 @@ local function validateInstanceHierarchy(
 	end
 
 	if not validateAllAssetsWithSchema(fullBodyData, requiredTopLevelFolders, validationContext) then
-		Analytics.reportFailure(Analytics.ErrorType.validateFullBody_InstancesMissing)
+		Analytics.reportFailure(Analytics.ErrorType.validateFullBody_InstancesMissing, nil, validationContext)
 		-- don't need more detailed error, as this is a check which has been done for each individual asset
 		return false,
 			{
@@ -195,21 +196,13 @@ local function validateFullBody(validationContext: Types.ValidationContext): (bo
 	assert(validationContext.fullBodyData ~= nil, "fullBodyData required in validationContext for validateFullBody")
 	local fullBodyData = validationContext.fullBodyData :: Types.FullBodyData
 	local requireAllFolders = validationContext.requireAllFolders
-	local isServer = validationContext.isServer
 
 	local requiredTopLevelFolders: { string } = {
 		Constants.FOLDER_NAMES.R15ArtistIntent,
 	}
-	if getEngineFeatureUGCValidationRequiredFolderContext() then
-		if requireAllFolders then
-			-- in Studio these folders are automatically added just before upload
-			table.insert(requiredTopLevelFolders, Constants.FOLDER_NAMES.R15Fixed)
-		end
-	else
-		if isServer then
-			-- in Studio these folders are automatically added just before upload
-			table.insert(requiredTopLevelFolders, Constants.FOLDER_NAMES.R15Fixed)
-		end
+	if requireAllFolders then
+		-- in Studio these folders are automatically added just before upload
+		table.insert(requiredTopLevelFolders, Constants.FOLDER_NAMES.R15Fixed)
 	end
 
 	local success, reasons = validateInstanceHierarchy(fullBodyData, requiredTopLevelFolders, validationContext)
@@ -227,6 +220,18 @@ local function validateFullBody(validationContext: Types.ValidationContext): (bo
 	for _, folderName in requiredTopLevelFolders do
 		local allBodyParts: Types.AllBodyParts = createAllBodyPartsTable(folderName, fullBodyData)
 		assert(allBodyParts) -- if validateInstanceHierarchy() has passed, this should not have any problems
+
+		if getFFlagUGCValidateMeshMin() then
+			-- anything which would cause a crash later on, we check in here and exit early
+			if not ValidateBodyBlockingTests.validateAll(allBodyParts, validationContext) then
+				Analytics.reportFailure(Analytics.ErrorType.validateFullBody_ZeroMeshSize, nil, validationContext)
+				-- don't need more detailed error, as this is a check which has been done for each individual asset
+				return false,
+					{
+						"Unable to run full body validation due to previous errors detected while processing individual body parts.",
+					}
+			end
+		end
 
 		reasonsAccumulator:updateReasons(validateAssetBounds(allBodyParts, nil, validationContext))
 	end

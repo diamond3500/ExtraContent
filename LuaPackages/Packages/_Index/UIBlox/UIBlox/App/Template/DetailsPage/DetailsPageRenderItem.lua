@@ -1,3 +1,4 @@
+-- moving this file to LuaApps, please replicate any changes in the LuaApps file as well
 local DetailsPage = script.Parent
 local Template = DetailsPage.Parent
 local App = Template.Parent
@@ -80,4 +81,4 @@ local function DetailsPageRenderItem(props: Props)
 	})
 end
 
-return DetailsPageRenderItem
+return (if UIBloxConfig.moveDetailsPageToLuaApps then nil else DetailsPageRenderItem) :: typeof(DetailsPageRenderItem)

@@ -2,12 +2,16 @@ local CorePackages = game:GetService("CorePackages")
 local CoreGui = game:GetService("CoreGui")
 local GuiService = game:GetService("GuiService")
 
-local Roact = require(CorePackages.Roact)
+local SharedFlags = require(CorePackages.Workspace.Packages.SharedFlags)
+local FFlagTiltIconUnibarFocusNav = SharedFlags.FFlagTiltIconUnibarFocusNav
+local FFlagAdaptUnibarAndTiltSizing = SharedFlags.GetFFlagAdaptUnibarAndTiltSizing()
+
+local Roact = require(CorePackages.Packages.Roact)
 local React = require(CorePackages.Packages.React)
 
 local t = require(CorePackages.Packages.t)
-local UIBlox = require(CorePackages.UIBlox)
-local Cryo = require(CorePackages.Cryo)
+local UIBlox = require(CorePackages.Packages.UIBlox)
+local Cryo = require(CorePackages.Packages.Cryo)
 
 local ImageSetLabel = UIBlox.Core.ImageSet.ImageSetLabel
 local withStyle = UIBlox.Core.Style.withStyle
@@ -18,6 +22,10 @@ local withSelectionCursorProvider = UIBlox.App.SelectionImage.withSelectionCurso
 local CursorKind = UIBlox.App.SelectionImage.CursorKind
 local ReactOtter = require(CorePackages.Packages.ReactOtter)
 
+local Foundation = require(CorePackages.Packages.Foundation)
+local withCursor = if FFlagAdaptUnibarAndTiltSizing then Foundation.Hooks.withCursor else nil :: never
+local ICON_BUTTON_CURSOR = if FFlagAdaptUnibarAndTiltSizing then Foundation.Enums.CursorType.SkinToneCircle else nil :: never
+
 local TopBar = script.Parent.Parent.Parent
 local FFlagEnableChromeBackwardsSignalAPI = require(TopBar.Flags.GetFFlagEnableChromeBackwardsSignalAPI)()
 
@@ -27,11 +35,9 @@ local GetFFlagFlashingDotUseAsyncInit = require(CoreGui.RobloxGui.Modules.Flags.
 local ChromeEnabled = require(CoreGui.RobloxGui.Modules.Chrome.Enabled)()
 local isNewTiltIconEnabled = require(CoreGui.RobloxGui.Modules.isNewTiltIconEnabled)
 local Constants = require(script.Parent.Parent.Parent.Constants)
-local GetFFlagChangeTopbarHeightCalculation = require(script.Parent.Parent.Parent.Flags.GetFFlagChangeTopbarHeightCalculation)
-local GetFFlagChromeUsePreferredTransparency = require(CoreGui.RobloxGui.Modules.Flags.GetFFlagChromeUsePreferredTransparency)
-
-local FFlagEnableTopBarIconButtonBackgroundProps = game:DefineFastFlag("EnableTopBarIconButtonBackgroundProps", false)
-local GetFFlagFixUnibarVirtualCursor = require(CoreGui.RobloxGui.Modules.Flags.GetFFlagFixUnibarVirtualCursor)
+local GetFFlagChangeTopbarHeightCalculation =
+	require(script.Parent.Parent.Parent.Flags.GetFFlagChangeTopbarHeightCalculation)
+local GetFFlagChromeUsePreferredTransparency = SharedFlags.GetFFlagChromeUsePreferredTransparency
 
 local IconButton = Roact.PureComponent:extend("IconButton")
 
@@ -53,6 +59,9 @@ IconButton.validateProps = t.strictInterface({
 	backgroundTransparency = t.optional(t.number),
 	backgroundColor3 = t.optional(t.Color3),
 	backgroundCornerRadius = t.optional(t.UDim),
+	forwardRef = if ChromeEnabled and FFlagTiltIconUnibarFocusNav then t.optional(t.any) else nil :: never,
+	onSelectionChanged = if ChromeEnabled and FFlagTiltIconUnibarFocusNav then t.optional(t.callback) else nil :: never,
+	nextSelectionRightRef = if ChromeEnabled and FFlagTiltIconUnibarFocusNav then t.optional(t.any) else nil :: never,
 })
 
 function AnimatedScaleIcon(props)
@@ -102,17 +111,19 @@ function IconButton:init()
 end
 
 function IconButton:render()
-	if GetFFlagFixUnibarVirtualCursor() then
-		return withSelectionCursorProvider(function(getSelectionCursor)
-			return self:renderWithSelectionCursor(getSelectionCursor)
+	if ChromeEnabled and FFlagAdaptUnibarAndTiltSizing then
+		return withCursor(function(getCursor)
+			return self:renderWithCursor(getCursor)
 		end)
 	else
-		return self:renderWithSelectionCursor(nil)
+		return withSelectionCursorProvider(function(getSelectionCursor)
+			return self:renderWithCursor(getSelectionCursor)
+		end)
 	end
 end
 
-function IconButton:renderWithSelectionCursor(getSelectionCursor)
-	local hasBackgroundFrame = FFlagEnableTopBarIconButtonBackgroundProps and not isNewTiltIconEnabled() and self.props.backgroundColor3
+function IconButton:renderWithCursor(getCursor)
+	local hasBackgroundFrame = not isNewTiltIconEnabled() and self.props.backgroundColor3
 	return withStyle(function(style: any)
 		local overlayTheme = {
 			Color = Color3.new(1, 1, 1),
@@ -129,8 +140,9 @@ function IconButton:renderWithSelectionCursor(getSelectionCursor)
 			onStateChanged = self.controlStateUpdated,
 
 			ZIndex = 1,
-			BackgroundTransparency = if isNewTiltIconEnabled() then
-					if GetFFlagChromeUsePreferredTransparency() then style.Theme.BackgroundUIContrast.Transparency * style.Settings.PreferredTransparency
+			BackgroundTransparency = if isNewTiltIconEnabled()
+				then if GetFFlagChromeUsePreferredTransparency()
+					then style.Theme.BackgroundUIContrast.Transparency * style.Settings.PreferredTransparency
 					else style.Theme.BackgroundUIContrast.Transparency
 				else 1,
 			Position = UDim2.fromScale(0, if isNewTiltIconEnabled() then 0.5 else 1),
@@ -138,8 +150,13 @@ function IconButton:renderWithSelectionCursor(getSelectionCursor)
 			Size = UDim2.fromOffset(BACKGROUND_SIZE, BACKGROUND_SIZE),
 			Image = if not isNewTiltIconEnabled() then "rbxasset://textures/ui/TopBar/iconBase.png" else nil,
 			BackgroundColor3 = style.Theme.BackgroundUIContrast.Color,
-			SelectionImageObject = if GetFFlagFixUnibarVirtualCursor() and isNewTiltIconEnabled() then getSelectionCursor(CursorKind.SelectedKnob) else nil,
+			SelectionImageObject = if isNewTiltIconEnabled() then 
+				if FFlagAdaptUnibarAndTiltSizing then getCursor.refCache[ICON_BUTTON_CURSOR]
+				else getCursor(CursorKind.SelectedKnob)
+			else nil,
+			NextSelectionRight = if ChromeEnabled and FFlagTiltIconUnibarFocusNav then self.props.nextSelectionRightRef else nil :: never,
 			[Roact.Event.Activated] = self.props.onActivated,
+			[Roact.Event.SelectionChanged] = if ChromeEnabled and FFlagTiltIconUnibarFocusNav then self.props.onSelectionChanged else nil,
 			[Roact.Ref] = self.props.forwardRef,
 		}, {
 
@@ -147,22 +164,26 @@ function IconButton:renderWithSelectionCursor(getSelectionCursor)
 				CornerRadius = UDim.new(1, 0),
 			}) or nil,
 
-			BackgroundFrame = if hasBackgroundFrame then Roact.createElement("Frame", {
-				Size = self.props.iconSize,
-				Position = UDim2.fromScale(0.5, 0.5),
-				AnchorPoint = Vector2.new(0.5, 0.5),
-				BorderSizePixel = 0,
-				BackgroundTransparency = self.props.backgroundTransparency,
-			 	BackgroundColor3 = self.props.backgroundColor3,
-				ZIndex = 0,
-			}, {
-			 UICorner = if self.props.backgroundCornerRadius then Roact.createElement("UICorner", {
-				  CornerRadius = self.props.backgroundCornerRadius,
-			  }) else nil,
-			}) else nil,
+			BackgroundFrame = if hasBackgroundFrame
+				then Roact.createElement("Frame", {
+					Size = self.props.iconSize,
+					Position = UDim2.fromScale(0.5, 0.5),
+					AnchorPoint = Vector2.new(0.5, 0.5),
+					BorderSizePixel = 0,
+					BackgroundTransparency = self.props.backgroundTransparency,
+					BackgroundColor3 = self.props.backgroundColor3,
+					ZIndex = 0,
+				}, {
+					UICorner = if self.props.backgroundCornerRadius
+						then Roact.createElement("UICorner", {
+							CornerRadius = self.props.backgroundCornerRadius,
+						})
+						else nil,
+				})
+				else nil,
 
 			Icon = not self.props.useIconScaleAnimation and Roact.createElement(ImageSetLabel, {
-				Size = if FFlagEnableTopBarIconButtonBackgroundProps and typeof(self.props.iconSize) ~= "number" then self.props.iconSize else UDim2.fromOffset(self.props.iconSize, self.props.iconSize),
+				Size = if typeof(self.props.iconSize) ~= "number" then self.props.iconSize else UDim2.fromOffset(self.props.iconSize, self.props.iconSize),
 				Position = UDim2.fromScale(0.5, 0.5),
 				AnchorPoint = Vector2.new(0.5, 0.5),
 				BackgroundTransparency = 1,
@@ -211,9 +232,12 @@ end
 
 if FFlagEnableChromeBackwardsSignalAPI then
 	return Roact.forwardRef(function(props, ref)
-		return Roact.createElement(IconButton, Cryo.Dictionary.join(props, {
-			forwardRef = ref,
-		}))
+		return Roact.createElement(
+			IconButton,
+			Cryo.Dictionary.join(props, {
+				forwardRef = ref,
+			})
+		)
 	end)
 end
 

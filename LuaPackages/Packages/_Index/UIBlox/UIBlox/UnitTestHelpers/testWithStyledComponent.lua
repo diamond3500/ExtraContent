@@ -25,6 +25,8 @@ local UnitTestHelpers = script.Parent
 local UIBlox = UnitTestHelpers.Parent
 local Packages = UIBlox.Parent
 
+local UIBloxConfig = require(UIBlox.UIBloxConfig)
+
 local Roact = require(Packages.Roact)
 local dumpInstanceTree = require(UnitTestHelpers.dumpInstanceTree)
 
@@ -41,7 +43,12 @@ local function testWithStyledComponent(component, props, callback)
 
 	local name = ("TestApp-%s"):format(HttpService:GenerateGUID())
 	local handle = Roact.mount(app, CoreGui, name)
-	local path = ("game.CoreGui.%s.StyleProvider.TestComponent"):format(name)
+	local path
+	if UIBloxConfig.useFoundationButton then
+		path = ("game.CoreGui.%s.Children.TestComponent"):format(name)
+	else
+		path = ("game.CoreGui.%s.StyleProvider.TestComponent"):format(name)
+	end
 
 	local success, result = pcall(function()
 		callback(path)

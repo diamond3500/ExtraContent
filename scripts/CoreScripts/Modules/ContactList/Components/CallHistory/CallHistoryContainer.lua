@@ -6,13 +6,11 @@ local UserInputService = game:GetService("UserInputService")
 local ApolloClientModule = require(CorePackages.Packages.ApolloClient)
 local Cryo = require(CorePackages.Packages.Cryo)
 local React = require(CorePackages.Packages.React)
-local Roact = require(CorePackages.Roact)
+local Roact = require(CorePackages.Packages.Roact)
 
 local ExternalEventConnection = require(CorePackages.Workspace.Packages.RoactUtils).ExternalEventConnection
 local RetrievalStatus = require(CorePackages.Workspace.Packages.Http).Enum.RetrievalStatus
 local UserProfiles = require(CorePackages.Workspace.Packages.UserProfiles)
-local GetFFlagIrisUseLocalizationProvider =
-	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagIrisUseLocalizationProvider
 
 local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 
@@ -26,15 +24,8 @@ local NetworkingCall = dependencies.NetworkingCall
 local dependencyArray = dependencies.Hooks.dependencyArray
 local useDispatch = dependencies.Hooks.useDispatch
 local UIBlox = dependencies.UIBlox
+local useLocalization = dependencies.Hooks.useLocalization
 local useSelector = dependencies.Hooks.useSelector
-
-local useLocalization
-local RobloxTranslator
-if GetFFlagIrisUseLocalizationProvider() then
-	useLocalization = dependencies.Hooks.useLocalization
-else
-	RobloxTranslator = require(RobloxGui.Modules.RobloxTranslator)
-end
 
 local useStyle = UIBlox.Core.Style.useStyle
 local LoadingSpinner = UIBlox.App.Loading.LoadingSpinner
@@ -45,7 +36,7 @@ local CallHistoryItem = require(ContactList.Components.CallHistory.CallHistoryIt
 local NoItemView = require(ContactList.Components.ContactListCommon.NoItemView)
 local Constants = require(ContactList.Components.ContactListCommon.Constants)
 
-local BlockingUtility = require(RobloxGui.Modules.BlockingUtility)
+local BlockingUtility = require(CorePackages.Workspace.Packages.BlockingUtility)
 
 local Players = game:GetService("Players")
 local localPlayer = Players.LocalPlayer
@@ -64,13 +55,10 @@ local function CallHistoryContainer(props: Props)
 	local style = useStyle()
 	local theme = style.Theme
 
-	local localized
-	if GetFFlagIrisUseLocalizationProvider() then
-		localized = useLocalization({
-			genericErrorLabel = "Feature.Call.Error.Description.Generic",
-			noCallsLabel = "Feature.Call.Prompt.FirstCall",
-		})
-	end
+	local localized = useLocalization({
+		genericErrorLabel = "Feature.Call.Error.Description.Generic",
+		noCallsLabel = "Feature.Call.Prompt.FirstCall",
+	})
 
 	-- Using refs instead of state since state might not be updated in time.
 	-- These are set to loading and fetching to prepare for the initial fetch.
@@ -157,34 +145,37 @@ local function CallHistoryContainer(props: Props)
 		end
 	end, { status })
 
-	local noRecordsComponent = React.useMemo(function()
-		local message
-		if GetFFlagIrisUseLocalizationProvider() then
+	local noRecordsComponent = React.useMemo(
+		function()
+			local message
 			if status == RetrievalStatus.Failed then
 				message = localized.genericErrorLabel
 			else
 				message = localized.noCallsLabel
 			end
-		else
-			if status == RetrievalStatus.Failed then
-				message = RobloxTranslator:FormatByKey("Feature.Call.Error.Description.Generic")
-			else
-				message = RobloxTranslator:FormatByKey("Feature.Call.Prompt.FirstCall")
-			end
-		end
 
-		return React.createElement(NoItemView, {
-			isImageEnabled = status ~= RetrievalStatus.Failed,
-			imageName = "icons/graphic/findfriends_xlarge",
-			isFailedButtonEnabled = status == RetrievalStatus.Failed,
-			onFailedButtonActivated = function()
-				getCallRecords(callRecords, nextPageCursor)
-			end,
-			isCallButtonEnabled = status == RetrievalStatus.Done,
-			onCallButtonActivated = navigateToNewCall,
-			messageText = message,
-		})
-	end, dependencyArray(callRecords, getCallRecords, navigateToNewCall, nextPageCursor, status))
+			return React.createElement(NoItemView, {
+				isImageEnabled = status ~= RetrievalStatus.Failed,
+				imageName = "icons/graphic/findfriends_xlarge",
+				isFailedButtonEnabled = status == RetrievalStatus.Failed,
+				onFailedButtonActivated = function()
+					getCallRecords(callRecords, nextPageCursor)
+				end,
+				isCallButtonEnabled = status == RetrievalStatus.Done,
+				onCallButtonActivated = navigateToNewCall,
+				messageText = message,
+			})
+		end,
+		dependencyArray(
+			callRecords,
+			getCallRecords,
+			localized.genericErrorLabel,
+			localized.noCallsLabel,
+			navigateToNewCall,
+			nextPageCursor,
+			status
+		)
+	)
 
 	local touchStarted = React.useCallback(function(touch: InputObject)
 		initialPositionY.current = touch.Position.Y

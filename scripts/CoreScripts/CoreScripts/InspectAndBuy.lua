@@ -5,7 +5,7 @@ local CoreGuiService = game:GetService("CoreGui")
 local RobloxGui = CoreGuiService.RobloxGui
 local CoreGuiModules = RobloxGui.Modules
 local InspectAndBuyModules = CoreGuiModules.InspectAndBuy
-local Roact = require(CorePackages.Roact)
+local Roact = require(CorePackages.Packages.Roact)
 local InspectAndBuy = require(InspectAndBuyModules.Components.InspectAndBuy)
 local InspectAndBuyInstanceHandle = nil
 

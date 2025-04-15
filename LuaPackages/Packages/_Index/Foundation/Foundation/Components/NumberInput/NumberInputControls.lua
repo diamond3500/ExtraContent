@@ -10,12 +10,18 @@ local Components = Foundation.Components
 local View = require(Components.View)
 local Image = require(Components.Image)
 
+local useNumberInputVariants = require(script.Parent.useNumberInputVariants)
+local InputSize = require(Foundation.Enums.InputSize)
+type InputSize = InputSize.InputSize
+
 type NumberInputControlProps = {
 	isDisabled: boolean,
 	onClick: () -> (),
 }
 
 type NumberInputControlsProps = {
+	-- Size of the controls
+	size: InputSize,
 	up: NumberInputControlProps,
 	down: NumberInputControlProps,
 	LayoutOrder: number?,
@@ -45,37 +51,33 @@ end
 
 local function NumberInputControls(props: NumberInputControlsProps)
 	local tokens = useTokens()
-	local horizontalPadding = (tokens.Size.Size_800 - tokens.Size.Size_150) / 2
+	local variantProps = useNumberInputVariants(tokens, props.size)
+
 	return React.createElement(View, {
-		tag = "size-800-full col",
+		tag = "col",
+		Size = UDim2.new(0, variantProps.button.width, 1, 0),
 		LayoutOrder = props.LayoutOrder,
 	}, {
 		ControlUp = React.createElement(IconButton, {
 			onActivated = props.up.onClick,
 			isDisabled = props.up.isDisabled,
-			padding = {
-				left = UDim.new(0, horizontalPadding),
-				right = UDim.new(0, horizontalPadding),
-			},
-			tag = "size-full fill padding-top-medium padding-bottom-xsmall",
+			padding = variantProps.button.padding,
+			tag = variantProps.upButton.tag,
 		}, {
 			Icon = React.createElement(Image, {
 				Image = "component_assets/triangleUp_16",
-				tag = "size-150-100 content-default",
+				tag = variantProps.icon.tag,
 			}),
 		}),
 		ControlDown = React.createElement(IconButton, {
-			tag = "size-full fill padding-top-xsmall",
+			tag = variantProps.downButton.tag,
 			onActivated = props.down.onClick,
 			isDisabled = props.down.isDisabled,
-			padding = {
-				left = UDim.new(0, horizontalPadding),
-				right = UDim.new(0, horizontalPadding),
-			},
+			padding = variantProps.button.padding,
 		}, {
 			Icon = React.createElement(Image, {
 				Image = "component_assets/triangleDown_16",
-				tag = "size-150-100 content-default",
+				tag = variantProps.icon.tag,
 			}),
 		}),
 	})

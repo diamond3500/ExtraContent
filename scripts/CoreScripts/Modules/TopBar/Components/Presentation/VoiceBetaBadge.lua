@@ -6,8 +6,8 @@ local GamepadService = game:GetService("GamepadService")
 local GuiService = game:GetService("GuiService")
 local HttpService = game:GetService("HttpService")
 
-local Roact = require(CorePackages.Roact)
-local RoactRodux = require(CorePackages.RoactRodux)
+local Roact = require(CorePackages.Packages.Roact)
+local RoactRodux = require(CorePackages.Packages.RoactRodux)
 local t = require(CorePackages.Packages.t)
 local UIBlox = require(CorePackages.Packages.UIBlox)
 local withStyle = UIBlox.Core.Style.withStyle
@@ -33,12 +33,11 @@ local SetKeepOutArea = require(TopBar.Actions.SetKeepOutArea)
 local RemoveKeepOutArea = require(TopBar.Actions.RemoveKeepOutArea)
 local Constants = require(TopBar.Constants)
 
-local GetFFlagFixChromeReferences = require(RobloxGui.Modules.Flags.GetFFlagFixChromeReferences)
-local GetFFlagEnableAlwaysOpenUnibar = require(RobloxGui.Modules.Flags.GetFFlagEnableAlwaysOpenUnibar)
+local GetFFlagFixChromeReferences = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagFixChromeReferences
 
 local Chrome = TopBar.Parent.Chrome
 local ChromeEnabled = require(Chrome.Enabled)
-local ChromeService = if GetFFlagFixChromeReferences() then 
+local ChromeService = if GetFFlagFixChromeReferences() then
 	if ChromeEnabled() then require(Chrome.Service) else nil
 	else if ChromeEnabled then require(Chrome.Service) else nil
 
@@ -60,7 +59,7 @@ local BadgeSize = UDim2.fromOffset(31, 11)
 local PopupPadding = UDim.new(0, 12)
 local PopupSize = UDim2.fromOffset(330, 185)
 
-local RobloxTranslator = require(RobloxGui.Modules.RobloxTranslator)
+local RobloxTranslator = require(CorePackages.Workspace.Packages.RobloxTranslator)
 
 local noop = function() end
 local eventContext = "voiceChat"
@@ -84,7 +83,6 @@ function VoiceBetaBadge:init()
 	self.buttonRef = Roact.createRef()
 
 	self:setState({
-		chromeMenuOpen = ChromeService and ChromeService:status():get() == ChromeService.MenuStatus.Open,
 		vrShowMenuIcon = VRService.VREnabled and GamepadService.GamepadCursorEnabled,
 		voiceChatServiceConnected = false,
 		showPopup = false,
@@ -118,29 +116,9 @@ function VoiceBetaBadge:init()
 	end
 end
 
-function VoiceBetaBadge:didMount()
-	if ChromeService then
-		self.chromeMenuStatusConn = ChromeService:status():connect(function()
-			self:setState({
-				chromeMenuOpen = ChromeService:status():get() == ChromeService.MenuStatus.Open
-			})
-		end)
-	end
-end
-
-function VoiceBetaBadge:onUnmount()
-	if self.chromeMenuStatusConn then
-		self.chromeMenuStatusConn:Disconnect()
-		self.chromeMenuStatusConn = nil
-	end
-end
-
 function VoiceBetaBadge:render()
 	local visible = (not VRService.VREnabled or self.state.vrShowMenuIcon) and self.state.voiceChatServiceConnected
 
-	if not GetFFlagEnableAlwaysOpenUnibar() and self.state.chromeMenuOpen then
-		visible = false
-	end
 	local onAreaChanged = function(rbx)
 		if visible and rbx then
 			-- Need to recalculate the position as stroke is not part of AbsolutePosition/AbsoluteSize

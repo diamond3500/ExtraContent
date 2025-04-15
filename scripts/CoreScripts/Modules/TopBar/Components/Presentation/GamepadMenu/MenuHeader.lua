@@ -1,10 +1,11 @@
 --!nonstrict
+-- APPEXP-2274: Remove with FFlagConnectGamepadChrome
 local CorePackages = game:GetService("CorePackages")
 
-local Roact = require(CorePackages.Roact)
+local Roact = require(CorePackages.Packages.Roact)
 local t = require(CorePackages.Packages.t)
-local UIBlox = require(CorePackages.UIBlox)
-local RoactRodux = require(CorePackages.RoactRodux)
+local UIBlox = require(CorePackages.Packages.UIBlox)
+local RoactRodux = require(CorePackages.Packages.RoactRodux)
 
 local withStyle = UIBlox.Core.Style.withStyle
 local Images = UIBlox.App.ImageSet.Images
@@ -115,11 +116,11 @@ function MenuHeader:render()
 						TextColor3 = theme.TextEmphasis.Color,
 						TextTransparency = theme.TextEmphasis.TextTransparency,
 						TextXAlignment = Enum.TextXAlignment.Left,
-						TextYAlignment =  Enum.TextYAlignment.Top,
+						TextYAlignment = Enum.TextYAlignment.Top,
 						TextTruncate = Enum.TextTruncate.AtEnd,
 						TextWrapped = true,
 					}),
-				})
+				}),
 			}),
 
 			Divider = Roact.createElement("Frame", {

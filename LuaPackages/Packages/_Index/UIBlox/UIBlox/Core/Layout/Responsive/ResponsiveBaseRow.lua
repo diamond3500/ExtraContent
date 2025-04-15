@@ -7,7 +7,6 @@ local Roact = require(Packages.Roact)
 local t = require(Packages.t)
 local LuauPolyfill = require(Packages.LuauPolyfill)
 local Object = LuauPolyfill.Object
-local UIBloxConfig = require(UIBlox.UIBloxConfig)
 
 local ResponsiveLayoutContext = require(Responsive.ResponsiveLayoutContext)
 local ResponsiveLayoutConfigReader = require(Responsive.ResponsiveLayoutConfigReader)
@@ -126,9 +125,7 @@ function ResponsiveBaseRow:renderChildren(scrollable, margin, gutter, verticalGu
 				AutomaticCanvasSize = self.props.pages and Enum.AutomaticSize.None or Enum.AutomaticSize.X,
 				Selectable = self.props.selectable,
 				ClipsDescendants = self.props.clipsDescendants,
-				[Roact.Ref] = if UIBloxConfig.responsiveBaseRowScrollingFrameRef
-					then self.props.scrollingFrameRef
-					else nil,
+				[Roact.Ref] = self.props.scrollingFrameRef,
 			}, children),
 		}
 	else

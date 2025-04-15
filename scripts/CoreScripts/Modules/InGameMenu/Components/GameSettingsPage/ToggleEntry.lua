@@ -1,7 +1,7 @@
 local CorePackages = game:GetService("CorePackages")
 local GuiService = game:GetService("GuiService")
 
-local InGameMenuDependencies = require(CorePackages.InGameMenuDependencies)
+local InGameMenuDependencies = require(CorePackages.Packages.InGameMenuDependencies)
 local Roact = InGameMenuDependencies.Roact
 local t = InGameMenuDependencies.t
 
@@ -85,12 +85,12 @@ function ToggleEntry:render()
 			buttonRef = buttonRef,
 			onSelectionLost = function()
 				self:setState({
-					isSelectable = true
+					isSelectable = true,
 				})
 			end,
 			onSelectionGained = function()
 				self:setState({
-					isSelectable = false
+					isSelectable = false,
 				})
 			end,
 			NextSelectionUp = self.props.NextSelectionUp,

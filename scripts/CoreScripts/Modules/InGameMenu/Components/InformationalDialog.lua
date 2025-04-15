@@ -6,7 +6,7 @@ local CorePackages = game:GetService("CorePackages")
 local ContextActionService = game:GetService("ContextActionService")
 local GuiService = game:GetService("GuiService")
 
-local InGameMenuDependencies = require(CorePackages.InGameMenuDependencies)
+local InGameMenuDependencies = require(CorePackages.Packages.InGameMenuDependencies)
 local Roact = InGameMenuDependencies.Roact
 local UIBlox = InGameMenuDependencies.UIBlox
 local t = InGameMenuDependencies.t
@@ -72,7 +72,7 @@ function InformationalDialog:init()
 	self.onAncestryChanged = function(instance)
 		if instance:IsDescendantOf(game) then
 			self:setState({
-				isRooted = true
+				isRooted = true,
 			})
 		end
 	end
@@ -134,7 +134,18 @@ function InformationalDialog:render()
 					ImageTransparency = style.Theme.BackgroundUIDefault.Transparency,
 					Position = UDim2.new(0.5, 0, 0.5, 0),
 					ScaleType = Assets.Images.RoundedRect.ScaleType,
-					Size = UDim2.new(0, TEXT_HEIGHT, 0, TITLE_BAR + DIVIDER + bodyTextContainerHeight + subBodyTextContainerHeight + BUTTON_CONTAINER_SIZE + 3.5 * BOTTOM_PADDING + props.iconSize),
+					Size = UDim2.new(
+						0,
+						TEXT_HEIGHT,
+						0,
+						TITLE_BAR
+							+ DIVIDER
+							+ bodyTextContainerHeight
+							+ subBodyTextContainerHeight
+							+ BUTTON_CONTAINER_SIZE
+							+ 3.5 * BOTTOM_PADDING
+							+ props.iconSize
+					),
 					SliceCenter = Assets.Images.RoundedRect.SliceCenter,
 				}, {
 					Padding = Roact.createElement("UIPadding", {
@@ -186,7 +197,7 @@ function InformationalDialog:render()
 							Size = UDim2.new(1, 0, 1, 0),
 							Text = props.bodyText,
 							TextWrapped = true,
-						})
+						}),
 					}),
 					SubBodyTextContainer = Roact.createElement("Frame", {
 						BackgroundTransparency = 1,
@@ -197,7 +208,7 @@ function InformationalDialog:render()
 							Size = UDim2.new(1, 0, 1, 0),
 							Text = props.subBodyText,
 							TextWrapped = true,
-						})
+						}),
 					}),
 					SpaceContainer2 = Roact.createElement("Frame", {
 						BackgroundTransparency = 1,
@@ -225,7 +236,7 @@ function InformationalDialog:render()
 							text = props.confirmText,
 							onActivated = function()
 								self:setState({
-									show = false
+									show = false,
 								})
 								if self.props.onContinueFunc then
 									self.props.onContinueFunc()
@@ -248,7 +259,7 @@ function InformationalDialog:render()
 
 					GuiService.SelectedCoreObject = self.confirmButtonRef:getValue()
 				end,
-			})
+			}),
 		})
 	end)
 end
@@ -266,8 +277,7 @@ function InformationalDialog:bindActions()
 	end
 
 	if self.props.bindReturnToConfirm then
-		ContextActionService:BindCoreAction(
-			MODAL_CONFIRM_ACTION, confirmFunc, false, Enum.KeyCode.Return)
+		ContextActionService:BindCoreAction(MODAL_CONFIRM_ACTION, confirmFunc, false, Enum.KeyCode.Return)
 	end
 end
 

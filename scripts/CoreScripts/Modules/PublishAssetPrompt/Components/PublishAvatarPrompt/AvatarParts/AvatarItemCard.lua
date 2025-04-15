@@ -5,10 +5,12 @@
 ]]
 local CorePackages = game:GetService("CorePackages")
 local React = require(CorePackages.Packages.React)
-local UIBlox = require(CorePackages.UIBlox)
+local UIBlox = require(CorePackages.Packages.UIBlox)
 local useStyle = UIBlox.Core.Style.useStyle
 
 local AvatarPartViewport = require(script.Parent.AvatarPartViewport)
+
+local FFlagAppendBodyPartToTitle = require(script.Parent.Parent.Parent.Parent.FFlagAppendBodyPartToTitle)
 
 local PADDING = 5
 
@@ -16,7 +18,9 @@ export type Props = {
 	asset: { [number]: Folder } | MeshPart | Accessory,
 	LayoutOrder: number?,
 	viewportSize: number?,
-	titleText: string?,
+	titleText: string?, -- remove with FFlagAppendBodyPartToTitle
+	bodyName: string?,
+	partName: string?,
 }
 local function AvatarItemCard(props: Props)
 	local style = useStyle()
@@ -30,6 +34,17 @@ local function AvatarItemCard(props: Props)
 		typeof(asset) == "table" or asset:IsA("MeshPart") or asset:IsA("Accessory"),
 		"Assert that asset is a table, MeshPart, or Accessory"
 	)
+	local bodyName = props.bodyName
+	local partName = props.partName
+	local showTitleText = if FFlagAppendBodyPartToTitle then bodyName and partName else props.titleText
+	local title: string?
+	if FFlagAppendBodyPartToTitle and bodyName and partName then
+		assert(bodyName, "bodyName is nil")
+		assert(partName, "partName is nil")
+		title = bodyName .. "'s " .. partName
+	else
+		title = props.titleText
+	end
 	return React.createElement("Frame", {
 		Size = UDim2.fromScale(1, 1),
 		LayoutOrder = props.LayoutOrder,
@@ -45,10 +60,10 @@ local function AvatarItemCard(props: Props)
 			LayoutOrder = 1,
 			viewportSize = props.viewportSize,
 		}),
-		TitleText = props.titleText and React.createElement("TextLabel", {
+		TitleText = showTitleText and React.createElement("TextLabel", {
 			LayoutOrder = 2,
 			BackgroundTransparency = 1,
-			Text = props.titleText,
+			Text = title,
 			TextXAlignment = Enum.TextXAlignment.Left,
 			TextYAlignment = Enum.TextYAlignment.Top,
 			Size = UDim2.new(1, 0, 0, 50),

@@ -2,11 +2,12 @@
 local CoreGui = game:GetService("CoreGui")
 local RbxAnalyticsService = game:GetService("RbxAnalyticsService")
 local Players = game:GetService("Players")
+local CorePackages = game:GetService("CorePackages")
 
 local LocalPlayer = Players.LocalPlayer
 
 local RobloxGui = CoreGui:WaitForChild("RobloxGui")
-local RobloxTranslator = require(RobloxGui.Modules.RobloxTranslator)
+local RobloxTranslator = require(CorePackages.Workspace.Packages.RobloxTranslator)
 local FriendingUtility = require(RobloxGui.Modules.FriendingUtility)
 local SendNotification = RobloxGui:WaitForChild("SendNotificationInfo")
 local FFlagRemoveHardCodedFriendLimitPrompt = require(RobloxGui.Modules.Flags.FFlagRemoveHardCodedFriendLimitPrompt)

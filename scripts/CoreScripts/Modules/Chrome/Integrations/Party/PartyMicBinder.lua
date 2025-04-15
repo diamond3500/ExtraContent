@@ -28,7 +28,7 @@ local function PartyMicBinder()
 	React.useEffect(function()
 		if integration then
 			if isVoiceConnected and (isVoiceFocused or not AudioFocusManagementEnabled) then
-				integration.availability:pinned()
+				integration.availability:available()
 			else
 				integration.availability:unavailable()
 			end

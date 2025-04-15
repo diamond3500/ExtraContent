@@ -45,6 +45,9 @@ local PurchaseError = createEnum("PurchaseError", {
 	"SubscriptionNotForSale",
 	"VpcRequired",
 	"ExceedParentalSpendLimit",
+
+	-- Creator Store
+	-- TODO(STM-5600): Add more detailed error messages.
 })
 
 return PurchaseError

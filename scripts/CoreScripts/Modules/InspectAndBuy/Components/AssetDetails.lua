@@ -3,8 +3,8 @@ local CoreGui = game:GetService("CoreGui")
 local Players = game:GetService("Players")
 
 local InspectAndBuyFolder = script.Parent.Parent
-local Roact = require(CorePackages.Roact)
-local RoactRodux = require(CorePackages.RoactRodux)
+local Roact = require(CorePackages.Packages.Roact)
+local RoactRodux = require(CorePackages.Packages.RoactRodux)
 local AppFonts = require(CorePackages.Workspace.Packages.Style).AppFonts
 local DetailsText = require(InspectAndBuyFolder.Components.DetailsText)
 local DetailsThumbnail = require(InspectAndBuyFolder.Components.DetailsThumbnail)
@@ -20,17 +20,14 @@ local GetCollectibleResellableInstances = require(InspectAndBuyFolder.Thunks.Get
 local Colors = require(InspectAndBuyFolder.Colors)
 local Constants = require(InspectAndBuyFolder.Constants)
 local UtilityFunctions = require(InspectAndBuyFolder.UtilityFunctions)
-local tutils = require(CorePackages.tutils)
-local RobloxTranslator = require(CoreGui.RobloxGui.Modules.RobloxTranslator)
-local UIBlox = require(CorePackages.UIBlox)
+local tutils = require(CorePackages.Packages.tutils)
+local RobloxTranslator = require(CorePackages.Workspace.Packages.RobloxTranslator)
+local UIBlox = require(CorePackages.Packages.UIBlox)
 local Images = UIBlox.App.ImageSet.Images
 local UIBloxImageSetLabel = UIBlox.Core.ImageSet.ImageSetLabel
 local ItemInfoList = require(CorePackages.Workspace.Packages.ItemDetails).ItemInfoList
 local AttributionConstants = require(InspectAndBuyFolder.AttributionConstants)
 
-local FFlagAssetDetailsUseAutomaticCanvasSize =
-	require(InspectAndBuyFolder.Flags.FFlagAssetDetailsUseAutomaticCanvasSize)
-local FFlagAttributionInInspectAndBuy = require(InspectAndBuyFolder.Flags.FFlagAttributionInInspectAndBuy)
 local InspectAndBuyContext = require(InspectAndBuyFolder.Components.InspectAndBuyContext)
 local GetFFlagDisplayCollectiblesIcon = require(InspectAndBuyFolder.Flags.GetFFlagDisplayCollectiblesIcon)
 local GetItemDetails = require(InspectAndBuyFolder.Thunks.GetItemDetails)
@@ -68,7 +65,7 @@ function AssetDetails:getInfoRowProps()
 		infoData = assetInfo.creatorName or "",
 		hasVerifiedBadge = assetInfo.creatorHasVerifiedBadge,
 		LayoutOrder = 1,
-		Selectable = if FFlagAttributionInInspectAndBuy then false else nil,
+		Selectable = false,
 	}
 
 	-- Attribution Row
@@ -88,14 +85,12 @@ function AssetDetails:getInfoRowProps()
 				attributionRow = {
 					infoName = RobloxTranslator:FormatByKeyForLocale("Feature.Catalog.Label.Attribution", locale),
 					infoData = gameName,
-					onActivate = if FFlagAttributionInInspectAndBuy
-						then function()
-							self.props.openOverlay(OverlayEnum.AttributionTraversal, experienceInfo)
-						end
-						else nil,
+					onActivate = function()
+						self.props.openOverlay(OverlayEnum.AttributionTraversal, experienceInfo)
+					end,
 					LayoutOrder = 2,
-					[Roact.Ref] = if FFlagAttributionInInspectAndBuy then self.attributionRef else nil,
-					Selectable = if FFlagAttributionInInspectAndBuy then true else nil,
+					[Roact.Ref] = self.attributionRef,
+					Selectable = true,
 				}
 			end
 		end
@@ -122,7 +117,7 @@ function AssetDetails:getInfoRowProps()
 		infoName = RobloxTranslator:FormatByKeyForLocale("Feature.Catalog.Label.CategoryType", locale),
 		infoData = categoryString,
 		LayoutOrder = 3,
-		Selectable = if FFlagAttributionInInspectAndBuy then false else nil,
+		Selectable = false,
 	}
 
 	local rowData = {
@@ -139,9 +134,7 @@ function AssetDetails:init()
 		scrollingEnabled = true,
 	}
 
-	if FFlagAttributionInInspectAndBuy then
-		self.attributionRef = Roact.createRef()
-	end
+	self.attributionRef = Roact.createRef()
 end
 
 function AssetDetails:willUpdate(nextProps)
@@ -269,8 +262,8 @@ function AssetDetails:render()
 					Size = UDim2.new(1, 0, 1, -55),
 					ScrollingEnabled = scrollingEnabled,
 					Selectable = false,
-					CanvasSize = if FFlagAssetDetailsUseAutomaticCanvasSize then UDim2.new(1, 0, 0, 0) else nil,
-					AutomaticCanvasSize = if FFlagAssetDetailsUseAutomaticCanvasSize then Enum.AutomaticSize.Y else nil,
+					CanvasSize = UDim2.new(1, 0, 0, 0),
+					AutomaticCanvasSize = Enum.AutomaticSize.Y,
 				}, {
 					UIListLayout = Roact.createElement("UIListLayout", {
 						SortOrder = Enum.SortOrder.LayoutOrder,
@@ -318,7 +311,7 @@ function AssetDetails:render()
 						}),
 					}),
 					DetailsDescription = Roact.createElement(DetailsDescription),
-					ItemInfoList = FFlagAttributionInInspectAndBuy and Roact.createElement(ItemInfoList, {
+					ItemInfoList = Roact.createElement(ItemInfoList, {
 						rowData = self:getInfoRowProps(),
 						LayoutOrder = 5,
 					}),
@@ -355,11 +348,9 @@ end, function(dispatch)
 		getCollectibleResellableInstances = function(collectibleItemId, userId)
 			dispatch(GetCollectibleResellableInstances(collectibleItemId, userId))
 		end,
-		openOverlay = if FFlagAttributionInInspectAndBuy
-			then function(overlay, overlayProps)
-				dispatch(OpenOverlay(overlay, overlayProps))
-			end
-			else nil,
+		openOverlay = function(overlay, overlayProps)
+			dispatch(OpenOverlay(overlay, overlayProps))
+		end,
 		getItemDetails = function(itemId, itemType)
 			dispatch(GetItemDetails(itemId, itemType))
 		end,

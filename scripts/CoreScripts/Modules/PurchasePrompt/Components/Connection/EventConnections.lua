@@ -6,7 +6,7 @@ local Root = script.Parent.Parent.Parent
 local UserInputService = game:GetService("UserInputService")
 local CorePackages = game:GetService("CorePackages")
 
-local PurchasePromptDeps = require(CorePackages.PurchasePromptDeps)
+local PurchasePromptDeps = require(CorePackages.Workspace.Packages.PurchasePromptDeps)
 local Roact = PurchasePromptDeps.Roact
 
 local UpsellFlow = require(Root.Enums.UpsellFlow)

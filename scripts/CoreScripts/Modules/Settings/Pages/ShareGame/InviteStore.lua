@@ -1,5 +1,5 @@
 local CorePackages = game:GetService("CorePackages")
-local Rodux = require(CorePackages.Rodux)
+local Rodux = require(CorePackages.Packages.Rodux)
 
 local Modules = game:GetService("CoreGui").RobloxGui.Modules
 local AppReducer = require(Modules.Settings.Pages.ShareGame.AppReducer)

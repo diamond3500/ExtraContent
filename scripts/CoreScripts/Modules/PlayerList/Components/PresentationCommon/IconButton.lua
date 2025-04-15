@@ -1,9 +1,9 @@
 --!nonstrict
 local CorePackages = game:GetService("CorePackages")
 
-local Roact = require(CorePackages.Roact)
+local Roact = require(CorePackages.Packages.Roact)
 local t = require(CorePackages.Packages.t)
-local UIBlox = require(CorePackages.UIBlox)
+local UIBlox = require(CorePackages.Packages.UIBlox)
 
 local withStyle = UIBlox.Style.withStyle
 
@@ -50,11 +50,11 @@ function IconButton:render()
 			return Roact.createElement("TextButton", {
 				Text = "",
 				BorderSizePixel = 0,
-				BackgroundTransparency = self.props.showBackground and layoutValues.IconButtonBackgroundTransparency or 1,
+				BackgroundTransparency = self.props.showBackground and layoutValues.IconButtonBackgroundTransparency
+					or 1,
 				BackgroundColor3 = self.props.backgroundColor,
 				Position = self.props.position,
 				Size = self.props.size,
-
 
 				[Roact.Event.Activated] = self.props.onActivated,
 
@@ -93,7 +93,7 @@ function IconButton:render()
 
 				ImageButton = Roact.createElement(ImageSetLabel, {
 					Position = UDim2.new(0.5, 0, 0.5, 0),
-					Size = UDim2.new(0, layoutValues.DropDownIconSize , 0, layoutValues.DropDownIconSize),
+					Size = UDim2.new(0, layoutValues.DropDownIconSize, 0, layoutValues.DropDownIconSize),
 					Image = self.props.icon,
 					AnchorPoint = Vector2.new(0.5, 0.5),
 					BackgroundTransparency = 1,

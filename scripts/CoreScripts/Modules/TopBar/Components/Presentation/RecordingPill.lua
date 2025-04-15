@@ -5,8 +5,8 @@ local GamepadService = game:GetService("GamepadService")
 local GuiService = game:GetService("GuiService")
 local HttpService = game:GetService("HttpService")
 
-local Roact = require(CorePackages.Roact)
-local RoactRodux = require(CorePackages.RoactRodux)
+local Roact = require(CorePackages.Packages.Roact)
+local RoactRodux = require(CorePackages.Packages.RoactRodux)
 local t = require(CorePackages.Packages.t)
 local UIBlox = require(CorePackages.Packages.UIBlox)
 local withStyle = UIBlox.Core.Style.withStyle
@@ -17,7 +17,7 @@ local RECORD_UPDATE_STEP = 0.2
 local GameSettings = (settings() :: any):WaitForChild("Game Options")
 
 local RecordingPill = Roact.PureComponent:extend("MenuIcon")
- 
+
 RecordingPill.validateProps = t.strictInterface({
 	layoutOrder = t.integer,
 })
@@ -28,7 +28,7 @@ local TEXTLABEL_SIZE = UDim2.fromOffset(27, 14)
 function RecordingPill:init()
 	self.state = {
 		recording = false,
-		recordingText = "0:00"
+		recordingText = "0:00",
 	}
 
 	self.recordingConnection = GameSettings:GetPropertyChangedSignal("VideoRecording"):Connect(function()
@@ -60,11 +60,11 @@ function RecordingPill:render()
 					BackgroundColor3 = style.Theme.Alert.Color,
 					BorderSizePixel = 0,
 					Size = BUTTON_SIZE,
-					Position = UDim2.new(0,0,1,-30),
+					Position = UDim2.new(0, 0, 1, -30),
 					[Roact.Event.Activated] = self.RecordingPillActivated,
 				}, {
 					UICorner = Roact.createElement("UICorner", {
-						CornerRadius = UDim.new(0, 18)
+						CornerRadius = UDim.new(0, 18),
 					}),
 					Layout = Roact.createElement("UIListLayout", {
 						FillDirection = Enum.FillDirection.Horizontal,
@@ -91,7 +91,7 @@ function RecordingPill:render()
 						TextYAlignment = Enum.TextYAlignment.Center,
 					}),
 				}),
-			})
+			}),
 		})
 	end)
 end
@@ -105,10 +105,10 @@ function RecordingPill:didUpdate(prevProps, _)
 				if self.state.recording then
 					delay(RECORD_UPDATE_STEP, loop)
 				end
-				local d = os.date("*t", tick() - startTime) :: {[string]: any}
+				local d = os.date("*t", tick() - startTime) :: { [string]: any }
 				local recordingText = ("%d:%02d"):format(d.min :: number, d.sec :: number)
 				self:setState({
-					recordingText = recordingText
+					recordingText = recordingText,
 				})
 			end
 			delay(RECORD_UPDATE_STEP, loop)

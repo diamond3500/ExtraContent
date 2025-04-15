@@ -14,7 +14,7 @@ local RunService = game:GetService("RunService")
 local Roact = require(CorePackages.Packages.Roact)
 local RoactRodux = require(CorePackages.Packages.RoactRodux)
 local t = require(CorePackages.Packages.t)
-local UIBlox = require(CorePackages.UIBlox)
+local UIBlox = require(CorePackages.Packages.UIBlox)
 
 local ExternalEventConnection = UIBlox.Utility.ExternalEventConnection
 local Images = UIBlox.App.ImageSet.Images
@@ -44,7 +44,7 @@ ControlsBubble.validateProps = t.strictInterface({
 	LayoutOrder = t.optional(t.number),
 	hasCameraPermissions = t.boolean,
 	hasMicPermissions = t.boolean,
-	isShowingDueToEasierUnmuting = t.optional(t.boolean)
+	isShowingDueToEasierUnmuting = t.optional(t.boolean),
 })
 
 ControlsBubble.defaultProps = {
@@ -83,10 +83,12 @@ function ControlsBubble:init()
 			end
 		else
 			-- The billboards use strings, but the manager expects numbers
-			VoiceChatServiceManager:ToggleMutePlayer(tonumber(self.props.userId), 
+			VoiceChatServiceManager:ToggleMutePlayer(
+				tonumber(self.props.userId),
 				if self.props.isShowingDueToEasierUnmuting
 					then VoiceConstants.VOICE_CONTEXT_TYPE.EASIER_UNMUTING
-					else VoiceConstants.VOICE_CONTEXT_TYPE.BUBBLE_CHAT)
+					else VoiceConstants.VOICE_CONTEXT_TYPE.BUBBLE_CHAT
+			)
 		end
 	end
 

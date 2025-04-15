@@ -27,7 +27,6 @@ local ANIMATION_SPEED = 2
 type Props = {
 	radius: Radius?,
 	Size: Bindable<UDim2>?,
-	AnchorPoint: Bindable<Vector2>?,
 } & Types.CommonProps
 
 local defaultProps = {
@@ -59,20 +58,19 @@ local function Skeleton(skeletonProps: Props, ref: React.Ref<GuiObject>?)
 						),
 					}
 				end)
-				else tokens.Color.Extended.White.White_10,
-			AnchorPoint = props.AnchorPoint,
+				else tokens.Color.Extended.White.White_30,
 			Size = props.Size,
 			ref = ref,
 		}),
 		{
 			Gradient = if not preferences.reducedMotion
 				then React.createElement("UIGradient", {
-					Color = ColorSequence.new(tokens.Color.Content.Emphasis.Color3),
-					Transparency = NumberSequence.new({
-						NumberSequenceKeypoint.new(0, 0),
-						NumberSequenceKeypoint.new(0.5, 1),
-						NumberSequenceKeypoint.new(1, 0),
+					Color = ColorSequence.new({
+						ColorSequenceKeypoint.new(0, tokens.Color.Common.Shimmer.Color3),
+						ColorSequenceKeypoint.new(0.5, tokens.Color.Extended.White.White_30.Color3),
+						ColorSequenceKeypoint.new(1, tokens.Color.Common.Shimmer.Color3),
 					}),
+					Transparency = NumberSequence.new(tokens.Color.Common.Shimmer.Transparency),
 					Offset = clockBinding:map(function(value: number)
 						return Vector2.new(value * ANIMATION_SPEED % GRADIENT_OFFSET - (GRADIENT_OFFSET / 2), 0)
 					end),

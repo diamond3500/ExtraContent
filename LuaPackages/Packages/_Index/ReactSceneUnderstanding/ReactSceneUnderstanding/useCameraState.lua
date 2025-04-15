@@ -1,5 +1,8 @@
 local Root = script:FindFirstAncestor("ReactSceneUnderstanding")
 
+local UserInputService = game:GetService("UserInputService")
+
+local ReactUtils = require(Root.Parent.ReactUtils)
 local React = require(Root.Parent.React)
 local enums = require(Root.enums)
 local useCurrentCamera = require(Root.useCurrentCamera)
@@ -8,6 +11,7 @@ local useCallback = React.useCallback
 local useEffect = React.useEffect
 local useRef = React.useRef
 local useState = React.useState
+local useEventConnection = ReactUtils.useEventConnection
 
 local SECONDS_BEFORE_IDLE = 0.2
 
@@ -34,13 +38,19 @@ local function useCameraState(cameraOverrride: Camera?): CameraState
 		end)
 	end, {})
 
+	useEventConnection(UserInputService.InputChanged, function(input: InputObject)
+		if input.UserInputType == Enum.UserInputType.MouseWheel then
+			onCameraMoved()
+		end
+	end, { onCameraMoved })
+
 	useEffect(function()
 		local conn = camera:GetPropertyChangedSignal("CFrame"):Connect(onCameraMoved)
 
 		return function()
 			conn:Disconnect()
 		end
-	end, { camera })
+	end, { camera, onCameraMoved } :: { unknown })
 
 	return cameraState
 end

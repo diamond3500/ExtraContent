@@ -2,6 +2,8 @@ local Foundation = script:FindFirstAncestor("Foundation")
 local Packages = Foundation.Parent
 local Flags = require(Foundation.Utility.Flags)
 
+local FFlagFoundationFixSupportImageBinding = Flags.FoundationFixSupportImageBinding
+
 local React = require(Packages.React)
 local Cryo = require(Packages.Cryo)
 local ReactIs = require(Packages.ReactIs)
@@ -54,11 +56,24 @@ local defaultProps = {
 	isDisabled = false,
 }
 
-local defaultTags = "gui-object-defaults"
+local DEFAULT_TAGS = "gui-object-defaults"
+
+local function ImageValue(value): string?
+	if ReactIs.isBinding(value) then
+		return (value :: React.Binding<string>):getValue()
+	else
+		return value :: string
+	end
+end
+
+local function isFoundationAsset(image)
+	local imageValue = ImageValue(image)
+	return imageValue ~= nil and imageValue:match("^%w+://.*$") == nil
+end
 
 local function Image(imageProps: ImageProps, ref: React.Ref<GuiObject>?)
 	local defaultPropsWithStyles = if Flags.FoundationStylingPolyfill
-		then useStyledDefaults("Image", imageProps.tag, defaultTags, defaultProps)
+		then useStyledDefaults("Image", imageProps.tag, DEFAULT_TAGS, defaultProps)
 		else nil
 	local props = withDefaults(
 		imageProps,
@@ -67,32 +82,90 @@ local function Image(imageProps: ImageProps, ref: React.Ref<GuiObject>?)
 
 	local isInteractable = props.onStateChanged ~= nil or props.onActivated ~= nil
 
-	local image = props.Image
-	local imageValue = if ReactIs.isBinding(image) then (image :: React.Binding<string>):getValue() else image :: string
+	local image, imageRectOffset, imageRectSize = nil, nil, nil
+	local isFoundationImage = nil
 
-	local isFoundationImage = imageValue ~= nil and imageValue:match("^%w+://.*$") == nil
-	local asset = if isFoundationImage then Images[imageValue] else nil
+	if FFlagFoundationFixSupportImageBinding then
+		image, imageRectOffset, imageRectSize = React.useMemo(function(): ...any
+			local image = props.Image
+			local imageRectOffset = if props.imageRect then props.imageRect.offset else nil
+			local imageRectSize = if props.imageRect then props.imageRect.size else nil
 
-	local imageRectOffset, imageRectSize = nil, nil
-	if props.imageRect then
-		imageRectOffset = props.imageRect.offset
-		imageRectSize = props.imageRect.size
-	end
-	if asset then
-		image = asset.Image
-		imageRectOffset = asset.ImageRectOffset
-		imageRectSize = asset.ImageRectSize
+			if ReactIs.isBinding(props.Image) then
+				local function getImageBindingValue(prop)
+					return (props.Image :: React.Binding<string>):map(function(value: string)
+						if isFoundationAsset(value) then
+							local asset = Images[value]
+							return if asset then asset[prop] else nil
+						elseif prop == "Image" then
+							return value
+						elseif prop == "ImageRectOffset" and props.imageRect then
+							return props.imageRect.offset
+						elseif prop == "ImageRectSize" and props.imageRect then
+							return props.imageRect.size
+						else
+							return nil
+						end
+					end)
+				end
+
+				image = getImageBindingValue("Image")
+				imageRectOffset = getImageBindingValue("ImageRectOffset")
+				imageRectSize = getImageBindingValue("ImageRectSize")
+			elseif isFoundationAsset(props.Image) then
+				local imageValue = ImageValue(props.Image)
+				local asset = Images[imageValue]
+				if asset then
+					image = asset.Image
+					imageRectOffset = asset.ImageRectOffset
+					imageRectSize = asset.ImageRectSize
+				end
+			end
+
+			return image, imageRectOffset, imageRectSize
+		end, { props.Image, props.imageRect :: any, Images :: any })
+	else
+		image = props.Image
+		local imageValue = if ReactIs.isBinding(image)
+			then (image :: React.Binding<string>):getValue()
+			else image :: string
+
+		isFoundationImage = imageValue ~= nil and imageValue:match("^%w+://.*$") == nil
+		local asset = if isFoundationImage then Images[imageValue] else nil
+
+		imageRectOffset, imageRectSize = nil, nil
+		if props.imageRect then
+			imageRectOffset = props.imageRect.offset
+			imageRectSize = props.imageRect.size
+		end
+		if asset then
+			image = asset.Image
+			imageRectOffset = asset.ImageRectOffset
+			imageRectSize = asset.ImageRectSize
+		end
 	end
 
 	local sliceCenter, sliceScale, scaleType = nil, nil, props.ScaleType
 	if props.slice then
 		sliceCenter, sliceScale = props.slice.center, props.slice.scale
-		if isFoundationImage then
+		local isFoundation = if FFlagFoundationFixSupportImageBinding
+			then isFoundationAsset(props.Image)
+			else isFoundationImage
+		if isFoundation then
 			sliceCenter, sliceScale = getScaledSlice(sliceCenter, sliceScale)
 		end
 		scaleType = Enum.ScaleType.Slice
 	end
 
+	local defaultTags = DEFAULT_TAGS
+	if Flags.FoundationMigrateStylingV2 then
+		local transparency = if props.backgroundStyle ~= nil
+			then indexBindable(props.backgroundStyle, "Transparency") :: any
+			else nil
+		if transparency == 0 then
+			defaultTags ..= " x-default-transparency"
+		end
+	end
 	local tagsWithDefaults = useDefaultTags(props.tag, defaultTags)
 	local tag = useStyleTags(tagsWithDefaults)
 

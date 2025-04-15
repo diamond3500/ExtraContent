@@ -1,3 +1,4 @@
+-- moving this file to LuaApps, please replicate any changes in the LuaApps file as well
 local DetailsPage = script.Parent
 local Template = DetailsPage.Parent
 local App = Template.Parent
@@ -11,6 +12,8 @@ type DeviceType = Constants.DeviceType
 local DeviceType = Constants.DeviceType
 
 local React = require(Packages.React)
+
+local UIBloxConfig = require(UIBlox.UIBloxConfig)
 
 export type Props = {
 	-- Device FormFactor from the DeviceType Enum
@@ -37,4 +40,6 @@ local function DetailsPageTemplateSelector(props: Props)
 	return React.createElement(DetailsPageTemplate, props.detailsPageProps)
 end
 
-return DetailsPageTemplateSelector
+return (
+	if UIBloxConfig.moveDetailsPageToLuaApps then nil else DetailsPageTemplateSelector
+) :: typeof(DetailsPageTemplateSelector)

@@ -1,4 +1,5 @@
 --!strict
+-- TODO: remove this file once getEngineFeatureRemoveProxyWrap is removed
 local root = script.Parent.Parent
 local Constants = require(root.Constants)
 

@@ -1,9 +1,9 @@
 --!strict
-local CoreGui = game:GetService("CoreGui")
 local CorePackages = game:GetService("CorePackages")
-local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 local CoreScriptsRootProvider = require(CorePackages.Workspace.Packages.CoreScriptsRoactCommon).CoreScriptsRootProvider
-local FocusNavigationEffects = require(RobloxGui.Modules.Common.FocusNavigationEffectsWrapper)
+local FocusNavigationCoreScriptsWrapper =
+	require(CorePackages.Workspace.Packages.FocusNavigationUtils).FocusNavigationCoreScriptsWrapper
+local FocusRoot = require(CorePackages.Workspace.Packages.FocusNavigationUtils).FocusRoot
 
 local React = require(CorePackages.Packages.React)
 local RobloxAppEnums = require(CorePackages.Workspace.Packages.RobloxAppEnums)
@@ -12,6 +12,8 @@ local FocusNavigationUtils = require(CorePackages.Workspace.Packages.FocusNaviga
 local FocusNavigableSurfaceIdentifierEnum = FocusNavigationUtils.FocusNavigableSurfaceIdentifierEnum
 
 local DeviceTypeEnum = RobloxAppEnums.DeviceType
+
+local FFlagCSFocusWrapperRefactor = require(CorePackages.Workspace.Packages.SharedFlags).FFlagCSFocusWrapperRefactor
 
 local SELECTION_GROUP_NAME = "OverscanScreen"
 
@@ -24,12 +26,22 @@ function OverscanWrapper(Overscan)
 		return React.createElement(CoreScriptsRootProvider, {
 			styleOverride = styleOverride,
 		}, {
-			FocusNavigationEffects = React.createElement(FocusNavigationEffects, {
-				selectionGroupName = SELECTION_GROUP_NAME,
-				focusNavigableSurfaceIdentifier = FocusNavigableSurfaceIdentifierEnum.CentralOverlay,
-			}, {
-				Overscan = React.createElement(Overscan, props),
-			}),
+			FocusNavigationCoreScriptsWrapper = React.createElement(
+				if FFlagCSFocusWrapperRefactor then FocusRoot else FocusNavigationCoreScriptsWrapper,
+				if FFlagCSFocusWrapperRefactor
+					then {
+						surfaceIdentifier = FocusNavigableSurfaceIdentifierEnum.CentralOverlay,
+						isIsolated = true,
+						isAutoFocusRoot = true,
+					}
+					else {
+						selectionGroupName = SELECTION_GROUP_NAME,
+						focusNavigableSurfaceIdentifier = FocusNavigableSurfaceIdentifierEnum.CentralOverlay,
+					},
+				{
+					Overscan = React.createElement(Overscan, props),
+				}
+			),
 		})
 	end
 end

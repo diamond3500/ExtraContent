@@ -1,8 +1,8 @@
 local CoreGui = game:GetService("CoreGui")
 local CorePackages = game:GetService("CorePackages")
 
-local Roact = require(CorePackages.Roact)
-local RoactRodux = require(CorePackages.RoactRodux)
+local Roact = require(CorePackages.Packages.Roact)
+local RoactRodux = require(CorePackages.Packages.RoactRodux)
 
 local Modules = CoreGui.RobloxGui.Modules
 local ShareGameComponents = script.Parent
@@ -64,8 +64,8 @@ function FullModalShareGameComponent:render()
 						end
 						onAfterClosePage(sentToUserIds)
 					end,
-				})
-			})
+				}),
+			}),
 		}),
 	})
 end

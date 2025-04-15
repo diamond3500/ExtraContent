@@ -1,5 +1,5 @@
-game:DefineFastFlag("FFlagEnableSeamlessVoiceDataConsentToast", false)
+game:DefineFastFlag("EnableSeamlessVoiceDataConsentToast", false)
 
 return function()
-    return game:GetFastFlag("FFlagEnableSeamlessVoiceDataConsentToast")
+    return game:GetFastFlag("EnableSeamlessVoiceDataConsentToast")
 end

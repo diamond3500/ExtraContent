@@ -6,7 +6,7 @@ local CorePackages = game:GetService("CorePackages")
 local UserGameSettings = UserSettings():GetService("UserGameSettings")
 local MicroProfilerChanged = UserGameSettings:GetPropertyChangedSignal("OnScreenProfilerEnabled")
 
-local InGameMenuDependencies = require(CorePackages.InGameMenuDependencies)
+local InGameMenuDependencies = require(CorePackages.Packages.InGameMenuDependencies)
 local Roact = InGameMenuDependencies.Roact
 local RoactRodux = InGameMenuDependencies.RoactRodux
 local t = InGameMenuDependencies.t
@@ -62,9 +62,7 @@ end
 
 if not GetFFlagIGMGamepadSelectionHistory() then
 	function AdvancedPage:didUpdate(prevProps)
-		if self.props.canCaptureFocus
-			and not prevProps.canCaptureFocus
-		then
+		if self.props.canCaptureFocus and not prevProps.canCaptureFocus then
 			GuiService.SelectedCoreObject = self.performanceToggleRef:getValue()
 		end
 	end
@@ -79,14 +77,16 @@ function AdvancedPage:renderWithSelectionCursor(getSelectionCursor)
 			buttonRef = self.backButtonRef,
 			NextSelectionDown = self.performanceToggleRef,
 		}, {
-			FocusHandler = GetFFlagIGMGamepadSelectionHistory() and Roact.createElement(FocusHandler, {
-				isFocused = self.props.canCaptureFocus,
-				shouldForgetPreviousSelection = self.props.currentPage ~= Constants.advancedSettingsPageKey
-					or self.props.currentZone == 0,
-				didFocus = function(previousSelection)
-					GuiService.SelectedCoreObject = previousSelection or self.performanceToggleRef:getValue()
-				end,
-			}) or nil,
+			FocusHandler = GetFFlagIGMGamepadSelectionHistory()
+					and Roact.createElement(FocusHandler, {
+						isFocused = self.props.canCaptureFocus,
+						shouldForgetPreviousSelection = self.props.currentPage ~= Constants.advancedSettingsPageKey
+							or self.props.currentZone == 0,
+						didFocus = function(previousSelection)
+							GuiService.SelectedCoreObject = previousSelection or self.performanceToggleRef:getValue()
+						end,
+					})
+				or nil,
 			Layout = Roact.createElement("UIListLayout", {
 				SortOrder = Enum.SortOrder.LayoutOrder,
 				HorizontalAlignment = Enum.HorizontalAlignment.Right,
@@ -117,7 +117,7 @@ function AdvancedPage:renderWithSelectionCursor(getSelectionCursor)
 				end,
 			}),
 			DeveloperConsole = withLocalization({
-				text = "CoreScripts.InGameMenu.GameSettings.DeveloperConsole"
+				text = "CoreScripts.InGameMenu.GameSettings.DeveloperConsole",
 			})(function(localized)
 				return Roact.createElement("TextButton", {
 					BackgroundTransparency = 1,
@@ -193,6 +193,6 @@ end, function(dispatch)
 	return {
 		closeMenu = function()
 			dispatch(CloseMenu)
-		end
+		end,
 	}
 end)(AdvancedPage)

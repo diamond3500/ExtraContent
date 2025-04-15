@@ -2,7 +2,7 @@
 local GuiService = game:GetService("GuiService")
 local CorePackages = game:GetService("CorePackages")
 local RbxAnalyticsService = game:GetService("RbxAnalyticsService")
-local InGameMenuDependencies = require(CorePackages.InGameMenuDependencies)
+local InGameMenuDependencies = require(CorePackages.Packages.InGameMenuDependencies)
 local Roact = InGameMenuDependencies.Roact
 local RoactRodux = InGameMenuDependencies.RoactRodux
 local t = InGameMenuDependencies.t
@@ -33,7 +33,7 @@ EducationalPopup.validateProps = t.strictInterface({
 	screenSize = t.Vector2,
 	onDismiss = t.callback,
 	onConfirm = t.callback,
-	isClosingApp  = t.boolean,
+	isClosingApp = t.boolean,
 })
 
 function EducationalPopup:init()
@@ -68,8 +68,10 @@ function EducationalPopup:render()
 			titleBackgroundImageProps = {
 				image = "rbxasset://textures/ui/LuaApp/graphic/Auth/GridBackground.jpg",
 				imageHeight = 200,
-				text = [[<font face="GothamBlack" size="42">]] .. localized.title ..
-					[[</font><font size="4"><br /></font><br />]] .. localized.subtitle,
+				text = [[<font face="GothamBlack" size="42">]]
+					.. localized.title
+					.. [[</font><font size="4"><br /></font><br />]]
+					.. localized.subtitle,
 			},
 			screenSize = self.props.screenSize,
 			onDismiss = self.props.onDismiss,
@@ -86,26 +88,23 @@ function EducationalPopup:didUpdate()
 	GuiService:SetMenuIsOpen(isMenuOpen, "EducationalPopup")
 end
 
-return RoactRodux.UNSTABLE_connect2(
-	function(state, props)
-		return {
-			isClosingApp = state.nativeClosePrompt.closingApp,
-			screenSize = state.screenSize,
-		}
-	end,
-	function(dispatch)
-		return {
-			onDismiss = function()
-				dispatch(CloseNativeClosePrompt())
-				RbxAnalyticsService:ReportCounter("EducationalPopup_Dismiss", 1)
-				SendAnalytics(EducationalAnalytics.EventContext, EducationalAnalytics.DismissName, {})
-			end,
-			onConfirm = function()
-				RbxAnalyticsService:ReportCounter("EducationalPopup_Confirm", 1)
-				SendAnalytics(EducationalAnalytics.EventContext, EducationalAnalytics.ConfirmName, {})
+return RoactRodux.UNSTABLE_connect2(function(state, props)
+	return {
+		isClosingApp = state.nativeClosePrompt.closingApp,
+		screenSize = state.screenSize,
+	}
+end, function(dispatch)
+	return {
+		onDismiss = function()
+			dispatch(CloseNativeClosePrompt())
+			RbxAnalyticsService:ReportCounter("EducationalPopup_Dismiss", 1)
+			SendAnalytics(EducationalAnalytics.EventContext, EducationalAnalytics.DismissName, {})
+		end,
+		onConfirm = function()
+			RbxAnalyticsService:ReportCounter("EducationalPopup_Confirm", 1)
+			SendAnalytics(EducationalAnalytics.EventContext, EducationalAnalytics.ConfirmName, {})
 
-				LeaveGame()
-			end,
-		}
-	end
-)(EducationalPopup)
+			LeaveGame()
+		end,
+	}
+end)(EducationalPopup)

@@ -1,8 +1,8 @@
 local CorePackages = game:GetService("CorePackages")
 local validatePropsWithForwardRef = require(CorePackages.Workspace.Packages.RoactUtils).validatePropsWithForwardRef
 
-local Cryo = require(CorePackages.Cryo)
-local Roact = require(CorePackages.Roact)
+local Cryo = require(CorePackages.Packages.Cryo)
+local Roact = require(CorePackages.Packages.Roact)
 local t = require(CorePackages.Packages.t)
 
 local EntryFrame = Roact.PureComponent:extend("EntryFrame")
@@ -88,7 +88,10 @@ function EntryFrame:render()
 end
 
 return Roact.forwardRef(function(props, ref)
-	return Roact.createElement(EntryFrame, Cryo.Dictionary.join(props, {
-		forwardRef = ref,
-	}))
+	return Roact.createElement(
+		EntryFrame,
+		Cryo.Dictionary.join(props, {
+			forwardRef = ref,
+		})
+	)
 end)

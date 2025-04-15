@@ -3,11 +3,11 @@ local CorePackages = game:GetService("CorePackages")
 local CoreGui = game:GetService("CoreGui")
 local Modules = CoreGui.RobloxGui.Modules
 
-local Cryo = require(CorePackages.Cryo)
-local Roact = require(CorePackages.Roact)
+local Cryo = require(CorePackages.Packages.Cryo)
+local Roact = require(CorePackages.Packages.Roact)
 local t = require(CorePackages.Packages.t)
-local UIBlox = require(CorePackages.UIBlox)
-local AvatarExperienceDeps = require(CorePackages.AvatarExperienceDeps)
+local UIBlox = require(CorePackages.Packages.UIBlox)
+local AvatarExperienceDeps = require(CorePackages.Packages.AvatarExperienceDeps)
 local Text = require(CorePackages.Workspace.Packages.AppCommonLib).Text
 
 local RoactFitComponents = AvatarExperienceDeps.RoactFitComponents
@@ -83,13 +83,16 @@ function ListEntry:render()
 				TextTransparency = theme.TextDefault.Transparency,
 				TextXAlignment = Enum.TextXAlignment.Left,
 				LayoutOrder = 2,
-			})
+			}),
 		})
 	end)
 end
 
 return Roact.forwardRef(function(props, ref)
-	return Roact.createElement(ListEntry, Cryo.Dictionary.join(props, {
-		forwardRef = ref,
-	}))
+	return Roact.createElement(
+		ListEntry,
+		Cryo.Dictionary.join(props, {
+			forwardRef = ref,
+		})
+	)
 end)

@@ -1,8 +1,8 @@
 --!nonstrict
 local CorePackages = game:GetService("CorePackages")
 
-local Cryo = require(CorePackages.Cryo)
-local Rodux = require(CorePackages.Rodux)
+local Cryo = require(CorePackages.Packages.Cryo)
+local Rodux = require(CorePackages.Packages.Rodux)
 
 local TnsModule = script.Parent.Parent
 
@@ -36,7 +36,7 @@ return Rodux.createReducer({
 	sortedUserIds = {},
 	screenshotAnnotationPoints = {},
 	identifiedAvatars = {},
-	selectedAvatars = {}
+	selectedAvatars = {},
 }, {
 	[EndReportFlow.name] = function(state, action)
 		return Cryo.Dictionary.join(state, {
@@ -46,7 +46,7 @@ return Rodux.createReducer({
 			reportType = Constants.ReportType.Any,
 			identifiedAvatars = {},
 			selectedAvatars = {},
-			screenshotAnnotationPoints = {}
+			screenshotAnnotationPoints = {},
 		})
 	end,
 	[BeginReportFlow.name] = function(state, action)
@@ -68,7 +68,8 @@ return Rodux.createReducer({
 				reportType = action.reportType,
 				beginningReportType = action.reportType,
 				targetPlayer = action.targetPlayer,
-				currentPage = if state.voiceReportingFlowEnabled then Constants.Page.Category
+				currentPage = if state.voiceReportingFlowEnabled
+					then Constants.Page.Category
 					else Constants.Page.ReportForm,
 			})
 		else
@@ -76,46 +77,47 @@ return Rodux.createReducer({
 				reportType = Constants.ReportType.Any,
 				beginningReportType = Constants.ReportType.Any,
 				targetPlayer = Cryo.None,
-				currentPage = if state.voiceReportingFlowEnabled then Constants.Page.Category
+				currentPage = if state.voiceReportingFlowEnabled
+					then Constants.Page.Category
 					else Constants.Page.Listing,
 			})
 		end
 	end,
 	[NavigateBack.name] = function(state, action)
-		local prevPage = state.history[#state.history] or state.currentPage;
+		local prevPage = state.history[#state.history] or state.currentPage
 		local nextHistory = Cryo.List.removeIndex(state.history, #state.history)
 
 		return Cryo.Dictionary.join(state, {
 			history = nextHistory,
-			currentPage = prevPage;
+			currentPage = prevPage,
 		})
 	end,
 	[SelectReportCategory.name] = function(state, action)
-		local experienceCatSelected = action.reportCategory == Constants.Category.Experience;
-		local isPreselectedPlayerFlow = state.beginningReportType == Constants.ReportType.Player;
+		local experienceCatSelected = action.reportCategory == Constants.Category.Experience
+		local isPreselectedPlayerFlow = state.beginningReportType == Constants.ReportType.Player
 
-		local nextPage = Constants.Page.Listing;
-		local reportType = state.reportType;
+		local nextPage = Constants.Page.Listing
+		local reportType = state.reportType
 
 		if GetFFlagReportAnythingScreenshot() then
 			if experienceCatSelected then
 				nextPage = Constants.Page.ScreenshotDialog
 				reportType = Constants.ReportType.Place
-			elseif isPreselectedPlayerFlow then 
+			elseif isPreselectedPlayerFlow then
 				nextPage = Constants.Page.ReportForm
 			end
-		else 
+		else
 			local skipListing = experienceCatSelected or isPreselectedPlayerFlow
 
 			if skipListing then
-				nextPage = Constants.Page.ReportForm;
+				nextPage = Constants.Page.ReportForm
 				if experienceCatSelected then
-					reportType = Constants.ReportType.Place;
+					reportType = Constants.ReportType.Place
 				end
 			end
 		end
 
-		local nextHistory = Cryo.List.join(state.history, {state.currentPage})
+		local nextHistory = Cryo.List.join(state.history, { state.currentPage })
 
 		return Cryo.Dictionary.join(state, {
 			history = nextHistory,
@@ -125,10 +127,10 @@ return Rodux.createReducer({
 		})
 	end,
 	[SelectReportListing.name] = function(state, action)
-		local nextHistory = Cryo.List.join(state.history, {state.currentPage})
+		local nextHistory = Cryo.List.join(state.history, { state.currentPage })
 
 		return Cryo.Dictionary.join(state, {
-			sortedUserIds =  Cryo.List.join(action.sortedUserIds or {}, {}),
+			sortedUserIds = Cryo.List.join(action.sortedUserIds or {}, {}),
 			history = nextHistory,
 			currentPage = Constants.Page.ReportForm,
 			reportType = action.reportType,
@@ -136,7 +138,7 @@ return Rodux.createReducer({
 		})
 	end,
 	[ScreenshotAnnotated.name] = function(state, action)
-		local nextHistory = Cryo.List.join(state.history, {state.currentPage})
+		local nextHistory = Cryo.List.join(state.history, { state.currentPage })
 		-- TODO(bcwong): This needs to be generalized beyond the "Experience" flow.
 		local nextPage = Constants.Page.ReportForm
 
@@ -145,7 +147,7 @@ return Rodux.createReducer({
 			currentPage = nextPage,
 			screenshotAnnotationPoints = action.annotationPoints,
 		})
-	end, 
+	end,
 	[OpenReportMenu.name] = function(state, action)
 		return Cryo.Dictionary.join(state, {
 			isReportMenuOpen = true,
@@ -171,13 +173,12 @@ return Rodux.createReducer({
 	[SetIdentifedAvatars.name] = function(state, action)
 		return Cryo.Dictionary.join(state, {
 			identifiedAvatars = action.identifiedAvatars,
-			screenshotAnnotationPoints = {}
+			screenshotAnnotationPoints = {},
 		})
 	end,
 	[SetSelectedAvatars.name] = function(state, action)
 		return Cryo.Dictionary.join(state, {
-			selectedAvatars = action.selectedAvatars
+			selectedAvatars = action.selectedAvatars,
 		})
-	end
-
+	end,
 })

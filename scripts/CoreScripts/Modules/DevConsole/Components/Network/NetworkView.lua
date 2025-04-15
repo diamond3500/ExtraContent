@@ -1,5 +1,5 @@
 local CorePackages = game:GetService("CorePackages")
-local Roact = require(CorePackages.Roact)
+local Roact = require(CorePackages.Packages.Roact)
 
 local Constants = require(script.Parent.Parent.Parent.Constants)
 local HEADER_HEIGHT = Constants.NetworkFormatting.HeaderFrameHeight
@@ -28,7 +28,7 @@ function NetworkView:init(props)
 		local currSortType = props.targetNetworkData:getSortType()
 		if sortType == currSortType then
 			self:setState({
-				reverseSort = not self.state.reverseSort
+				reverseSort = not self.state.reverseSort,
 			})
 		else
 			props.targetNetworkData:setSortType(sortType)
@@ -152,10 +152,10 @@ function NetworkView:render()
 				TextSize = BANNER_FONT_SIZE,
 				Font = BANNER_FONT,
 
-				Size = UDim2.new(1,-INDENT,0,SUMMARY_HEIGHT),
+				Size = UDim2.new(1, -INDENT, 0, SUMMARY_HEIGHT),
 				Position = UDim2.new(0, INDENT, 0, 0),
 				BackgroundTransparency = 1,
-			})
+			}),
 		}),
 		Summary = summaryExpanded and Roact.createElement(NetworkSummary, {
 			width = absWidth,
@@ -176,10 +176,10 @@ function NetworkView:render()
 				TextSize = BANNER_FONT_SIZE,
 				Font = BANNER_FONT,
 
-				Size = UDim2.new(1,-INDENT,0,SUMMARY_HEIGHT),
+				Size = UDim2.new(1, -INDENT, 0, SUMMARY_HEIGHT),
 				Position = UDim2.new(0, INDENT, 0, 0),
 				BackgroundTransparency = 1,
-			})
+			}),
 		}),
 		Entries = entriesExpanded and Roact.createElement(NetworkChart, {
 			httpEntryList = httpEntryList,
@@ -189,8 +189,8 @@ function NetworkView:render()
 			reverseSort = reverseSort,
 			layoutOrder = 4,
 
-			onSortChanged = self.onSortChanged
-		})
+			onSortChanged = self.onSortChanged,
+		}),
 	})
 end
 

@@ -15,7 +15,6 @@ local withStyle = require(UIBlox.Core.Style.withStyle)
 local ImageSetComponent = require(UIBlox.Core.ImageSet.ImageSetComponent)
 
 local getModalWindowWidth = require(ModalRoot.getModalWindowWidth)
-local UIBloxConfig = require(UIBlox.UIBloxConfig)
 
 local SLICE_CENTER = Rect.new(8, 8, 9, 9)
 local MAX_WIDTH = 540
@@ -50,17 +49,6 @@ function ModalWindow:init()
 	self.contentSize, self.changeContentSize = Roact.createBinding(Vector2.new(0, 0))
 end
 
--- Used to determine width of middle content for dynamically sizing children, see PartialPageModal
--- remove with UIBloxConfig.useSeparatedCalcFunction
-function ModalWindow:getWidth(screenWidth)
-	if UIBloxConfig.useSeparatedCalcFunction then
-		assert(false, "Deprecated usage, use `getModalWindowWidth()` instead")
-		return
-	end
-
-	return self:isFullWidth(screenWidth) and screenWidth or MAX_WIDTH
-end
-
 -- Used to determine if the modal is anchored in the middle or bottom of the screen
 function ModalWindow:isFullWidth(screenWidth)
 	return screenWidth < MAX_WIDTH
@@ -72,12 +60,7 @@ function ModalWindow:render()
 		local screenSize = self.props.screenSize
 
 		local anchorPoint, backgroundImage, position, width
-		width = UDim.new(
-			0,
-			if UIBloxConfig.useSeparatedCalcFunction
-				then getModalWindowWidth(screenSize.X)
-				else self:getWidth(screenSize.X)
-		)
+		width = UDim.new(0, getModalWindowWidth(screenSize.X))
 		if self:isFullWidth(screenSize.X) then
 			anchorPoint = Vector2.new(0.5, 1)
 			backgroundImage = ANCHORED_BACKGROUND_IMAGE

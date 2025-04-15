@@ -56,7 +56,7 @@ local function resetModules()
 	render = ReactTestingLibrary.render
 	cleanup = ReactTestingLibrary.cleanup
 
-	InGameMenuDependencies = require(CorePackages.InGameMenuDependencies)
+	InGameMenuDependencies = require(CorePackages.Packages.InGameMenuDependencies)
 	UIBlox = InGameMenuDependencies.UIBlox
 	UIBlox.init(require(CorePackages.Workspace.Packages.RobloxAppUIBloxConfig))
 	Roact = InGameMenuDependencies.Roact

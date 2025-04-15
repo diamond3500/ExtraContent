@@ -1,6 +1,6 @@
 local CorePackages = game:GetService("CorePackages")
 
-local InGameMenuDependencies = require(CorePackages.InGameMenuDependencies)
+local InGameMenuDependencies = require(CorePackages.Packages.InGameMenuDependencies)
 local Roact = InGameMenuDependencies.Roact
 local t = InGameMenuDependencies.t
 
@@ -30,7 +30,6 @@ local function Connection(props)
 			or nil,
 	})
 end
-
 
 return InGameMenuPolicy.connect(function(appPolicy, props)
 	return {

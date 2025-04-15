@@ -5,7 +5,7 @@
 local CorePackages = game:GetService("CorePackages")
 local Url = require(CorePackages.Workspace.Packages.Http).Url
 local UrlBuilder = require(CorePackages.Packages.UrlBuilder).UrlBuilder
-local Logging = require(CorePackages.Logging)
+local Logging = require(CorePackages.Workspace.Packages.AppCommonLib).Logging
 local ArgCheck = require(CorePackages.Workspace.Packages.ArgCheck)
 
 local TEA_END_POINTS = {
@@ -18,7 +18,7 @@ local LOGOUT_ENDPOINT = "v1/logout"
 local RESPONSE_FORMATS = {
 	GET_INSTRUCTIONS = {
 		errorCode = "number",
-		instructions = "table"
+		instructions = "table",
 	},
 	INSTRUCTION = {
 		type = "number",
@@ -28,7 +28,7 @@ local RESPONSE_FORMATS = {
 		message = "string",
 		url = "string",
 		modalType = "number",
-		data = "string"
+		data = "string",
 	},
 	REPORT_EXECUTION = {
 		errorCode = "number",
@@ -39,17 +39,17 @@ local TAG = "HttpRequests"
 
 local getInstructionsUrl = UrlBuilder.new({
 	base = Url.APIS_URL,
-	path = TEA_END_POINTS.GET_INSTRUCTIONS
+	path = TEA_END_POINTS.GET_INSTRUCTIONS,
 })()
 
 local reportExecutionUrl = UrlBuilder.new({
 	base = Url.APIS_URL,
-	path = TEA_END_POINTS.REPORT_EXECUTION
+	path = TEA_END_POINTS.REPORT_EXECUTION,
 })()
 
 local logoutUrl = UrlBuilder.new({
 	base = Url.AUTH_URL,
-	path = LOGOUT_ENDPOINT
+	path = LOGOUT_ENDPOINT,
 })()
 
 --[[
@@ -131,7 +131,7 @@ function HttpRequests:getInstructions(callback)
 			end)
 		end
 		if not success then
-			Logging.warn(TAG .. " getInstructions failed: " .. getInstructionsUrl .. ", ".. err)
+			Logging.warn(TAG .. " getInstructions failed: " .. getInstructionsUrl .. ", " .. err)
 		end
 		callback(success, unauthorized, instructions)
 	end)
@@ -180,14 +180,13 @@ function HttpRequests:reportExecution(instructionName, serialId, callback)
 			end)
 		end
 		if not success then
-			Logging.warn(TAG .. " reportExecution failed: " .. reportExecutionUrl .. ", ".. err)
+			Logging.warn(TAG .. " reportExecution failed: " .. reportExecutionUrl .. ", " .. err)
 		end
 		if callback ~= nil then
 			callback(success)
 		end
 	end)
 end
-
 
 function HttpRequests:logout()
 	ArgCheck.isNotNil(self.httpService, "httpService")

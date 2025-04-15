@@ -1,6 +1,6 @@
 --!nonstrict
 local CorePackages = game:GetService("CorePackages")
-local Roact = require(CorePackages.Roact)
+local Roact = require(CorePackages.Packages.Roact)
 
 local Components = script.Parent.Parent.Parent.Components
 local DataConsumer = require(Components.DataConsumer)
@@ -42,10 +42,10 @@ end
 function DataStoresChart:init(props)
 	local currStoresData, currStoresDataCount = props.DataStoresData:getCurrentData()
 
-	self.getOnButtonPress = function (name)
+	self.getOnButtonPress = function(name)
 		return function(rbx, input)
 			self:setState({
-				expandedEntry = self.state.expandedEntry ~= name and name
+				expandedEntry = self.state.expandedEntry ~= name and name,
 			})
 		end
 	end
@@ -53,7 +53,7 @@ function DataStoresChart:init(props)
 	self.state = {
 		dataStoresData = currStoresData,
 		dataStoresDataCount = currStoresDataCount,
-		expandedEntry = nil
+		expandedEntry = nil,
 	}
 end
 
@@ -113,7 +113,7 @@ function DataStoresChart:render()
 
 						onButtonPress = self.getOnButtonPress(name),
 					}, {
-						[name] =  Roact.createElement(CellLabel, {
+						[name] = Roact.createElement(CellLabel, {
 							text = name,
 							size = UDim2.new(1 - VALUE_CELL_WIDTH, -CELL_PADDING - ARROW_PADDING, 1, 0),
 							pos = UDim2.new(0, CELL_PADDING + ARROW_PADDING, 0, 0),
@@ -121,7 +121,7 @@ function DataStoresChart:render()
 
 						Data = Roact.createElement(CellLabel, {
 							text = data.dataSet:back().value,
-							size = UDim2.new(VALUE_CELL_WIDTH , -CELL_PADDING, 1, 0),
+							size = UDim2.new(VALUE_CELL_WIDTH, -CELL_PADDING, 1, 0),
 							pos = UDim2.new(1 - VALUE_CELL_WIDTH, CELL_PADDING, 0, 0),
 						}),
 
@@ -155,7 +155,6 @@ function DataStoresChart:render()
 
 						stringFormatX = convertTimeStamp,
 						stringFormatY = stringFormatY,
-
 					}),
 				})
 				componentHeight = componentHeight + ENTRY_HEIGHT
@@ -184,57 +183,57 @@ function DataStoresChart:render()
 	end
 
 	return Roact.createElement("Frame", {
-			Size = size,
+		Size = size,
+		BackgroundTransparency = 1,
+		LayoutOrder = layoutOrder,
+	}, {
+		Header = Roact.createElement("Frame", {
+			Size = UDim2.new(1, 0, 0, HEADER_HEIGHT),
 			BackgroundTransparency = 1,
-			LayoutOrder = layoutOrder,
+			LayoutOrder = 1,
 		}, {
-			Header = Roact.createElement("Frame", {
-				Size = UDim2.new(1, 0, 0, HEADER_HEIGHT),
-				BackgroundTransparency = 1,
-				LayoutOrder = 1,
-			}, {
-				[HEADER_NAMES[1]] = Roact.createElement(CellLabel, {
-					text = HEADER_NAMES[1],
-					size = UDim2.new(1 - VALUE_CELL_WIDTH, -CELL_PADDING - ARROW_PADDING, 1, 0),
-					pos = UDim2.new(0, CELL_PADDING + ARROW_PADDING, 0, 0),
-				}),
-
-				[HEADER_NAMES[2]] = Roact.createElement(CellLabel, {
-					text = HEADER_NAMES[2],
-					size = UDim2.new(VALUE_CELL_WIDTH , -CELL_PADDING, 1, 0),
-					pos = UDim2.new(1 - VALUE_CELL_WIDTH, CELL_PADDING, 0, 0),
-				}),
-
-				upperHorizontalLine = Roact.createElement("Frame", {
-					Size = UDim2.new(1, 0, 0, LINE_WIDTH),
-					BackgroundColor3 = LINE_COLOR,
-					BorderSizePixel = 0,
-				}),
-
-				vertical = Roact.createElement("Frame", {
-					Size = UDim2.new(0, LINE_WIDTH, 1, 0),
-					Position = UDim2.new(1 - VALUE_CELL_WIDTH, 0, 0, 0),
-					BackgroundColor3 = LINE_COLOR,
-					BorderSizePixel = 0,
-				}),
-
-				lowerHorizontalLine = Roact.createElement("Frame", {
-					Size = UDim2.new(1, 0, 0, LINE_WIDTH),
-					Position = UDim2.new(0, 0, 1, 0),
-					BackgroundColor3 = LINE_COLOR,
-					BorderSizePixel = 0,
-				}),
+			[HEADER_NAMES[1]] = Roact.createElement(CellLabel, {
+				text = HEADER_NAMES[1],
+				size = UDim2.new(1 - VALUE_CELL_WIDTH, -CELL_PADDING - ARROW_PADDING, 1, 0),
+				pos = UDim2.new(0, CELL_PADDING + ARROW_PADDING, 0, 0),
 			}),
-			mainFrame = Roact.createElement("ScrollingFrame", {
-				Position = UDim2.new(0, 0, 0, HEADER_HEIGHT),
-				Size = UDim2.new(1, 0, 1, -HEADER_HEIGHT),
-				ScrollBarThickness = 5,
 
-				CanvasSize = UDim2.new(1, 0, 0, componentHeight),
+			[HEADER_NAMES[2]] = Roact.createElement(CellLabel, {
+				text = HEADER_NAMES[2],
+				size = UDim2.new(VALUE_CELL_WIDTH, -CELL_PADDING, 1, 0),
+				pos = UDim2.new(1 - VALUE_CELL_WIDTH, CELL_PADDING, 0, 0),
+			}),
 
-				BackgroundTransparency = 1,
-			}, elements),
-		})
+			upperHorizontalLine = Roact.createElement("Frame", {
+				Size = UDim2.new(1, 0, 0, LINE_WIDTH),
+				BackgroundColor3 = LINE_COLOR,
+				BorderSizePixel = 0,
+			}),
+
+			vertical = Roact.createElement("Frame", {
+				Size = UDim2.new(0, LINE_WIDTH, 1, 0),
+				Position = UDim2.new(1 - VALUE_CELL_WIDTH, 0, 0, 0),
+				BackgroundColor3 = LINE_COLOR,
+				BorderSizePixel = 0,
+			}),
+
+			lowerHorizontalLine = Roact.createElement("Frame", {
+				Size = UDim2.new(1, 0, 0, LINE_WIDTH),
+				Position = UDim2.new(0, 0, 1, 0),
+				BackgroundColor3 = LINE_COLOR,
+				BorderSizePixel = 0,
+			}),
+		}),
+		mainFrame = Roact.createElement("ScrollingFrame", {
+			Position = UDim2.new(0, 0, 0, HEADER_HEIGHT),
+			Size = UDim2.new(1, 0, 1, -HEADER_HEIGHT),
+			ScrollBarThickness = 5,
+
+			CanvasSize = UDim2.new(1, 0, 0, componentHeight),
+
+			BackgroundTransparency = 1,
+		}, elements),
+	})
 end
 
 return DataConsumer(DataStoresChart, "DataStoresData")

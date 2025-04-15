@@ -7,7 +7,7 @@ local Root = script.Parent.Parent.Parent
 local MarketplaceService = game:GetService("MarketplaceService")
 local CorePackages = game:GetService("CorePackages")
 
-local PurchasePromptDeps = require(CorePackages.PurchasePromptDeps)
+local PurchasePromptDeps = require(CorePackages.Workspace.Packages.PurchasePromptDeps)
 local Roact = PurchasePromptDeps.Roact
 
 local ErrorOccurred = require(Root.Actions.ErrorOccurred)
@@ -40,8 +40,8 @@ local function NativePurchaseFinishedConnector(props)
 		})
 	else
 		return Roact.createElement(ExternalEventConnection, {
-				event = MarketplaceService.NativePurchaseFinished,
-				callback = nativePurchaseFinished,
+			event = MarketplaceService.NativePurchaseFinished,
+			callback = nativePurchaseFinished,
 		})
 	end
 end
@@ -67,9 +67,6 @@ local function mapDispatchToProps(dispatch)
 	}
 end
 
-NativePurchaseFinishedConnector = connectToStore(
-	nil,
-	mapDispatchToProps
-)(NativePurchaseFinishedConnector)
+NativePurchaseFinishedConnector = connectToStore(nil, mapDispatchToProps)(NativePurchaseFinishedConnector)
 
 return NativePurchaseFinishedConnector

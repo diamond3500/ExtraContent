@@ -1,6 +1,6 @@
 local CorePackages = game:GetService("CorePackages")
 
-local Cryo = require(CorePackages.Cryo)
+local Cryo = require(CorePackages.Packages.Cryo)
 
 local Actions = script.Parent.Parent.Actions
 local AddPlayer = require(Actions.AddPlayer)
@@ -39,8 +39,8 @@ local function PlayerKeys(state, action, store)
 		return {
 			primaryStat = primaryStat,
 			keys = Cryo.Dictionary.join(state.keys, {
-				[action.player] = createKey(action.player, primaryStat, store.playerStats)
-			})
+				[action.player] = createKey(action.player, primaryStat, store.playerStats),
+			}),
 		}
 	end
 
@@ -49,7 +49,7 @@ local function PlayerKeys(state, action, store)
 			primaryStat = primaryStat,
 			keys = Cryo.Dictionary.join(state.keys, {
 				[action.player] = Cryo.None,
-			})
+			}),
 		}
 	end
 

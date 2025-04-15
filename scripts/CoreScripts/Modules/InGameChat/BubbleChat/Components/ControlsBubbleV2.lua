@@ -13,7 +13,7 @@ local HttpService = game:GetService("HttpService")
 local Roact = require(CorePackages.Packages.Roact)
 local RoactRodux = require(CorePackages.Packages.RoactRodux)
 local t = require(CorePackages.Packages.t)
-local UIBlox = require(CorePackages.UIBlox)
+local UIBlox = require(CorePackages.Packages.UIBlox)
 local PermissionsProtocol = require(CorePackages.Workspace.Packages.PermissionsProtocol).PermissionsProtocol.default
 
 local ExternalEventConnection = UIBlox.Utility.ExternalEventConnection
@@ -33,9 +33,9 @@ local isCamEnabledForUserAndPlace = require(RobloxGui.Modules.Settings.isCamEnab
 local displayCameraDeniedToast = require(RobloxGui.Modules.InGameChat.BubbleChat.Helpers.displayCameraDeniedToast)
 local isCameraOnlyUser = require(RobloxGui.Modules.Settings.isCameraOnlyUser)
 
-local getFFlagDoNotPromptCameraPermissionsOnMount = require(RobloxGui.Modules.Flags.getFFlagDoNotPromptCameraPermissionsOnMount)
+local getFFlagDoNotPromptCameraPermissionsOnMount =
+	require(RobloxGui.Modules.Flags.getFFlagDoNotPromptCameraPermissionsOnMount)
 local getFFlagEnableAlwaysAvailableCamera = require(RobloxGui.Modules.Flags.getFFlagEnableAlwaysAvailableCamera)
-local getFFlagLegacyConnectingMicStateFix = require(RobloxGui.Modules.Flags.getFFlagLegacyConnectingMicStateFix)
 
 local AvatarChatUISettings = Constants.AVATAR_CHAT_UI_SETTINGS
 
@@ -52,7 +52,7 @@ ControlsBubble.validateProps = t.strictInterface({
 	LayoutOrder = t.optional(t.number),
 	hasCameraPermissions = t.boolean,
 	hasMicPermissions = t.boolean,
-	isShowingDueToEasierUnmuting = t.optional(t.boolean)
+	isShowingDueToEasierUnmuting = t.optional(t.boolean),
 })
 
 ControlsBubble.defaultProps = {
@@ -172,13 +172,7 @@ end
 function ControlsBubble:shouldShowMicOffIndicator()
 	if self.props.isLocalPlayer then
 		-- If the local player has not given mic permissions to their device, we show the muted icon.
-		local noPermissions
-		if getFFlagLegacyConnectingMicStateFix() then
-			noPermissions = not self.props.hasMicPermissions
-		else
-			noPermissions = not (self.state.microphoneEnabled and self.props.hasMicPermissions)
-		end
-		
+		local noPermissions = not self.props.hasMicPermissions
 		local micMuted = self.props.voiceState == Constants.VOICE_STATE.MUTED
 			or self.props.voiceState == Constants.VOICE_STATE.LOCAL_MUTED
 
@@ -220,8 +214,8 @@ function ControlsBubble:render()
 	if getFFlagDoNotPromptCameraPermissionsOnMount() then
 		-- The asset name will no longer depend on the Camera Device Permissions
 		cameraIconAssetName = if self.state.cameraEnabled and self:getCameraButtonVisibleAtMount()
-		then VIDEO_ON_ASSET_NAME
-		else VIDEO_OFF_ASSET_NAME
+			then VIDEO_ON_ASSET_NAME
+			else VIDEO_OFF_ASSET_NAME
 	end
 
 	return Roact.createElement("Frame", {
@@ -276,7 +270,8 @@ function ControlsBubble:render()
 			}),
 			CameraBubble = shouldShowCameraIndicator and Roact.createElement(ControlBubble, {
 				LayoutOrder = 3,
-				onActivated = (getFFlagDoNotPromptCameraPermissionsOnMount() and self.onVideoButtonPressed) or self.toggleVideo,
+				onActivated = (getFFlagDoNotPromptCameraPermissionsOnMount() and self.onVideoButtonPressed)
+					or self.toggleVideo,
 				chatSettings = chatSettings,
 				cornerRadiusOffset = cornerRadiusOffset,
 				controlBubbleSize = controlBubbleSize,

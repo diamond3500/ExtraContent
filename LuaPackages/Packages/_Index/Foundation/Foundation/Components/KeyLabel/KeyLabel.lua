@@ -37,7 +37,6 @@ export type KeyLabelProps = {
 	keyCode: Enum.KeyCode,
 	holdBehavior: HoldBehavior?,
 	Size: Bindable<UDim2>?,
-	AnchorPoint: Bindable<Vector2>?,
 } & Types.CommonProps
 
 local defaultHoldBehavior = {

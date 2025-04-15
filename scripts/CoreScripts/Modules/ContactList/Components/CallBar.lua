@@ -9,8 +9,6 @@ local Sounds = require(CorePackages.Workspace.Packages.SoundManager).Sounds
 local SoundGroups = require(CorePackages.Workspace.Packages.SoundManager).SoundGroups
 local SoundManager = require(CorePackages.Workspace.Packages.SoundManager).SoundManager
 local UserProfiles = require(CorePackages.Workspace.Packages.UserProfiles)
-local GetFFlagIrisUseLocalizationProvider =
-	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagIrisUseLocalizationProvider
 
 local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 
@@ -29,15 +27,8 @@ local Colors = UIBlox.App.Style.Colors
 local ImageSetLabel = UIBlox.Core.ImageSet.ImageSetLabel
 local useStyle = UIBlox.Core.Style.useStyle
 
+local useLocalization = dependencies.Hooks.useLocalization
 local useSelector = dependencies.Hooks.useSelector
-
-local useLocalization
-local RobloxTranslator
-if GetFFlagIrisUseLocalizationProvider() then
-	useLocalization = dependencies.Hooks.useLocalization
-else
-	RobloxTranslator = require(RobloxGui.Modules.RobloxTranslator)
-end
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -148,15 +139,10 @@ local function CallBar(passedProps: Props)
 		image = getStandardSizeAvatarHeadShotRbxthumb(otherParticipantId)
 	end
 
-	local callStatusText
-	if GetFFlagIrisUseLocalizationProvider() then
-		local localized = useLocalization({
-			callStatusLabel = getTextFromCallStatus(callStatus, instanceId),
-		})
-		callStatusText = localized.callStatusLabel
-	else
-		callStatusText = RobloxTranslator:FormatByKey(getTextFromCallStatus(callStatus, instanceId))
-	end
+	local localized = useLocalization({
+		callStatusLabel = getTextFromCallStatus(callStatus, instanceId),
+	})
+	local callStatusText = localized.callStatusLabel
 
 	local isCallEndedInInstance = callStatus == RoduxCall.Enums.Status.Idle and game.JobId == instanceId
 

@@ -5,16 +5,16 @@ local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 local LocalizationService = game:GetService("LocalizationService")
 
 local React = require(CorePackages.Packages.React)
-local Roact = require(CorePackages.Roact)
-local UIBlox = require(CorePackages.UIBlox)
+local Roact = require(CorePackages.Packages.Roact)
+local UIBlox = require(CorePackages.Packages.UIBlox)
 
 local Constants = require(RobloxGui.Modules.InGameMenuConstants)
 local ControllerBar = UIBlox.App.Bar.ControllerBar
 
-local RobloxTranslator = require(RobloxGui.Modules.RobloxTranslator)
+local RobloxTranslator = require(CorePackages.Workspace.Packages.RobloxTranslator)
 
-local SharedFlags = require(CorePackages.Workspace.Packages.SharedFlags)
-local GetFFlagReenableTextChatForTenFootInterfaces = SharedFlags.GetFFlagReenableTextChatForTenFootInterfaces
+local SocialExperiments = require(CorePackages.Workspace.Packages.SocialExperiments)
+local TenFootInterfaceExpChatExperimentation = SocialExperiments.TenFootInterfaceExpChatExperimentation
 local Localization = require(CorePackages.Workspace.Packages.InExperienceLocales).Localization
 
 local useSelector = require(CorePackages.Workspace.Packages.RoactUtils).Hooks.RoactRodux.useSelector
@@ -24,11 +24,11 @@ local localizedHints = {
 	leave = "CoreScripts.TopBar.Leave",
 	respawn = "CoreScripts.TopBar.Respawn",
 	showChat = "CoreScripts.TopBar.ShowChat",
-	hideChat = "CoreScripts.TopBar.HideChat"
+	hideChat = "CoreScripts.TopBar.HideChat",
 }
 
 local function QuickMenuControllerBar(props)
-	if GetFFlagReenableTextChatForTenFootInterfaces() then
+	if TenFootInterfaceExpChatExperimentation.getIsEnabled() then
 		local locales = Localization.new(LocalizationService.RobloxLocaleId)
 
 		-- This is the base set of right-side hints, we will add a chat option if the chat menu is visible
@@ -61,7 +61,7 @@ local function QuickMenuControllerBar(props)
 		end
 
 		return React.createElement(Roact.Portal, {
-			target = CoreGui
+			target = CoreGui,
 		}, {
 			QuickMenuControllerBar = React.createElement("ScreenGui", {
 				DisplayOrder = Constants.DisplayOrder.ControllerBar,
@@ -71,13 +71,13 @@ local function QuickMenuControllerBar(props)
 						text = locales:Format(localizedHints.back),
 						keyCode = Enum.KeyCode.ButtonB,
 					},
-					rightHints = rightHints
+					rightHints = rightHints,
 				}),
-			})
+			}),
 		})
 	else
 		return Roact.createElement(Roact.Portal, {
-			target = CoreGui
+			target = CoreGui,
 		}, {
 			QuickMenuControllerBar = Roact.createElement("ScreenGui", {
 				DisplayOrder = Constants.DisplayOrder.ControllerBar,
@@ -96,9 +96,9 @@ local function QuickMenuControllerBar(props)
 							text = RobloxTranslator:FormatByKey(localizedHints.leave),
 							keyCode = Enum.KeyCode.ButtonX,
 						},
-					}
+					},
 				}),
-			})
+			}),
 		})
 	end
 end

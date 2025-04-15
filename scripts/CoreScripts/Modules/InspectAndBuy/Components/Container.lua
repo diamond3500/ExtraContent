@@ -1,8 +1,8 @@
 local CorePackages = game:GetService("CorePackages")
 local GuiService = game:GetService("GuiService")
 local InspectAndBuyFolder = script.Parent.Parent
-local Roact = require(CorePackages.Roact)
-local RoactRodux = require(CorePackages.RoactRodux)
+local Roact = require(CorePackages.Packages.Roact)
+local RoactRodux = require(CorePackages.Packages.RoactRodux)
 local InitialView = require(InspectAndBuyFolder.Components.InitialView)
 local AssetDetails = require(InspectAndBuyFolder.Components.AssetDetails)
 local CloseButton = require(InspectAndBuyFolder.Components.CloseButton)
@@ -18,8 +18,6 @@ local TopBarConstants = require(Modules.TopBar.Constants)
 
 local screenSideOffset = TopBarConstants.ScreenSideOffset
 local InspectAndBuyContext = require(InspectAndBuyFolder.Components.InspectAndBuyContext)
-
-local FFlagAttributionInInspectAndBuy = require(InspectAndBuyFolder.Flags.FFlagAttributionInInspectAndBuy)
 
 local Container = Roact.PureComponent:extend("Container")
 
@@ -109,7 +107,7 @@ function Container:render()
 						CornerRadius = Theme.DefaultCornerRadius,
 					})
 					else nil,
-				Overlay = if FFlagAttributionInInspectAndBuy then Roact.createElement(Overlay) else nil,
+				Overlay = Roact.createElement(Overlay),
 				MainContainer = Roact.createElement("ImageButton", {
 					AnchorPoint = viewMapping.ContainerAnchorPoint,
 					Size = viewMapping.ContainerSize,

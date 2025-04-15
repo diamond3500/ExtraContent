@@ -16,21 +16,13 @@ local LayoutValues = require(Connection.LayoutValues)
 local WithLayoutValues = LayoutValues.WithLayoutValues
 local usePlayerCombinedName = require(PlayerList.Hooks.usePlayerCombinedName)
 
-local ApolloClient = require(CoreGui.RobloxGui.Modules.ApolloClient)
-local UserProfiles = require(CorePackages.Workspace.Packages.UserProfiles)
-local getInExperienceCombinedNameFromId = UserProfiles.Selectors.getInExperienceCombinedNameFromId
-
-local getIsUserProfileOnLeaderboardEnabled = require(RobloxGui.Modules.Flags.getIsUserProfileOnLeaderboardEnabled)
-local FFlagRefactorPlayerNameTag = require(PlayerList.Flags.FFlagRefactorPlayerNameTag)
-local FFlagInExperienceNameQueryEnabled = require(CorePackages.Workspace.Packages.SharedFlags).FFlagInExperienceNameQueryEnabled
-
 local PlayerNameTag = React.PureComponent:extend("PlayerNameTag")
 
 PlayerNameTag.validateProps = t.strictInterface({
 	player = playerInterface,
 	isTitleEntry = t.boolean,
 	isHovered = t.boolean,
-	name = if FFlagRefactorPlayerNameTag then t.string else nil,
+	name = t.string,
 	textStyle = t.strictInterface({
 		Color = t.Color3,
 		Transparency = t.number,
@@ -61,28 +53,6 @@ type Props = {
 	},
 }
 
-if not FFlagRefactorPlayerNameTag then
-	function PlayerNameTag:init()
-		if getIsUserProfileOnLeaderboardEnabled() then
-			self:setState({
-				name = self.props.player.DisplayName,
-			})
-
-			ApolloClient:query({
-				query = if FFlagInExperienceNameQueryEnabled then UserProfiles.Queries.userProfilesInExperienceNamesByUserIds else UserProfiles.Queries.userProfilesCombinedNameByUserIds,
-				variables = {
-					userIds = { tostring(self.props.player.UserId) },
-				},
-			}):andThen(function(response)
-				local name = if FFlagInExperienceNameQueryEnabled then getInExperienceCombinedNameFromId(response.data, self.props.player.UserId) else response.data.userProfiles[1].names.combinedName
-				self:setState({
-					name = name,
-				})
-			end)
-		end
-	end
-end
-
 function PlayerNameTag:render()
 	return WithLayoutValues(function(layoutValues)
 		local playerNameFont = self.props.textFont.Font
@@ -100,11 +70,7 @@ function PlayerNameTag:render()
 			TextStrokeColor3 = self.props.textStyle.StrokeColor,
 			TextStrokeTransparency = self.props.textStyle.StrokeTransparency,
 			BackgroundTransparency = 1,
-			Text = if FFlagRefactorPlayerNameTag
-				then self.props.name
-				else if getIsUserProfileOnLeaderboardEnabled()
-					then self.state.name
-					else self.props.player.DisplayName,
+			Text = self.props.name,
 			TextTruncate = Enum.TextTruncate.AtEnd,
 		})
 	end)
@@ -118,8 +84,5 @@ local function PlayerNameTagContainer(props: Props)
 	}))
 end
 
-if FFlagRefactorPlayerNameTag then
-	return PlayerNameTagContainer
-else
-	return PlayerNameTag
-end
+return PlayerNameTagContainer
+

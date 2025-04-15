@@ -3,11 +3,12 @@ local CorePackages = game:GetService("CorePackages")
 local CoreGui = game:GetService("CoreGui")
 local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 
-local Roact = require(CorePackages.Roact)
-local RoactRodux = require(CorePackages.RoactRodux)
+local Roact = require(CorePackages.Packages.Roact)
+local RoactRodux = require(CorePackages.Packages.RoactRodux)
 
 local ShareGame = RobloxGui.Modules.Settings.Pages.ShareGame
-local GetFFlagShareGameSearchBoxFocusAnalytics = require(RobloxGui.Modules.Settings.Flags.GetFFlagShareGameSearchBoxFocusAnalytics)
+local GetFFlagShareGameSearchBoxFocusAnalytics =
+	require(RobloxGui.Modules.Settings.Flags.GetFFlagShareGameSearchBoxFocusAnalytics)
 local SearchBox = require(ShareGame.Components.SearchBox)
 local IconButton = require(ShareGame.Components.IconButton)
 local Constants = require(ShareGame.Constants)
@@ -129,7 +130,7 @@ function SearchArea:render()
 
 							self.textConnection = textChangedSignal:connect(function()
 								self:setState({
-									cancelText = rbx.Text
+									cancelText = rbx.Text,
 								})
 							end)
 						end
@@ -190,23 +191,20 @@ function SearchArea:didUpdate(prevProps)
 	end
 end
 
-SearchArea = RoactRodux.UNSTABLE_connect2(
-	function(state, props)
-		return {
-			isPageOpen = state.Page.IsOpen,
-			searchAreaActive = state.ConversationsSearch.SearchAreaActive,
-		}
-	end,
-	function(dispatch)
-		return {
-			setSearchAreaActive = function(isActive)
-				dispatch(SetSearchAreaActive(isActive))
-			end,
-			setSearchText = function(text)
-				dispatch(SetSearchText(text))
-			end,
-		}
-	end
-)(SearchArea)
+SearchArea = RoactRodux.UNSTABLE_connect2(function(state, props)
+	return {
+		isPageOpen = state.Page.IsOpen,
+		searchAreaActive = state.ConversationsSearch.SearchAreaActive,
+	}
+end, function(dispatch)
+	return {
+		setSearchAreaActive = function(isActive)
+			dispatch(SetSearchAreaActive(isActive))
+		end,
+		setSearchText = function(text)
+			dispatch(SetSearchText(text))
+		end,
+	}
+end)(SearchArea)
 
 return SearchArea

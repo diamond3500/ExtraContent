@@ -9,7 +9,6 @@ local Packages = UIBlox.Parent
 local Roact = require(Packages.Roact)
 local t = require(Packages.t)
 local Cryo = require(Packages.Cryo)
-local UIBloxConfig = require(UIBlox.UIBloxConfig)
 
 local Images = require(AppRoot.ImageSet.Images)
 local ImageSetComponent = require(CoreRoot.ImageSet.ImageSetComponent)
@@ -85,11 +84,9 @@ local function renderBackgroundImage(titleBackgroundImageProps, stylePalette, co
 	if titleText and #titleText > 0 then
 		contents = Cryo.Dictionary.join(contents, {
 			BackgroundText = Roact.createElement(GenericTextLabel, {
-				Size = if UIBloxConfig.resizeModalTitle then UDim2.new(1, 0, 1, -TITLE_HEIGHT - TITLE_RADIUS) else nil,
-				AnchorPoint = if UIBloxConfig.resizeModalTitle then Vector2.new(0.5, 0) else Vector2.new(0.5, 0.5),
-				Position = if UIBloxConfig.resizeModalTitle
-					then UDim2.new(0.5, 0, 0, TITLE_HEIGHT)
-					else UDim2.new(0.5, 0, 0.5, 0),
+				Size = UDim2.new(1, 0, 1, -TITLE_HEIGHT - TITLE_RADIUS),
+				AnchorPoint = Vector2.new(0.5, 0),
+				Position = UDim2.new(0.5, 0, 0, TITLE_HEIGHT),
 				fontStyle = stylePalette.Font.Body,
 				colorStyle = stylePalette.Theme.TextEmphasis,
 				RichText = true,

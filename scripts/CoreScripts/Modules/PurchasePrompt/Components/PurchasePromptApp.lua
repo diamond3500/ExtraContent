@@ -3,14 +3,14 @@ local Root = script.Parent.Parent
 local CoreGui = game:GetService("CoreGui")
 local LocalizationService = game:GetService("LocalizationService")
 local CorePackages = game:GetService("CorePackages")
-local PurchasePromptDeps = require(CorePackages.PurchasePromptDeps)
+local PurchasePromptDeps = require(CorePackages.Workspace.Packages.PurchasePromptDeps)
 local Roact = PurchasePromptDeps.Roact
 local Rodux = PurchasePromptDeps.Rodux
 local RoactRodux = PurchasePromptDeps.RoactRodux
 local UIBlox = PurchasePromptDeps.UIBlox
 local StyleProvider = UIBlox.Style.Provider
-local IAPExperience = require(CorePackages.IAPExperience)
-local LocaleProvider =  IAPExperience.Locale.LocaleProvider
+local IAPExperience = require(CorePackages.Workspace.Packages.IAPExperience)
+local LocaleProvider = IAPExperience.Locale.LocaleProvider
 local ToastLite = require(CorePackages.Workspace.Packages.ToastLite)
 local Toast = ToastLite.Components.Toast
 
@@ -33,34 +33,34 @@ local ProductPurchaseContainer = require(script.Parent.ProductPurchase.ProductPu
 local RobuxUpsellContainer = require(script.Parent.RobuxUpsell.RobuxUpsellContainer)
 local PremiumUpsellContainer = require(script.Parent.PremiumUpsell.PremiumUpsellContainer)
 local SubscriptionPurchaseContainer = require(script.Parent.SubscriptionPurchase.SubscriptionPurchaseContainer)
-
-local FFlagPublishAvatarPromptEnabled = require(RobloxGui.Modules.PublishAssetPrompt.FFlagPublishAvatarPromptEnabled)
-local GetFFlagEnableToastLiteRender = require(Root.Flags.GetFFlagEnableToastLiteRender)
 local renderWithCoreScriptsStyleProvider =
 	require(script.Parent.Parent.Parent.Common.renderWithCoreScriptsStyleProvider)
 
+local SelectionCursorProvider = require(CorePackages.Packages.UIBlox).App.SelectionImage.SelectionCursorProvider
+local ReactFocusNavigation = require(CorePackages.Packages.ReactFocusNavigation)
+local focusNavigationService =
+	ReactFocusNavigation.FocusNavigationService.new(ReactFocusNavigation.EngineInterface.CoreGui)
+local FocusNavigationUtils = require(CorePackages.Workspace.Packages.FocusNavigationUtils)
+local FocusNavigableSurfaceRegistry = FocusNavigationUtils.FocusNavigableSurfaceRegistry
+local FocusNavigationRegistryProvider = FocusNavigableSurfaceRegistry.Provider
+local FocusNavigationCoreScriptsWrapper = FocusNavigationUtils.FocusNavigationCoreScriptsWrapper
+local FocusRoot = FocusNavigationUtils.FocusRoot
+local FocusNavigableSurfaceIdentifierEnum = FocusNavigationUtils.FocusNavigableSurfaceIdentifierEnum
+
+local GetFFlagEnableToastLiteRender = require(Root.Flags.GetFFlagEnableToastLiteRender)
+local FFlagUIBloxFoundationProvider =
+	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagUIBloxFoundationProvider()
+local FFlagAddCursorProviderToPurchasePromptApp = require(Root.Flags.FFlagAddCursorProviderToPurchasePromptApp)
+local FFlagCSFocusWrapperRefactor = require(CorePackages.Workspace.Packages.SharedFlags).FFlagCSFocusWrapperRefactor
+
 local PurchasePromptApp = Roact.Component:extend("PurchasePromptApp")
 
-function PurchasePromptApp:init()
-	local initialState = {}
+local SELECTION_GROUP_NAME = "PurchasePromptApp"
 
-	local abTest = ABTest.new()
-	local network = Network.new()
-	local analytics = Analytics.new()
-	local platformInterface = PlatformInterface.new()
+function PurchasePromptApp:init()
 	local externalSettings = ExternalSettings.new()
 
 	self.state = {
-		-- Remove store from state with FFlagPublishAvatarPromptEnabled
-		store = if not FFlagPublishAvatarPromptEnabled then Rodux.Store.new(Reducer, initialState, {
-			Thunk.middleware({
-				[ABTest] = abTest,
-				[Network] = network,
-				[Analytics] = analytics,
-				[PlatformInterface] = platformInterface,
-				[ExternalSettings] = externalSettings,
-			}),
-		}) else nil,
 		isTenFootInterface = externalSettings.isTenFootInterface(),
 	}
 end
@@ -71,35 +71,95 @@ end
 
 function PurchasePromptApp:render()
 	return provideRobloxLocale(function()
-		return Roact.createElement(RoactRodux.StoreProvider, {
-			store = if FFlagPublishAvatarPromptEnabled then self.props.store else self.state.store,
-		}, {
-			StyleProvider = self:renderWithStyle({
-				LayoutValuesProvider = Roact.createElement(LayoutValuesProvider, {
-					isTenFootInterface = self.state.isTenFootInterface,
+		local children = {
+			LocaleProvider = Roact.createElement(LocaleProvider, {
+				locale = LocalizationService.RobloxLocaleId,
+			}, {
+				ProductPurchaseContainer = Roact.createElement(ProductPurchaseContainer),
+				RobuxUpsellContainer = Roact.createElement(RobuxUpsellContainer),
+				PremiumUpsellContainer = Roact.createElement(PremiumUpsellContainer),
+				SubscriptionPurchaseContainer = Roact.createElement(SubscriptionPurchaseContainer),
+			}),
+			EventConnections = Roact.createElement(EventConnections),
+			Toast = if GetFFlagEnableToastLiteRender() then Roact.createElement(Toast) else nil,
+		} :: any
+
+		if FFlagAddCursorProviderToPurchasePromptApp then
+			children = {
+				CursorProvider = Roact.createElement(SelectionCursorProvider, {}, {
+					FocusNavigationProvider = Roact.createElement(
+						ReactFocusNavigation.FocusNavigationContext.Provider,
+						{
+							value = focusNavigationService,
+						},
+						{
+							FocusNavigationRegistryProvider = Roact.createElement(
+								FocusNavigationRegistryProvider,
+								nil,
+								{
+									FocusNavigationCoreScriptsWrapper = Roact.createElement(
+										if FFlagCSFocusWrapperRefactor
+											then FocusRoot
+											else FocusNavigationCoreScriptsWrapper,
+										if FFlagCSFocusWrapperRefactor
+											then {
+												surfaceIdentifier = FocusNavigableSurfaceIdentifierEnum.CentralOverlay,
+												isIsolated = true,
+												isAutoFocusRoot = true,
+											}
+											else {
+												selectionGroupName = SELECTION_GROUP_NAME,
+												focusNavigableSurfaceIdentifier = FocusNavigableSurfaceIdentifierEnum.CentralOverlay,
+											},
+										children
+									),
+								}
+							),
+						}
+					),
+				}),
+			} :: any
+		end
+
+		if FFlagUIBloxFoundationProvider then
+			return Roact.createElement("ScreenGui", {
+				AutoLocalize = false,
+				IgnoreGuiInset = true,
+			}, {
+				StoreProvider = Roact.createElement(RoactRodux.StoreProvider, {
+					store = self.props.store,
 				}, {
-					PolicyProvider = Roact.createElement(PurchasePromptPolicy.Provider, {
-						policy = { PurchasePromptPolicy.Mapper },
-					}, {
-						PurchasePrompt = Roact.createElement("ScreenGui", {
-							AutoLocalize = false,
-							IgnoreGuiInset = true,
+					StyleProvider = self:renderWithStyle({
+						LayoutValuesProvider = Roact.createElement(LayoutValuesProvider, {
+							isTenFootInterface = self.state.isTenFootInterface,
 						}, {
-							LocaleProvider = Roact.createElement(LocaleProvider, {
-								locale = LocalizationService.RobloxLocaleId,
-							}, {
-								ProductPurchaseContainer = Roact.createElement(ProductPurchaseContainer),
-								RobuxUpsellContainer = Roact.createElement(RobuxUpsellContainer),
-								PremiumUpsellContainer = Roact.createElement(PremiumUpsellContainer),
-								SubscriptionPurchaseContainer = Roact.createElement(SubscriptionPurchaseContainer),
-							}),
-							EventConnections = Roact.createElement(EventConnections),
-							Toast = if GetFFlagEnableToastLiteRender() then Roact.createElement(Toast) else nil
+							PolicyProvider = Roact.createElement(PurchasePromptPolicy.Provider, {
+								policy = { PurchasePromptPolicy.Mapper },
+							}, children),
 						}),
 					}),
 				}),
-			}),
-		})
+			})
+		else
+			return Roact.createElement(RoactRodux.StoreProvider, {
+				store = self.props.store,
+			}, {
+				StyleProvider = self:renderWithStyle({
+					LayoutValuesProvider = Roact.createElement(LayoutValuesProvider, {
+						isTenFootInterface = self.state.isTenFootInterface,
+					}, {
+						PolicyProvider = Roact.createElement(PurchasePromptPolicy.Provider, {
+							policy = { PurchasePromptPolicy.Mapper },
+						}, {
+							PurchasePrompt = Roact.createElement("ScreenGui", {
+								AutoLocalize = false,
+								IgnoreGuiInset = true,
+							}, children),
+						}),
+					}),
+				}),
+			})
+		end
 	end)
 end
 

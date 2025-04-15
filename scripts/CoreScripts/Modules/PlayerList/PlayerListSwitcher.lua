@@ -2,8 +2,8 @@ local CorePackages = game:GetService("CorePackages")
 local CoreGui = game:GetService("CoreGui")
 local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 
-local Roact = require(CorePackages.Roact)
-local RoactRodux = require(CorePackages.RoactRodux)
+local Roact = require(CorePackages.Packages.Roact)
+local RoactRodux = require(CorePackages.Packages.RoactRodux)
 
 local UiModeStyleProvider = require(CorePackages.Workspace.Packages.Style).UiModeStyleProvider
 
@@ -26,26 +26,29 @@ function PlayerListSwitcher:didMount()
 	self.props.setPlayerListVisible(PlayerListInitialVisibleState())
 end
 
-function PlayerListSwitcher:wrapWithUiModeStyleProvider(children) 
+function PlayerListSwitcher:wrapWithUiModeStyleProvider(children)
 	return {
 		ThemeProvider = Roact.createElement(UiModeStyleProvider, {
 			style = {
 				themeName = self.props.appStyleForUiModeStyleProvider.themeName,
 				fontName = self.props.appStyleForUiModeStyleProvider.fontName,
 			},
-		}, children)
+		}, children),
 	}
 end
 
 function PlayerListSwitcher:render()
-	return Roact.createElement(LayoutValuesProvider, {
-		layoutValues = CreateLayoutValues(TenFootInterface:IsEnabled())
-	}, self:wrapWithUiModeStyleProvider({
+	return Roact.createElement(
+		LayoutValuesProvider,
+		{
+			layoutValues = CreateLayoutValues(TenFootInterface:IsEnabled()),
+		},
+		self:wrapWithUiModeStyleProvider({
 			PlayerListApp = self.props.isSmallTouchDevice and Roact.createElement(PlayerListAppMobile, {
 				setLayerCollectorEnabled = self.props.setLayerCollectorEnabled,
 			}) or Roact.createElement(PlayerListApp, {
 				setLayerCollectorEnabled = self.props.setLayerCollectorEnabled,
-			})
+			}),
 		})
 	)
 end

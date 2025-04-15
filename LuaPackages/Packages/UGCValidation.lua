@@ -8,6 +8,17 @@ local Package = require(PackageIndex["UGCValidation"]["UGCValidation"])
 export type AvatarValidationError = Package.AvatarValidationError
 export type AvatarValidationResponse = Package.AvatarValidationResponse
 export type BundlesMetadata = Package.BundlesMetadata
+export type AllBodyParts = Package.AllBodyParts
+export type AxisValidateBoundsResult = Package.AxisValidateBoundsResult
+export type ScaleTypeValidateBoundsResult = Package.ScaleTypeValidateBoundsResult
+export type ExtraDataValidateBoundsResult = Package.ExtraDataValidateBoundsResult
+export type ErrorValidateBoundsResult = Package.ErrorValidateBoundsResult
+export type OverallValidateBoundsResult = Package.OverallValidateBoundsResult
+export type MainValidateBoundsResult = Package.MainValidateBoundsResult
+export type ValidateBoundsResult = Package.ValidateBoundsResult
+export type DataCache = Package.DataCache
+export type MainPreprocessDataResult = Package.MainPreprocessDataResult
+export type PreprocessDataResult = Package.PreprocessDataResult
 
 
 return Package

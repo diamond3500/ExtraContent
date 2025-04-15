@@ -1,7 +1,7 @@
 --!nonstrict
 local CorePackages = game:GetService("CorePackages")
 local RobloxGui = game:GetService("CoreGui").RobloxGui
-local Roact = require(CorePackages.Roact)
+local Roact = require(CorePackages.Packages.Roact)
 
 local Constants = require(script.Parent.Parent.Constants)
 local FONT = Constants.Font.UtilBar
@@ -21,11 +21,12 @@ function DropDown:init()
 	end
 
 	self.nonDropDownSelection = function(rbx, input)
-		if input.UserInputType == Enum.UserInputType.MouseButton1 or
-			(input.UserInputType == Enum.UserInputType.Touch and
-			input.UserInputState == Enum.UserInputState.End) then
+		if
+			input.UserInputType == Enum.UserInputType.MouseButton1
+			or (input.UserInputType == Enum.UserInputType.Touch and input.UserInputState == Enum.UserInputState.End)
+		then
 			self:setState({
-				showDropDown = false
+				showDropDown = false,
 			})
 		end
 	end
@@ -87,9 +88,9 @@ function DropDown:render()
 				[Roact.Event.Activated] = function()
 					onSelection(ind)
 					self:setState({
-						showDropDown = false
+						showDropDown = false,
 					})
-				end
+				end,
 			})
 			frameHeight = frameHeight + absoluteSize.Y
 		end
@@ -98,7 +99,6 @@ function DropDown:render()
 		outerFrameSize = UDim2.new(0, frameWidth + padding, 0, frameHeight + padding)
 		absolutePosition = UDim2.new(0, absolutePos.X, 0, absolutePos.Y + absoluteSize.Y)
 	end
-
 
 	return Roact.createElement("TextButton", {
 		Size = buttonSize,
@@ -120,12 +120,13 @@ function DropDown:render()
 			Image = OPEN_ARROW,
 			BackgroundTransparency = 1,
 			Size = UDim2.new(0, ARROW_SIZE, 0, ARROW_SIZE),
-			Position = UDim2.new(1, -ARROW_SIZE - ARROW_OFFSET, .5, -ARROW_OFFSET),
+			Position = UDim2.new(1, -ARROW_SIZE - ARROW_OFFSET, 0.5, -ARROW_OFFSET),
 		}),
 
 		DropDown = showDropDown and Roact.createElement(Roact.Portal, {
 			-- ROBLOX FIXME: Can we express the DevConsoleMaster singleton statically in the project config?
-			target = dropDownTargetParent ~= nil and dropDownTargetParent or (game:GetService("CoreGui") :: any).DevConsoleMaster,
+			target = dropDownTargetParent ~= nil and dropDownTargetParent
+				or (game:GetService("CoreGui") :: any).DevConsoleMaster,
 		}, {
 			InputCatcher = Roact.createElement("Frame", {
 				Size = UDim2.new(1, 0, 1, 0),
@@ -142,13 +143,13 @@ function DropDown:render()
 					BackgroundTransparency = 0,
 				}, {
 					innerFrame = Roact.createElement("Frame", {
-						Position = UDim2.new(0, INNER_FRAME_PADDING, 0 , INNER_FRAME_PADDING),
+						Position = UDim2.new(0, INNER_FRAME_PADDING, 0, INNER_FRAME_PADDING),
 						Size = UDim2.new(0, frameWidth, 0, frameHeight),
 						BackgroundTransparency = 1,
-					}, children)
-				})
-			})
-		})
+					}, children),
+				}),
+			}),
+		}),
 	})
 end
 

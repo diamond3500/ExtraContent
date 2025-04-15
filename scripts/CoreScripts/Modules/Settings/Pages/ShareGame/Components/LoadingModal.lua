@@ -1,5 +1,5 @@
 local CorePackages = game:GetService("CorePackages")
-local Roact = require(CorePackages.Roact)
+local Roact = require(CorePackages.Packages.Roact)
 
 local LoadingBar = require(CorePackages.Workspace.Packages.AppBlox).LoadingBar
 
@@ -17,6 +17,6 @@ return function()
 		Roact.createElement("UICorner", {
 			CornerRadius = UDim.new(0, 4),
 		}),
-		Roact.createElement(LoadingBar)
+		Roact.createElement(LoadingBar),
 	})
 end

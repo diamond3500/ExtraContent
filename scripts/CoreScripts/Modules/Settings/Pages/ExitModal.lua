@@ -35,24 +35,22 @@ local Players = game:GetService("Players")
 ----------- UTILITIES --------------
 
 local SharedFlags = CorePackages.Workspace.Packages.SharedFlags
-local GetFFlagChromeSurveySupport = require(SharedFlags).GetFFlagChromeSurveySupport
 local GetFFlagGateEducationalPopupVisibilityViaGUAC = require(SharedFlags).GetFFlagGateEducationalPopupVisibilityViaGUAC
 local InExperienceCapabilities =
 	require(CorePackages.Workspace.Packages.InExperienceCapabilities).InExperienceCapabilities
 
 local NotificationType = GuiService:GetNotificationTypeList()
-local Roact = require(CorePackages.Roact)
+local Roact = require(CorePackages.Packages.Roact)
 local LinkingProtocol = require(CorePackages.Workspace.Packages.LinkingProtocol).LinkingProtocol
 local Localization = require(CorePackages.Workspace.Packages.InExperienceLocales).Localization
 local SendAnalytics = require(RobloxGui.Modules.InGameMenu.Utility.SendAnalytics)
 local UserLocalStore = require(RobloxGui.Modules.InGameMenu.Utility.UserLocalStore)
 local GetDefaultQualityLevel = require(CorePackages.Workspace.Packages.AppCommonLib).GetDefaultQualityLevel
 local MessageBus = require(CorePackages.Workspace.Packages.MessageBus).MessageBus
-local LocalStore = require(RobloxGui.Modules.Chrome.Service.LocalStore)
 
 ----------- COMPONENTS --------------
 
-local InGameMenuDependencies = require(CorePackages.InGameMenuDependencies)
+local InGameMenuDependencies = require(CorePackages.Packages.InGameMenuDependencies)
 local UIBlox = InGameMenuDependencies.UIBlox
 local Images = UIBlox.App.ImageSet.Images
 local EducationalModal = UIBlox.App.Dialog.Modal.EducationalModal
@@ -222,12 +220,10 @@ local function Initialize()
 						this.DontShowAgain()
 					end
 					this.LeaveGameFunc(false)
-
-					local customProps = nil
-					if GetFFlagChromeSurveySupport() then
-						local chromeSeenCount = tostring(LocalStore.getChromeSeenCount())
-						customProps = { chromeSeenCount = chromeSeenCount }
-					end
+					
+					-- TODO APPEXP-1879: Remove code passing chromeSeenCount/customProps to survey receiver by flagging it off, now that it is unused.
+					local chromeSeenCount = tostring(0)
+					local customProps = { chromeSeenCount = chromeSeenCount }
 
 					local localUserId = tostring(Players.LocalPlayer.UserId)
 					MessageBus.publish(

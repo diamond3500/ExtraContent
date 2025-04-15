@@ -5,14 +5,14 @@ local ContextActionService = game:GetService("ContextActionService")
 local AnalyticsService = game:GetService("RbxAnalyticsService")
 local UserInputService = game:GetService("UserInputService")
 
-local Roact = require(CorePackages.Roact)
+local Roact = require(CorePackages.Packages.Roact)
 local t = require(CorePackages.Packages.t)
-local Cryo = require(CorePackages.Cryo)
+local Cryo = require(CorePackages.Packages.Cryo)
 local renderWithCoreScriptsStyleProvider =
 	require(script.Parent.Parent.Parent.Common.renderWithCoreScriptsStyleProvider)
 local ExternalEventConnection = require(CorePackages.Workspace.Packages.RoactUtils).ExternalEventConnection
 
-local UIBlox = require(CorePackages.UIBlox)
+local UIBlox = require(CorePackages.Packages.UIBlox)
 local Button = UIBlox.App.Button.Button
 local ButtonType = UIBlox.App.Button.Enum.ButtonType
 local SlideFromTopToast = UIBlox.App.Dialog.Toast
@@ -37,11 +37,7 @@ local GetFFlagEnableVoicePromptReasonText = require(RobloxGui.Modules.Flags.GetF
 local GetFFlagEnableVoiceNudge = require(VoiceChatCore.Flags.GetFFlagEnableVoiceNudge)
 local GetFIntVoiceToxicityToastDurationSeconds =
 	require(RobloxGui.Modules.Flags.GetFIntVoiceToxicityToastDurationSeconds)
-local GetFFlagVoiceBanShowToastOnSubsequentJoins =
-	require(RobloxGui.Modules.Flags.GetFFlagVoiceBanShowToastOnSubsequentJoins)
-local FFlagEnableVoiceChatStorybookFix = require(RobloxGui.Modules.Flags.FFlagEnableVoiceChatStorybookFix)
 local FFlagVoiceChatOnlyReportVoiceBans = game:DefineFastFlag("VoiceChatOnlyReportVoiceBans", false)
-local GetFFlagUpdateNudgeV3VoiceBanUI = require(RobloxGui.Modules.Flags.GetFFlagUpdateNudgeV3VoiceBanUI)
 local GetFFlagEnableInExpVoiceUpsell = require(RobloxGui.Modules.Flags.GetFFlagEnableInExpVoiceUpsell)
 local GetFFlagEnableInExpVoiceConsentAnalytics =
 	require(RobloxGui.Modules.Flags.GetFFlagEnableInExpVoiceConsentAnalytics)
@@ -51,18 +47,15 @@ local EngineFeatureRbxAnalyticsServiceExposePlaySessionId =
 	game:GetEngineFeature("RbxAnalyticsServiceExposePlaySessionId")
 local GetFFlagEnableSeamlessVoiceUX = require(RobloxGui.Modules.Flags.GetFFlagEnableSeamlessVoiceUX)
 local GetFIntVoiceJoinM3ToastDurationSeconds = require(RobloxGui.Modules.Flags.GetFIntVoiceJoinM3ToastDurationSeconds)
-local GetFFlagSendDevicePermissionsModalAnalytics = require(RobloxGui.Modules.Flags.GetFFlagSendDevicePermissionsModalAnalytics)
-local GetFFlagEnableSeamlessVoiceDataConsentToast = require(RobloxGui.Modules.Flags.GetFFlagEnableSeamlessVoiceDataConsentToast)
+local GetFFlagSendDevicePermissionsModalAnalytics =
+	require(RobloxGui.Modules.Flags.GetFFlagSendDevicePermissionsModalAnalytics)
+local GetFFlagEnableSeamlessVoiceDataConsentToast =
+	require(RobloxGui.Modules.Flags.GetFFlagEnableSeamlessVoiceDataConsentToast)
 
-local RobloxTranslator
-if FFlagEnableVoiceChatStorybookFix() then
-	RobloxTranslator = require(RobloxGui.Modules.RobloxTranslator)
-else
-	RobloxTranslator = require(RobloxGui:WaitForChild("Modules"):WaitForChild("RobloxTranslator"))
-end
+local RobloxTranslator = require(CorePackages.Workspace.Packages.RobloxTranslator)
 
 local locales = nil
-if GetFFlagEnableSeamlessVoiceDataConsentToast() then 
+if GetFFlagEnableSeamlessVoiceDataConsentToast() then
 	local LocalizationService = game:GetService("LocalizationService")
 	local Localization = require(CorePackages.Workspace.Packages.InExperienceLocales).Localization
 	locales = Localization.new(LocalizationService.RobloxLocaleId)
@@ -113,18 +106,16 @@ local PromptTitle = {
 	[PromptType.VoiceConsentModalV1] = RobloxTranslator:FormatByKey("Feature.SettingsHub.Prompt.GetVoiceChat"),
 	[PromptType.VoiceConsentModalV2] = RobloxTranslator:FormatByKey("Feature.SettingsHub.Prompt.VoiceChatWithOthers"),
 	[PromptType.VoiceConsentModalV3] = RobloxTranslator:FormatByKey("Feature.SettingsHub.Prompt.GetVoiceChat"),
-	[PromptType.JoinedVoiceToast] = RobloxTranslator:FormatByKey(
-		"Feature.SettingsHub.Prompt.JoinedVoiceChat"
-	),
+	[PromptType.JoinedVoiceToast] = RobloxTranslator:FormatByKey("Feature.SettingsHub.Prompt.JoinedVoiceChat"),
 	[PromptType.JoinVoiceSTUX] = RobloxTranslator:FormatByKey("Feature.SettingsHub.Prompt.JoinedVoiceChat"),
 	[PromptType.LeaveVoice] = RobloxTranslator:FormatByKey("Feature.SettingsHub.Prompt.LeaveVoiceChat"),
 	[PromptType.JoinVoice] = RobloxTranslator:FormatByKey("Feature.SettingsHub.Prompt.JoinedVoiceChatV2"),
 	[PromptType.DevicePermissionsModal] = RobloxTranslator:FormatByKey(
 		"Feature.SettingsHub.Prompt.NeedMicrophoneAccess"
 	),
-	[PromptType.VoiceDataConsentOptOutToast] = if GetFFlagEnableSeamlessVoiceDataConsentToast() then locales:Format(
-		"Feature.SettingsHub.Prompt.Title.ImproveVoiceChat"
-	) else nil,
+	[PromptType.VoiceDataConsentOptOutToast] = if GetFFlagEnableSeamlessVoiceDataConsentToast()
+		then locales:Format("Feature.SettingsHub.Prompt.Title.ImproveVoiceChat")
+		else nil,
 }
 local PromptSubTitle = {
 	[PromptType.None] = "",
@@ -152,9 +143,9 @@ local PromptSubTitle = {
 	[PromptType.VoiceToxicityToast] = RobloxTranslator:FormatByKey(
 		"Feature.SettingsHub.Prompt.Subtitle.VoiceToxicityToast"
 	),
-	[PromptType.VoiceToxicityFeedbackToast] = if GetFFlagUpdateNudgeV3VoiceBanUI()
-		then RobloxTranslator:FormatByKey("Feature.SettingsHub.Prompt.Subtitle.ThanksForLettingUsKnow")
-		else RobloxTranslator:FormatByKey("Feature.SettingsHub.Prompt.Subtitle.ThankYouForFeedback"),
+	[PromptType.VoiceToxicityFeedbackToast] = RobloxTranslator:FormatByKey(
+		"Feature.SettingsHub.Prompt.Subtitle.ThanksForLettingUsKnow"
+	),
 	[PromptType.VoiceChatSuspendedTemporaryToast] = function(dateTime)
 		return RobloxTranslator:FormatByKey(
 			"Feature.SettingsHub.Description.ChatWithVoiceDisabledUntil",
@@ -185,9 +176,9 @@ local PromptSubTitle = {
 	[PromptType.DevicePermissionsModal] = RobloxTranslator:FormatByKey(
 		"Feature.SettingsHub.Prompt.Subtitle.AllowMicrophoneAccess"
 	),
-	[PromptType.VoiceDataConsentOptOutToast] = if GetFFlagEnableSeamlessVoiceDataConsentToast() then locales:Format(
-		"Feature.SettingsHub.Prompt.Subtitle.ThanksForVoiceData"
-	) else nil,
+	[PromptType.VoiceDataConsentOptOutToast] = if GetFFlagEnableSeamlessVoiceDataConsentToast()
+		then locales:Format("Feature.SettingsHub.Prompt.Subtitle.ThanksForVoiceData")
+		else nil,
 }
 
 if runService:IsStudio() then
@@ -269,6 +260,7 @@ VoiceChatPromptFrame.validateProps = t.strictInterface({
 	VoiceChatServiceManager = t.optional(t.table),
 	showNewContent = t.optional(t.boolean),
 	showCheckbox = t.optional(t.boolean),
+	showDataConsentToast = t.optional(t.boolean),
 	policyMapper = t.optional(t.callback),
 	appStyle = validateStyle,
 	settingsAppAvailable = t.optional(t.boolean),
@@ -344,14 +336,12 @@ function VoiceChatPromptFrame:init()
 			local toastTitle = PromptTitle[promptType]
 			local toastSubtitle = PromptSubTitle[promptType]
 
-			if GetFFlagVoiceBanShowToastOnSubsequentJoins() then
-				if typeof(toastTitle) == "function" then
-					toastTitle = toastTitle(self.props.bannedUntil)
-				end
+			if typeof(toastTitle) == "function" then
+				toastTitle = toastTitle(self.props.bannedUntil)
+			end
 
-				if typeof(toastSubtitle) == "function" then
-					toastSubtitle = toastSubtitle(self.props.bannedUntil)
-				end
+			if typeof(toastSubtitle) == "function" then
+				toastSubtitle = toastSubtitle(self.props.bannedUntil)
 			end
 
 			local iconImage
@@ -387,8 +377,7 @@ function VoiceChatPromptFrame:init()
 					"Feature.SettingsHub.Prompt.XMinuteSuspension",
 					{ banDurationInMinutes = self.props.bannedUntil }
 				)
-				local banEnd = if GetFFlagUpdateNudgeV3VoiceBanUI()
-						and promptType == PromptType.VoiceChatSuspendedTemporaryB
+				local banEnd = if promptType == PromptType.VoiceChatSuspendedTemporaryB
 					then xMinuteSuspension
 					else " " .. self.props.bannedUntil .. "."
 
@@ -412,8 +401,7 @@ function VoiceChatPromptFrame:init()
 			self.props.onContinueFunc()
 		end
 		ContextActionService:UnbindCoreAction(CLOSE_VOICE_BAN_PROMPT)
-		local isUpdatedBanModalB = GetFFlagUpdateNudgeV3VoiceBanUI()
-			and self.state.promptType == PromptType.VoiceChatSuspendedTemporaryB
+		local isUpdatedBanModalB = self.state.promptType == PromptType.VoiceChatSuspendedTemporaryB
 		if FFlagVoiceChatOnlyReportVoiceBans then
 			if PromptTypeIsBan(self.state.promptType) then
 				-- We don't want these events to fire for Nudge v3 because pressing both buttons in the modal to close it will fire these events.
@@ -464,8 +452,7 @@ function VoiceChatPromptFrame:render()
 	local errorText = GetFFlagEnableVoicePromptReasonText() and self.props.errorText or nil
 	local isNudgeModal = IsModalNudge(self.state.promptType)
 	local isNudgeToast = self.state.promptType == PromptType.VoiceToxicityToast
-	local isUpdatedBanModalB = GetFFlagUpdateNudgeV3VoiceBanUI()
-		and self.state.promptType == PromptType.VoiceChatSuspendedTemporaryB
+	local isUpdatedBanModalB = self.state.promptType == PromptType.VoiceChatSuspendedTemporaryB
 	local isVoiceConsentModal = GetFFlagEnableInExpVoiceUpsell() and IsVoiceConsentModal(self.state.promptType)
 	local isDevicePermissionsModal = GetFFlagShowDevicePermissionsModal()
 		and IsDevicePermissionsModal(self.state.promptType)
@@ -511,9 +498,7 @@ function VoiceChatPromptFrame:render()
 		).Y
 		local subBodyTextContainerHeight = PADDING + subTextHeight
 
-		local showSecondaryButton = if GetFFlagUpdateNudgeV3VoiceBanUI()
-			then ShouldShowSecondaryButton(self.state.promptType)
-			else isNudgeModal
+		local showSecondaryButton = ShouldShowSecondaryButton(self.state.promptType)
 
 		local inGameMenuInformationalDialog = Roact.createElement("ScreenGui", {
 			DisplayOrder = 8,
@@ -732,6 +717,11 @@ function VoiceChatPromptFrame:render()
 			end
 		end
 
+		local showThisToast = self.state.showPrompt
+		if self.state.promptType == PromptType.VoiceDataConsentOptOutToast and GetFFlagEnableSeamlessVoiceDataConsentToast() then
+			showThisToast = if self.props.showDataConsentToast then self.props.showDataConsentToast else false
+		end
+
 		voiceChatPromptFrame = Roact.createElement("Frame", {
 			BackgroundTransparency = 1,
 			Size = UDim2.new(1, 0, 1, 0),
@@ -743,6 +733,7 @@ function VoiceChatPromptFrame:render()
 					elseif GetFFlagEnableSeamlessVoiceUX() then toastDuration
 					else TOAST_DURATION,
 				toastContent = self.state.toastContent,
+				show = showThisToast,
 			}),
 			EventConnection = self.props.promptSignal and Roact.createElement(ExternalEventConnection, {
 				event = self.props.promptSignal,
@@ -775,6 +766,7 @@ VoiceChatPromptFrame = InGameMenuPolicy.connect(function(appPolicy, props)
 	return {
 		showNewContent = appPolicy.getGameInfoShowChatFeatures(),
 		showCheckbox = if GetFFlagEnableInExpVoiceUpsell() then appPolicy.getDisplayCheckboxInVoiceConsent() else true,
+		showDataConsentToast = if appPolicy.getDisplayCheckboxInVoiceConsent() == nil then false else appPolicy.getDisplayCheckboxInVoiceConsent(),
 	}
 end)(VoiceChatPromptFrame)
 

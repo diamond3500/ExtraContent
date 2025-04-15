@@ -1,3 +1,4 @@
+-- moving this file to LuaApps, please replicate any changes in the LuaApps file as well
 local DetailsPage = script.Parent
 local Template = DetailsPage.Parent
 local App = Template.Parent
@@ -66,6 +67,11 @@ export type Props = {
 	-- 	Props for the embedded action bar component.
 	-- See [[ButtonStack]] for required and optional props.
 	actionBarProps: { button: any, icons: { any }, enableButtonAtStart: boolean? },
+
+	-- The width of the action bar component. If unspecified, the default tokens
+	-- value will be used.
+	actionBarWidth: number?,
+
 	--[[
 	The table of props for the content of the details page.
 
@@ -298,7 +304,7 @@ local function DetailsPageTenfootTemplate(props: Props)
 			style = {
 				BackgroundTransparency = 1,
 				ScrollBarThickness = 0,
-				ScrollingEnabled = false,
+				ScrollingEnabled = if UIBloxConfig.enableAnimatedFlatListScrolling then true else false,
 				Selectable = false,
 				VerticalScrollBarInset = Enum.ScrollBarInset.None,
 				ZIndex = 3,
@@ -318,4 +324,4 @@ local function DetailsPageTenfootTemplate(props: Props)
 	})
 end
 
-return DetailsPageTenfootTemplate
+return if UIBloxConfig.moveDetailsPageToLuaApps then nil else DetailsPageTenfootTemplate

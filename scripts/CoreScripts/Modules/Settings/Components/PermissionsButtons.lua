@@ -16,8 +16,8 @@ local AnalyticsService = game:GetService("RbxAnalyticsService")
 local IXPService = game:GetService("IXPService")
 local AppStorageService = game:GetService("AppStorageService")
 
-local Roact = require(CorePackages.Roact)
-local UIBlox = require(CorePackages.UIBlox)
+local Roact = require(CorePackages.Packages.Roact)
+local UIBlox = require(CorePackages.Packages.UIBlox)
 local t = require(CorePackages.Packages.t)
 local PermissionsProtocol = require(CorePackages.Workspace.Packages.PermissionsProtocol).PermissionsProtocol.default
 
@@ -40,26 +40,34 @@ local VoiceConstants = require(Modules.VoiceChat.Constants)
 local log = require(CorePackages.Workspace.Packages.CoreScriptsInitializer).CoreLogger:new(script.Name)
 
 local GetFFlagInvertMuteAllPermissionButton = require(RobloxGui.Modules.Flags.GetFFlagInvertMuteAllPermissionButton)
-local FFlagAvatarChatCoreScriptSupport = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagAvatarChatCoreScriptSupport()
+local FFlagAvatarChatCoreScriptSupport =
+	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagAvatarChatCoreScriptSupport()
 local GetFFlagUpdateSelfieViewOnBan = require(RobloxGui.Modules.Flags.GetFFlagUpdateSelfieViewOnBan)
 local GetFFlagShowMicConnectingIconAndToast = require(RobloxGui.Modules.Flags.GetFFlagShowMicConnectingIconAndToast)
 local FFlagMuteNonFriendsEvent = require(RobloxGui.Modules.Flags.FFlagMuteNonFriendsEvent)
 local GetFFlagRemoveInGameChatBubbleChatReferences =
 	require(RobloxGui.Modules.Flags.GetFFlagRemoveInGameChatBubbleChatReferences)
-local GetFFlagJoinWithoutMicPermissions = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagJoinWithoutMicPermissions
+local GetFFlagJoinWithoutMicPermissions =
+	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagJoinWithoutMicPermissions
 local GetFFlagEnableInExpVoiceUpsell = require(RobloxGui.Modules.Flags.GetFFlagEnableInExpVoiceUpsell)
 local GetFFlagEnableInExpJoinVoiceAnalytics = require(RobloxGui.Modules.Flags.GetFFlagEnableInExpJoinVoiceAnalytics)
-local GetFFlagEnableConnectDisconnectButtonAnalytics = require(RobloxGui.Modules.Flags.GetFFlagEnableConnectDisconnectButtonAnalytics)
+local GetFFlagEnableConnectDisconnectButtonAnalytics =
+	require(RobloxGui.Modules.Flags.GetFFlagEnableConnectDisconnectButtonAnalytics)
 local GetFFlagPassShouldRequestPermsArg = require(RobloxGui.Modules.Flags.GetFFlagPassShouldRequestPermsArg)
 local EngineFeatureRbxAnalyticsServiceExposePlaySessionId =
 	game:GetEngineFeature("RbxAnalyticsServiceExposePlaySessionId")
-local GetFFlagFixPermissionsButtonsEvents = require(RobloxGui.Modules.Settings.Flags.GetFFlagFixPermissionsButtonsEvents)
+local GetFFlagFixPermissionsButtonsEvents =
+	require(RobloxGui.Modules.Settings.Flags.GetFFlagFixPermissionsButtonsEvents)
 local GetFStringVoiceUpsellLayer = require(CorePackages.Workspace.Packages.SharedFlags).GetFStringVoiceUpsellLayer
-local GetFFlagUseMicPermForEnrollment = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagUseMicPermForEnrollment
-local GetFFlagEnableInExpPhoneVoiceUpsellEntrypoints = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagEnableInExpPhoneVoiceUpsellEntrypoints 
-local GetFFlagEnableShowVoiceUI = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagEnableShowVoiceUI 
-local GetFFlagEnableSeamlessVoiceConnectDisconnectButton = require(RobloxGui.Modules.Flags.GetFFlagEnableSeamlessVoiceConnectDisconnectButton)
-local GetFFlagEnableConnectDisconnectInSettingsAndChrome = require(RobloxGui.Modules.Flags.GetFFlagEnableConnectDisconnectInSettingsAndChrome)
+local GetFFlagUseMicPermForEnrollment =
+	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagUseMicPermForEnrollment
+local GetFFlagEnableInExpPhoneVoiceUpsellEntrypoints =
+	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagEnableInExpPhoneVoiceUpsellEntrypoints
+local GetFFlagEnableShowVoiceUI = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagEnableShowVoiceUI
+local GetFFlagEnableSeamlessVoiceConnectDisconnectButton =
+	require(RobloxGui.Modules.Flags.GetFFlagEnableSeamlessVoiceConnectDisconnectButton)
+local GetFFlagEnableConnectDisconnectInSettingsAndChrome =
+	require(RobloxGui.Modules.Flags.GetFFlagEnableConnectDisconnectInSettingsAndChrome)
 local GetFFlagHideVoiceDisconnectButton = require(RobloxGui.Modules.Flags.GetFFlagHideVoiceDisconnectButton)
 
 if GetFFlagRemoveInGameChatBubbleChatReferences() then
@@ -220,7 +228,9 @@ function PermissionsButtons:init()
 	-- voice UI visibility
 	if GetFFlagEnableShowVoiceUI() then
 		self:setState({
-			isVoiceUIVisible = if VoiceChatServiceManager.voiceUIVisible ~= nil then VoiceChatServiceManager.voiceUIVisible else false,
+			isVoiceUIVisible = if VoiceChatServiceManager.voiceUIVisible ~= nil
+				then VoiceChatServiceManager.voiceUIVisible
+				else false,
 		})
 
 		VoiceChatServiceManager.showVoiceUI.Event:Connect(function()
@@ -296,11 +306,7 @@ function PermissionsButtons:init()
 		if self.state.showSelfView ~= coreGuiState then
 			local showSelfView = FFlagAvatarChatCoreScriptSupport
 				and StarterGui:GetCoreGuiEnabled(Enum.CoreGuiType.SelfView)
-				and (
-					isCamEnabledForUserAndPlace()
-					or self.state.hasMicPermissions
-					or self.state.hasCameraPermissions
-				)
+				and (isCamEnabledForUserAndPlace() or self.state.hasMicPermissions or self.state.hasCameraPermissions)
 			self:setState({
 				showSelfView = showSelfView,
 			})
@@ -358,29 +364,42 @@ function PermissionsButtons:init()
 			end
 			local promptToShow = VoiceChatServiceManager:GetInExpUpsellPromptFromEnum(voiceInExpUpsellVariant)
 			VoiceChatServiceManager:showPrompt(promptToShow)
-		elseif not GetFFlagEnableSeamlessVoiceConnectDisconnectButton() and VoiceChatServiceManager:UserVoiceEnabled() and not self.state.hasMicPermissions then
+		elseif
+			not GetFFlagEnableSeamlessVoiceConnectDisconnectButton()
+			and VoiceChatServiceManager:UserVoiceEnabled()
+			and not self.state.hasMicPermissions
+		then
 			-- Users without mic permissions
 			VoiceChatServiceManager:showPrompt(VoiceChatPromptType.Permission)
-		elseif GetFFlagEnableInExpPhoneVoiceUpsellEntrypoints()
+		elseif
+			GetFFlagEnableInExpPhoneVoiceUpsellEntrypoints()
 			and not VoiceChatServiceManager:UserVoiceEnabled()
-			and VoiceChatServiceManager:FetchPhoneVerificationUpsell(VoiceConstants.IN_EXP_PHONE_UPSELL_IXP_LAYER) == VoiceConstants.PHONE_UPSELL_VALUE_PROP.VoiceChat then
+			and VoiceChatServiceManager:FetchPhoneVerificationUpsell(VoiceConstants.IN_EXP_PHONE_UPSELL_IXP_LAYER)
+				== VoiceConstants.PHONE_UPSELL_VALUE_PROP.VoiceChat
+		then
 			-- Close menu with no animation before we open the phone upsell modal
 			self.props.hubRef:SetVisibility(false, true)
-			VoiceChatServiceManager:ShowInExperiencePhoneVoiceUpsell(VoiceConstants.IN_EXP_UPSELL_ENTRYPOINTS.JOIN_VOICE, VoiceConstants.IN_EXP_PHONE_UPSELL_IXP_LAYER)
+			VoiceChatServiceManager:ShowInExperiencePhoneVoiceUpsell(
+				VoiceConstants.IN_EXP_UPSELL_ENTRYPOINTS.JOIN_VOICE,
+				VoiceConstants.IN_EXP_PHONE_UPSELL_IXP_LAYER
+			)
 		end
 
-		if GetFFlagEnableConnectDisconnectButtonAnalytics() and GetFFlagEnableSeamlessVoiceConnectDisconnectButton() then
+		if
+			GetFFlagEnableConnectDisconnectButtonAnalytics() and GetFFlagEnableSeamlessVoiceConnectDisconnectButton()
+		then
 			if VoiceChatServiceManager:getService() then
 				local stateChangedConnection: RBXScriptConnection
-				stateChangedConnection = VoiceChatServiceManager:getService().StateChanged:Connect(function(_oldState, newState)
-					if _oldState ~= newState then
-						VoiceChatServiceManager.Analytics:reportJoinVoiceButtonEventWithVoiceSessionId(
-							"clicked",
-							VoiceChatServiceManager:GetConnectDisconnectButtonAnalyticsData(true)
-						)
-						stateChangedConnection:Disconnect()
-					end
-				end)
+				stateChangedConnection = VoiceChatServiceManager:getService().StateChanged
+					:Connect(function(_oldState, newState)
+						if _oldState ~= newState then
+							VoiceChatServiceManager.Analytics:reportJoinVoiceButtonEventWithVoiceSessionId(
+								"clicked",
+								VoiceChatServiceManager:GetConnectDisconnectButtonAnalyticsData(true)
+							)
+							stateChangedConnection:Disconnect()
+						end
+					end)
 			else
 				VoiceChatServiceManager.Analytics:reportJoinVoiceButtonEventWithVoiceSessionId(
 					"clicked",
@@ -465,7 +484,7 @@ function PermissionsButtons:getJoinVoiceButtonVisibleAtMount()
 	if GetFFlagEnableSeamlessVoiceConnectDisconnectButton() and VoiceChatServiceManager:IsSeamlessVoice() then
 		return not self.state.isVoiceUIVisible or VoiceChatServiceManager.isShowingFTUX
 	end
-	
+
 	-- M1 Treatment/M3 Control
 	local userInInExperienceUpsellTreatment
 	if VoiceChatServiceManager:UserVoiceEnabled() then
@@ -490,11 +509,12 @@ function PermissionsButtons:getJoinVoiceButtonVisibleAtMount()
 
 	local userVoiceUpsellEligible = VoiceChatServiceManager:UserOnlyEligibleForVoice()
 	-- Order matters here, we want to short circuit to avoid the fetch when the user is already voice enabled
-	if 
+	if
 		GetFFlagEnableInExpPhoneVoiceUpsellEntrypoints()
 		and not userVoiceUpsellEligible
-		and not VoiceChatServiceManager:UserVoiceEnabled() 
-		and VoiceChatServiceManager:FetchPhoneVerificationUpsell(VoiceConstants.IN_EXP_PHONE_UPSELL_IXP_LAYER) == VoiceConstants.PHONE_UPSELL_VALUE_PROP.VoiceChat
+		and not VoiceChatServiceManager:UserVoiceEnabled()
+		and VoiceChatServiceManager:FetchPhoneVerificationUpsell(VoiceConstants.IN_EXP_PHONE_UPSELL_IXP_LAYER)
+			== VoiceConstants.PHONE_UPSELL_VALUE_PROP.VoiceChat
 	then
 		return true
 	end
@@ -509,7 +529,11 @@ end
 
 function PermissionsButtons:getLeaveVoiceButtonVisibleAtMount()
 	-- M3 Treatment
-	if GetFFlagEnableSeamlessVoiceConnectDisconnectButton() and not GetFFlagHideVoiceDisconnectButton() and VoiceChatServiceManager:IsSeamlessVoice() then
+	if
+		GetFFlagEnableSeamlessVoiceConnectDisconnectButton()
+		and not GetFFlagHideVoiceDisconnectButton()
+		and VoiceChatServiceManager:IsSeamlessVoice()
+	then
 		return self.state.isVoiceUIVisible and not VoiceChatServiceManager.isShowingFTUX
 	end
 
@@ -532,13 +556,19 @@ function PermissionsButtons:didUpdate(prevProps, prevState)
 end
 
 function PermissionsButtons:didMount()
-	self:getMicPermission(if GetFFlagJoinWithoutMicPermissions() then not VoiceChatServiceManager:IsSeamlessVoice() else nil)
+	self:getMicPermission(
+		if GetFFlagJoinWithoutMicPermissions() then not VoiceChatServiceManager:IsSeamlessVoice() else nil
+	)
 	self:getCameraPermissionWithoutRequest()
 end
 
 function PermissionsButtons:isShowingPermissionButtons()
 	if GetFFlagEnableShowVoiceUI() and GetFFlagJoinWithoutMicPermissions() then
-		return (self.state.voiceServiceInitialized and not VoiceChatServiceManager:VoiceChatEnded() and self.state.isVoiceUIVisible)
+		return (
+			self.state.voiceServiceInitialized
+			and not VoiceChatServiceManager:VoiceChatEnded()
+			and self.state.isVoiceUIVisible
+		)
 			or self.state.hasCameraPermissions
 			or self.state.showSelfView
 			or self:getCameraButtonVisibleAtMount()
@@ -571,13 +601,16 @@ function PermissionsButtons:render()
 
 	if GetFFlagEnableShowVoiceUI() then
 		-- Mic button should only show if voice UI is visible and it is not a new user's first time joining voice
-		shouldShowMicButtons = shouldShowMicButtons and self.state.isVoiceUIVisible and not VoiceChatServiceManager.isShowingFTUX
+		shouldShowMicButtons = shouldShowMicButtons
+			and self.state.isVoiceUIVisible
+			and not VoiceChatServiceManager.isShowingFTUX
 	end
 	-- Show the camera button if the camera is enabled + eligible in user settings and camera is enabled in experience
 	local shouldShowCameraButtons = self:getCameraButtonVisibleAtMount()
 	-- Show join voice button in voice enabled experiences, for voice eligible users who haven't enabled voice and voice enabled users with denied mic permissions
 	local shouldShowJoinVoiceButton = GetFFlagEnableInExpVoiceUpsell() and self:getJoinVoiceButtonVisibleAtMount()
-	local shouldShowLeaveVoiceButton = GetFFlagEnableSeamlessVoiceConnectDisconnectButton() and self:getLeaveVoiceButtonVisibleAtMount()
+	local shouldShowLeaveVoiceButton = GetFFlagEnableSeamlessVoiceConnectDisconnectButton()
+		and self:getLeaveVoiceButtonVisibleAtMount()
 
 	local showMuteAll = if GetFFlagInvertMuteAllPermissionButton()
 		then not self.state.allPlayersMuted

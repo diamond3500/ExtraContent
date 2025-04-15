@@ -1,6 +1,6 @@
 local CorePackages = game:GetService("CorePackages")
 
-local InGameMenuDependencies = require(CorePackages.InGameMenuDependencies)
+local InGameMenuDependencies = require(CorePackages.Packages.InGameMenuDependencies)
 local Roact = InGameMenuDependencies.Roact
 local UIBlox = InGameMenuDependencies.UIBlox
 local Cryo = InGameMenuDependencies.Cryo
@@ -84,8 +84,8 @@ function PlayerLabel:renderButtons()
 			HorizontalAlignment = Enum.HorizontalAlignment.Right,
 			SortOrder = Enum.SortOrder.LayoutOrder,
 			VerticalAlignment = Enum.VerticalAlignment.Center,
-			Padding = UDim.new(0, BUTTONS_PADDING)
-		})
+			Padding = UDim.new(0, BUTTONS_PADDING),
+		}),
 	})
 
 	return buttons
@@ -127,22 +127,32 @@ function PlayerLabel:renderWithSelectionCursor(getSelectionCursor)
 			[Roact.Ref] = forwardRef,
 			SelectionImageObject = getSelectionCursor(CursorKind.Square),
 		}, {
-			PlayerCutout = Roact.createElement(ImageSetLabel, Cryo.Dictionary.join(iconPos, {
-				BackgroundTransparency = 1,
-				Image = Assets.Images.CircleCutout,
-				ImageColor3 = backgroundStyle.Color,
-				ZIndex = 3,
-			})),
-			PlayerIcon = Roact.createElement(ImageSetLabel, Cryo.Dictionary.join(iconPos, {
-				BackgroundTransparency = 1,
-				Image = props.userId > 0 and "rbxthumb://type=AvatarHeadShot&id=" ..props.userId.. "&w=48&h=48" or "",
-				ZIndex = 2,
-			})),
-			PlayerBackground = Roact.createElement("Frame", Cryo.Dictionary.join(iconPos, {
-				BackgroundColor3 = style.Theme.UIDefault.Color,
-				BackgroundTransparency = 0,
-				BorderSizePixel = 0,
-			})),
+			PlayerCutout = Roact.createElement(
+				ImageSetLabel,
+				Cryo.Dictionary.join(iconPos, {
+					BackgroundTransparency = 1,
+					Image = Assets.Images.CircleCutout,
+					ImageColor3 = backgroundStyle.Color,
+					ZIndex = 3,
+				})
+			),
+			PlayerIcon = Roact.createElement(
+				ImageSetLabel,
+				Cryo.Dictionary.join(iconPos, {
+					BackgroundTransparency = 1,
+					Image = props.userId > 0 and "rbxthumb://type=AvatarHeadShot&id=" .. props.userId .. "&w=48&h=48"
+						or "",
+					ZIndex = 2,
+				})
+			),
+			PlayerBackground = Roact.createElement(
+				"Frame",
+				Cryo.Dictionary.join(iconPos, {
+					BackgroundColor3 = style.Theme.UIDefault.Color,
+					BackgroundTransparency = 0,
+					BorderSizePixel = 0,
+				})
+			),
 
 			OnlineIndicator = Roact.createElement(ImageSetLabel, {
 				AnchorPoint = Vector2.new(0, 0.5),
@@ -162,9 +172,7 @@ function PlayerLabel:renderWithSelectionCursor(getSelectionCursor)
 				Text = props.username,
 				TextXAlignment = Enum.TextXAlignment.Left,
 				TextTruncate = Enum.TextTruncate.AtEnd,
-				OpenTypeFeatures = if (
-						GetFFlagLuaAppEnableOpenTypeSupport() and GetFFlagLuaAppEnableOpenTypeIGMFix()
-					)
+				OpenTypeFeatures = if (GetFFlagLuaAppEnableOpenTypeSupport() and GetFFlagLuaAppEnableOpenTypeIGMFix())
 					then OpenTypeSupport:getUserNameStylisticAlternative()
 					else nil,
 			}),
@@ -174,7 +182,7 @@ function PlayerLabel:renderWithSelectionCursor(getSelectionCursor)
 				BackgroundTransparency = 1,
 				Position = UDim2.new(1, -BUTTONS_RIGHT_PADDING, 0, 0),
 				Size = UDim2.new(0, 0, 1, 0),
-			}, self:renderButtons())
+			}, self:renderButtons()),
 		})
 	end)
 end
@@ -186,7 +194,10 @@ function PlayerLabel:render()
 end
 
 return Roact.forwardRef(function(props, ref)
-	return Roact.createElement(PlayerLabel, Cryo.Dictionary.join(props, {
-		forwardRef = ref,
-	}))
+	return Roact.createElement(
+		PlayerLabel,
+		Cryo.Dictionary.join(props, {
+			forwardRef = ref,
+		})
+	)
 end)

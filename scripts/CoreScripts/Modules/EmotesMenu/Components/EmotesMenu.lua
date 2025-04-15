@@ -8,10 +8,9 @@ local Players = game:GetService("Players")
 
 local VRService = game:GetService("VRService")
 local CoreGui = game:GetService("CoreGui")
-local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 
-local Roact = require(CorePackages.Roact)
-local RoactRodux = require(CorePackages.RoactRodux)
+local Roact = require(CorePackages.Packages.Roact)
+local RoactRodux = require(CorePackages.Packages.RoactRodux)
 
 local Components = script.Parent
 local EmotesModules = Components.Parent
@@ -30,10 +29,8 @@ local ErrorMessage = require(Components.ErrorMessage)
 
 local Constants = require(EmotesModules.Constants)
 
-local CoreScriptModules = EmotesModules.Parent
-local RobloxTranslator = require(CoreScriptModules.RobloxTranslator)
+local RobloxTranslator = require(CorePackages.Workspace.Packages.RobloxTranslator)
 
-local GetFFlagFixMissingPlayerGuiCrash = require(RobloxGui.Modules.Flags.GetFFlagFixMissingPlayerGuiCrash)
 local LocalPlayer = Players.LocalPlayer
 local PlayerGui
 
@@ -104,16 +101,11 @@ function EmotesMenu:resetSelectedObject()
 		end
 	end
 	if GuiService.SelectedObject == nil then
-		if GetFFlagFixMissingPlayerGuiCrash() then
-			if PlayerGui == nil then
-				-- To avoid race condition with not using a "WaitForChild" we will grab the PlayerGui instance before use
-				PlayerGui = LocalPlayer:FindFirstChildOfClass("PlayerGui")
-			end
-		else
-			if PlayerGui == nil then
-				PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
-			end
+		if PlayerGui == nil then
+			-- To avoid race condition with not using a "WaitForChild" we will grab the PlayerGui instance before use
+			PlayerGui = LocalPlayer:FindFirstChildOfClass("PlayerGui")
 		end
+
 		-- We want to reset the selected object if the saved version is either nil or a descendant of PlayerGui
 		local isValid = if PlayerGui
 			then (self.savedSelectedObject == nil or self.savedSelectedObject:IsDescendantOf(PlayerGui))

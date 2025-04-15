@@ -1,6 +1,6 @@
 local CorePackages = game:GetService("CorePackages")
-local Cryo = require(CorePackages.Cryo)
-local Rodux = require(CorePackages.Rodux)
+local Cryo = require(CorePackages.Packages.Cryo)
+local Rodux = require(CorePackages.Packages.Rodux)
 
 local OpenOrUpdateCFM = require(script.Parent.Parent.Actions.OpenOrUpdateCFM)
 local CloseCFM = require(script.Parent.Parent.Actions.CloseCFM)

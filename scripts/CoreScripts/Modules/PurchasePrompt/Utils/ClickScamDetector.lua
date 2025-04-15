@@ -3,7 +3,7 @@ local Root = script.Parent.Parent
 local UserInputService = game:GetService("UserInputService")
 
 local CorePackages = game:GetService("CorePackages")
-local PurchasePromptDeps = require(CorePackages.PurchasePromptDeps)
+local PurchasePromptDeps = require(CorePackages.Workspace.Packages.PurchasePromptDeps)
 local Cryo = PurchasePromptDeps.Cryo
 
 --[[
@@ -65,8 +65,7 @@ function ClickScamDetector:_onInput(input)
 
 	local isGamepad = self._options.buttonInput ~= nil and input.KeyCode == self._options.buttonInput
 
-	local isMouseOrTouch = inputType == Enum.UserInputType.MouseButton1
-		or inputType == Enum.UserInputType.Touch
+	local isMouseOrTouch = inputType == Enum.UserInputType.MouseButton1 or inputType == Enum.UserInputType.Touch
 
 	if isGamepad or isMouseOrTouch then
 		self._clickCount = self._clickCount + 1

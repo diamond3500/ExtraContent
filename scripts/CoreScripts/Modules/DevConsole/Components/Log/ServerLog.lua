@@ -1,5 +1,5 @@
 local CorePackages = game:GetService("CorePackages")
-local Roact = require(CorePackages.Roact)
+local Roact = require(CorePackages.Packages.Roact)
 
 local DataConsumer = require(script.Parent.Parent.DataConsumer)
 
@@ -25,14 +25,14 @@ function ServerLog:render()
 		LayoutOrder = self.props.layoutOrder,
 	}, {
 		Scroll = Roact.createElement(LogOutput, {
-			size = UDim2.new(1, 0 , 1, -(COMMANDLINE_HEIGHT + COMMANDLINE_PADDING)),
+			size = UDim2.new(1, 0, 1, -(COMMANDLINE_HEIGHT + COMMANDLINE_PADDING)),
 			targetSignal = self.props.ServerLogData:Signal(),
 			initLogOutput = self.initServerLogData,
 		}),
 
 		CommandLine = Roact.createElement(DevConsoleCommandLine, {
-			pos = UDim2.new(0,0,1,-COMMANDLINE_HEIGHT),
-			height = COMMANDLINE_HEIGHT
+			pos = UDim2.new(0, 0, 1, -COMMANDLINE_HEIGHT),
+			height = COMMANDLINE_HEIGHT,
 		}),
 	})
 end

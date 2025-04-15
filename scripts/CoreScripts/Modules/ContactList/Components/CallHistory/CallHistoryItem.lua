@@ -10,8 +10,6 @@ local Sounds = require(CorePackages.Workspace.Packages.SoundManager).Sounds
 local SoundGroups = require(CorePackages.Workspace.Packages.SoundManager).SoundGroups
 local SoundManager = require(CorePackages.Workspace.Packages.SoundManager).SoundManager
 local UserProfiles = require(CorePackages.Workspace.Packages.UserProfiles)
-local GetFFlagIrisUseLocalizationProvider =
-	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagIrisUseLocalizationProvider
 
 local ContactList = RobloxGui.Modules.ContactList
 local dependencies = require(ContactList.dependencies)
@@ -20,13 +18,7 @@ local UIBlox = dependencies.UIBlox
 local dependencyArray = dependencies.Hooks.dependencyArray
 local getStandardSizeAvatarHeadShotRbxthumb = dependencies.getStandardSizeAvatarHeadShotRbxthumb
 
-local useLocalization
-local RobloxTranslator
-if GetFFlagIrisUseLocalizationProvider() then
-	useLocalization = dependencies.Hooks.useLocalization
-else
-	RobloxTranslator = require(RobloxGui.Modules.RobloxTranslator)
-end
+local useLocalization = dependencies.Hooks.useLocalization
 
 local useSelector = dependencies.Hooks.useSelector
 
@@ -169,19 +161,12 @@ local function CallHistoryItem(props: Props)
 		userName = UserProfiles.Formatters.formatUsername(userName)
 	end
 
-	local callStatusLabel
-	local yesterdayLabel
-	if GetFFlagIrisUseLocalizationProvider() then
-		local localized = useLocalization({
-			callStatusLabel = getCallStatusText(callRecord, localUserId),
-			yesterdayLabel = "Feature.Call.Label.Yesterday",
-		})
-		callStatusLabel = localized.callStatusLabel
-		yesterdayLabel = localized.yesterdayLabel
-	else
-		callStatusLabel = RobloxTranslator:FormatByKey(getCallStatusText(callRecord, localUserId))
-		yesterdayLabel = RobloxTranslator:FormatByKey("Feature.Call.Label.Yesterday")
-	end
+	local localized = useLocalization({
+		callStatusLabel = getCallStatusText(callRecord, localUserId),
+		yesterdayLabel = "Feature.Call.Label.Yesterday",
+	})
+	local callStatusLabel = localized.callStatusLabel
+	local yesterdayLabel = localized.yesterdayLabel
 
 	local analytics = useAnalytics()
 	local style = useStyle()
@@ -196,6 +181,10 @@ local function CallHistoryItem(props: Props)
 			setItemBackgroundTheme("BackgroundOnPress")
 		elseif newState == ControlState.Hover then
 			setItemBackgroundTheme("BackgroundOnHover")
+			SoundManager:PlaySound(Sounds.Hover.Name, {
+				Volume = 0.5 + rng:NextNumber(-0.25, 0.25),
+				PlaybackSpeed = 1 + rng:NextNumber(-0.5, 0.5),
+			}, SoundGroups.Iris)
 		else
 			setItemBackgroundTheme("BackgroundDefault")
 		end
@@ -218,15 +207,6 @@ local function CallHistoryItem(props: Props)
 		page = currentPage,
 	}
 	local startCall = useStartCallCallback(tag, otherParticipantId, combinedName, props.dismissCallback, analyticsInfo)
-
-	local onHovered = React.useCallback(function(_: any, inputObject: InputObject?)
-		if inputObject and inputObject.UserInputType == Enum.UserInputType.MouseMovement then
-			SoundManager:PlaySound(Sounds.Hover.Name, {
-				Volume = 0.5 + rng:NextNumber(-0.25, 0.25),
-				PlaybackSpeed = 1 + rng:NextNumber(-0.5, 0.5),
-			}, SoundGroups.Iris)
-		end
-	end, {})
 
 	local openOrUpdateCFM = React.useCallback(function()
 		analytics.fireEvent(EventNamesEnum.PhoneBookPlayerMenuOpened, {
@@ -255,7 +235,6 @@ local function CallHistoryItem(props: Props)
 		onStateChanged = onItemStateChanged,
 		AutoButtonColor = false,
 		[React.Event.Activated] = startCall,
-		[React.Event.InputBegan] = onHovered,
 	}, {
 		UIPadding = React.createElement("UIPadding", {
 			PaddingLeft = UDim.new(0, PADDING.X),
@@ -361,17 +340,15 @@ local function CallHistoryItem(props: Props)
 			}),
 		}),
 
-		CallIcon = if game:GetEngineFeature("EnableSocialServiceIrisInvite")
-			then React.createElement(ImageSetLabel, {
-				Position = UDim2.new(1, -PADDING.X - 4, 0.5, -PADDING.Y / 2),
-				Size = UDim2.fromOffset(CALL_IMAGE_SIZE, CALL_IMAGE_SIZE),
-				AnchorPoint = Vector2.new(1, 0.5),
-				BackgroundTransparency = 1,
-				Image = "rbxassetid://15239343417", -- TODO(IRIS-659): Replace with UIBLOX icon
-				ImageColor3 = theme.ContextualPrimaryDefault.Color,
-				ImageTransparency = theme.ContextualPrimaryDefault.Transparency,
-			})
-			else nil,
+		CallIcon = React.createElement(ImageSetLabel, {
+			Position = UDim2.new(1, -PADDING.X - 4, 0.5, -PADDING.Y / 2),
+			Size = UDim2.fromOffset(CALL_IMAGE_SIZE, CALL_IMAGE_SIZE),
+			AnchorPoint = Vector2.new(1, 0.5),
+			BackgroundTransparency = 1,
+			Image = "rbxassetid://15239343417", -- TODO(IRIS-659): Replace with UIBLOX icon
+			ImageColor3 = theme.ContextualPrimaryDefault.Color,
+			ImageTransparency = theme.ContextualPrimaryDefault.Transparency,
+		}),
 
 		Divider = props.showDivider and React.createElement("Frame", {
 			Position = UDim2.new(0, 0, 1, -1),

@@ -4,8 +4,8 @@ local GuiService = game:GetService("GuiService")
 local RunService = game:GetService("RunService")
 local VRService = game:GetService("VRService")
 
-local Roact = require(CorePackages.Roact)
-local RoactRodux = require(CorePackages.RoactRodux)
+local Roact = require(CorePackages.Packages.Roact)
+local RoactRodux = require(CorePackages.Packages.RoactRodux)
 local t = require(CorePackages.Packages.t)
 
 local Components = script.Parent.Parent
@@ -92,12 +92,10 @@ function HeadsetMenu:didUpdate(prevProps, prevState)
 	end
 end
 
-HeadsetMenu = RoactRodux.connect(
-	function(state)
-		return {
-			screenSize = state.displayOptions.screenSize,
-		}
-	end
-)(HeadsetMenu)
+HeadsetMenu = RoactRodux.connect(function(state)
+	return {
+		screenSize = state.displayOptions.screenSize,
+	}
+end)(HeadsetMenu)
 
 return HeadsetMenu

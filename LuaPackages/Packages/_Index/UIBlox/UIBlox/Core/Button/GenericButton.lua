@@ -47,9 +47,7 @@ function GenericButton:init()
 		controlState = ControlState.Initialize,
 		absoluteSize = Vector2.new(PLACEHOLDER_ABSOLUTE_SIZE_PX, PLACEHOLDER_ABSOLUTE_SIZE_PX),
 		targetLoadingProgress = BEGIN_LOAD_TARGET,
-		isButtonUnfocused = if UIBloxConfig.useRobloxGuiFocusedChangedEventInGenericButton
-			then RunService:GetRobloxGuiFocused()
-			else nil,
+		isButtonUnfocused = RunService:GetRobloxGuiFocused(),
 	})
 
 	self.onStateChanged = function(oldState, newState)
@@ -196,34 +194,25 @@ GenericButton.defaultProps = {
 	SliceCenter = Rect.new(8, 8, 9, 9),
 }
 
-if UIBloxConfig.useRobloxGuiFocusedChangedEventInGenericButton then
-	function GenericButton:didMount()
-		self:setState({
-			targetLoadingProgress = if not self.state.isButtonUnfocused and self.props.enableInputDelayed
-				then 0
-				else BEGIN_LOAD_TARGET,
-		})
-	end
+function GenericButton:didMount()
+	self:setState({
+		targetLoadingProgress = if not self.state.isButtonUnfocused and self.props.enableInputDelayed
+			then 0
+			else BEGIN_LOAD_TARGET,
+	})
 end
 
 function GenericButton:render()
 	local isDelayedInput = self.props.isDelayedInput
-	local enableInputDelayed = self.props.enableInputDelayed
 	local delayInputSeconds = self.props.delayInputSeconds
 
-	local shouldRenderWithDelay = isDelayedInput
-	if UIBloxConfig.useRobloxGuiFocusedChangedEventInGenericButton then
-		-- When button is unfocused, we want to reset the animation by not
-		-- rendering with the withAnimation wrapper
-		shouldRenderWithDelay = isDelayedInput and not self.state.isButtonUnfocused
-	end
+	-- When button is unfocused, we want to reset the animation by not
+	-- rendering with the withAnimation wrapper
+	local shouldRenderWithDelay = isDelayedInput and not self.state.isButtonUnfocused
+
 	if shouldRenderWithDelay then
-		local targetLoadingProgress
-		if UIBloxConfig.useRobloxGuiFocusedChangedEventInGenericButton then
-			targetLoadingProgress = self.state.targetLoadingProgress
-		else
-			targetLoadingProgress = enableInputDelayed and 0 or BEGIN_LOAD_TARGET
-		end
+		local targetLoadingProgress = self.state.targetLoadingProgress
+
 		return withAnimation({
 			loadingProgress = targetLoadingProgress,
 		}, function(values)
@@ -235,15 +224,11 @@ function GenericButton:render()
 			dampingRatio = 0.8,
 		})
 	else
-		if UIBloxConfig.useRobloxGuiFocusedChangedEventInGenericButton then
-			if self.state.isButtonUnfocused then
-				-- While button is unfocused, manually set the delay load
-				-- to the beginning so it is not interactable and can resume
-				-- delay loading once it becomes re-focused
-				return self:renderButton(BEGIN_LOAD_TARGET)
-			else
-				return self:renderButton()
-			end
+		if self.state.isButtonUnfocused then
+			-- While button is unfocused, manually set the delay load
+			-- to the beginning so it is not interactable and can resume
+			-- delay loading once it becomes re-focused
+			return self:renderButton(BEGIN_LOAD_TARGET)
 		else
 			return self:renderButton()
 		end
@@ -517,39 +502,33 @@ function GenericButton:renderButton(loadingProgress)
 					SliceCenter = self.props.SliceCenter,
 				}),
 				HoverBackground = showHoverBackground and Roact.createElement(HoverButtonBackground, {
-					sidePadding = if UIBloxConfig.fixGenericButtonHoverBackgroundPadding and standardSize
-						then UDim.new(0, sidePadding)
-						else nil,
-					image = if UIBloxConfig.enableGenericButtonHoverImage then hoverImage else nil,
-					sliceCenter = if UIBloxConfig.enableGenericButtonHoverImage then self.props.SliceCenter else nil,
+					sidePadding = if standardSize then UDim.new(0, sidePadding) else nil,
+					image = hoverImage,
+					sliceCenter = self.props.SliceCenter,
 				}) or nil,
-				EventConnection = UIBloxConfig.useRobloxGuiFocusedChangedEventInGenericButton
-						and Roact.createElement(EventConnection, {
-							event = RunService.RobloxGuiFocusedChanged,
-							callback = self.onRobloxGuiFocusedChanged,
-						})
-					or nil,
+				EventConnection = Roact.createElement(EventConnection, {
+					event = RunService.RobloxGuiFocusedChanged,
+					callback = self.onRobloxGuiFocusedChanged,
+				}),
 			}
 		)
 	end)
 end
 
-if UIBloxConfig.useRobloxGuiFocusedChangedEventInGenericButton then
-	function GenericButton:didUpdate(prevProps, prevState)
-		if self.props.enableInputDelayed ~= prevProps.enableInputDelayed then
-			self:setState({
-				targetLoadingProgress = self.props.enableInputDelayed and 0 or BEGIN_LOAD_TARGET,
-			})
-		end
+function GenericButton:didUpdate(prevProps, prevState)
+	if self.props.enableInputDelayed ~= prevProps.enableInputDelayed then
+		self:setState({
+			targetLoadingProgress = self.props.enableInputDelayed and 0 or BEGIN_LOAD_TARGET,
+		})
+	end
 
-		if not self.state.isButtonUnfocused and prevState.isButtonUnfocused then
-			-- When the button regains focus and input delay is enabled, set the
-			-- target loading progress once again to 0 so it will begin animation
-			if self.state.targetLoadingProgress == 1 and self.props.enableInputDelayed then
-				self:setState({
-					targetLoadingProgress = 0,
-				})
-			end
+	if not self.state.isButtonUnfocused and prevState.isButtonUnfocused then
+		-- When the button regains focus and input delay is enabled, set the
+		-- target loading progress once again to 0 so it will begin animation
+		if self.state.targetLoadingProgress == 1 and self.props.enableInputDelayed then
+			self:setState({
+				targetLoadingProgress = 0,
+			})
 		end
 	end
 end

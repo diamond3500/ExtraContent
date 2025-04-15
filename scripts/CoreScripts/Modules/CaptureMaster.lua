@@ -1,8 +1,7 @@
-
 local CoreGui = game:GetService("CoreGui")
 local CorePackages = game:GetService("CorePackages")
 
-local Roact = require(CorePackages.Roact)
+local Roact = require(CorePackages.Packages.Roact)
 
 local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 local CaptureNotification = require(RobloxGui.Modules.CaptureNotification)
@@ -41,7 +40,8 @@ function CaptureMaster:Start()
 
 	self.init = true
 	if shouldSaveScreenshotToAlbum() then
-		self.captureNotificationInstance = Roact.mount(self.captureNotification, CoreGui, "RobloxCaptureNotificationGui")
+		self.captureNotificationInstance =
+			Roact.mount(self.captureNotification, CoreGui, "RobloxCaptureNotificationGui")
 	end
 end
 
@@ -51,17 +51,23 @@ function CaptureMaster:DismissNotification()
 	if not self.init then
 		master:Start()
 	elseif shouldSaveScreenshotToAlbum() then
-		Roact.update(self.captureNotificationInstance, Roact.createElement(CaptureNotification, {
-			permissionEvent = self.permissionEvent,
-			forceDismissToast = {
-				onDismissed = function()
-					Roact.update(self.captureNotificationInstance, Roact.createElement(CaptureNotification, {
-						permissionEvent = self.permissionEvent,
-						forceDismissToast = nil,
-					}))
-				end,
-			}
-		}))
+		Roact.update(
+			self.captureNotificationInstance,
+			Roact.createElement(CaptureNotification, {
+				permissionEvent = self.permissionEvent,
+				forceDismissToast = {
+					onDismissed = function()
+						Roact.update(
+							self.captureNotificationInstance,
+							Roact.createElement(CaptureNotification, {
+								permissionEvent = self.permissionEvent,
+								forceDismissToast = nil,
+							})
+						)
+					end,
+				},
+			})
+		)
 	end
 end
 

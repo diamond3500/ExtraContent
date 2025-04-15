@@ -127,8 +127,10 @@ local function calculatePositions(
 	y -= screen.Min.Y
 
 	-- Ensure the content is within the screen bounds
-	x = math.clamp(x, 0, screenSize.X - popoverSize.X)
-	y = math.clamp(y, 0, screenSize.Y - popoverSize.Y)
+	local xLimit = math.max(0, screenSize.X - popoverSize.X)
+	local yLimit = math.max(0, screenSize.Y - popoverSize.Y)
+	x = math.clamp(x, 0, xLimit)
+	y = math.clamp(y, 0, yLimit)
 
 	return Vector2.new(x, y), Vector2.new(arrowX, arrowY)
 end

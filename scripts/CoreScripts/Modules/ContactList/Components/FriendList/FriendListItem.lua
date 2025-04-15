@@ -9,8 +9,6 @@ local Sounds = require(CorePackages.Workspace.Packages.SoundManager).Sounds
 local SoundGroups = require(CorePackages.Workspace.Packages.SoundManager).SoundGroups
 local SoundManager = require(CorePackages.Workspace.Packages.SoundManager).SoundManager
 local UserProfiles = require(CorePackages.Workspace.Packages.UserProfiles)
-local GetFFlagIrisUseLocalizationProvider =
-	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagIrisUseLocalizationProvider
 local ContactList = RobloxGui.Modules.ContactList
 local dependencies = require(ContactList.dependencies)
 local dependencyArray = dependencies.Hooks.dependencyArray
@@ -20,13 +18,7 @@ local getStandardSizeAvatarHeadShotRbxthumb = dependencies.getStandardSizeAvatar
 
 local GetPresencesFromUserIds = dependencies.NetworkingPresence.GetPresencesFromUserIds
 
-local useLocalization
-local RobloxTranslator
-if GetFFlagIrisUseLocalizationProvider() then
-	useLocalization = dependencies.Hooks.useLocalization
-else
-	RobloxTranslator = require(RobloxGui.Modules.RobloxTranslator)
-end
+local useLocalization = dependencies.Hooks.useLocalization
 
 local EnumPresenceType = dependencies.RoduxPresence.Enums.PresenceType
 local UIBlox = dependencies.UIBlox
@@ -81,14 +73,11 @@ local function FriendListItem(props: Props)
 		combinedName = props.combinedName,
 	}
 
-	local localized
-	if GetFFlagIrisUseLocalizationProvider() then
-		localized = useLocalization({
-			offlineStatusLabel = "InGame.Presence.Label.Offline",
-			onlineStatusLabel = "InGame.Presence.Label.Online",
-			studioStatusLabel = "InGame.Presence.Label.RobloxStudio",
-		})
-	end
+	local localized = useLocalization({
+		offlineStatusLabel = "InGame.Presence.Label.Offline",
+		onlineStatusLabel = "InGame.Presence.Label.Online",
+		studioStatusLabel = "InGame.Presence.Label.RobloxStudio",
+	})
 
 	React.useEffect(function()
 		if props.userPresenceType == nil then
@@ -117,6 +106,10 @@ local function FriendListItem(props: Props)
 			setItemBackgroundTheme("BackgroundOnPress")
 		elseif newState == ControlState.Hover then
 			setItemBackgroundTheme("BackgroundOnHover")
+			SoundManager:PlaySound(Sounds.Hover.Name, {
+				Volume = 0.5 + rng:NextNumber(-0.25, 0.25),
+				PlaybackSpeed = 1 + rng:NextNumber(-0.5, 0.5),
+			}, SoundGroups.Iris)
 		else
 			setItemBackgroundTheme("BackgroundDefault")
 		end
@@ -137,9 +130,7 @@ local function FriendListItem(props: Props)
 		local iconColor = style.Theme.OfflineStatus.Color
 		local iconTransparency = style.Theme.OfflineStatus.Transparency
 		local iconSize = 12
-		local text = if GetFFlagIrisUseLocalizationProvider()
-			then localized.offlineStatusLabel
-			else RobloxTranslator:FormatByKey("InGame.Presence.Label.Offline")
+		local text = localized.offlineStatusLabel
 		local textColorStyle = style.Theme.TextMuted
 
 		local userPresenceType
@@ -158,9 +149,7 @@ local function FriendListItem(props: Props)
 			icon = Images["component_assets/circle_16"]
 			iconColor = style.Theme.OnlineStatus.Color
 			iconTransparency = style.Theme.OnlineStatus.Transparency
-			text = if GetFFlagIrisUseLocalizationProvider()
-				then localized.onlineStatusLabel
-				else RobloxTranslator:FormatByKey("InGame.Presence.Label.Online")
+			text = localized.onlineStatusLabel
 			textColorStyle = style.Theme.TextMuted
 			iconSize = 12
 		elseif userPresenceType == EnumPresenceType.InGame then
@@ -174,9 +163,7 @@ local function FriendListItem(props: Props)
 			icon = Images["icons/logo/studiologo_small"]
 			iconColor = style.Theme.TextDefault.Color
 			iconTransparency = style.Theme.TextDefault.Transparency
-			text = if GetFFlagIrisUseLocalizationProvider()
-				then localized.studioStatusLabel
-				else RobloxTranslator:FormatByKey("InGame.Presence.Label.RobloxStudio")
+			text = localized.studioStatusLabel
 			textColorStyle = style.Theme.TextMuted
 			iconSize = 16
 		end
@@ -193,16 +180,7 @@ local function FriendListItem(props: Props)
 			textColorStyle = textColorStyle,
 			textHeight = PLAYER_CONTEXT_HEIGHT,
 		})
-	end, { presence, style })
-
-	local onHovered = React.useCallback(function(_: any, inputObject: InputObject?)
-		if inputObject and inputObject.UserInputType == Enum.UserInputType.MouseMovement then
-			SoundManager:PlaySound(Sounds.Hover.Name, {
-				Volume = 0.5 + rng:NextNumber(-0.25, 0.25),
-				PlaybackSpeed = 1 + rng:NextNumber(-0.5, 0.5),
-			}, SoundGroups.Iris)
-		end
-	end, {})
+	end, { presence, style, localized.offlineStatusLabel, localized.onlineStatusLabel, localized.studioStatusLabel })
 
 	local openOrUpdateCFM = React.useCallback(function()
 		analytics.fireEvent(EventNamesEnum.PhoneBookPlayerMenuOpened, {
@@ -227,7 +205,6 @@ local function FriendListItem(props: Props)
 		onStateChanged = onItemStateChanged,
 		AutoButtonColor = false,
 		[React.Event.Activated] = startCall,
-		[React.Event.InputBegan] = onHovered,
 	}, {
 		UIPadding = React.createElement("UIPadding", {
 			PaddingLeft = UDim.new(0, PADDING.X),
@@ -306,17 +283,15 @@ local function FriendListItem(props: Props)
 			PlayerContext = playerContext,
 		}),
 
-		CallIcon = if game:GetEngineFeature("EnableSocialServiceIrisInvite")
-			then React.createElement(ImageSetLabel, {
-				Position = UDim2.new(1, -PADDING.X - 4, 0.5, -PADDING.Y / 2),
-				Size = UDim2.fromOffset(CALL_IMAGE_SIZE, CALL_IMAGE_SIZE),
-				AnchorPoint = Vector2.new(1, 0.5),
-				BackgroundTransparency = 1,
-				Image = "rbxassetid://15239343417", -- TODO(IRIS-659): Replace with UIBLOX icon
-				ImageColor3 = theme.ContextualPrimaryDefault.Color,
-				ImageTransparency = theme.ContextualPrimaryDefault.Transparency,
-			})
-			else nil,
+		CallIcon = React.createElement(ImageSetLabel, {
+			Position = UDim2.new(1, -PADDING.X - 4, 0.5, -PADDING.Y / 2),
+			Size = UDim2.fromOffset(CALL_IMAGE_SIZE, CALL_IMAGE_SIZE),
+			AnchorPoint = Vector2.new(1, 0.5),
+			BackgroundTransparency = 1,
+			Image = "rbxassetid://15239343417", -- TODO(IRIS-659): Replace with UIBLOX icon
+			ImageColor3 = theme.ContextualPrimaryDefault.Color,
+			ImageTransparency = theme.ContextualPrimaryDefault.Transparency,
+		}),
 
 		Divider = props.showDivider and React.createElement("Frame", {
 			Position = UDim2.new(0, 0, 1, -1),

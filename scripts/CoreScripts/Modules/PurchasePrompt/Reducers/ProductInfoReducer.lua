@@ -3,7 +3,7 @@ local Root = script.Parent.Parent
 
 local CoreGui = game:GetService("CoreGui")
 local CorePackages = game:GetService("CorePackages")
-local PurchasePromptDeps = require(CorePackages.PurchasePromptDeps)
+local PurchasePromptDeps = require(CorePackages.Workspace.Packages.PurchasePromptDeps)
 local Rodux = PurchasePromptDeps.Rodux
 
 local RobloxGui = CoreGui:WaitForChild("RobloxGui")
@@ -18,8 +18,8 @@ local getPreviewImageUrl = require(Root.getPreviewImageUrl)
 local USER_OUTFIT = "UserOutfit"
 
 local GetFFlagTranslateDevProducts = require(Root.Flags.GetFFlagTranslateDevProducts)
-local FFlagPublishAvatarPromptEnabled = require(RobloxGui.Modules.PublishAssetPrompt.FFlagPublishAvatarPromptEnabled)
 local GetFFlagFixBundlePromptThumbnail = require(Root.Flags.GetFFlagFixBundlePromptThumbnail)
+local GetFFlagEnableCreatorStorePurchasingCutover = require(Root.Flags.GetFFlagEnableCreatorStorePurchasingCutover)
 
 local ProductInfoReducer = Rodux.createReducer({}, {
 	[ProductInfoReceived.name] = function(state, action)
@@ -34,11 +34,12 @@ local ProductInfoReducer = Rodux.createReducer({}, {
 
 		return {
 			name = GetFFlagTranslateDevProducts() and (productInfo.DisplayName or productInfo.Name) or productInfo.Name,
-			description = if FFlagPublishAvatarPromptEnabled then productInfo.Description else nil,
+			description = productInfo.Description,
 			price = productInfo.PriceInRobux or 0,
 			premiumPrice = productInfo.PremiumPriceInRobux,
 			imageUrl = getPreviewImageUrl(productInfo),
 			assetTypeId = productInfo.AssetTypeId,
+			assetType = if GetFFlagEnableCreatorStorePurchasingCutover() then productInfo.AssetType else nil,
 			productId = productInfo.ProductId,
 			productType = productInfo.ProductType,
 			membershipTypeRequired = productInfo.MinimumMembershipLevel,
@@ -71,7 +72,7 @@ local ProductInfoReducer = Rodux.createReducer({}, {
 			assetTypeId = nil,
 			productId = bundleProductInfo.product.id,
 			membershipTypeRequired = nil,
-			itemType = bundleProductInfo.itemType
+			itemType = bundleProductInfo.itemType,
 		}
 	end,
 

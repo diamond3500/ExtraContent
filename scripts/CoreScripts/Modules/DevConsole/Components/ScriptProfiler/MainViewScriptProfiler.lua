@@ -1,16 +1,13 @@
 local CorePackages = game:GetService("CorePackages")
-local Roact = require(CorePackages.Roact)
-local RoactRodux = require(CorePackages.RoactRodux)
+local Roact = require(CorePackages.Packages.Roact)
+local RoactRodux = require(CorePackages.Packages.RoactRodux)
 
-local ScriptContext = game:GetService("ScriptContext")
 local ScriptProfiler = game:GetService("ScriptProfilerService")
-local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
 
 local Immutable = require(script.Parent.Parent.Parent.Immutable)
 
 local Components = script.Parent.Parent.Parent.Components
-local DataConsumer = require(Components.DataConsumer)
 local UtilAndTab = require(Components.UtilAndTab)
 local BoxButton = require(Components.BoxButton)
 local DropDown = require(Components.DropDown)
@@ -49,8 +46,6 @@ local TEXT_SIZE = Constants.DefaultFontSize.MainWindowHeader
 local TEXT_COLOR = Constants.Color.Text
 local BACKGROUND_COLOR = Constants.Color.UnselectedGray
 
-local TESTING_DATA = nil -- Assign this to override the data for testing
-
 local LIVE_UPDATE_TEXT = "Live"
 local SHOW_PLUGINS_TEXT = "Plugins"
 local SHOW_GC_TEXT = "GC"
@@ -58,7 +53,6 @@ local SHOW_GC_TEXT = "GC"
 local MainViewScriptProfiler = Roact.PureComponent:extend("MainViewScriptProfiler")
 
 local FFlagScriptProfilerShowPlugins = game:DefineFastFlag("ScriptProfilerShowPlugins2", false)
-local FFlagScriptProfilerNoClientRepl = game:DefineFastFlag("ScriptProfilerNoClientRepl", false)
 
 local FIntScriptProfilerLiveUpdateIntervalMS = game:DefineFastInt("ScriptProfilerLiveUpdateIntervalMS", 1000)
 
@@ -880,11 +874,7 @@ function MainViewScriptProfiler:render()
 		checkBoxStates[tmpCheckboxIndex] = { name = SHOW_GC_TEXT, state = state.showGC }
 	end
 
-	local utilButtons = self:renderUtilButtons(
-		state,
-		mobileUIformFactor,
-		mobileUIformFactor
-	)
+	local utilButtons = self:renderUtilButtons(state, mobileUIformFactor, mobileUIformFactor)
 
 	return self:renderProfilerView(isClientView, state, utilButtons, checkBoxStates)
 end
@@ -973,10 +963,4 @@ local function mapDispatchToProps(dispatch)
 	}
 end
 
-if FFlagScriptProfilerNoClientRepl then
-	return RoactRodux.UNSTABLE_connect2(mapStateToProps, mapDispatchToProps)(MainViewScriptProfiler)
-else
-	return RoactRodux.UNSTABLE_connect2(mapStateToProps, mapDispatchToProps)(
-		DataConsumer(MainViewScriptProfiler, "ServerProfilingData")
-	)
-end
+return RoactRodux.UNSTABLE_connect2(mapStateToProps, mapDispatchToProps)(MainViewScriptProfiler)

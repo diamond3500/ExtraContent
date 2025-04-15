@@ -4,8 +4,8 @@ local Types = require(Foundation.Components.Types)
 type ColorStyleValue = Types.ColorStyleValue
 type Padding = Types.Padding
 
-local CheckboxSize = require(Foundation.Enums.CheckboxSize)
-type CheckboxSize = CheckboxSize.CheckboxSize
+local InputSize = require(Foundation.Enums.InputSize)
+type InputSize = InputSize.InputSize
 
 local InputLabelSize = require(Foundation.Enums.InputLabelSize)
 type InputLabelSize = InputLabelSize.InputLabelSize
@@ -22,15 +22,15 @@ type Tokens = Tokens.Tokens
 local VariantsContext = require(Foundation.Providers.Style.VariantsContext)
 
 type CheckboxVariantProps = {
-	container: { tag: string, padding: Padding, groupTransparency: number },
+	container: { tag: string, padding: Padding },
 	checkbox: { tag: string, size: UDim2, stroke: ColorStyleValue },
 	checkmark: { tag: string },
-	label: { size: InputLabelSize, style: ColorStyleValue },
+	label: { style: ColorStyleValue },
 }
 
 export type CheckboxState = ControlState | "Checked"
 
-function variantsFactory(tokens: Tokens)
+local function variantsFactory(tokens: Tokens)
 	local strokeThickness = math.ceil(tokens.Stroke.Standard)
 	local function getCheckboxSize(size: number): UDim2
 		return UDim2.fromOffset(size - strokeThickness, size - strokeThickness)
@@ -48,67 +48,63 @@ function variantsFactory(tokens: Tokens)
 			},
 		},
 		checkbox = {
-			tag = "stroke-standard",
+			tag = "stroke-standard radius-small",
 		},
 		checkmark = {
 			tag = "position-center-center anchor-center-center content-action-sub-emphasis",
 		},
 	}
 
-	local sizes: { [CheckboxSize]: VariantProps } = {
-		[CheckboxSize.Small] = {
+	local sizes: { [InputSize]: VariantProps } = {
+		[InputSize.XSmall] = {
 			container = {
 				tag = "gap-small",
 			},
 			checkbox = {
 				size = getCheckboxSize(tokens.Size.Size_400),
-				tag = "radius-small",
 			},
 			checkmark = {
 				tag = "size-300",
 			},
-			label = {
-				size = InputLabelSize.Small,
-			},
 		},
-		[CheckboxSize.Medium] = {
-			container = {
-				tag = "gap-medium",
-			},
-			checkbox = {
-				size = getCheckboxSize(tokens.Size.Size_500),
-				tag = "radius-small",
-			},
-			checkmark = {
-				tag = "size-350",
-			},
-			label = {
-				size = InputLabelSize.Medium,
-			},
-		},
-		[CheckboxSize.Large] = {
+		[InputSize.Small] = {
 			container = {
 				tag = "gap-small",
 			},
 			checkbox = {
+				size = getCheckboxSize(tokens.Size.Size_500),
+			},
+			checkmark = {
+				tag = "size-350",
+			},
+		},
+		[InputSize.Medium] = {
+			container = {
+				tag = "gap-medium",
+			},
+			checkbox = {
 				size = getCheckboxSize(tokens.Size.Size_600),
-				tag = "radius-medium",
 			},
 			checkmark = {
 				tag = "size-400",
 			},
-			label = {
-				size = InputLabelSize.Large,
+		},
+		[InputSize.Large] = {
+			container = {
+				tag = "gap-large",
+			},
+			checkbox = {
+				size = getCheckboxSize(tokens.Size.Size_700),
+			},
+			checkmark = {
+				tag = "size-500",
 			},
 		},
 	}
 
-	-- Strokes are intentionally left as tokens, because tags with matching name uses different colro tokens
+	-- Strokes are intentionally left as tokens, because tags with matching name uses different color tokens
 	local states: { [CheckboxState]: VariantProps } = {
 		Checked = {
-			container = {
-				groupTransparency = 0,
-			},
 			checkbox = {
 				tag = "bg-action-sub-emphasis",
 				stroke = tokens.Color.ActionSubEmphasis.Background,
@@ -118,9 +114,6 @@ function variantsFactory(tokens: Tokens)
 			},
 		},
 		[ControlState.Hover] = {
-			container = {
-				groupTransparency = 0,
-			},
 			checkbox = {
 				stroke = tokens.Color.Content.Emphasis,
 			},
@@ -129,9 +122,6 @@ function variantsFactory(tokens: Tokens)
 			},
 		},
 		[ControlState.Default] = {
-			container = {
-				groupTransparency = 0,
-			},
 			checkbox = {
 				stroke = tokens.Color.Content.Default,
 			},
@@ -144,7 +134,7 @@ function variantsFactory(tokens: Tokens)
 	return { common = common, sizes = sizes, states = states }
 end
 
-return function(tokens: Tokens, size: CheckboxSize, state: CheckboxState): CheckboxVariantProps
+return function(tokens: Tokens, size: InputSize, state: CheckboxState): CheckboxVariantProps
 	local props = VariantsContext.useVariants("Checkbox", variantsFactory, tokens)
 	return composeStyleVariant(props.common, props.sizes[size], props.states[state])
 end

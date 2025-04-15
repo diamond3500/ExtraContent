@@ -12,8 +12,6 @@ local t = require(Packages.t)
 local FitFrame = require(Packages.FitFrame)
 local FitFrameOnAxis = FitFrame.FitFrameOnAxis
 
-local UIBloxConfig = require(UIBlox.UIBloxConfig)
-
 local Button = require(ButtonRoot.Button)
 local ComboButton = require(ButtonRoot.ComboButton)
 local IconButton = require(ButtonRoot.IconButton)
@@ -231,8 +229,7 @@ function ActionBar:render()
 			)
 			local buttonIndex = isButtonAtStart and 1 or iconNumber + 1
 
-			local useComboButton = UIBloxConfig.enableComboButtonInActionBar
-				and ComboButton.validateProps(self.props.button.props)
+			local useComboButton = ComboButton.validateProps(self.props.button.props)
 			local newProps = {
 				layoutOrder = buttonIndex,
 				size = buttonSize,

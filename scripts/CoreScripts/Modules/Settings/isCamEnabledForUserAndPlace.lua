@@ -3,12 +3,13 @@ local AppStorageService = game:GetService("AppStorageService")
 local CoreGui = game:GetService("CoreGui")
 local CorePackages = game:GetService("CorePackages")
 local VideoCaptureService = game:GetService("VideoCaptureService")
-local Cryo = require(CorePackages.Cryo)
+local Cryo = require(CorePackages.Packages.Cryo)
 local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 local IXPService = game:GetService("IXPService")
 local MemStorageService = game:GetService("MemStorageService")
 
-local GetFFlagAvatarChatServiceEnabled = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagAvatarChatServiceEnabled
+local GetFFlagAvatarChatServiceEnabled =
+	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagAvatarChatServiceEnabled
 local getFFlagEnableAlwaysAvailableCamera = require(RobloxGui.Modules.Flags.getFFlagEnableAlwaysAvailableCamera)
 local getFFlagUseCameraDevicesListener = require(RobloxGui.Modules.Flags.getFFlagUseCameraDevicesListener)
 local cameraDevicesHelper = require(RobloxGui.Modules.Settings.cameraDevicesHelper)
@@ -60,15 +61,17 @@ local isCamEnabledForUserAndPlace = function(): boolean
 	local userCamEligible = AvatarChatService:IsEnabled(clientFeatures, Enum.AvatarChatServiceFeature.UserVideoEligible)
 
 	if FFlagDisableCameraOnLowSpecDevices and placeCamEnabled and userCamEnabled and userCamEligible then
-		local deviceMeetsCameraPerformanceRequirements = AvatarChatService:deviceMeetsRequirementsForFeature(Enum.DeviceFeatureType.DeviceCapture)
-	
+		local deviceMeetsCameraPerformanceRequirements =
+			AvatarChatService:deviceMeetsRequirementsForFeature(Enum.DeviceFeatureType.DeviceCapture)
+
 		if not deviceMeetsCameraPerformanceRequirements and ShouldCheckDeviceSpecs() then
 			if FFlagOnlyShowToastOnceInLifetime and hasKeyInGameEngine then
 				local success, shownToastOnce = pcall(function()
 					return AppStorageService:GetItem(ShownDisableCameraToastKey)
 				end)
-	
-				local NeedsToShowCameraToast = not success or not (shownToastOnce == "true")
+
+				local NeedsToShowCameraToast = not success
+					or not (shownToastOnce == "true")
 					or FFlagDebugAlwaysShowDisableCameraToast
 				if NeedsToShowCameraToast then
 					TrackerMenu:showPrompt(TrackerPromptType.CameraUnavailable)

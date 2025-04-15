@@ -1,8 +1,8 @@
 --!nonstrict
 local CorePackages = game:GetService("CorePackages")
 
-local Cryo = require(CorePackages.Cryo)
-local Rodux = require(CorePackages.Rodux)
+local Cryo = require(CorePackages.Packages.Cryo)
+local Rodux = require(CorePackages.Packages.Rodux)
 
 local Reducers = script.Parent
 local EmotesMenu = Reducers.Parent
@@ -18,43 +18,43 @@ local HideError = require(Actions.HideError)
 local SetGuiInset = require(Actions.SetGuiInset)
 
 local default = {
-    menuVisible = false,
+	menuVisible = false,
 
-    guiInset = 0,
+	guiInset = 0,
 
-    errorVisible = false,
-    errorText = "",
+	errorVisible = false,
+	errorText = "",
 }
 
 return Rodux.createReducer(default, {
-    [ShowMenu.name] = function(state, action)
-        return Cryo.Dictionary.join(state, {
-            menuVisible = true,
-        })
-    end,
+	[ShowMenu.name] = function(state, action)
+		return Cryo.Dictionary.join(state, {
+			menuVisible = true,
+		})
+	end,
 
-    [HideMenu.name] = function(state, action)
-        return Cryo.Dictionary.join(state, {
-            menuVisible = false,
-        })
-    end,
+	[HideMenu.name] = function(state, action)
+		return Cryo.Dictionary.join(state, {
+			menuVisible = false,
+		})
+	end,
 
-    [ShowError.name] = function(state, action)
-        return Cryo.Dictionary.join(state, {
-            errorVisible = true,
-            errorText = action.errorText,
-        })
-    end,
+	[ShowError.name] = function(state, action)
+		return Cryo.Dictionary.join(state, {
+			errorVisible = true,
+			errorText = action.errorText,
+		})
+	end,
 
-    [HideError.name] = function(state, action)
-        return Cryo.Dictionary.join(state, {
-            errorVisible = false,
-        })
-    end,
+	[HideError.name] = function(state, action)
+		return Cryo.Dictionary.join(state, {
+			errorVisible = false,
+		})
+	end,
 
-    [SetGuiInset.name] = function(state, action)
-        return Cryo.Dictionary.join(state, {
-            guiInset = action.guiInset,
-        })
-    end,
+	[SetGuiInset.name] = function(state, action)
+		return Cryo.Dictionary.join(state, {
+			guiInset = action.guiInset,
+		})
+	end,
 })

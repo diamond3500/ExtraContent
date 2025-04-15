@@ -1,6 +1,6 @@
 local CorePackages = game:GetService("CorePackages")
 
-local Rodux = require(CorePackages.Rodux)
+local Rodux = require(CorePackages.Packages.Rodux)
 
 local Actions = script.Parent.Parent.Actions
 local SetScreenSize = require(Actions.SetScreenSize)

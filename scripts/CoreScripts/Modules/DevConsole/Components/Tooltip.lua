@@ -1,7 +1,7 @@
 local CorePackages = game:GetService("CorePackages")
 local CoreGui = game:GetService("CoreGui")
 local React = require(CorePackages.Packages.React)
-local Roact = require(CorePackages.Roact)
+local Roact = require(CorePackages.Packages.Roact)
 
 local Constants = require(script.Parent.Parent.Constants)
 local FONT = Constants.Font.MainWindowHeader
@@ -15,11 +15,10 @@ local DELAY = Constants.Tooltip.Delay
 
 export type Props = {
 	text: string,
-	pos: UDim2
+	pos: UDim2,
 }
 
 local function Tooltip(props: Props)
-	
 	local visible, setVisible = React.useState(false)
 	local text = props.text
 	local pos = props.pos
@@ -39,13 +38,13 @@ local function Tooltip(props: Props)
 	end, { text, pos } :: { any })
 
 	return Roact.createElement(Roact.Portal, {
-		target = CoreGui :: Instance
+		target = CoreGui :: Instance,
 	}, {
 		TooltipContainer = Roact.createElement("ScreenGui", {
 			DisplayOrder = 20,
 			IgnoreGuiInset = true,
 			OnTopOfCoreBlur = true,
-			Enabled = visible
+			Enabled = visible,
 		}, {
 			Tooltip = Roact.createElement("TextLabel", {
 				Text = text,
@@ -54,10 +53,10 @@ local function Tooltip(props: Props)
 				TextWrapped = true,
 				TextXAlignment = Enum.TextXAlignment.Left,
 				Font = FONT,
-		
+
 				AutomaticSize = Enum.AutomaticSize.XY,
 				Position = pos + OFFSET,
-		
+
 				BackgroundColor3 = BACKGROUND_COLOR,
 				BackgroundTransparency = 0,
 				BorderSizePixel = 0,
@@ -66,15 +65,14 @@ local function Tooltip(props: Props)
 					PaddingTop = PADDING,
 					PaddingBottom = PADDING,
 					PaddingLeft = PADDING,
-					PaddingRight = PADDING
+					PaddingRight = PADDING,
 				}),
 				SizeConstraint = Roact.createElement("UISizeConstraint", {
-					MaxSize = Vector2.new(MAX_WIDTH, math.huge)
-				})
-			})
-		})
+					MaxSize = Vector2.new(MAX_WIDTH, math.huge),
+				}),
+			}),
+		}),
 	})
-	
 end
 
 return Tooltip

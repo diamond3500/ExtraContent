@@ -1,7 +1,7 @@
 local CorePackages = game:GetService("CorePackages")
 local TextService = game:GetService("TextService")
-local Roact = require(CorePackages.Roact)
-local RoactRodux = require(CorePackages.RoactRodux)
+local Roact = require(CorePackages.Packages.Roact)
+local RoactRodux = require(CorePackages.Packages.RoactRodux)
 
 local DataConsumer = require(script.Parent.Parent.Components.DataConsumer)
 
@@ -34,11 +34,11 @@ local LiveUpdateElement = Roact.PureComponent:extend("LiveUpdateElement")
 function LiveUpdateElement:didMount()
 	local totalMemSignal = self.props.ClientMemoryData:totalMemSignal()
 	self.totalMemConnector = totalMemSignal:Connect(function(totalClientMemory)
-		self:setState({totalClientMemory = totalClientMemory})
+		self:setState({ totalClientMemory = totalClientMemory })
 	end)
 
 	self.avgPingConnector = self.props.ServerStatsData:avgPing():Connect(function(averagePing)
-		self:setState({averagePing = averagePing})
+		self:setState({ averagePing = averagePing })
 	end)
 
 	self.logWarningErrorConnector = self.props.ClientLogData:errorWarningSignal():Connect(function(error, warning)
@@ -48,9 +48,7 @@ function LiveUpdateElement:didMount()
 		})
 	end)
 
-	
 	self:doSizeCheck()
-	
 end
 
 function LiveUpdateElement:didUpdate()
@@ -64,7 +62,7 @@ function LiveUpdateElement:doSizeCheck()
 
 		if isSmallerThanFormFactorThreshold ~= self.state.isSmallerThanFormFactorThreshold then
 			self:setState({
-				isSmallerThanFormFactorThreshold = isSmallerThanFormFactorThreshold
+				isSmallerThanFormFactorThreshold = isSmallerThanFormFactorThreshold,
 			})
 		end
 	end
@@ -140,35 +138,16 @@ function LiveUpdateElement:render()
 	end
 
 	local logErrorStat = string.format("%d", numErrors)
-	local logErrorStatVector = TextService:GetTextSize(
-		logErrorStat,
-		TOP_BAR_FONT_SIZE,
-		FONT,
-		Vector2.new(0, 0)
-	)
+	local logErrorStatVector = TextService:GetTextSize(logErrorStat, TOP_BAR_FONT_SIZE, FONT, Vector2.new(0, 0))
 
 	local logWarningStat = string.format("%d", numWarnings)
-	local logWarningStatVector = TextService:GetTextSize(
-		logWarningStat,
-		TOP_BAR_FONT_SIZE,
-		FONT,
-		Vector2.new(0, 0)
-	)
+	local logWarningStatVector = TextService:GetTextSize(logWarningStat, TOP_BAR_FONT_SIZE, FONT, Vector2.new(0, 0))
 
 	local memUsageString = string.format("%d MB", clientMemoryUsage)
-	local memUsageStringVector = TextService:GetTextSize(
-		memUsageString,
-		TOP_BAR_FONT_SIZE,
-		FONT,
-		Vector2.new(0, 0)
-	)
+	local memUsageStringVector = TextService:GetTextSize(memUsageString, TOP_BAR_FONT_SIZE, FONT, Vector2.new(0, 0))
 
 	local avgPingString = string.format("%d ms", averagePing)
-	local avgPingStringVector = TextService:GetTextSize(avgPingString,
-		TOP_BAR_FONT_SIZE,
-		FONT,
-		Vector2.new(0, 0)
-	)
+	local avgPingStringVector = TextService:GetTextSize(avgPingString, TOP_BAR_FONT_SIZE, FONT, Vector2.new(0, 0))
 
 	if formFactor == Constants.FormFactor.Small or isSmallerThanFormFactorThreshold then
 		position = position + UDim2.new(0, INNER_PADDING * 2, 0, 0)
@@ -296,7 +275,7 @@ function LiveUpdateElement:render()
 			BackgroundTransparency = 1,
 			LayoutOrder = 11,
 			[Roact.Event.Activated] = self.props.dispatchChangeTabNetworkPing,
-		})
+		}),
 	})
 end
 
@@ -315,5 +294,5 @@ local function mapDispatchToProps(dispatch)
 end
 
 return RoactRodux.UNSTABLE_connect2(nil, mapDispatchToProps)(
-	DataConsumer(LiveUpdateElement, "ServerStatsData", "ClientMemoryData", "ClientLogData" )
+	DataConsumer(LiveUpdateElement, "ServerStatsData", "ClientMemoryData", "ClientLogData")
 )

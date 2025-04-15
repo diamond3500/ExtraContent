@@ -3,7 +3,7 @@ local CorePackages = game:GetService("CorePackages")
 local TextService = game:GetService("TextService")
 local GuiService = game:GetService("GuiService")
 
-local InGameMenuDependencies = require(CorePackages.InGameMenuDependencies)
+local InGameMenuDependencies = require(CorePackages.Packages.InGameMenuDependencies)
 local Roact = InGameMenuDependencies.Roact
 local RoactRodux = InGameMenuDependencies.RoactRodux
 local t = InGameMenuDependencies.t
@@ -25,6 +25,9 @@ local RootedConnection = require(InGameMenu.Components.Connection.RootedConnecti
 
 local SetCurrentPage = require(InGameMenu.Actions.SetCurrentPage)
 
+local FFlagUIBloxUseFoundationButton =
+	require(CorePackages.Workspace.Packages.SharedFlags).UIBlox.GetFFlagUIBloxUseFoundationButton()
+
 local ImageSetLabel = UIBlox.Core.ImageSet.ImageSetLabel
 local ControlState = UIBlox.Core.Control.Enum.ControlState
 
@@ -43,7 +46,7 @@ function AddFriendsNow:init()
 	self.buttonRef = Roact.createRef()
 
 	self.state = {
-		buttonIsInitialized = false,
+		buttonIsInitialized = if FFlagUIBloxUseFoundationButton then true else false,
 	}
 end
 
@@ -100,35 +103,38 @@ function AddFriendsNow:render()
 						Size = UDim2.new(1, 0, 1, -totalTextPadding),
 						TextXAlignment = Enum.TextXAlignment.Center,
 						TextWrapped = true,
-					})
+					}),
 				}),
 
 				RootedConnection = Roact.createElement(RootedConnection, {
 					render = function(isRooted)
 						return Roact.createElement(FocusHandler, {
-							isFocused = props.canCaptureFocus
-								and self.state.buttonIsInitialized
-								and isRooted,
+							isFocused = props.canCaptureFocus and self.state.buttonIsInitialized and isRooted,
 
 							didFocus = function()
 								GuiService.SelectedCoreObject = self.buttonRef:getValue()
 							end,
 						}, {
-							MakeFriendsButton = isRooted and Roact.createElement(Button, {
-								buttonType = ButtonType.Secondary,
-								layoutOrder = 3,
-								size = UDim2.new(1, 0, 0, 48),
-								text = localized.makeFriendsNow,
-								onActivated = props.switchToPlayers,
-								buttonRef = self.buttonRef,
-								onStateChanged = function(_, newState)
-									if not self.state.buttonIsInitialized and newState ~= ControlState.Initialize then
-										self:setState({
-											buttonIsInitialized = true,
-										})
-									end
-								end,
-							}) or nil,
+							MakeFriendsButton = isRooted
+									and Roact.createElement(Button, {
+										buttonType = ButtonType.Secondary,
+										layoutOrder = 3,
+										size = UDim2.new(1, 0, 0, 48),
+										text = localized.makeFriendsNow,
+										onActivated = props.switchToPlayers,
+										buttonRef = self.buttonRef,
+										onStateChanged = function(_, newState)
+											if
+												not self.state.buttonIsInitialized
+												and newState ~= ControlState.Initialize
+											then
+												self:setState({
+													buttonIsInitialized = true,
+												})
+											end
+										end,
+									})
+								or nil,
 						})
 					end,
 				}),
@@ -145,13 +151,10 @@ function AddFriendsNow:render()
 	end)
 end
 
-return RoactRodux.UNSTABLE_connect2(
-	nil,
-	function(dispatch)
-		return {
-			switchToPlayers = function()
-				dispatch(SetCurrentPage("Players"))
-			end
-		}
-	end
-)(AddFriendsNow)
+return RoactRodux.UNSTABLE_connect2(nil, function(dispatch)
+	return {
+		switchToPlayers = function()
+			dispatch(SetCurrentPage("Players"))
+		end,
+	}
+end)(AddFriendsNow)

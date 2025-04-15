@@ -1,6 +1,10 @@
 local CorePackages = game:GetService("CorePackages")
 
-local Roact = require(CorePackages.Roact)
+local Roact = require(CorePackages.Packages.Roact)
+
+local TopBar = script.Parent.Parent
+
+local FFlagRemoveTopBarInputTypeRodux = require(TopBar.Flags.GetFFlagRemoveTopBarInputTypeRodux)()
 
 local CoreGuiConnector = require(script.CoreGuiConnector)
 local MenuConnector = require(script.MenuConnector)
@@ -20,7 +24,7 @@ function Connection:render()
 		HealthConnector = Roact.createElement(HealthConnector),
 		EnabledNotifier = Roact.createElement(EnabledNotifier),
 		OpenUIConnector = Roact.createElement(OpenUIConnector),
-		LastInputTypeConnector = Roact.createElement(LastInputTypeConnector),
+		LastInputTypeConnector = if FFlagRemoveTopBarInputTypeRodux then nil else Roact.createElement(LastInputTypeConnector),
 	})
 end
 

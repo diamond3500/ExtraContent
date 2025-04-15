@@ -1,7 +1,7 @@
 --!nonstrict
 local CorePackages = game:GetService("CorePackages")
 
-local InGameMenuDependencies = require(CorePackages.InGameMenuDependencies)
+local InGameMenuDependencies = require(CorePackages.Packages.InGameMenuDependencies)
 local Rodux = InGameMenuDependencies.Rodux
 local Cryo = InGameMenuDependencies.Cryo
 
@@ -26,7 +26,7 @@ return Rodux.createReducer({
 	end,
 	[SetMenuIconTooltipOpen.name] = function(state, action)
 		return Cryo.Dictionary.join(state, {
-			menuIconTooltipOpen = action.menuIconTooltipOpen
+			menuIconTooltipOpen = action.menuIconTooltipOpen,
 		})
 	end,
 })

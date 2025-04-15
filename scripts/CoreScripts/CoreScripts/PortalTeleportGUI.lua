@@ -23,7 +23,7 @@ local pi = math.pi
 
 -- Modules
 local RobloxGui = CoreGui.RobloxGui
-local RobloxTranslator = require(RobloxGui.Modules.RobloxTranslator)
+local RobloxTranslator = require(CorePackages.Workspace.Packages.RobloxTranslator)
 local AppFonts = require(CorePackages.Workspace.Packages.Style).AppFonts
 
 -- UI objects

@@ -27,7 +27,7 @@ Not every tag listed below is rendered. Instead, we conditionally render the tag
 Since hooks shouldn't be used in the render function, you'll need to move the hook call to the body of the component. This is what Foundation components do internally.
 
 ```lua hl_lines="3 6"
-local useStyleTags = Foundation.useStyleTags
+local useStyleTags = Foundation.Hooks.useStyleTags
 
 local tag = useStyleTags("bg-surface-100 radius-small")
 ...

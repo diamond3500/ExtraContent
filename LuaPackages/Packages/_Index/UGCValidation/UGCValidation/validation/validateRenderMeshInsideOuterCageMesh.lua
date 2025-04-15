@@ -9,11 +9,8 @@ local root = script.Parent.Parent
 
 local Analytics = require(root.Analytics)
 
-local getEngineFeatureUGCValidateEditableMeshAndImage =
-	require(root.flags.getEngineFeatureUGCValidateEditableMeshAndImage)
 local getFIntUGCValidateRenderMeshInsideOuterCageMeshThreshold =
 	require(root.flags.getFIntUGCValidateRenderMeshInsideOuterCageMeshThreshold)
-local getFFlagUGCValidationShouldYield = require(root.flags.getFFlagUGCValidationShouldYield)
 
 local Types = require(root.util.Types)
 local pcallDeferred = require(root.util.pcallDeferred)
@@ -26,29 +23,17 @@ local function validateRenderMeshInsideOuterCageMesh(
 ): (boolean, { string }?)
 	local startTime = tick()
 
-	local success, percentageInside
 	-- below we transform the render mesh by the inverse of the cage origin which is because the C++ function cannot move the
 	-- cage mesh, but it can move the render mesh, so moving the render mesh by the inverse of the cage mesh keeps the two meshes
 	-- in the same relative positions to one and other
-	if getEngineFeatureUGCValidateEditableMeshAndImage() and getFFlagUGCValidationShouldYield() then
-		success, percentageInside = pcallDeferred(function()
-			return (UGCValidationService :: any):CalculateEditableMeshInsideMeshPercentage(
-				meshInfoOuterCage.editableMesh,
-				meshInfoRenderMesh.editableMesh,
-				wrapLayer.CageOrigin:Inverse(),
-				Vector3.new(1, 1, 1)
-			)
-		end, validationContext)
-	else
-		success, percentageInside = pcall(function()
-			return (UGCValidationService :: any):CalculateMeshInsideMeshPercentage(
-				meshInfoOuterCage.contentId,
-				meshInfoRenderMesh.contentId,
-				wrapLayer.CageOrigin:Inverse(),
-				Vector3.new(1, 1, 1)
-			)
-		end)
-	end
+	local success, percentageInside = pcallDeferred(function()
+		return (UGCValidationService :: any):CalculateEditableMeshInsideMeshPercentage(
+			meshInfoOuterCage.editableMesh,
+			meshInfoRenderMesh.editableMesh,
+			wrapLayer.CageOrigin:Inverse(),
+			Vector3.new(1, 1, 1)
+		)
+	end, validationContext)
 
 	if not success then
 		local errorString = string.format(
@@ -62,13 +47,21 @@ local function validateRenderMeshInsideOuterCageMesh(
 			-- which would mean the asset failed validation
 			error(errorString)
 		end
-		Analytics.reportFailure(Analytics.ErrorType.validateRenderMeshInsideOuterCageMesh_FailedToExecute)
+		Analytics.reportFailure(
+			Analytics.ErrorType.validateRenderMeshInsideOuterCageMesh_FailedToExecute,
+			nil,
+			validationContext
+		)
 		return false, { errorString }
 	end
 
 	percentageInside = percentageInside * 100
 	if percentageInside < getFIntUGCValidateRenderMeshInsideOuterCageMeshThreshold() then
-		Analytics.reportFailure(Analytics.ErrorType.validateRenderMeshInsideOuterCageMesh_MaxOutsideCageMeshExceeded)
+		Analytics.reportFailure(
+			Analytics.ErrorType.validateRenderMeshInsideOuterCageMesh_MaxOutsideCageMeshExceeded,
+			nil,
+			validationContext
+		)
 		return false,
 			{
 				string.format(

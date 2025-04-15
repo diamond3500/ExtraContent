@@ -4,14 +4,14 @@ local CoreGui = game:GetService("CoreGui")
 local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 
 local React = require(CorePackages.Packages.React)
-local UIBlox = require(CorePackages.UIBlox)
+local UIBlox = require(CorePackages.Packages.UIBlox)
 local withTooltip = UIBlox.App.Dialog.TooltipV2.withTooltip
 local TooltipOrientation = UIBlox.App.Dialog.Enum.TooltipOrientation
-local RobloxTranslator = require(RobloxGui.Modules.RobloxTranslator)
+local RobloxTranslator = require(CorePackages.Workspace.Packages.RobloxTranslator)
 
 local Promise = require(CorePackages.Packages.Promise)
 
-return function (props)
+return function(props)
 	local isActive, setActive = React.useState(true)
 
 	local tooltipText = props.fallbackText
@@ -57,7 +57,7 @@ return function (props)
 		return React.createElement("Frame", {
 			Visible = false,
 			BackgroundTransparency = 1,
-			Size = UDim2.new(1,0,1,0),
+			Size = UDim2.new(1, 0, 1, 0),
 			[React.Change.AbsoluteSize] = onChange,
 			[React.Change.AbsolutePosition] = onChange,
 		})

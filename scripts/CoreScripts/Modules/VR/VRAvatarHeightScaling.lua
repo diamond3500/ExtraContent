@@ -1,11 +1,11 @@
 --!nonstrict
 -- This script is responsible for scaling the world in VR based on the size of the avatar
 
-local RobloxGui = game:GetService("CoreGui"):WaitForChild("RobloxGui")
+local CorePackages = game:GetService("CorePackages")
 local VRService = game:GetService("VRService")
 local UserGameSettings = UserSettings():GetService("UserGameSettings")
 local Players = game:GetService("Players")
-local AvatarUtil = require(RobloxGui.Modules.Common.AvatarUtil)
+local AvatarUtil = require(CorePackages.Workspace.Packages.CoreScriptsCommon).AvatarUtil
 
 local VRAvatarHeightScaling = {}
 VRAvatarHeightScaling.__index = VRAvatarHeightScaling
@@ -25,7 +25,7 @@ function VRAvatarHeightScaling.new()
 			self:onPlayerHeightChanged()
 		end
 	end)
-	
+
 	self:onScalingChanged() -- run once at the begining to set current state
 	return self
 end
@@ -33,7 +33,7 @@ end
 -- sets camera.HeadScale, does nothing if subject or camera is invalid
 -- does not assume scaling is on
 function VRAvatarHeightScaling:setHeadScale(character)
-	-- needs to ensure scaling is enabled before setting headscale because this callback can be called 
+	-- needs to ensure scaling is enabled before setting headscale because this callback can be called
 	-- from AvatarUtil after scaling is toggled off
 	if VRService.AutomaticScaling ~= Enum.VRScaling.World then
 		return
@@ -41,7 +41,7 @@ function VRAvatarHeightScaling:setHeadScale(character)
 
 	local avatarHeight = self:GetSubjectHeight(character)
 	if not avatarHeight or avatarHeight <= 0 then return end
-	
+
 	local measuredHeight = -VRService:GetUserCFrame(Enum.UserCFrame.Floor).Position.Y
 
 	local newHeadScale
@@ -65,15 +65,15 @@ function VRAvatarHeightScaling:GetSubjectHeight(character)
 
 	local humanoid = character:FindFirstChild("Humanoid")
 	if humanoid and humanoid:GetState() == Enum.HumanoidStateType.Dead then return end
-	
+
 	-- measures the location of the camera to the floor. This uses the camera location from where the playerscripts
-	-- would have placed the camera instead of the actual height of the avatar, prioritizing floor location vs 
+	-- would have placed the camera instead of the actual height of the avatar, prioritizing floor location vs
 	-- acurate avatar height
 	local rootPart = humanoid and humanoid.RootPart or character:FindFirstChild("HumanoidRootPart")
 	if rootPart and humanoid then
 		local hipHeight = humanoid.HipHeight
 
-		if humanoid.RigType == Enum.HumanoidRigType.R6 then 
+		if humanoid.RigType == Enum.HumanoidRigType.R6 then
 			-- hip height is always 0 in R6
 			hipHeight = 2
 		end
@@ -105,7 +105,7 @@ function VRAvatarHeightScaling:onScalingChanged()
 				self:setHeadScale(character)
 			end)
 		end
-	else 
+	else
 		-- disconnect from avatar if turned off
 		if self.characterChangedConnection then self.characterChangedConnection:Disconnect(); self.characterChangedConnection = nil end
 	end

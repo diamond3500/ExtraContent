@@ -1,6 +1,6 @@
 --!nonstrict
 local CorePackages = game:GetService("CorePackages")
-local Roact = require(CorePackages.Roact)
+local Roact = require(CorePackages.Packages.Roact)
 
 local Components = script.Parent.Parent.Parent.Components
 local DataConsumer = require(Components.DataConsumer)
@@ -47,7 +47,7 @@ local entryCellSize = {}
 local entryCellHeight = ENTRY_HEIGHT - LINE_WIDTH -- to account for border height and to use UIListLayout
 
 for _, cellWidth in ipairs(CELL_WIDTHS) do
-	table.insert(cellOffset,UDim2.new(currOffset, CELL_PADDING, 0, 0))
+	table.insert(cellOffset, UDim2.new(currOffset, CELL_PADDING, 0, 0))
 	table.insert(headerCellSize, UDim2.new(cellWidth, -CELL_PADDING, 0, HEADER_HEIGHT))
 	table.insert(entryCellSize, UDim2.new(cellWidth, -CELL_PADDING, 0, entryCellHeight))
 	currOffset = currOffset + cellWidth
@@ -55,12 +55,7 @@ end
 
 local verticalOffsets = {}
 for i, offset in ipairs(cellOffset) do
-	verticalOffsets[i] = UDim2.new(
-		offset.X.Scale,
-		offset.X.Offset - CELL_PADDING,
-		offset.Y.Scale,
-		offset.Y.Offset
-	)
+	verticalOffsets[i] = UDim2.new(offset.X.Scale, offset.X.Offset - CELL_PADDING, offset.Y.Scale, offset.Y.Offset)
 end
 
 local ServerJobsChart = Roact.Component:extend("ServerJobsChart")
@@ -73,21 +68,21 @@ local function getDutyCycle(entry)
 	return entry.data[1]
 end
 
-local function getStepsPerSec (entry)
+local function getStepsPerSec(entry)
 	return entry.data[2]
 end
 
-local function getStepTime (entry)
+local function getStepTime(entry)
 	return entry.data[3]
 end
 
 function ServerJobsChart:init(props)
 	local currJobsList = props.ServerJobsData:getCurrentData()
 
-	self.getOnButtonPress = function (name)
+	self.getOnButtonPress = function(name)
 		return function(rbx, input)
 			self:setState({
-				expandIndex = self.state.expandIndex ~= name and name
+				expandIndex = self.state.expandIndex ~= name and name,
 			})
 		end
 	end
@@ -96,7 +91,7 @@ function ServerJobsChart:init(props)
 		local currSortType = props.ServerJobsData:getSortType()
 		if sortType == currSortType then
 			self:setState({
-				reverseSort = not self.state.reverseSort
+				reverseSort = not self.state.reverseSort,
 			})
 		else
 			props.ServerJobsData:setSortType(sortType)
@@ -105,7 +100,6 @@ function ServerJobsChart:init(props)
 			})
 		end
 	end
-
 
 	self.onCanvasPosChanged = function()
 		local canvasPos = self.scrollingRef.current.CanvasPosition
@@ -138,8 +132,7 @@ function ServerJobsChart:didUpdate()
 
 		local absSize = self.scrollingRef.current.AbsoluteSize
 		local currAbsSize = self.state.absScrollSize
-		if absSize.X ~= currAbsSize.X or
-			absSize.Y ~= currAbsSize.Y then
+		if absSize.X ~= currAbsSize.X or absSize.Y ~= currAbsSize.Y then
 			self:setState({
 				absScrollSize = absSize,
 			})
@@ -209,12 +202,12 @@ function ServerJobsChart:render()
 		for ind, job in pairs(serverJobsList) do
 			local name = job.name
 			if not searchTerm or string.find(name:lower(), searchTerm:lower()) ~= nil then
-
 				local jobData = job.dataStats
 				local currEntry = jobData.dataSet:back()
 
 				local showGraph = expandIndex == name
-				local frameHeight = showGraph and ENTRY_HEIGHT + (3 * GRAPH_HEIGHT / 2) + CELL_PADDING * 4 or ENTRY_HEIGHT
+				local frameHeight = showGraph and ENTRY_HEIGHT + (3 * GRAPH_HEIGHT / 2) + CELL_PADDING * 4
+					or ENTRY_HEIGHT
 
 				if scrollingFrameHeight + frameHeight >= canvasPos.Y then
 					if usedFrameSpace < absScrollSize.Y then
@@ -228,7 +221,7 @@ function ServerJobsChart:render()
 						})
 
 						for i, v in pairs(currEntry.data) do
-							entry[HEADER_NAMES[i] ] = Roact.createElement(CellLabel, {
+							entry[HEADER_NAMES[i]] = Roact.createElement(CellLabel, {
 								text = COLUMN_TRANSFORM_FUNC[i](v),
 								size = headerCellSize[i + 1],
 								pos = cellOffset[i + 1],
@@ -237,7 +230,7 @@ function ServerJobsChart:render()
 
 						-- add vertical lines over components
 						for offsetInd = 2, #verticalOffsets do
-							local key = string.format("VerticalLine_%d",offsetInd)
+							local key = string.format("VerticalLine_%d", offsetInd)
 							entry[key] = Roact.createElement("Frame", {
 								Size = UDim2.new(0, LINE_WIDTH, 1, 0),
 								Position = verticalOffsets[offsetInd],
@@ -264,7 +257,7 @@ function ServerJobsChart:render()
 								pos = UDim2.new(),
 								isExpanded = showGraph,
 
-								onButtonPress = self.getOnButtonPress(name)
+								onButtonPress = self.getOnButtonPress(name),
 							}, entry),
 
 							DutyCycleGraph = showGraph and Roact.createElement(LineGraph, {
@@ -284,22 +277,23 @@ function ServerJobsChart:render()
 								axisLabelY = name .. " " .. HEADER_NAMES[2],
 							}),
 
-							StepsPerSecGraph = showGraph and Roact.createElement(LineGraph, {
-								pos = UDim2.new(0, 0, 0, ENTRY_HEIGHT + (GRAPH_HEIGHT / 2) + CELL_PADDING * 2),
-								size = UDim2.new(0, absWidth, 0, GRAPH_HEIGHT / 2),
-								graphData = jobData.dataSet,
-								maxY = jobData.max[2],
-								minY = jobData.min[2],
+							StepsPerSecGraph = showGraph
+								and Roact.createElement(LineGraph, {
+									pos = UDim2.new(0, 0, 0, ENTRY_HEIGHT + (GRAPH_HEIGHT / 2) + CELL_PADDING * 2),
+									size = UDim2.new(0, absWidth, 0, GRAPH_HEIGHT / 2),
+									graphData = jobData.dataSet,
+									maxY = jobData.max[2],
+									minY = jobData.min[2],
 
-								getX = getX,
-								getY = getStepsPerSec,
+									getX = getX,
+									getY = getStepsPerSec,
 
-								stringFormatX = convertTimeStamp,
-								stringFormatY = COLUMN_TRANSFORM_FUNC[2],
+									stringFormatX = convertTimeStamp,
+									stringFormatY = COLUMN_TRANSFORM_FUNC[2],
 
-								axisLabelX = "Timestamp",
-								axisLabelY = name .. " " .. HEADER_NAMES[3],
-							}),
+									axisLabelX = "Timestamp",
+									axisLabelY = name .. " " .. HEADER_NAMES[3],
+								}),
 
 							StepTimeGraph = showGraph and Roact.createElement(LineGraph, {
 								pos = UDim2.new(0, 0, 0, ENTRY_HEIGHT + GRAPH_HEIGHT + CELL_PADDING * 3),
@@ -372,7 +366,7 @@ function ServerJobsChart:render()
 	})
 
 	for ind = 2, #verticalOffsets do
-		local key = string.format("VerticalLine_%d",ind)
+		local key = string.format("VerticalLine_%d", ind)
 		header[key] = Roact.createElement("Frame", {
 			Size = UDim2.new(0, LINE_WIDTH, 1, 0),
 			Position = verticalOffsets[ind],

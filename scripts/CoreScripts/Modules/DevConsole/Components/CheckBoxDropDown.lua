@@ -1,6 +1,6 @@
 local CorePackages = game:GetService("CorePackages")
 local RobloxGui = game:GetService("CoreGui").RobloxGui
-local Roact = require(CorePackages.Roact)
+local Roact = require(CorePackages.Packages.Roact)
 
 local Constants = require(script.Parent.Parent.Constants)
 local INNER_FRAME_PADDING = 12
@@ -18,7 +18,7 @@ function CheckBoxDropDown:render()
 	local onCloseCheckBox = self.props.onCloseCheckBox
 
 	local frameHeight = elementHeight * numElements
-	local outerFrameSize = UDim2.new( 0, frameWidth, 0, (2 * INNER_FRAME_PADDING) + frameHeight)
+	local outerFrameSize = UDim2.new(0, frameWidth, 0, (2 * INNER_FRAME_PADDING) + frameHeight)
 
 	return Roact.createElement(Roact.Portal, {
 		-- render the portal into the same ScreenGui as the DevConsole
@@ -40,11 +40,11 @@ function CheckBoxDropDown:render()
 				BackgroundTransparency = 0,
 			}, {
 				innerFrame = Roact.createElement("Frame", {
-					Position = UDim2.new(0, INNER_FRAME_PADDING, 0 , INNER_FRAME_PADDING),
-					Size = UDim2.new(0,frameWidth, 0, frameHeight),
+					Position = UDim2.new(0, INNER_FRAME_PADDING, 0, INNER_FRAME_PADDING),
+					Size = UDim2.new(0, frameWidth, 0, frameHeight),
 					BackgroundTransparency = 1,
-				}, children)
-			})
+				}, children),
+			}),
 		}),
 	})
 end

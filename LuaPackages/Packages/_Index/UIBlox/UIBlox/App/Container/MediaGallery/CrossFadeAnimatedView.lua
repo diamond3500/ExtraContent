@@ -1,8 +1,10 @@
+-- moving this file to LuaApps, please replicate any changes in the LuaApps file as well
 local UIBlox = script:FindFirstAncestor("UIBlox")
 local Packages = UIBlox.Parent
 local React = require(Packages.React)
 local ReactOtter = require(Packages.ReactOtter)
 local Cryo = require(Packages.Cryo)
+local UIBloxConfig = require(UIBlox.UIBloxConfig)
 local useStyle = require(UIBlox.Core.Style.useStyle)
 
 local MINIMUM_ITEMS_SIZE = 2
@@ -29,13 +31,13 @@ export type CrossAnimationParameters = {
 	-- The current index of Media Gallery thumbnail
 	currentIndex: number,
 	-- Callback function to update currentIndex of Media Gallery thumbnail
-	setCurrentIndex: ((currentIndex: number) -> ()),
+	setCurrentIndex: (currentIndex: number) -> (),
 	-- The next index of Media Gallery thumbnail
 	nextIndex: number,
 	-- The status of cross fade animation
 	isCrossFade: boolean,
 	-- Callback function for update status of cross fade animation
-	setCrossFade: ((isCrossFade: boolean) -> ()),
+	setCrossFade: (isCrossFade: boolean) -> (),
 }
 
 export type Props = {
@@ -113,4 +115,4 @@ local function CrossFadeAnimatedView(providedProps: Props)
 	})
 end
 
-return CrossFadeAnimatedView
+return (if UIBloxConfig.moveMediaGalleryToLuaApps then nil else CrossFadeAnimatedView) :: any

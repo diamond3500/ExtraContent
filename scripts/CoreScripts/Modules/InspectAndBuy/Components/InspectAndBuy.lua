@@ -8,12 +8,12 @@ local GuiService = game:GetService("GuiService")
 local MarketplaceService = game:GetService("MarketplaceService")
 local Players = game:GetService("Players")
 local MouseIconOverrideService = require(CorePackages.InGameServices.MouseIconOverrideService)
-local Roact = require(CorePackages.Roact)
-local Rodux = require(CorePackages.Rodux)
-local RoactRodux = require(CorePackages.RoactRodux)
-local Symbol = require(CorePackages.Symbol)
+local Roact = require(CorePackages.Packages.Roact)
+local Rodux = require(CorePackages.Packages.Rodux)
+local RoactRodux = require(CorePackages.Packages.RoactRodux)
+local Symbol = require(CorePackages.Workspace.Packages.AppCommonLib).Symbol
 local renderWithCoreScriptsStyleProvider = require(CoreGui.RobloxGui.Modules.Common.renderWithCoreScriptsStyleProvider)
-local UIBlox = require(CorePackages.UIBlox)
+local UIBlox = require(CorePackages.Packages.UIBlox)
 local SelectionCursorProvider = UIBlox.App.SelectionImage.SelectionCursorProvider
 
 local InspectAndBuyFolder = script.Parent.Parent
@@ -43,9 +43,7 @@ local GetPlayerName = require(InspectAndBuyFolder.Thunks.GetPlayerName)
 local InspectAndBuyContext = require(InspectAndBuyFolder.Components.InspectAndBuyContext)
 local CloseOverlay = require(InspectAndBuyFolder.Actions.CloseOverlay)
 
-local FFlagAttributionInInspectAndBuy = require(InspectAndBuyFolder.Flags.FFlagAttributionInInspectAndBuy)
-
-local PolicyService = require(CoreGui.RobloxGui.Modules.Common.PolicyService)
+local CachedPolicyService = require(CorePackages.Workspace.Packages.CachedPolicyService)
 
 local COMPACT_VIEW_MAX_WIDTH = 600
 local CURSOR_OVERRIDE_KEY = Symbol.named("OverrideCursorInspectMenu")
@@ -182,7 +180,7 @@ function InspectAndBuy:didMount()
 	end)
 
 	coroutine.wrap(function()
-		local subjectToChinaPolicies = PolicyService:IsSubjectToChinaPolicies()
+		local subjectToChinaPolicies = CachedPolicyService:IsSubjectToChinaPolicies()
 		self.state.store:dispatch(SetIsSubjectToChinaPolicies(subjectToChinaPolicies))
 	end)()
 
@@ -264,37 +262,21 @@ end
 function InspectAndBuy:render()
 	local localPlayerModel = self.localPlayerModel
 
-	if FFlagAttributionInInspectAndBuy then
-		return Roact.createElement(InspectAndBuyContext.Provider, {
-			value = self.state.views,
+	return Roact.createElement(InspectAndBuyContext.Provider, {
+		value = self.state.views,
+	}, {
+		StoreProvider = Roact.createElement(RoactRodux.StoreProvider, {
+			store = self.state.store,
 		}, {
-			StoreProvider = Roact.createElement(RoactRodux.StoreProvider, {
-				store = self.state.store,
-			}, {
-				ThemeProvider = renderWithCoreScriptsStyleProvider({
-					CursorProvider = Roact.createElement(SelectionCursorProvider, {}, {
-						Container = Roact.createElement(Container, {
-							localPlayerModel = localPlayerModel,
-						}),
-					}),
-				}),
-			}),
-		})
-	else
-		return Roact.createElement(InspectAndBuyContext.Provider, {
-			value = self.state.views,
-		}, {
-			Roact.createElement(RoactRodux.StoreProvider, {
-				store = self.state.store,
-			}, {
-				ThemeProvider = renderWithCoreScriptsStyleProvider({
+			ThemeProvider = renderWithCoreScriptsStyleProvider({
+				CursorProvider = Roact.createElement(SelectionCursorProvider, {}, {
 					Container = Roact.createElement(Container, {
 						localPlayerModel = localPlayerModel,
 					}),
 				}),
 			}),
-		})
-	end
+		}),
+	})
 end
 
 function InspectAndBuy:bindButtonB()
@@ -303,7 +285,7 @@ function InspectAndBuy:bindButtonB()
 			local state = self.state.store:getState()
 			local viewingDetails = state.detailsInformation.viewingDetails
 
-			if FFlagAttributionInInspectAndBuy and state.overlay and state.overlay.overlay ~= nil then
+			if state.overlay and state.overlay.overlay ~= nil then
 				self.state.store:dispatch(CloseOverlay())
 			elseif viewingDetails then
 				self.state.store:dispatch(SetDetailsInformation(false, nil))

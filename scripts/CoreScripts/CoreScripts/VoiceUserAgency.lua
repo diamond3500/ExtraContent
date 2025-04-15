@@ -8,15 +8,15 @@ local Players = game:GetService("Players")
 local TextService = game:GetService("TextService")
 local TweenService = game:GetService("TweenService")
 
-local InGameMenuDependencies = require(CorePackages.InGameMenuDependencies)
+local InGameMenuDependencies = require(CorePackages.Packages.InGameMenuDependencies)
 local UIBlox = InGameMenuDependencies.UIBlox
 local Images = UIBlox.App.ImageSet.Images
 
 local RobloxGuiModules = CoreGui.RobloxGui.Modules
 local Create = require(CorePackages.Workspace.Packages.AppCommonLib).Create
-local IXPServiceWrapper = require(RobloxGuiModules.Common.IXPServiceWrapper)
+local IXPServiceWrapper = require(CorePackages.Workspace.Packages.IxpServiceWrapper).IXPServiceWrapper
 local log = require(CorePackages.Workspace.Packages.CoreScriptsInitializer).CoreLogger:new(script.Name)
-local RobloxTranslator = require(RobloxGuiModules.RobloxTranslator)
+local RobloxTranslator = require(CorePackages.Workspace.Packages.RobloxTranslator)
 local VoiceChatServiceManager = require(RobloxGuiModules.VoiceChat.VoiceChatServiceManager).default
 local Constants = require(RobloxGuiModules.VoiceChat.Constants)
 local AppFonts = require(CorePackages.Workspace.Packages.Style).AppFonts

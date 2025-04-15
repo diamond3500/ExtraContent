@@ -8,9 +8,9 @@ local UserInputService = game:GetService("UserInputService")
 local useLocalization = require(CorePackages.Workspace.Packages.Localization).Hooks.useLocalization
 
 local React = require(CorePackages.Packages.React)
-local Cryo = require(CorePackages.Cryo)
+local Cryo = require(CorePackages.Packages.Cryo)
 local ChromeService = require(Chrome.Service)
-local LocalStore = require(Chrome.Service.LocalStore)
+local LocalStore = require(Chrome.ChromeShared.Service.LocalStore)
 
 local LuauPolyfill = require(CorePackages.Packages.LuauPolyfill)
 local clearTimeout = LuauPolyfill.clearTimeout

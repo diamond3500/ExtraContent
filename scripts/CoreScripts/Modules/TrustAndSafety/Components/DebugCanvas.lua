@@ -1,12 +1,12 @@
 --!strict
 local CorePackages = game:GetService("CorePackages")
 
-local Logging = require(CorePackages.Logging)
+local Logging = require(CorePackages.Workspace.Packages.AppCommonLib).Logging
 
 local React = require(CorePackages.Packages.React)
-local RoactRodux = require(CorePackages.RoactRodux)
+local RoactRodux = require(CorePackages.Packages.RoactRodux)
 local t = require(CorePackages.Packages.t)
-local UIBlox = require(CorePackages.UIBlox)
+local UIBlox = require(CorePackages.Packages.UIBlox)
 local TextButton = UIBlox.App.Button.TextButton
 
 local TnsModule = script.Parent.Parent
@@ -22,7 +22,7 @@ local POINT_OFFSET = -1 * (POINT_SIZE / 2)
 
 function DebugCanvas:render()
 	if not GetFFlagReportAnythingDebugCanvas() or not self.props.identifiedAvatars then
-		return React.createElement("Frame", {Size = UDim2.fromScale(0, 0)})
+		return React.createElement("Frame", { Size = UDim2.fromScale(0, 0) })
 	end
 
 	local children = {}
@@ -44,7 +44,7 @@ function DebugCanvas:render()
 			})
 		end
 	end
-	
+
 	for adId, v in pairs(self.props.identifiedAds) do
 		local bb = v.boundingBox
 		children[#children + 1] = React.createElement("Frame", {
@@ -53,8 +53,8 @@ function DebugCanvas:render()
 			BackgroundTransparency = 0.8,
 			BackgroundColor3 = Color3.fromRGB(20, 0, 255),
 		})
-		local hulls = v.visibleRegions 
-		for _, hull in hulls do 
+		local hulls = v.visibleRegions
+		for _, hull in hulls do
 			local lhp = #hull.convexHull
 			for ihp, hp in hull.convexHull do
 				children[#children + 1] = React.createElement("Frame", {
@@ -63,15 +63,13 @@ function DebugCanvas:render()
 					BackgroundTransparency = 0.2,
 					BackgroundColor3 = Color3.fromHSV(ihp / lhp, 1, 0.65),
 				})
-				
 			end
 		end
-		
 	end
 	return React.createElement("Frame", {
 		BackgroundTransparency = 0.9,
 		Size = UDim2.fromScale(1, 1),
-		ZIndex = self.props.ZIndex
+		ZIndex = self.props.ZIndex,
 	}, children)
 end
 

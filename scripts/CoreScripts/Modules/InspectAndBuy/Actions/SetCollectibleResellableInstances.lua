@@ -1,6 +1,6 @@
 local CorePackages = game:GetService("CorePackages")
 local CollectibleItemInstance = require(script.Parent.Parent.Models.CollectibleInstance)
-local Action = require(CorePackages.Rodux).makeActionCreator
+local Action = require(CorePackages.Packages.Rodux).makeActionCreator
 type CollectibleItemInstanceModel = CollectibleItemInstance.CollectibleItemInstanceModel
 
 return Action(

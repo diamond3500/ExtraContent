@@ -1,20 +1,20 @@
 local CorePackages = game:GetService("CorePackages")
 local RobloxGui = game:GetService("CoreGui").RobloxGui
 local TextService = game:GetService("TextService")
-local Roact = require(CorePackages.Roact)
-local RoactRodux = require(CorePackages.RoactRodux)
+local Roact = require(CorePackages.Packages.Roact)
+local RoactRodux = require(CorePackages.Packages.RoactRodux)
 
 local Constants = require(script.Parent.Parent.Constants)
 local FRAME_HEIGHT = Constants.TopBarFormatting.FrameHeight
-local ICON_SIZE = .5 * FRAME_HEIGHT
+local ICON_SIZE = 0.5 * FRAME_HEIGHT
 local ICON_PADDING = (FRAME_HEIGHT - ICON_SIZE) / 2
 
 local UserInputService = game:GetService("UserInputService")
 
 local DEVCONSOLE_TEXT = "Developer Console"
 local DEVCONSOLE_TEXT_X_PADDING = 4
-local DEVCONSOLE_TEXT_FRAMESIZE = TextService:GetTextSize(DEVCONSOLE_TEXT, Constants.DefaultFontSize.TopBar,
-	Constants.Font.TopBar, Vector2.new(0, 0))
+local DEVCONSOLE_TEXT_FRAMESIZE =
+	TextService:GetTextSize(DEVCONSOLE_TEXT, Constants.DefaultFontSize.TopBar, Constants.Font.TopBar, Vector2.new(0, 0))
 
 local LiveUpdateElement = require(script.Parent.Parent.Components.LiveUpdateElement)
 local SetDevConsolePosition = require(script.Parent.Parent.Actions.SetDevConsolePosition)
@@ -22,10 +22,9 @@ local SetDevConsolePosition = require(script.Parent.Parent.Actions.SetDevConsole
 local DevConsoleTopBar = Roact.Component:extend("DevConsoleTopBar")
 
 function DevConsoleTopBar:init()
-
 	self.inputChangedConnection = nil
 
-	self.inputBegan = function(rbx,input)
+	self.inputBegan = function(rbx, input)
 		if self.props.isMinimized then
 			return
 		end
@@ -40,7 +39,9 @@ function DevConsoleTopBar:init()
 				self.inputChangedConnection:Disconnect()
 				self.inputChangedConnection = nil
 			end
-			self.inputChangedConnection = UserInputService.InputChanged:Connect(function(input) self.inputChanged(nil, input) end)
+			self.inputChangedConnection = UserInputService.InputChanged:Connect(function(input)
+				self.inputChanged(nil, input)
+			end)
 
 			self:setState({
 				startPos = startPos,
@@ -49,7 +50,7 @@ function DevConsoleTopBar:init()
 			})
 		end
 	end
-	self.inputChanged = function(rbx,input)
+	self.inputChanged = function(rbx, input)
 		if self.state.moving then
 			if input.UserInputType == Enum.UserInputType.MouseMovement then
 				local offset = self.state.startPos - self.state.startOffset
@@ -60,13 +61,13 @@ function DevConsoleTopBar:init()
 		elseif self.inputChangedConnection then -- this connection should not be connected if the console is not being dragged
 			self.inputChangedConnection:Disconnect()
 			self.inputChangedConnection = nil
-
 		end
 	end
-	self.inputEnded = function(rbx,input)
-		if input.UserInputType == Enum.UserInputType.MouseButton1 and
-			input.UserInputState == Enum.UserInputState.End then
-
+	self.inputEnded = function(rbx, input)
+		if
+			input.UserInputType == Enum.UserInputType.MouseButton1
+			and input.UserInputState == Enum.UserInputState.End
+		then
 			-- stop listening to inputchanged when stopping dragging to save performance
 			if self.inputChangedConnection then
 				self.inputChangedConnection:Disconnect()
@@ -94,7 +95,6 @@ function DevConsoleTopBar:render()
 
 	local elements = {}
 
-
 	elements["WindowTitle"] = Roact.createElement("TextLabel", {
 		Text = DEVCONSOLE_TEXT,
 		TextSize = Constants.DefaultFontSize.TopBar,
@@ -115,14 +115,9 @@ function DevConsoleTopBar:render()
 	if isMinimized then
 		liveStatsModulePos = UDim2.new(0, 0, 1, 0)
 		liveStatsModuleSize = UDim2.new(1, 0, 1, 0)
-
 	elseif self.ref.current then
-		liveStatsModuleSize = UDim2.new(
-			0,
-			self.ref.current.AbsoluteSize.X - (2 * DEVCONSOLE_TEXT_FRAMESIZE.X),
-			0,
-			FRAME_HEIGHT
-		)
+		liveStatsModuleSize =
+			UDim2.new(0, self.ref.current.AbsoluteSize.X - (2 * DEVCONSOLE_TEXT_FRAMESIZE.X), 0, FRAME_HEIGHT)
 	end
 
 	local topBarLiveUpdate = self.props.topBarLiveUpdate
@@ -173,7 +168,7 @@ function DevConsoleTopBar:render()
 	return Roact.createElement("ImageButton", {
 		Size = UDim2.new(1, 0, 0, FRAME_HEIGHT),
 		BackgroundColor3 = Constants.Color.Black,
-		BackgroundTransparency = .5,
+		BackgroundTransparency = 0.5,
 		AutoButtonColor = false,
 		LayoutOrder = 1,
 
@@ -186,9 +181,9 @@ end
 
 local function mapDispatchToProps(dispatch)
 	return {
-		dispatchSetDevConsolePosition = function (size)
+		dispatchSetDevConsolePosition = function(size)
 			dispatch(SetDevConsolePosition(size))
-		end
+		end,
 	}
 end
 

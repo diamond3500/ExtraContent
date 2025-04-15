@@ -11,9 +11,12 @@ local HttpService = game:GetService("HttpService")
 local VRService = game:GetService("VRService")
 local CorePackages = game:GetService("CorePackages")
 
-local Create = require(CorePackages:WaitForChild("Workspace"):WaitForChild("Packages"):WaitForChild("AppCommonLib")).Create -- WaitForChild used here because Workspace is not available on startup
+CorePackages:WaitForChild("Workspace"):WaitForChild("Packages") -- WaitForChild used here because Workspace is not available on startup
+local Create = require(CorePackages.Workspace.Packages.AppCommonLib).Create
 local ErrorPrompt = require(RobloxGui.Modules.ErrorPrompt)
-local Url = require(RobloxGui.Modules.Common.Url)
+local Localization = require(CorePackages.Workspace.Packages.InExperienceLocales).Localization
+local Logging = require(CorePackages.Workspace.Packages.AppCommonLib).Logging
+local Url = require(CorePackages.Workspace.Packages.CoreScriptsCommon).Url
 
 local fflagDebugEnableErrorStringTesting = game:DefineFastFlag("DebugEnableErrorStringTesting", false)
 local fflagShouldMuteUnlocalizedError = game:DefineFastFlag("ShouldMuteUnlocalizedError", false)
@@ -32,10 +35,11 @@ local LEAVE_GAME_FRAME_WAITS = 2
 local DEFAULT_ERROR_PROMPT_KEY = "ErrorPrompt"
 
 local FFlagCoreScriptShowTeleportPrompt = require(RobloxGui.Modules.Flags.FFlagCoreScriptShowTeleportPrompt)
-local FFlagErrorPromptResizesHeight = require(RobloxGui.Modules.Flags.FFlagErrorPromptResizesHeight)
 
-local FFlagRemoveKickWhitespaceSub = require(RobloxGui.Modules.Flags.FFlagRemoveKickWhitespaceSub)
-local FFlagEmptyKickMessageTranslation = require(RobloxGui.Modules.Flags.FFlagEmptyKickMessageTranslation)
+local FFlagCreatorBanLocalization = require(RobloxGui.Modules.Flags.FFlagCreatorBanLocalization)
+local FFlagErrorStringRefactor = game:DefineFastFlag("ErrorStringRefactor", false)
+
+local FFlagAllowDisconnectGuiForOkUnknown = require(RobloxGui.Modules.Flags.FFlagAllowDisconnectGuiForOkUnknown)
 
 local function safeGetFInt(name, defaultValue)
 	local success, result = pcall(function()
@@ -67,13 +71,28 @@ local lastErrorTimeStamp = tick()
 
 local coreScriptTableTranslator = CoreGui.CoreScriptLocalization:GetTranslator(LocalizationService.RobloxLocaleId)
 
+-- The new, supported way to translate strings in the client.
+-- This function should be used instead of coreScriptTableTranslator:FormatByKey.
+-- Errors will be caught and an empty string will be returned if the translation fails.
+local function translateString(key: string, arguments: { [string]: any }?): string
+	local localeId = LocalizationService.RobloxLocaleId
+	local localization = Localization.new(localeId)
+	localization:SetLocale(localeId)
+
+	local success, result = pcall(function()
+		return localization:Format(key, arguments)
+	end)
+	if success then
+		return result
+	end
+	Logging.warn("Failed to translate string with key: " .. key)
+	return ""
+end
+
 local errorPrompt
 local graceTimeout = -1
 local screenWidth = RobloxGui.AbsoluteSize.X
-local screenHeight
-if FFlagErrorPromptResizesHeight() then
-	screenHeight = RobloxGui.AbsoluteSize.Y
-end
+local screenHeight = RobloxGui.AbsoluteSize.Y
 
 local ConnectionPromptState = {
 	NONE = 1, -- General Error Message
@@ -230,6 +249,8 @@ local reconnectDisabledList = {
 	[Enum.ConnectionError.PlacelaunchRestricted] = true,
 	[Enum.ConnectionError.PlacelaunchUserPrivacyUnauthorized] = true,
 	[Enum.ConnectionError.PlacelaunchCreatorBan] = true,
+	[Enum.ConnectionError.AndroidAnticheatKick] = true,
+	[Enum.ConnectionError.AndroidEmulatorKick] = true,
 }
 -- When removing engine feature CoreGuiOverflowDetection, move this into the above list.
 if coreGuiOverflowDetection then
@@ -380,11 +401,7 @@ local function onEnter(newState)
 		}
 		errorPrompt = ErrorPrompt.new("Default", extraConfiguration)
 		errorPrompt:setParent(promptOverlay)
-		if FFlagErrorPromptResizesHeight() then
-			errorPrompt:resizeWidthAndHeight(screenWidth, screenHeight)
-		else
-			errorPrompt:resizeWidth(screenWidth)
-		end
+		errorPrompt:resizeWidthAndHeight(screenWidth, screenHeight)
 	end
 	if updateFullScreenEffect[newState] then
 		updateFullScreenEffect[newState]()
@@ -401,8 +418,17 @@ end
 
 -- state transit function
 local function stateTransit(errorType, errorCode, oldState)
-	if errorType == Enum.ConnectionError.OK then
-		return ConnectionPromptState.NONE
+	-- This is necessary because we always pre-run onErrorMessageChanged() on connecting to a new game, to
+	-- clear any bad state, assuming that the new GuiService in that new state will be initialized to
+	-- ConnectionError::OK.
+	if FFlagAllowDisconnectGuiForOkUnknown then
+		if errorCode == Enum.ConnectionError.OK then
+			return ConnectionPromptState.NONE
+		end
+	else
+		if errorType == Enum.ConnectionError.OK then
+			return ConnectionPromptState.NONE
+		end
 	end
 
 	if oldState == ConnectionPromptState.NONE then
@@ -410,6 +436,14 @@ local function stateTransit(errorType, errorCode, oldState)
 			return ConnectionPromptState.RECONNECT_DISABLED
 		end
 		lastErrorTimeStamp = tick()
+
+		if FFlagAllowDisconnectGuiForOkUnknown then
+			assert(errorCode ~= Enum.ConnectionError.OK)
+			if errorType == Enum.ConnectionError.OK then
+				-- If disconnected due to ConnectionError.UNKNOWN, or some other state, prompt reconnect
+				return ConnectionPromptState.RECONNECT_DISCONNECT
+			end
+		end
 
 		if errorType == Enum.ConnectionError.DisconnectErrors then
 			-- reconnection will be delayed after graceTimeout
@@ -462,9 +496,77 @@ local function stateTransit(errorType, errorCode, oldState)
 	return oldState
 end
 
+local function getCreatorBanString(errorMsg: string)
+	local errorDetails = GuiService:GetErrorDetails()
+	if errorDetails then
+		local time = errorDetails['time']
+
+		local banMessage
+		if time then
+			local minutes = errorDetails['minutes']
+			local hours = errorDetails['hours']
+			local days = errorDetails['days']
+
+			local minutesString
+			if minutes == 1 then
+				minutesString = translateString("InGame.ConnectionError.CreatorBanMinutesSingular")
+			else
+				minutesString = translateString("InGame.ConnectionError.CreatorBanMinutesPlural", { ["RBX_TIME_MINUTES:int"] = minutes })
+			end
+
+			local hoursString
+			if hours == 1 then
+				hoursString = translateString("InGame.ConnectionError.CreatorBanHoursSingular")
+			else
+				hoursString = translateString("InGame.ConnectionError.CreatorBanHoursPlural", { ["RBX_TIME_HOURS:int"] = hours })
+			end
+
+			local daysString
+			if days == 1 then
+				daysString = translateString("InGame.ConnectionError.CreatorBanDaysSingular")
+			else
+				daysString = translateString("InGame.ConnectionError.CreatorBanDaysPlural", { ["RBX_TIME_DAYS:int"] = days })
+			end
+
+			if minutesString ~= "" and hoursString ~= "" and daysString ~= "" then
+				local joinedTime = minutesString
+				if hours > 0 then
+					joinedTime = hoursString .. ", " .. joinedTime
+				end
+				if days > 0 then
+					joinedTime = daysString .. ", " .. joinedTime
+				end
+
+				banMessage = translateString("InGame.ConnectionError.CreatorBanWithTime", { RBX_TIME_REMAINING = joinedTime })
+			else
+				return errorMsg
+			end
+		else
+			banMessage = translateString("InGame.ConnectionError.CreatorBanNoTime")
+		end
+
+		if banMessage == "" then
+			return errorMsg
+		end
+
+		local displayReason = errorDetails['displayReason']
+		if displayReason and displayReason ~= "" then
+			local reasonMessage = translateString("InGame.ConnectionError.CreatorBanMessage", { RBX_STR = displayReason })
+			if reasonMessage ~= "" then
+				return banMessage .. " " .. reasonMessage
+			else
+				return errorMsg
+			end
+		end
+		return banMessage
+	end
+	
+	return errorMsg
+end
+
 -- Look up in corelocalization for new string. Otherwise fallback to the original string
 -- If it is teleport error but not TELEPORT_FAILED, use general string "Reconnect failed."
-local function getErrorString(errorMsg: string, errorCode, reconnectError)
+local function getErrorString_deprecated(errorMsg: string, errorCode, reconnectError)
 	if errorCode == Enum.ConnectionError.OK then
 		return ""
 	end
@@ -480,27 +582,16 @@ local function getErrorString(errorMsg: string, errorCode, reconnectError)
 	end
 
 	if errorCode == Enum.ConnectionError.DisconnectLuaKick then
-		if not FFlagRemoveKickWhitespaceSub() then
-			-- Collapse all whitespace to single spaces, destroying any newlines.
-			errorMsg = errorMsg:gsub("%s+", " ")
-		end
 		-- Limit final message length to a reasonable value
 		errorMsg = errorMsg:sub(1, fintMaxKickMessageLength)
-		
+
 		-- errorMsg is dev message
 		local success = false
 		local attemptTranslation = errorMsg
-		if FFlagEmptyKickMessageTranslation() then
-			if errorMsg == '' then
-				success, attemptTranslation = pcall(function()
-					return coreScriptTableTranslator:FormatByKey("InGame.ConnectionError.DisconnectLuaKick")
-				end)
-			else
-				success, attemptTranslation = pcall(function()
-					local luaKickMessageKey = "InGame.ConnectionError.DisconnectLuaKickWithMessage"
-					return coreScriptTableTranslator:FormatByKey(luaKickMessageKey, { RBX_STR = errorMsg })
-				end)
-			end
+		if errorMsg == '' then
+			success, attemptTranslation = pcall(function()
+				return coreScriptTableTranslator:FormatByKey("InGame.ConnectionError.DisconnectLuaKick")
+			end)
 		else
 			success, attemptTranslation = pcall(function()
 				local luaKickMessageKey = "InGame.ConnectionError.DisconnectLuaKickWithMessage"
@@ -537,6 +628,53 @@ local function getErrorString(errorMsg: string, errorCode, reconnectError)
 	return errorMsg
 end
 
+-- Localize the error string, with a fallback to the original string upon failure.
+-- If it is a teleport error but not TELEPORT_FAILED, use general string "Reconnect failed."
+local function getErrorString(errorMsg: string, errorCode, reconnectError)
+	if errorCode == Enum.ConnectionError.OK then
+		return ""
+	end
+
+	if reconnectError then
+		local attemptTranslation = translateString("InGame.ConnectionError.ReconnectFailed")
+		if attemptTranslation ~= '' then
+			return attemptTranslation
+		end
+		return "Reconnect was unsuccessful. Please try again."
+	end
+
+	if errorCode == Enum.ConnectionError.DisconnectLuaKick and errorMsg ~= '' then
+		-- Limit final message length to a reasonable value
+		errorMsg = errorMsg:sub(1, fintMaxKickMessageLength)
+
+		-- errorMsg is dev message
+		local attemptTranslation = translateString("InGame.ConnectionError.DisconnectLuaKickWithMessage", { RBX_STR = errorMsg })
+		if attemptTranslation ~= '' then
+			return attemptTranslation
+		end
+		return errorMsg
+	end
+
+	local key = string.gsub(tostring(errorCode), "Enum", "InGame")
+
+	local attemptTranslation
+	if errorCode == Enum.ConnectionError.DisconnectIdle then
+		attemptTranslation = translateString(key, { RBX_NUM = tostring(20) })
+	else
+		attemptTranslation = translateString(key)
+	end
+
+	if attemptTranslation ~= '' then
+		return attemptTranslation
+	end
+
+	if fflagShouldMuteUnlocalizedError then
+		return translateString("InGame.ConnectionError.UnknownError")
+	end
+
+	return errorMsg
+end
+
 local function updateErrorPrompt(errorMsg, errorCode, errorType)
 	local newPromptState = stateTransit(errorType, errorCode, connectionPromptState)
 	if newPromptState ~= connectionPromptState then
@@ -545,13 +683,24 @@ local function updateErrorPrompt(errorMsg, errorCode, errorType)
 		onEnter(newPromptState)
 	end
 
-	if
-		errorType == Enum.ConnectionError.TeleportErrors
+	if FFlagCreatorBanLocalization() and errorCode == Enum.ConnectionError.PlacelaunchCreatorBan then
+		errorMsg = getCreatorBanString(errorMsg)
+	elseif FFlagErrorStringRefactor then
+		if errorType == Enum.ConnectionError.TeleportErrors
 		and connectionPromptState ~= ConnectionPromptState.TELEPORT_FAILED
-	then
-		errorMsg = getErrorString(errorMsg, errorCode, true)
+		then
+			errorMsg = getErrorString(errorMsg, errorCode, true)
+		else
+			errorMsg = getErrorString(errorMsg, errorCode)
+		end
 	else
-		errorMsg = getErrorString(errorMsg, errorCode)
+		if errorType == Enum.ConnectionError.TeleportErrors
+		and connectionPromptState ~= ConnectionPromptState.TELEPORT_FAILED
+		then
+			errorMsg = getErrorString_deprecated(errorMsg, errorCode, true)
+		else
+			errorMsg = getErrorString_deprecated(errorMsg, errorCode)
+		end
 	end
 
 	if connectionPromptState == ConnectionPromptState.RECONNECT_DISABLED then
@@ -575,18 +724,11 @@ local function onScreenSizeChanged()
 		return
 	end
 	local newWidth = RobloxGui.AbsoluteSize.X
-	if FFlagErrorPromptResizesHeight() then
-		local newHeight = RobloxGui.AbsoluteSize.Y
-		if screenWidth ~= newWidth or screenHeight ~= newHeight then
-			screenWidth = newWidth
-			screenHeight = newHeight
-			errorPrompt:resizeWidthAndHeight(screenWidth, screenHeight)
-		end
-	else
-		if screenWidth ~= newWidth then
-			screenWidth = newWidth
-			errorPrompt:resizeWidth(screenWidth)
-		end
+	local newHeight = RobloxGui.AbsoluteSize.Y
+	if screenWidth ~= newWidth or screenHeight ~= newHeight then
+		screenWidth = newWidth
+		screenHeight = newHeight
+		errorPrompt:resizeWidthAndHeight(screenWidth, screenHeight)
 	end
 end
 

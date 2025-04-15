@@ -9,8 +9,12 @@ local safelyAccessProperty = require(Root.safelyAccessProperty)
 
 	Returns 0 if [UserGameSettings.MasterVolume] or [Sound.RollOffGain] are inaccessible
 
+	This function is deprecated in favor of [SceneUnderstanding.calculatePotentialAudibility]
+	which supports the new Audio API.
+
 	@within SceneUnderstanding
 	@tag internal
+	@deprecated v0.8.0 -- Use calculatePotentialAudibility which supports the new Audio API.
 ]=]
 local function getAudibleVolume(sound: Sound): number
 	if not sound.IsPlaying then

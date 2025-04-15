@@ -22,13 +22,14 @@ local ContextActionService = game:GetService("ContextActionService")
 local GuiService = game:GetService("GuiService")
 local UserInputService = game:GetService("UserInputService")
 local RobloxReplicatedStorage = game:GetService("RobloxReplicatedStorage")
+local CorePackages = game:GetService("CorePackages")
 
 --- VARIABLES
 local RobloxGui = CoreGuiService:WaitForChild("RobloxGui")
 local CoreGuiModules = RobloxGui:WaitForChild("Modules")
 local AvatarMenuModules = CoreGuiModules:WaitForChild("AvatarContextMenu")
 local ThemeHandler = require(AvatarMenuModules.ThemeHandler)
-local BlockingUtility = require(CoreGuiModules.BlockingUtility)
+local BlockingUtility = require(CorePackages.Workspace.Packages.BlockingUtility)
 
 type Theme = ThemeHandler.Theme
 

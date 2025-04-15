@@ -3,7 +3,7 @@ MockAppStorageService.__index = MockAppStorageService
 
 function MockAppStorageService.new(data)
 	local self = setmetatable({
-		_privateValues = data,
+		_privateValues = table.clone(data),
 	}, MockAppStorageService)
 
 	return self

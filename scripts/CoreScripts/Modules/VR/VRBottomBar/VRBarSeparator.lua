@@ -1,6 +1,6 @@
 local CorePackages = game:GetService("CorePackages")
 
-local InGameMenuDependencies = require(CorePackages.InGameMenuDependencies)
+local InGameMenuDependencies = require(CorePackages.Packages.InGameMenuDependencies)
 local t = InGameMenuDependencies.t
 local Roact = InGameMenuDependencies.Roact
 local UIBlox = InGameMenuDependencies.UIBlox
@@ -10,7 +10,7 @@ local CursorKind = UIBlox.App.SelectionImage.CursorKind
 
 local ImageSetButton = UIBlox.Core.ImageSet.ImageSetButton
 
-local StarterGui = game:GetService('StarterGui')
+local StarterGui = game:GetService("StarterGui")
 local CoreGui = game:GetService("CoreGui")
 local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 local StarterPlayer = game:GetService("StarterPlayer")
@@ -68,8 +68,10 @@ local function VRBarSeparator(props)
 end
 
 return Roact.forwardRef(function(props, ref)
-	return Roact.createElement(VRBarSeparator, Cryo.Dictionary.join(props, {
-		forwardRef = ref,
-	}))
+	return Roact.createElement(
+		VRBarSeparator,
+		Cryo.Dictionary.join(props, {
+			forwardRef = ref,
+		})
+	)
 end)
-

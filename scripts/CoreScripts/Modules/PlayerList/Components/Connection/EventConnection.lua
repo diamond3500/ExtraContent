@@ -1,6 +1,6 @@
 local CorePackages = game:GetService("CorePackages")
 
-local Roact = require(CorePackages.Roact)
+local Roact = require(CorePackages.Packages.Roact)
 
 local EventConnection = Roact.Component:extend("EventConnection")
 

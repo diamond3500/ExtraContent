@@ -17,6 +17,7 @@ local useStyledDefaults = require(Foundation.Utility.useStyledDefaults)
 local GuiObjectChildren = require(Foundation.Utility.GuiObjectChildren)
 
 local useStyleTags = require(Foundation.Providers.Style.useStyleTags)
+local indexBindable = require(Foundation.Utility.indexBindable)
 
 local ControlState = require(Foundation.Enums.ControlState)
 type ControlState = ControlState.ControlState
@@ -39,15 +40,24 @@ local defaultProps = {
 	isDisabled = false,
 }
 
-local defaultTags = "gui-object-defaults"
+local DEFAULT_TAGS = "gui-object-defaults"
 
 local function View(viewProps: ViewProps, ref: React.Ref<GuiObject>?)
 	local defaultPropsWithStyles = if Flags.FoundationStylingPolyfill
-		then useStyledDefaults("View", viewProps.tag, defaultTags, defaultProps)
+		then useStyledDefaults("View", viewProps.tag, DEFAULT_TAGS, defaultProps)
 		else nil
 	local props =
 		withDefaults(viewProps, if Flags.FoundationStylingPolyfill then defaultPropsWithStyles else defaultProps)
 
+	local defaultTags = DEFAULT_TAGS
+	if Flags.FoundationMigrateStylingV2 then
+		local transparency = if props.backgroundStyle ~= nil
+			then indexBindable(props.backgroundStyle, "Transparency") :: any
+			else nil
+		if transparency == 0 then
+			defaultTags ..= " x-default-transparency"
+		end
+	end
 	local tagsWithDefaults = useDefaultTags(props.tag, defaultTags)
 	local tag = useStyleTags(tagsWithDefaults)
 

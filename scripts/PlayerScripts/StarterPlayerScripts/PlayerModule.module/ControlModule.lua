@@ -326,6 +326,7 @@ function ControlModule:Enable(enable: boolean?)
 	if enable == nil then
 		enable = true
 	end
+	if self.controlsEnabled == enable then return end
 	self.controlsEnabled = enable
 
 	if not self.activeController then
@@ -337,9 +338,7 @@ end
 
 -- For those who prefer distinct functions
 function ControlModule:Disable()
-	self.controlsEnabled = false
-
-	self:UpdateActiveControlModuleEnabled()
+	self:Enable(false)
 end
 
 

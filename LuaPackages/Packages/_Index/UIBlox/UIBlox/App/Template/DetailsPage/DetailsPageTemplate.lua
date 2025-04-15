@@ -1,4 +1,5 @@
 --!nonstrict
+-- moving this file to LuaApps, please replicate any changes in the LuaApps file as well
 local DetailsPage = script.Parent
 local Template = DetailsPage.Parent
 local App = Template.Parent
@@ -63,8 +64,14 @@ DetailsPageTemplate.validateProps = t.strictInterface({
 	-- See [[ButtonStack]] for more information.
 	actionBarProps = t.optional(ActionBar.validateProps),
 
+	-- The width of the action bar component. If unspecified, a default value
+	-- will be used.
+	actionBarWidth = t.optional(t.number),
+
 	-- The table of props for the content of the details page
-	componentList = t.optional(validateDetailsPageComponentList),
+	componentList = t.optional(
+		if UIBloxConfig.moveDetailsPageToLuaApps then t.table else validateDetailsPageComponentList
+	),
 	-- The dual panel breakpoint
 	dualPanelBreakpoint = t.optional(t.number),
 	-- The side margin of the body components
@@ -237,13 +244,11 @@ function DetailsPageTemplate:render()
 				CloseButton = Roact.createElement(IconButton, {
 					size = UDim2.fromScale(1, 1),
 					icon = showFullscreen and Images[ICON_BACK] or Images[ICON_CLOSE],
-					iconColor3 = if UIBloxConfig.useNewThemeColorPalettes then nil else style.Theme.UIEmphasis.Color,
+					iconColor3 = style.Theme.UIEmphasis.Color,
 					iconSize = IconSize.Medium,
 					onActivated = self.props.onClose,
 					showBackground = self.state.showStickyActionTopBar == false,
-					backgroundColor = if UIBloxConfig.useNewThemeColorPalettes
-						then nil
-						else style.Theme.BackgroundUIDefault,
+					backgroundColor = style.Theme.BackgroundUIDefault,
 				}),
 			}),
 			BackgroundDetailsFrame = Roact.createElement("Frame", {
@@ -279,6 +284,7 @@ function DetailsPageTemplate:render()
 					}, {
 						StickyActionBar = Roact.createElement(StickyActionBar, {
 							actionBarProps = self.props.actionBarProps,
+							actionBarWidth = self.props.actionBarWidth,
 							infoProps = {
 								icon = self.props.thumbnailImageUrl,
 								title = self.props.titleText,
@@ -334,6 +340,7 @@ function DetailsPageTemplate:render()
 									then self.props.actionBarProps
 									else nil
 								else self.props.actionBarProps,
+							actionBarWidth = self.props.actionBarWidth,
 
 							headerBarBackgroundHeight = headerBarBackgroundHeight,
 							sideMargin = sideMargin,
@@ -445,4 +452,4 @@ function DetailsPageTemplate:didUpdate()
 	end
 end
 
-return DetailsPageTemplate
+return if UIBloxConfig.moveDetailsPageToLuaApps then nil else DetailsPageTemplate

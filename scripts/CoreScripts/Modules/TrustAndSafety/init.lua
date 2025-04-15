@@ -3,11 +3,11 @@ local CoreGui = game:GetService("CoreGui")
 local CorePackages = game:GetService("CorePackages")
 local LocalizationService = game:GetService("LocalizationService")
 
-local Roact = require(CorePackages.Roact)
-local Rodux = require(CorePackages.Rodux)
-local RoactRodux = require(CorePackages.RoactRodux)
+local Roact = require(CorePackages.Packages.Roact)
+local Rodux = require(CorePackages.Packages.Rodux)
+local RoactRodux = require(CorePackages.Packages.RoactRodux)
 local t = require(CorePackages.Packages.t)
-local UIBlox = require(CorePackages.UIBlox)
+local UIBlox = require(CorePackages.Packages.UIBlox)
 
 local Dependencies = require(script.Dependencies)
 local Localization = Dependencies.Localization
@@ -71,7 +71,7 @@ function TrustAndSafety:initialize()
 			}, {
 				TrustAndSafety = Roact.createElement(TrustAndSafetyApp),
 			}),
-		})
+		}),
 	})
 
 	self.element = Roact.mount(self.root, CoreGui, "TrustAndSafety")
@@ -130,7 +130,7 @@ return {
 		SessionUtility.startAbuseReportSession(source)
 		TrustAndSafety:getInstance():openReportMenu()
 	end,
-	setPreReportScreenshotHook = function(preScreenshotHook)	
+	setPreReportScreenshotHook = function(preScreenshotHook)
 		ScreenshotHookManager.setPreScreenshotHook(preScreenshotHook)
 	end,
 	setPostReportScreenshotHook = function(postScreenshotHook)

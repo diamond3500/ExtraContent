@@ -7,15 +7,13 @@ local UserInputService = game:GetService("UserInputService")
 local ApolloClientModule = require(CorePackages.Packages.ApolloClient)
 local Cryo = require(CorePackages.Packages.Cryo)
 local React = require(CorePackages.Packages.React)
-local Roact = require(CorePackages.Roact)
+local Roact = require(CorePackages.Packages.Roact)
 
 local Promise = require(CorePackages.Packages.Promise)
 
 local ExternalEventConnection = require(CorePackages.Workspace.Packages.RoactUtils).ExternalEventConnection
 local RetrievalStatus = require(CorePackages.Workspace.Packages.Http).Enum.RetrievalStatus
 local UserProfiles = require(CorePackages.Workspace.Packages.UserProfiles)
-local GetFFlagIrisUseLocalizationProvider =
-	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagIrisUseLocalizationProvider
 local GetFFlagSuggestedCalleeBugFixEnabled =
 	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagSuggestedCalleeBugFixEnabled
 
@@ -30,13 +28,7 @@ local dependencyArray = dependencies.Hooks.dependencyArray
 local useSelector = dependencies.Hooks.useSelector
 local useDispatch = dependencies.Hooks.useDispatch
 
-local useLocalization
-local RobloxTranslator
-if GetFFlagIrisUseLocalizationProvider() then
-	useLocalization = dependencies.Hooks.useLocalization
-else
-	RobloxTranslator = require(RobloxGui.Modules.RobloxTranslator)
-end
+local useLocalization = dependencies.Hooks.useLocalization
 
 local FindFriendsFromUserId = dependencies.NetworkingFriends.FindFriendsFromUserId
 local SearchFriendsByQuery = dependencies.NetworkingFriends.SearchFriendsByQuery
@@ -52,7 +44,7 @@ local SectionHeader = require(ContactList.Components.FriendList.SectionHeader)
 local NoItemView = require(ContactList.Components.ContactListCommon.NoItemView)
 local Constants = require(ContactList.Components.ContactListCommon.Constants)
 
-local BlockingUtility = require(RobloxGui.Modules.BlockingUtility)
+local BlockingUtility = require(CorePackages.Workspace.Packages.BlockingUtility)
 
 local Players = game:GetService("Players")
 local localPlayer = Players.LocalPlayer :: Player
@@ -72,18 +64,15 @@ local function FriendListContainer(props: Props)
 	local style = useStyle()
 	local theme = style.Theme
 
-	local localized
-	if GetFFlagIrisUseLocalizationProvider() then
-		localized = useLocalization({
-			genericErrorLabel = "Feature.Call.Error.Description.Generic",
-			noFriendsLabel = "Feature.Call.Description.NoFriendsFound",
-			addFriendsLabel = "Feature.Call.Prompt.AddFriends",
-			suggestedFriendsTitle = "Feature.Call.Label.Suggested",
-			suggestedFriendsDescription = "Feature.Call.Description.SuggestedFriends",
-			friendsTitle = "Feature.Call.Label.Friends",
-			friendsDescription = "Feature.Call.Description.Friends",
-		})
-	end
+	local localized = useLocalization({
+		genericErrorLabel = "Feature.Call.Error.Description.Generic",
+		noFriendsLabel = "Feature.Call.Description.NoFriendsFound",
+		addFriendsLabel = "Feature.Call.Prompt.AddFriends",
+		suggestedFriendsTitle = "Feature.Call.Label.Suggested",
+		suggestedFriendsDescription = "Feature.Call.Description.SuggestedFriends",
+		friendsTitle = "Feature.Call.Label.Friends",
+		friendsDescription = "Feature.Call.Description.Friends",
+	})
 
 	-- Using refs instead of state since state might not be updated in time.
 	-- These are set to loading and fetching to prepare for the initial fetch.
@@ -270,9 +259,9 @@ local function FriendListContainer(props: Props)
 		end
 	) or {}
 
-	local noFriendsText = React.useMemo(function()
-		local message
-		if GetFFlagIrisUseLocalizationProvider() then
+	local noFriendsText = React.useMemo(
+		function()
+			local message
 			if status == RetrievalStatus.Failed then
 				message = localized.genericErrorLabel
 			elseif props.searchText ~= "" then
@@ -280,30 +269,32 @@ local function FriendListContainer(props: Props)
 			else
 				message = localized.addFriendsLabel
 			end
-		else
-			if status == RetrievalStatus.Failed then
-				message = RobloxTranslator:FormatByKey("Feature.Call.Error.Description.Generic")
-			elseif props.searchText ~= "" then
-				message = RobloxTranslator:FormatByKey("Feature.Call.Description.NoFriendsFound")
-			else
-				message = RobloxTranslator:FormatByKey("Feature.Call.Prompt.AddFriends")
-			end
-		end
 
-		return React.createElement(NoItemView, {
-			isImageEnabled = status ~= RetrievalStatus.Failed,
-			imageName = if props.searchText == ""
-				then "icons/graphic/findfriends_xlarge"
-				else "icons/status/oof_xlarge",
-			isFailedButtonEnabled = status == RetrievalStatus.Failed,
-			onFailedButtonActivated = function()
-				getFriends(friends, nextPageCursor)
-			end,
-			isCallButtonEnabled = false,
-			onCallButtonActivated = function() end,
-			messageText = message,
-		})
-	end, dependencyArray(props.searchText, friends, getFriends, nextPageCursor, status))
+			return React.createElement(NoItemView, {
+				isImageEnabled = status ~= RetrievalStatus.Failed,
+				imageName = if props.searchText == ""
+					then "icons/graphic/findfriends_xlarge"
+					else "icons/status/oof_xlarge",
+				isFailedButtonEnabled = status == RetrievalStatus.Failed,
+				onFailedButtonActivated = function()
+					getFriends(friends, nextPageCursor)
+				end,
+				isCallButtonEnabled = false,
+				onCallButtonActivated = function() end,
+				messageText = message,
+			})
+		end,
+		dependencyArray(
+			props.searchText,
+			friends,
+			getFriends,
+			localized.addFriendsLabel,
+			localized.genericErrorLabel,
+			localized.noFriendsLabel,
+			nextPageCursor,
+			status
+		)
+	)
 
 	local touchStarted = React.useCallback(function(touch: InputObject)
 		initialPositionY.current = touch.Position.Y
@@ -352,19 +343,11 @@ local function FriendListContainer(props: Props)
 					Only incrementing numbers are counted when measuring the size of the entries table with #entries.
 					String keys like "suggestedHeader" do not contribute to the #entries count.
 				]]
-				if GetFFlagIrisUseLocalizationProvider() then
-					entries[#entries + 1] = React.createElement(SectionHeader, {
-						name = localized.suggestedFriendsTitle,
-						description = localized.suggestedFriendsDescription,
-						layoutOrder = #entries + 1,
-					})
-				else
-					entries[#entries + 1] = React.createElement(SectionHeader, {
-						name = RobloxTranslator:FormatByKey("Feature.Call.Label.Suggested"),
-						description = RobloxTranslator:FormatByKey("Feature.Call.Description.SuggestedFriends"),
-						layoutOrder = #entries + 1,
-					})
-				end
+				entries[#entries + 1] = React.createElement(SectionHeader, {
+					name = localized.suggestedFriendsTitle,
+					description = localized.suggestedFriendsDescription,
+					layoutOrder = #entries + 1,
+				})
 
 				local filteredSuggestedCallees = {}
 				for i, callee in ipairs(suggestedCallees) do
@@ -398,19 +381,11 @@ local function FriendListContainer(props: Props)
 			end
 
 			if #friends ~= 0 then
-				if GetFFlagIrisUseLocalizationProvider() then
-					entries[#entries + 1] = React.createElement(SectionHeader, {
-						name = localized.friendsTitle,
-						description = localized.friendsDescription,
-						layoutOrder = #entries + 1,
-					})
-				else
-					entries[#entries + 1] = React.createElement(SectionHeader, {
-						name = RobloxTranslator:FormatByKey("Feature.Call.Label.Friends"),
-						description = RobloxTranslator:FormatByKey("Feature.Call.Description.Friends"),
-						layoutOrder = #entries + 1,
-					})
-				end
+				entries[#entries + 1] = React.createElement(SectionHeader, {
+					name = localized.friendsTitle,
+					description = localized.friendsDescription,
+					layoutOrder = #entries + 1,
+				})
 			end
 
 			local filteredFriends = {}
@@ -471,7 +446,11 @@ local function FriendListContainer(props: Props)
 			status,
 			namesFetch.data,
 			suggestedCallees,
-			trimmedSearchText
+			trimmedSearchText,
+			localized.friendsDescription,
+			localized.friendsTitle,
+			localized.suggestedFriendsDescription,
+			localized.suggestedFriendsTitle
 		)
 	)
 

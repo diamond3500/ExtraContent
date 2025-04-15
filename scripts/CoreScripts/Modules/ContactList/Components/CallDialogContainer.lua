@@ -3,13 +3,13 @@ local CoreGui = game:GetService("CoreGui")
 local CorePackages = game:GetService("CorePackages")
 
 local React = require(CorePackages.Packages.React)
-local Roact = require(CorePackages.Roact)
+local Roact = require(CorePackages.Packages.Roact)
 local Cryo = require(CorePackages.Packages.Cryo)
 local CallProtocol = require(CorePackages.Workspace.Packages.CallProtocol)
 
 local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 
-local RobloxTranslator = require(RobloxGui.Modules.RobloxTranslator)
+local RobloxTranslator = require(CorePackages.Workspace.Packages.RobloxTranslator)
 local ContactList = RobloxGui.Modules.ContactList
 local OpenOrUpdateDialog = require(ContactList.Actions.OpenOrUpdateDialog)
 local dependencies = require(ContactList.dependencies)

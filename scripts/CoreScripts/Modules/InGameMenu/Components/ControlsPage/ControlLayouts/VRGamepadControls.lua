@@ -1,7 +1,7 @@
 --!nonstrict
 local CorePackages = game:GetService("CorePackages")
 
-local InGameMenuDependencies = require(CorePackages.InGameMenuDependencies)
+local InGameMenuDependencies = require(CorePackages.Packages.InGameMenuDependencies)
 local Roact = InGameMenuDependencies.Roact
 local UIBlox = InGameMenuDependencies.UIBlox
 
@@ -34,14 +34,14 @@ local function GamepadControls(props)
 			BackgroundTransparency = 1,
 			Image = Assets.Images.GamepadQuest,
 			Size = UDim2.new(1, 0, 0.6, 0),
-			Position = UDim2.new(0.5, GAMEPAD_ICONS_WIDTH/2, 0.5, 0),
+			Position = UDim2.new(0.5, GAMEPAD_ICONS_WIDTH / 2, 0.5, 0),
 			AnchorPoint = Vector2.new(0.5, 0.5),
 			SizeConstraint = Enum.SizeConstraint.RelativeXX,
 			[React.Tag] = "data-testid=VRGamepadInstructions",
 		}, {
 			Array.map(Controls.questGamepadLabels, function(item, index)
-				local localizationKey = "CoreScripts.InGameMenu.Controls."..item.labelKey
-				return withLocalization({localizationKey})(function(localized)
+				local localizationKey = "CoreScripts.InGameMenu.Controls." .. item.labelKey
+				return withLocalization({ localizationKey })(function(localized)
 					return Roact.createElement(ThemedTextLabel, {
 						key = item.labelKey,
 						fontKey = "Header2",
@@ -54,8 +54,8 @@ local function GamepadControls(props)
 						TextScaled = true,
 					})
 				end)
-			end)
-		})
+			end),
+		}),
 	})
 end
 

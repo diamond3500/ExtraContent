@@ -4,16 +4,17 @@ local UserInputService = game:GetService("UserInputService")
 local PurchaseError = require(Root.Enums.PurchaseError)
 local Promise = require(Root.Promise)
 
+
 local MAX_ROBUX = 2147483647
 
-local function getBalanceInfo(network, externalSettings)
+local function getBalanceInfo(network, externalSettings, overrideStudioMock)
 	return network.getBalanceInfo()
 		:andThen(function(result)
 			--[[
 				In studio, we falsely report that users have the maximum amount
 				 of robux, so that they can always test the normal purchase flow
 			]]
-			if externalSettings.isStudio() then
+			if externalSettings.isStudio() and not overrideStudioMock then
 				result.robux = MAX_ROBUX
 			end
 

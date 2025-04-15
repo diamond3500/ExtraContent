@@ -7,10 +7,10 @@
 local CorePackages = game:GetService("CorePackages")
 local ExperienceStateCaptureService = game:GetService("ExperienceStateCaptureService")
 
-local Roact = require(CorePackages.Roact)
-local RoactRodux = require(CorePackages.RoactRodux)
+local Roact = require(CorePackages.Packages.Roact)
+local RoactRodux = require(CorePackages.Packages.RoactRodux)
 local t = require(CorePackages.Packages.t)
-local UIBlox = require(CorePackages.UIBlox)
+local UIBlox = require(CorePackages.Packages.UIBlox)
 local VerticalScrollView = UIBlox.App.Container.VerticalScrollView
 
 local FeedbackModule = script.Parent.Parent

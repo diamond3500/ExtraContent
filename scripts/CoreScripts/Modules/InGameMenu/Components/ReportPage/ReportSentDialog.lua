@@ -2,7 +2,7 @@ local CorePackages = game:GetService("CorePackages")
 local GuiService = game:GetService("GuiService")
 local ContextActionService = game:GetService("ContextActionService")
 
-local InGameMenuDependencies = require(CorePackages.InGameMenuDependencies)
+local InGameMenuDependencies = require(CorePackages.Packages.InGameMenuDependencies)
 local Roact = InGameMenuDependencies.Roact
 local RoactRodux = InGameMenuDependencies.RoactRodux
 local t = InGameMenuDependencies.t
@@ -22,7 +22,7 @@ local REPORT_SENT_DIALOG_SELECTION_GROUP_NAME = "ReportSentDialogGroup"
 local REPORT_SENT_DIALOG_SINK_ACTION = "ReporSentDialogSinkAction"
 
 local validateProps = t.strictInterface({
-	isReportSentOpen  = t.boolean,
+	isReportSentOpen = t.boolean,
 	onDismiss = t.callback,
 	inputType = t.optional(t.string),
 })
@@ -40,9 +40,8 @@ function ReportSentDialog:renderFocusHandler()
 		isFocused = self.props.inputType == Constants.InputType.Gamepad and self.props.isReportSentOpen,
 		didFocus = function()
 			-- RemoveSelectionGroup is deprecated
-			(GuiService :: any):RemoveSelectionGroup(REPORT_SENT_DIALOG_SELECTION_GROUP_NAME)
-			-- AddSelectionParent is deprecated
-			;(GuiService :: any):AddSelectionParent(REPORT_SENT_DIALOG_SELECTION_GROUP_NAME, self.buttonRef:getValue())
+			(GuiService :: any):RemoveSelectionGroup(REPORT_SENT_DIALOG_SELECTION_GROUP_NAME); -- AddSelectionParent is deprecated
+			(GuiService :: any):AddSelectionParent(REPORT_SENT_DIALOG_SELECTION_GROUP_NAME, self.buttonRef:getValue())
 			GuiService.SelectedCoreObject = self.buttonRef:getValue()
 
 			ContextActionService:BindCoreAction(REPORT_SENT_DIALOG_SINK_ACTION, function(actionName, inputState)
@@ -50,10 +49,9 @@ function ReportSentDialog:renderFocusHandler()
 			end, false, Enum.KeyCode.ButtonB, Enum.KeyCode.ButtonY, Enum.KeyCode.ButtonX)
 		end,
 		didBlur = function()
-			ContextActionService:UnbindCoreAction(REPORT_SENT_DIALOG_SINK_ACTION)
-			-- RemoveSelectionGroup is deprecated
-			;(GuiService :: any):RemoveSelectionGroup(REPORT_SENT_DIALOG_SELECTION_GROUP_NAME)
-		end
+			ContextActionService:UnbindCoreAction(REPORT_SENT_DIALOG_SINK_ACTION); -- RemoveSelectionGroup is deprecated
+			(GuiService :: any):RemoveSelectionGroup(REPORT_SENT_DIALOG_SELECTION_GROUP_NAME)
+		end,
 	})
 end
 
@@ -73,7 +71,7 @@ function ReportSentDialog:render()
 				onDismiss = self.props.onDismiss,
 				visible = self.props.isReportSentOpen,
 			}),
-			FocusHandler = self:renderFocusHandler()
+			FocusHandler = self:renderFocusHandler(),
 		})
 	end)
 end

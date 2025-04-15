@@ -1,7 +1,7 @@
 --!nonstrict
 local Root = script.Parent.Parent
 local CorePackages = game:GetService("CorePackages")
-local PurchasePromptDeps = require(CorePackages.PurchasePromptDeps)
+local PurchasePromptDeps = require(CorePackages.Workspace.Packages.PurchasePromptDeps)
 local Rodux = PurchasePromptDeps.Rodux
 
 local CompleteRequest = require(Root.Actions.CompleteRequest)

@@ -1,6 +1,6 @@
 local ConfigureFriendMenu = require(script.Parent.ConfigureFriendMenu)
 local CorePackages = game:GetService("CorePackages")
-local Roact = require(CorePackages.Roact)
+local Roact = require(CorePackages.Packages.Roact)
 
 return {
 	name = "ConfigureFriendMenu",

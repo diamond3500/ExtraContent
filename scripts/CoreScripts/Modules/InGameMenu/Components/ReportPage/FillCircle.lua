@@ -2,7 +2,7 @@
 local RunService = game:GetService("RunService")
 local CorePackages = game:GetService("CorePackages")
 
-local InGameMenuDependencies = require(CorePackages.InGameMenuDependencies)
+local InGameMenuDependencies = require(CorePackages.Packages.InGameMenuDependencies)
 local Roact = InGameMenuDependencies.Roact
 local t = InGameMenuDependencies.t
 local UIBlox = InGameMenuDependencies.UIBlox
@@ -48,12 +48,12 @@ local function getFillRingZIndex(fillFraction)
 end
 
 local function linearTween(dTime, startFrame, endFrame)
-	local range = (endFrame - startFrame)/FPS
-	return (dTime - (startFrame/FPS)) / range
+	local range = (endFrame - startFrame) / FPS
+	return (dTime - (startFrame / FPS)) / range
 end
 
 local function isBetweenFrames(dTime, startFrame, endFrame)
-	return dTime >= (startFrame/FPS) and dTime <= (endFrame/FPS)
+	return dTime >= (startFrame / FPS) and dTime <= (endFrame / FPS)
 end
 
 local function largerCircleAnimation(timeElapsed, updateBindings, reverse, stopCallback)
@@ -63,7 +63,7 @@ local function largerCircleAnimation(timeElapsed, updateBindings, reverse, stopC
 		- frame 8 -> 20x20
 	]]
 	if reverse then
-		timeElapsed = 8/FPS - timeElapsed
+		timeElapsed = 8 / FPS - timeElapsed
 	end
 	if isBetweenFrames(timeElapsed, 0, 5) then
 		local scaledElapsed = linearTween(timeElapsed, 0, 5)
@@ -141,15 +141,12 @@ local function shakeCircleAnimation(timeElapsed, updateBindings, reverse, stopCa
 end
 
 function FillCircle:init()
-	self.sizeBinding, self.sizeBindingUpdate = Roact.createBinding(
-		UDim2.new(0, FILL_RING_MIN_SIZE, 0, FILL_RING_MIN_SIZE)
-	)
+	self.sizeBinding, self.sizeBindingUpdate =
+		Roact.createBinding(UDim2.new(0, FILL_RING_MIN_SIZE, 0, FILL_RING_MIN_SIZE))
 	self.largerSizeBinding = self.sizeBinding:map(function(oldValue)
 		return oldValue + UDim2.new(0, 2, 0, 2)
 	end)
-	self.positionOffsetBinding, self.positionOffsetBindingUpdate = Roact.createBinding(
-		UDim2.new(0, 0, 0, 0)
-	)
+	self.positionOffsetBinding, self.positionOffsetBindingUpdate = Roact.createBinding(UDim2.new(0, 0, 0, 0))
 
 	self.updateBindings = {
 		size = self.sizeBindingUpdate,
@@ -315,9 +312,14 @@ function FillCircle:playAnimation(animFunc, reverse)
 	self.reverseAnimation = reverse
 	if not self.renderSteppedConnection then
 		self.renderSteppedConnection = RunService.RenderStepped:Connect(function()
-			self.animationFunction(tick() - self.animationStartTime, self.updateBindings, self.reverseAnimation, function()
-				self:stopAnimation()
-			end)
+			self.animationFunction(
+				tick() - self.animationStartTime,
+				self.updateBindings,
+				self.reverseAnimation,
+				function()
+					self:stopAnimation()
+				end
+			)
 		end)
 	end
 end

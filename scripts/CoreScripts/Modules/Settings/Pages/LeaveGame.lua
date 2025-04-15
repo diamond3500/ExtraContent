@@ -23,10 +23,16 @@ local utility = require(RobloxGui.Modules.Settings.Utility)
 local leaveGame = require(RobloxGui.Modules.Settings.leaveGame)
 local Create = require(CorePackages.Workspace.Packages.AppCommonLib).Create
 
+local ChromeEnabled = require(RobloxGui.Modules.Chrome.Enabled)()
+local ChromeService = if ChromeEnabled then require(RobloxGui.Modules.Chrome.Service) else nil
+local ChromeConstants = if ChromeEnabled then require(RobloxGui.Modules.Chrome.ChromeShared.Unibar.Constants) else nil
+
 ------------ Variables -------------------
 local PageInstance = nil
 RobloxGui:WaitForChild("Modules"):WaitForChild("TenFootInterface")
 local isTenFootInterface = require(RobloxGui.Modules.TenFootInterface):IsEnabled()
+
+local FFlagEnableChromeShortcutBar = require(CorePackages.Workspace.Packages.SharedFlags).FFlagEnableChromeShortcutBar
 
 local Constants = require(RobloxGui.Modules:WaitForChild("InGameMenu"):WaitForChild("Resources"):WaitForChild("Constants"))
 
@@ -140,7 +146,13 @@ PageInstance = Initialize()
 
 PageInstance.Displayed.Event:connect(function()
 	GuiService.SelectedCoreObject = PageInstance.LeaveGameButton
-	ContextActionService:BindCoreAction(LEAVE_GAME_ACTION, PageInstance.DontLeaveFromHotkey, false, Enum.KeyCode.ButtonB)
+	if FFlagEnableChromeShortcutBar then 
+		if ChromeEnabled then 
+			ChromeService:setShortcutBar(ChromeConstants.TILTMENU_DIALOG_SHORTCUTBAR_ID)
+		end
+	else
+		ContextActionService:BindCoreAction(LEAVE_GAME_ACTION, PageInstance.DontLeaveFromHotkey, false, Enum.KeyCode.ButtonB)
+	end
 end)
 
 PageInstance.Hidden.Event:connect(function()

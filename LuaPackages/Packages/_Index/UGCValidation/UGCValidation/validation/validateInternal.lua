@@ -3,8 +3,6 @@ local root = script.Parent.Parent
 local Types = require(root.util.Types)
 
 local getFFlagAddUGCValidationForPackage = require(root.flags.getFFlagAddUGCValidationForPackage)
-local getEngineFeatureEngineUGCValidateRigidMeshPartAccessories =
-	require(root.flags.getEngineFeatureEngineUGCValidateRigidMeshPartAccessories)
 
 local ConstantsInterface = require(root.ConstantsInterface)
 
@@ -40,7 +38,7 @@ local function validateInternal(validationContext: Types.ValidationContext): (bo
 		return validatePackage(validationContext)
 	end
 
-	if getEngineFeatureEngineUGCValidateRigidMeshPartAccessories() and validateMeshPartAccessories then
+	if validateMeshPartAccessories then
 		local accessory = instances[1]
 		if isMeshPartAccessory(accessory) then
 			if isLayeredClothing(accessory) then

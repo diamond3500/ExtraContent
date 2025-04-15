@@ -1,6 +1,6 @@
 local CorePackages = game:GetService("CorePackages")
 
-local Rodux = require(CorePackages.Rodux)
+local Rodux = require(CorePackages.Packages.Rodux)
 
 local Reducers = script.Parent
 local EmotesMenu = Reducers.Parent

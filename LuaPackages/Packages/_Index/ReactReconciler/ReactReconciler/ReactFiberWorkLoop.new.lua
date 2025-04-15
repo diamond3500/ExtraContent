@@ -956,7 +956,11 @@ mod.performConcurrentWorkOnRoot = function(root): (() -> ...any) | nil
 		-- The task node scheduled for this root is the same one that's
 		-- currently executed. Need to return a continuation.
 		return function()
-			return mod.performConcurrentWorkOnRoot(root)
+			-- ROBLOX deviation: RobloxReactProfiling
+			local profileRunning = RobloxReactProfiling.profileRootBeforeUnitOfWork(root)
+			local ret = mod.performConcurrentWorkOnRoot(root)
+			RobloxReactProfiling.profileRootAfterYielding(profileRunning)
+			return ret
 		end
 	end
 	-- ROBLOX Luau FIXME: Luau shouldn't error on nil-able returns
@@ -2139,7 +2143,8 @@ mod.commitRootImpl = function(root: FiberRoot, renderPriorityLevel)
 		end
 
 		if enableSchedulingProfiler then
-			SchedulingProfiler.markCommitStopped()
+			-- ROBLOX deviation: pass root for attribution
+			SchedulingProfiler.markCommitStopped(root)
 		end
 
 		return nil
@@ -2458,7 +2463,8 @@ mod.commitRootImpl = function(root: FiberRoot, renderPriorityLevel)
 		end
 
 		if enableSchedulingProfiler then
-			SchedulingProfiler.markCommitStopped()
+			-- ROBLOX deviation: pass root for attribution
+			SchedulingProfiler.markCommitStopped(root)
 		end
 
 		-- This is a legacy edge case. We just committed the initial mount of
@@ -2478,7 +2484,8 @@ mod.commitRootImpl = function(root: FiberRoot, renderPriorityLevel)
 	end
 
 	if enableSchedulingProfiler then
-		SchedulingProfiler.markCommitStopped()
+		-- ROBLOX deviation: pass root for attribution
+		SchedulingProfiler.markCommitStopped(root)
 	end
 
 	return nil
@@ -2976,7 +2983,8 @@ flushPassiveEffectsImpl = function()
 	end
 
 	if enableSchedulingProfiler then
-		SchedulingProfiler.markPassiveEffectsStopped()
+		-- ROBLOX deviation: pass root for attribution
+		SchedulingProfiler.markPassiveEffectsStopped(root)
 	end
 
 	if __DEV__ and enableDoubleInvokingEffects then

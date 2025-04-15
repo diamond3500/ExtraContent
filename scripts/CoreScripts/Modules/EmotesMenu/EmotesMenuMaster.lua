@@ -16,10 +16,10 @@ if not LocalPlayer then
 	LocalPlayer = Players.LocalPlayer
 end
 
-local Roact = require(CorePackages.Roact)
-local Rodux = require(CorePackages.Rodux)
-local RoactRodux = require(CorePackages.RoactRodux)
-local UIBlox = require(CorePackages.UIBlox)
+local Roact = require(CorePackages.Packages.Roact)
+local Rodux = require(CorePackages.Packages.Rodux)
+local RoactRodux = require(CorePackages.Packages.RoactRodux)
+local UIBlox = require(CorePackages.Packages.UIBlox)
 
 local EmotesModules = script.Parent
 local CoreScriptModules = EmotesModules.Parent
@@ -34,6 +34,9 @@ local Backpack = require(CoreScriptModules.BackpackScript)
 local Chat = require(CoreScriptModules.ChatSelector)
 local TenFootInterface = require(CoreScriptModules.TenFootInterface)
 local TopBarConstant = require(CoreScriptModules.TopBar.Constants)
+local InExperienceAppChatModal = require(CorePackages.Workspace.Packages.AppChat).App.InExperienceAppChatModal
+local getFFlagAppChatCoreUIConflictFix =
+	require(CorePackages.Workspace.Packages.SharedFlags).getFFlagAppChatCoreUIConflictFix
 
 local StyleConstants = UIBlox.App.Style.Constants
 local UiModeStyleProvider = require(CorePackages.Workspace.Packages.Style).UiModeStyleProvider
@@ -54,13 +57,13 @@ local SetGuiInset = require(Actions.SetGuiInset)
 local SetLayout = require(Actions.SetLayout)
 local SetLocale = require(Actions.SetLocale)
 
+local FFlagUIBloxFoundationProvider = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagUIBloxFoundationProvider()
+
 local EmotesMenuMaster = {}
 EmotesMenuMaster.__index = EmotesMenuMaster
 
 local function isClient()
-	return RunService:IsClient() and
-		not RunService:IsEdit() and
-		not RunService:IsRunMode()
+	return RunService:IsClient() and not RunService:IsEdit() and not RunService:IsRunMode()
 end
 
 function EmotesMenuMaster:isOpen()
@@ -111,6 +114,13 @@ function EmotesMenuMaster:_connectCoreGuiListeners()
 		end
 	end)
 
+	if getFFlagAppChatCoreUIConflictFix() then
+		InExperienceAppChatModal.default.visibilitySignal.Event:Connect(function(visible)
+			if visible and self:isOpen() then
+				self:close()
+			end
+		end)
+	end
 end
 
 function EmotesMenuMaster:_connectApiListeners()
@@ -299,19 +309,23 @@ end
 function EmotesMenuMaster:_mount()
 	local appStyleForUiModeStyleProvider = {
 		themeName = StyleConstants.ThemeName.Dark,
-		fontName = StyleConstants.FontName.Gotham
+		fontName = StyleConstants.FontName.Gotham,
 	}
 
 	if not self.instance then
-		local app = Roact.createElement(RoactRodux.StoreProvider, {
+		local appWithProviders = Roact.createElement(RoactRodux.StoreProvider, {
 			store = self.store,
 		}, {
 			StyleProvider = Roact.createElement(UiModeStyleProvider, {
-				style = appStyleForUiModeStyleProvider
+				style = appStyleForUiModeStyleProvider,
 			}, {
-				EmotesMenu = Roact.createElement(EmotesMenu)
-			})
+				EmotesMenu = Roact.createElement(EmotesMenu),
+			}),
 		})
+		-- Root should be a Folder so that style provider stylesheet elements can be portaled properly; otherwise, they will attach to CoreGui
+		local app = if FFlagUIBloxFoundationProvider then Roact.createElement("Folder", {
+			Name = "EmotesMenu",
+		}, appWithProviders) else appWithProviders
 
 		self.instance = Roact.mount(app, RobloxGui, "EmotesMenu")
 

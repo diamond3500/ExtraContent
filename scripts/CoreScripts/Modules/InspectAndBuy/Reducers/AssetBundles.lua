@@ -1,6 +1,6 @@
 local CorePackages = game:GetService("CorePackages")
-local Cryo = require(CorePackages.Cryo)
-local Rodux = require(CorePackages.Rodux)
+local Cryo = require(CorePackages.Packages.Cryo)
+local Rodux = require(CorePackages.Packages.Rodux)
 local InspectAndBuyFolder = script.Parent.Parent
 local SetAssetToBundlesMapping = require(InspectAndBuyFolder.Actions.SetAssetToBundlesMapping)
 

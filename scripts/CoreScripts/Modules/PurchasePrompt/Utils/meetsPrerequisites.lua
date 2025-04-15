@@ -8,6 +8,8 @@ local PurchaseError = require(Root.Enums.PurchaseError)
 local CONTENT_RATING_13_PLUS = 1
 local ROBLOX_CREATOR = 1
 
+local GetFFlagEnableCreatorStorePurchasingCutover = require(Root.Flags.GetFFlagEnableCreatorStorePurchasingCutover)
+
 local THIRD_PARTY_WARNING = "AllowThirdPartySales has blocked the purchase"
 	.. " prompt for %d created by %d. To sell this asset made by a"
 	.. " different %s, you will need to enable AllowThirdPartySales."
@@ -29,6 +31,10 @@ local function meetsPrerequisites(productInfo, alreadyOwned, restrictThirdParty,
 
 	-- Resale cases should have precedence over the following conditions.
 	if (expectedPrice == nil) and not (productInfo.IsForSale or productInfo.IsPublicDomain) then
+		return false, PurchaseError.NotForSale
+	end
+
+	if GetFFlagEnableCreatorStorePurchasingCutover() and productInfo.IsFiatPriced == true then
 		return false, PurchaseError.NotForSale
 	end
 

@@ -2,10 +2,10 @@
 -- Nonstrict to stay matched with last version of in game menu component this was ported from
 local CorePackages = game:GetService("CorePackages")
 
-local InGameMenuDependencies = require(CorePackages.InGameMenuDependencies)
+local InGameMenuDependencies = require(CorePackages.Packages.InGameMenuDependencies)
 local Roact = InGameMenuDependencies.Roact
 local Cryo = InGameMenuDependencies.Cryo
-local UIBlox = require(CorePackages.UIBlox)
+local UIBlox = require(CorePackages.Packages.UIBlox)
 local t = InGameMenuDependencies.t
 
 local withStyle = UIBlox.Core.Style.withStyle

@@ -1,8 +1,8 @@
 local CorePackages = game:GetService("CorePackages")
 local RunService = game:GetService("RunService")
 
-local Roact = require(CorePackages.Roact)
-local RoactRodux = require(CorePackages.RoactRodux)
+local Roact = require(CorePackages.Packages.Roact)
+local RoactRodux = require(CorePackages.Packages.RoactRodux)
 
 local CoreGui = game:GetService("CoreGui")
 local RobloxGui = CoreGui:WaitForChild("RobloxGui")
@@ -25,25 +25,22 @@ local ErrorToaster = Roact.PureComponent:extend("ErrorToaster")
 
 function ErrorToaster:restartTimer()
 	if not self.timerConnection then
-		self.timerConnection =
-			RunService.RenderStepped:Connect(
-			function()
-				local failedInvites = self.props.failedInvites
+		self.timerConnection = RunService.RenderStepped:Connect(function()
+			local failedInvites = self.props.failedInvites
 
-				if #failedInvites == 0 then
-					self:stopTimer()
-					return
-				end
-
-				local lastModerated = failedInvites[#failedInvites]
-				local goalTick = lastModerated.timeStamp + TIMER_LENGTH
-
-				local now = tick()
-				if now > goalTick then
-					self:stopTimer()
-				end
+			if #failedInvites == 0 then
+				self:stopTimer()
+				return
 			end
-		)
+
+			local lastModerated = failedInvites[#failedInvites]
+			local goalTick = lastModerated.timeStamp + TIMER_LENGTH
+
+			local now = tick()
+			if now > goalTick then
+				self:stopTimer()
+			end
+		end)
 	end
 end
 
@@ -85,52 +82,38 @@ function ErrorToaster:render()
 		return
 	end
 
-	return Roact.createElement(
-		"ScreenGui",
-		{
-			DisplayOrder = 2,
-			ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-		},
-		{
-			ToastFrame = Roact.createElement(
-				"Frame",
-				{
-					AnchorPoint = Vector2.new(0.5, 0),
-					BackgroundColor3 = Constants.Color.RED,
-					BorderSizePixel = 0,
-					Position = UDim2.new(0.5, 0, 0, 0),
-					Size = UDim2.new(0.5, 0, 0, toastHeight)
-				},
-				{
-					InnerTextPadding = Roact.createElement(
-						"UIPadding",
-						{
-							PaddingLeft = UDim.new(0, INNER_TEXT_PADDING),
-							PaddingRight = UDim.new(0, INNER_TEXT_PADDING)
-						}
-					),
-					ToastText = Roact.createElement(
-						"TextLabel",
-						{
-							BackgroundTransparency = 1,
-							Font = Theme.font(Enum.Font.SourceSansSemibold, "Semibold"),
-							Size = UDim2.new(1, 0, 1, 0),
-							Text = RobloxTranslator:FormatByKey(errorMessageKey),
-							TextColor3 = Constants.Color.WHITE,
-							TextSize = Theme.textSize(TEXT_SIZE),
-							TextWrapped = true
-						}
-					)
-				}
-			)
-		}
-	)
+	return Roact.createElement("ScreenGui", {
+		DisplayOrder = 2,
+		ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
+	}, {
+		ToastFrame = Roact.createElement("Frame", {
+			AnchorPoint = Vector2.new(0.5, 0),
+			BackgroundColor3 = Constants.Color.RED,
+			BorderSizePixel = 0,
+			Position = UDim2.new(0.5, 0, 0, 0),
+			Size = UDim2.new(0.5, 0, 0, toastHeight),
+		}, {
+			InnerTextPadding = Roact.createElement("UIPadding", {
+				PaddingLeft = UDim.new(0, INNER_TEXT_PADDING),
+				PaddingRight = UDim.new(0, INNER_TEXT_PADDING),
+			}),
+			ToastText = Roact.createElement("TextLabel", {
+				BackgroundTransparency = 1,
+				Font = Theme.font(Enum.Font.SourceSansSemibold, "Semibold"),
+				Size = UDim2.new(1, 0, 1, 0),
+				Text = RobloxTranslator:FormatByKey(errorMessageKey),
+				TextColor3 = Constants.Color.WHITE,
+				TextSize = Theme.textSize(TEXT_SIZE),
+				TextWrapped = true,
+			}),
+		}),
+	})
 end
 
 local function mapStateToProps(state)
 	return {
 		deviceLayout = state.DeviceInfo.DeviceLayout,
-		failedInvites = state.Toasts.failedInvites
+		failedInvites = state.Toasts.failedInvites,
 	}
 end
 
@@ -138,7 +121,7 @@ local function mapDispatchToProps(dispatch)
 	return {
 		stoppedTimerDispatch = function()
 			dispatch(StoppedToastTimer())
-		end
+		end,
 	}
 end
 

@@ -2,8 +2,6 @@ local Foundation = script:FindFirstAncestor("Foundation")
 local Packages = Foundation.Parent
 
 local React = require(Packages.React)
-local ReactUtils = require(Packages.ReactUtils)
-local useClock = ReactUtils.useClock
 
 local Icon = require(Foundation.Components.Icon)
 local IconSize = require(Foundation.Enums.IconSize)
@@ -11,6 +9,7 @@ type IconSize = IconSize.IconSize
 
 local useTokens = require(Foundation.Providers.Style.useTokens)
 local withDefaults = require(Foundation.Utility.withDefaults)
+local useRotation = require(Foundation.Utility.useRotation)
 local Types = require(Foundation.Components.Types)
 local withCommonProps = require(Foundation.Utility.withCommonProps)
 
@@ -24,7 +23,7 @@ local defaultProps = {
 
 local function Loading(loadingProps: Props, ref: React.Ref<GuiObject>?)
 	local props = withDefaults(loadingProps, defaultProps)
-	local clockBinding = useClock()
+	local rotation = useRotation()
 	local tokens = useTokens()
 
 	return React.createElement(
@@ -33,9 +32,7 @@ local function Loading(loadingProps: Props, ref: React.Ref<GuiObject>?)
 			name = "icons/graphic/loadingspinner",
 			size = props.size,
 			style = tokens.DarkMode.Content.Emphasis,
-			Rotation = clockBinding:map(function(value: number)
-				return value * 360
-			end),
+			Rotation = rotation,
 			ref = ref,
 		})
 	)

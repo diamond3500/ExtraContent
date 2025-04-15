@@ -6,8 +6,8 @@
 ]]
 local Root = script.Parent.Parent
 local CorePackages = game:GetService("CorePackages")
-local Rodux = require(CorePackages.Rodux)
-local Cryo = require(CorePackages.Cryo)
+local Rodux = require(CorePackages.Packages.Rodux)
+local Cryo = require(CorePackages.Packages.Cryo)
 
 local OpenPublishAssetPrompt = require(Root.Actions.OpenPublishAssetPrompt)
 local OpenPublishAvatarPrompt = require(Root.Actions.OpenPublishAvatarPrompt)
@@ -26,89 +26,92 @@ local EMPTY_STATE = {
 
 type ReducerType = { [string]: (state: any, action: any) -> any }
 
-local PromptRequestReducer = Rodux.createReducer(EMPTY_STATE, {
-	[OpenPublishAssetPrompt.name] = function(state, action: OpenPublishAssetPrompt.Action)
-		-- Maintain a queue of pending prompts. action.promptInfo should contain
-		-- a promptType and any other information required by that prompt. See OpenPublishAssetPrompt.lua
-		if state.promptInfo.promptType == nil then
-			return Cryo.Dictionary.join(state, { promptInfo = action.promptInfo })
-		end
+local PromptRequestReducer = Rodux.createReducer(
+	EMPTY_STATE,
+	{
+		[OpenPublishAssetPrompt.name] = function(state, action: OpenPublishAssetPrompt.Action)
+			-- Maintain a queue of pending prompts. action.promptInfo should contain
+			-- a promptType and any other information required by that prompt. See OpenPublishAssetPrompt.lua
+			if state.promptInfo.promptType == nil then
+				return Cryo.Dictionary.join(state, { promptInfo = action.promptInfo })
+			end
 
-		return Cryo.Dictionary.join(state, {
-			queue = Cryo.List.join(state.queue, { action.promptInfo }),
-		})
-	end,
+			return Cryo.Dictionary.join(state, {
+				queue = Cryo.List.join(state.queue, { action.promptInfo }),
+			})
+		end,
 
-	[OpenPublishAvatarPrompt.name] = function(state, action: OpenPublishAvatarPrompt.Action)
-		-- Maintain a queue of pending prompts. action.promptInfo should contain
-		-- a promptType and any other information required by that prompt. See OpenPublishAvatarPrompt.lua
-		if state.promptInfo.promptType == nil then
-			return Cryo.Dictionary.join(state, { promptInfo = action.promptInfo })
-		end
+		[OpenPublishAvatarPrompt.name] = function(state, action: OpenPublishAvatarPrompt.Action)
+			-- Maintain a queue of pending prompts. action.promptInfo should contain
+			-- a promptType and any other information required by that prompt. See OpenPublishAvatarPrompt.lua
+			if state.promptInfo.promptType == nil then
+				return Cryo.Dictionary.join(state, { promptInfo = action.promptInfo })
+			end
 
-		return Cryo.Dictionary.join(state, {
-			queue = Cryo.List.join(state.queue, { action.promptInfo }),
-		})
-	end,
+			return Cryo.Dictionary.join(state, {
+				queue = Cryo.List.join(state.queue, { action.promptInfo }),
+			})
+		end,
 
-	[SetHumanoidModel.name] = function(state, action)
-		return Cryo.Dictionary.join(state, {
-			promptInfo = Cryo.Dictionary.join(state.promptInfo, {
-				humanoidModel = action.humanoidModel,
-			}),
-		})
-	end,
+		[SetHumanoidModel.name] = function(state, action)
+			return Cryo.Dictionary.join(state, {
+				promptInfo = Cryo.Dictionary.join(state.promptInfo, {
+					humanoidModel = action.humanoidModel,
+				}),
+			})
+		end,
 
-	[SetPriceInRobux.name] = function(state, action)
-		return Cryo.Dictionary.join(state, {
-			promptInfo = Cryo.Dictionary.join(state.promptInfo, {
-				priceInRobux = action.priceInRobux,
-			}),
-		})
-	end,
+		[SetPriceInRobux.name] = function(state, action)
+			return Cryo.Dictionary.join(state, {
+				promptInfo = Cryo.Dictionary.join(state.promptInfo, {
+					priceInRobux = action.priceInRobux,
+				}),
+			})
+		end,
 
-	[CloseOpenPrompt.name] = function(state, _action: CloseOpenPrompt.Action)
-		if Cryo.isEmpty(state.queue) then
-			return {
-				promptInfo = {},
-				queue = state.queue,
-			}
-		end
-		return Cryo.Dictionary.join(state, {
-			promptInfo = state.queue[1],
-			queue = Cryo.List.removeIndex(state.queue, 1),
-		})
-	end,
+		[CloseOpenPrompt.name] = function(state, _action: CloseOpenPrompt.Action)
+			if Cryo.isEmpty(state.queue) then
+				return {
+					promptInfo = {},
+					queue = state.queue,
+				}
+			end
+			return Cryo.Dictionary.join(state, {
+				promptInfo = state.queue[1],
+				queue = Cryo.List.removeIndex(state.queue, 1),
+			})
+		end,
 
-	[OpenResultModal.name] = function(state, action: OpenResultModal.Action)
-		-- We don't care about the queue of pending prompts; this modal should appear on top.
-		return Cryo.Dictionary.join(state, {
-			resultModalType = action.resultType,
-		})
-	end,
+		[OpenResultModal.name] = function(state, action: OpenResultModal.Action)
+			-- We don't care about the queue of pending prompts; this modal should appear on top.
+			return Cryo.Dictionary.join(state, {
+				resultModalType = action.resultType,
+			})
+		end,
 
-	[CloseResultModal.name] = function(state, _action)
-		return Cryo.Dictionary.join(state, {
-			resultModalType = Cryo.None,
-		})
-	end,
+		[CloseResultModal.name] = function(state, _action)
+			return Cryo.Dictionary.join(state, {
+				resultModalType = Cryo.None,
+			})
+		end,
 
-	[OpenValidationErrorModal.name] = function(state, action)
-		-- This modal should appear on top during a publish prompt
-		return Cryo.Dictionary.join(state, {
-			promptInfo = Cryo.Dictionary.join(state.promptInfo, {
-				errorMessage = action.errorMessage,
-			}),
-		})
-	end,
+		[OpenValidationErrorModal.name] = function(state, action)
+			-- This modal should appear on top during a publish prompt
+			return Cryo.Dictionary.join(state, {
+				promptInfo = Cryo.Dictionary.join(state.promptInfo, {
+					errorMessage = action.errorMessage,
+				}),
+			})
+		end,
 
-	[SetPromptVisibility.name] = function(state, action)
-		return Cryo.Dictionary.join(state, {
-			promptInfo = Cryo.Dictionary.join(state.promptInfo, {
-				promptVisible = action.promptVisible,
-			}),
-		})
-	end,
-} :: ReducerType)
+		[SetPromptVisibility.name] = function(state, action)
+			return Cryo.Dictionary.join(state, {
+				promptInfo = Cryo.Dictionary.join(state.promptInfo, {
+					promptVisible = action.promptVisible,
+				}),
+			})
+		end,
+	} :: ReducerType
+)
 
 return PromptRequestReducer

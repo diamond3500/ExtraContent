@@ -1,7 +1,7 @@
 local CorePackages = game:GetService("CorePackages")
 local FetchingStatus = require(CorePackages.Workspace.Packages.Http).Reducers.FetchingStatus
 local Reducers = script.Parent
-local Rodux = require(CorePackages.Rodux)
+local Rodux = require(CorePackages.Packages.Rodux)
 local View = require(Reducers.View)
 local PlayerId = require(Reducers.PlayerId)
 local PlayerName = require(Reducers.PlayerName)
@@ -22,9 +22,6 @@ local StoreId = require(Reducers.StoreId)
 local CollectibleResellableInstances = require(Reducers.CollectibleResellableInstances)
 local CreatingExperiences = require(Reducers.CreatingExperiences)
 local Overlay = require(Reducers.Overlay)
-local InspectAndBuyFolder = script.Parent.Parent
-
-local FFlagAttributionInInspectAndBuy = require(InspectAndBuyFolder.Flags.FFlagAttributionInInspectAndBuy)
 
 return Rodux.combineReducers({
 	view = View,
@@ -47,5 +44,5 @@ return Rodux.combineReducers({
 	storeId = StoreId,
 	collectibleResellableInstances = CollectibleResellableInstances,
 	creatingExperiences = CreatingExperiences,
-	overlay = if FFlagAttributionInInspectAndBuy then Overlay else nil,
+	overlay = Overlay,
 })

@@ -2,7 +2,7 @@
 -- For the 'Graph' tab view, this component displays the shortest paths to where memory is stored going from the root of the engine Luau references (as a tree)
 local CorePackages = game:GetService("CorePackages")
 
-local Roact = require(CorePackages.Roact)
+local Roact = require(CorePackages.Packages.Roact)
 
 local Components = script.Parent.Parent.Parent.Components
 local CellLabel = require(Components.CellLabel)
@@ -22,6 +22,8 @@ local CELL_PADDING = Constants.LuauHeapFormatting.CellPadding
 local VALUE_PADDING = Constants.LuauHeapFormatting.ValuePadding
 
 local LuauHeapViewEntry = Roact.PureComponent:extend("LuauHeapViewEntry")
+
+local FFlagAddTextWrapToCellLabel = require(script.Parent.Parent.Parent.Parent.Flags.FFlagAddTextWrapToCellLabel)
 
 type BorderedCellLabelProps = {
 	text: string,
@@ -134,7 +136,11 @@ function LuauHeapViewEntry:renderChildren(
 		-- Filter out small nodes if there are more than a certain amount of them.
 		-- While this does mean that N small children will be displayed, but N+1 children of the same size are collapsed,
 		-- the list can be expanded by clicking on '...' so it's not a big issue in practice
-		if data.TotalSize <= childFilterSizeThreshold and #childData > minChildrenToStartFiltering and not self.state.expandedEllipsis then
+		if
+			data.TotalSize <= childFilterSizeThreshold
+			and #childData > minChildrenToStartFiltering
+			and not self.state.expandedEllipsis
+		then
 			totalSkipSize += data.TotalSize
 
 			if compare then
@@ -279,7 +285,9 @@ function LuauHeapViewEntry:render()
 
 	local nameWidth = UDim.new(1 - VALUE_CELL_WIDTH * #values, -(CELL_PADDING + offset))
 
-	local isExpandable = #data.Children ~= 0 or (compare ~= nil and #compare.Children ~= 0) or props.customButtonPress ~= nil
+	local isExpandable = #data.Children ~= 0
+		or (compare ~= nil and #compare.Children ~= 0)
+		or props.customButtonPress ~= nil
 	local onButtonPress = if props.customButtonPress then props.customButtonPress else self.onButtonPress
 
 	return Roact.createElement("Frame", {
@@ -317,6 +325,8 @@ function LuauHeapViewEntry:render()
 				text = name,
 				size = UDim2.new(nameWidth, UDim.new(1, 0)),
 				pos = UDim2.new(0, CELL_PADDING + offset, 0, 0),
+				textTruncate = (if FFlagAddTextWrapToCellLabel then Enum.TextTruncate.SplitWord else nil),
+				textWrapped = (if FFlagAddTextWrapToCellLabel then false else true),
 			}),
 			values = Roact.createFragment(self:renderValues(values)),
 		}),

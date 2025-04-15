@@ -5,10 +5,9 @@
 -- This is a temporary fix until we can figure out how to get the app on Android to restart. Once
 -- we have such a solution, we'll remove this logic to follow universality principles
 
-local CoreGui = game:GetService("CoreGui")
-local RobloxGui = CoreGui:WaitForChild("RobloxGui")
+local CorePackages = game:GetService("CorePackages")
 
-local RobloxTranslator = require(RobloxGui.Modules.RobloxTranslator)
+local RobloxTranslator = require(CorePackages.Workspace.Packages.RobloxTranslator)
 
 local restartOnMicAccessChange = RobloxTranslator:FormatByKey("Feature.SettingsHub.Prompt.RestartOnMicAccessChange")
 

@@ -2,19 +2,12 @@
 local CorePackages = game:GetService("CorePackages")
 local UserInputService = game:GetService("UserInputService")
 local LocalizationService = game:GetService("LocalizationService")
-local CoreGui = game:GetService("CoreGui")
-local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 local ContextActionService = game:GetService("ContextActionService")
 
 local React = require(CorePackages.Packages.React)
 local UIBlox = require(CorePackages.Packages.UIBlox)
-local GetTextSize = require(CorePackages.Workspace.Packages.Style).GetTextSize
 local useDesignTokens = require(CorePackages.Workspace.Packages.Style).useDesignTokens
 local useLocalization = require(CorePackages.Workspace.Packages.Localization).Hooks.useLocalization
-local FocusNavigationEffects = require(RobloxGui.Modules.Common.FocusNavigationEffectsWrapper)
-local FocusNavigableSurfaceIdentifierEnum =
-	require(CorePackages.Workspace.Packages.FocusNavigationUtils).FocusNavigableSurfaceIdentifierEnum
-	local CoreScriptsRootProvider = require(CorePackages.Workspace.Packages.CoreScriptsRoactCommon).CoreScriptsRootProvider
 
 local TopBar = script:FindFirstAncestor("TopBar")
 local TopBarAnalytics = require(TopBar.Analytics).default

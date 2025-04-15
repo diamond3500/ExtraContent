@@ -1,6 +1,6 @@
 --!nonstrict
 local CorePackages = game:GetService("CorePackages")
-local Roact = require(CorePackages.Roact)
+local Roact = require(CorePackages.Packages.Roact)
 
 local FFlagFixActionBindingSecurity = game:DefineFastFlag("FixActionBindingSecurity", false)
 
@@ -39,27 +39,23 @@ local entryCellSize = {}
 
 currOffset = currOffset / 2
 table.insert(cellOffset, UDim2.new(0, CELL_PADDING, 0, 0))
-table.insert(headerCellSize, UDim2.new(.5, currOffset - CELL_PADDING, 0, HEADER_HEIGHT))
-table.insert(entryCellSize, UDim2.new(.5, currOffset - CELL_PADDING, 0, ENTRY_HEIGHT))
+table.insert(headerCellSize, UDim2.new(0.5, currOffset - CELL_PADDING, 0, HEADER_HEIGHT))
+table.insert(entryCellSize, UDim2.new(0.5, currOffset - CELL_PADDING, 0, ENTRY_HEIGHT))
 
 for _, cellWidth in ipairs(CELL_WIDTHS) do
-	table.insert(cellOffset,UDim2.new(.5, currOffset + CELL_PADDING, 0, 0))
+	table.insert(cellOffset, UDim2.new(0.5, currOffset + CELL_PADDING, 0, 0))
 	table.insert(headerCellSize, UDim2.new(0, cellWidth - CELL_PADDING, 0, HEADER_HEIGHT))
 	table.insert(entryCellSize, UDim2.new(0, cellWidth - CELL_PADDING, 0, ENTRY_HEIGHT))
 	currOffset = currOffset + cellWidth
 end
 
-table.insert(cellOffset,UDim2.new(.5, currOffset + CELL_PADDING, 0, 0))
-table.insert(headerCellSize, UDim2.new(.5, (-totalCellWidth / 2) - CELL_PADDING, 0, HEADER_HEIGHT))
-table.insert(entryCellSize, UDim2.new(.5, (-totalCellWidth / 2) - CELL_PADDING, 0, ENTRY_HEIGHT))
+table.insert(cellOffset, UDim2.new(0.5, currOffset + CELL_PADDING, 0, 0))
+table.insert(headerCellSize, UDim2.new(0.5, (-totalCellWidth / 2) - CELL_PADDING, 0, HEADER_HEIGHT))
+table.insert(entryCellSize, UDim2.new(0.5, (-totalCellWidth / 2) - CELL_PADDING, 0, ENTRY_HEIGHT))
 
 local verticalOffsets = {}
 for i, offset in ipairs(cellOffset) do
-	verticalOffsets[i] = UDim2.new(
-		offset.X.Scale,
-		offset.X.Offset - CELL_PADDING,
-		offset.Y.Scale,
-		offset.Y.Offset)
+	verticalOffsets[i] = UDim2.new(offset.X.Scale, offset.X.Offset - CELL_PADDING, offset.Y.Scale, offset.Y.Offset)
 end
 
 local ActionBindingsChart = Roact.Component:extend("ActionBindingsChart")
@@ -91,7 +87,7 @@ local function constructHeader(onSortChanged, width)
 	})
 
 	for ind = 2, #verticalOffsets do
-		local key = string.format("VerticalLine_%d",ind)
+		local key = string.format("VerticalLine_%d", ind)
 		header[key] = Roact.createElement("Frame", {
 			Size = UDim2.new(0, LINE_WIDTH, 1, 0),
 			Position = verticalOffsets[ind],
@@ -119,7 +115,7 @@ local function constructEntry(entry, width, layoutOrder)
 	if FFlagFixActionBindingSecurity then
 		isCoreString = IS_DEVELOPER_STR
 		if actionInfo["isCore"] then
-			isCoreString= IS_CORE_STR
+			isCoreString = IS_CORE_STR
 		end
 	else
 		isCoreString = IS_CORE_STR
@@ -129,10 +125,10 @@ local function constructEntry(entry, width, layoutOrder)
 	end
 
 	local row = {}
-	for i = 2,#verticalOffsets do
-		local key = string.format("line_%d",i)
+	for i = 2, #verticalOffsets do
+		local key = string.format("line_%d", i)
 		row[key] = Roact.createElement("Frame", {
-			Size = UDim2.new(0,LINE_WIDTH,1,0),
+			Size = UDim2.new(0, LINE_WIDTH, 1, 0),
 			Position = verticalOffsets[i],
 			BackgroundColor3 = LINE_COLOR,
 			BorderSizePixel = 0,
@@ -176,12 +172,11 @@ local function constructEntry(entry, width, layoutOrder)
 		BorderSizePixel = 0,
 	})
 
-
 	return Roact.createElement("Frame", {
 		Size = UDim2.new(0, width, 0, ENTRY_HEIGHT),
 		BackgroundTransparency = 1,
 		LayoutOrder = layoutOrder,
-	},row)
+	}, row)
 end
 
 function ActionBindingsChart:init(props)
@@ -191,7 +186,7 @@ function ActionBindingsChart:init(props)
 		local currSortType = props.ActionBindingsData:getSortType()
 		if sortType == currSortType then
 			self:setState({
-				reverseSort = not self.state.reverseSort
+				reverseSort = not self.state.reverseSort,
 			})
 		else
 			props.ActionBindingsData:setSortType(sortType)
@@ -231,8 +226,7 @@ function ActionBindingsChart:didUpdate()
 
 		local absSize = self.scrollingRef.current.AbsoluteSize
 		local currAbsSize = self.state.absScrollSize
-		if absSize.X ~= currAbsSize.X or
-			absSize.Y ~= currAbsSize.Y then
+		if absSize.X ~= currAbsSize.X or absSize.Y ~= currAbsSize.Y then
 			self:setState({
 				absScrollSize = absSize,
 			})
@@ -243,7 +237,7 @@ end
 function ActionBindingsChart:didMount()
 	self.bindingsUpdated = self.props.ActionBindingsData:Signal():Connect(function(bindingsData)
 		self:setState({
-			actionBindingEntries = bindingsData
+			actionBindingEntries = bindingsData,
 		})
 	end)
 
@@ -329,7 +323,6 @@ function ActionBindingsChart:render()
 				LayoutOrder = 1,
 			})
 		else
-
 			entries["WindowingPadding"] = Roact.createElement("Frame", {
 				Size = UDim2.new(1, 0, 0, paddingHeight),
 				BackgroundTransparency = 1,
@@ -347,13 +340,13 @@ function ActionBindingsChart:render()
 		Header = constructHeader(self.onSortChanged, frameWidth),
 		MainChart = Roact.createElement("ScrollingFrame", {
 			Position = UDim2.new(0, 0, 0, HEADER_HEIGHT),
-			Size = UDim2.new(1, 0, 1, - HEADER_HEIGHT),
+			Size = UDim2.new(1, 0, 1, -HEADER_HEIGHT),
 			CanvasSize = UDim2.new(0, frameWidth, 0, canvasHeight),
 			ScrollBarThickness = 6,
 			BackgroundColor3 = Constants.Color.BaseGray,
 			BackgroundTransparency = 1,
 
-			[Roact.Ref] = self.scrollingRef
+			[Roact.Ref] = self.scrollingRef,
 		}, entries),
 	})
 end

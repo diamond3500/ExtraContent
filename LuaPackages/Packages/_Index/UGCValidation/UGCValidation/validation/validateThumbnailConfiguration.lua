@@ -9,16 +9,14 @@ local root = script.Parent.Parent
 
 local Types = require(root.util.Types)
 
-local getEngineFeatureUGCValidateEditableMeshAndImage =
-	require(root.flags.getEngineFeatureUGCValidateEditableMeshAndImage)
-
 local Analytics = require(root.Analytics)
 
 local function validateThumbnailConfiguration(
 	accessory: Instance,
 	handle: BasePart,
 	meshInfo: Types.MeshInfo,
-	meshScale: Vector3
+	meshScale: Vector3,
+	validationContext: Types.ValidationContext
 ): (boolean, { string }?)
 	local thumbnailConfiguration = accessory:FindFirstChild("ThumbnailConfiguration")
 
@@ -26,7 +24,11 @@ local function validateThumbnailConfiguration(
 		-- if ThumbnailConfiguration is present, validateInstanceTree verifies ThumbnailCameraTarget also exists
 		local thumbnailCameraTarget = thumbnailConfiguration:FindFirstChild("ThumbnailCameraTarget") :: ObjectValue
 		if thumbnailCameraTarget.Value ~= handle then
-			Analytics.reportFailure(Analytics.ErrorType.validateThumbnailConfiguration_InvalidTarget)
+			Analytics.reportFailure(
+				Analytics.ErrorType.validateThumbnailConfiguration_InvalidTarget,
+				nil,
+				validationContext
+			)
 			return false,
 				{
 					string.format(
@@ -44,38 +46,26 @@ local function validateThumbnailConfiguration(
 			local handleCF = target.CFrame
 			local thumbnailCameraValue = thumbnailConfiguration:FindFirstChild("ThumbnailCameraValue") :: CFrameValue
 			local cameraCF = handleCF * thumbnailCameraValue.Value
-			if getEngineFeatureUGCValidateEditableMeshAndImage() then
-				if
-					UGCValidationService:CheckEditableMeshInCameraFrustum(
-						meshInfo.editableMesh,
-						meshScale,
-						handleCF,
-						cameraCF
-					) == false
-				then
-					Analytics.reportFailure(Analytics.ErrorType.validateThumbnailConfiguration_OutsideView)
-					return false,
-						{
-							string.format(
-								"Asset '%s' is positioned outside the thumbnail camera view. You need to reposition the asset at the center of the camera view and try again.",
-								meshInfo.fullName
-							),
-						}
-				end
-			else
-				if
-					UGCValidationService:CheckMeshInCameraFrustum(meshInfo.contentId, meshScale, handleCF, cameraCF)
-					== false
-				then
-					Analytics.reportFailure(Analytics.ErrorType.validateThumbnailConfiguration_OutsideView)
-					return false,
-						{
-							string.format(
-								"Asset '%s' is positioned outside the thumbnail camera view. You need to reposition the asset at the center of the camera view and try again.",
-								meshInfo.fullName
-							),
-						}
-				end
+			if
+				UGCValidationService:CheckEditableMeshInCameraFrustum(
+					meshInfo.editableMesh,
+					meshScale,
+					handleCF,
+					cameraCF
+				) == false
+			then
+				Analytics.reportFailure(
+					Analytics.ErrorType.validateThumbnailConfiguration_OutsideView,
+					nil,
+					validationContext
+				)
+				return false,
+					{
+						string.format(
+							"Asset '%s' is positioned outside the thumbnail camera view. You need to reposition the asset at the center of the camera view and try again.",
+							meshInfo.fullName
+						),
+					}
 			end
 		end
 	end

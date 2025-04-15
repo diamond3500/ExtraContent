@@ -1,7 +1,7 @@
 local CorePackages = game:GetService("CorePackages")
-local Roact = require(CorePackages.Roact)
+local Roact = require(CorePackages.Packages.Roact)
 local CoreGui = game:GetService("CoreGui")
-local UIBlox = require(CorePackages.UIBlox)
+local UIBlox = require(CorePackages.Packages.UIBlox)
 local AppStyleProvider = UIBlox.App.Style.AppStyleProvider
 local DarkTheme = UIBlox.App.Style.Constants.ThemeName.Dark
 
@@ -10,7 +10,7 @@ local Promise = require(CorePackages.Packages.Promise)
 local SelfViewTooltipFTUX = require(script.Parent.SelfViewTooltipFTUX)
 local PADDING_TIME = 5
 
-return function (props)
+return function(props)
 	local screenGui = Instance.new("ScreenGui")
 	screenGui.Name = "SelfViewTooltipOnOpenGui"
 	screenGui.DisplayOrder = -1
@@ -24,7 +24,7 @@ return function (props)
 	}, {
 		frame = Roact.createElement("Frame", {
 			Position = props.position,
-			Size =  props.size,
+			Size = props.size,
 			BackgroundTransparency = 0,
 			AnchorPoint = props.anchorPoint,
 			Visible = false,
@@ -32,7 +32,7 @@ return function (props)
 			aspectRatioConstraint = Roact.createElement("UIAspectRatioConstraint", {
 				AspectRatio = props.aspectRatio,
 				AspectType = "ScaleWithParentSize",
-				DominantAxis = "Width"
+				DominantAxis = "Width",
 			}),
 			sizeConstraint = Roact.createElement("UISizeConstraint", {
 				MaxSize = props.maxSize,
@@ -48,9 +48,9 @@ return function (props)
 					fallbackText = props.fallbackText,
 					translationKey = props.translationKey,
 					tooltipLifetime = props.tooltipLifetime,
-				})
+				}),
 			}),
-		})
+		}),
 	})
 	local instance = Roact.mount(root, screenGui, "SelfViewTooltipOnOpenGui")
 

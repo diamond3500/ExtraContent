@@ -4,10 +4,10 @@ local Root = script.Parent.Parent
 
 local Types = require(Root.util.Types)
 
-local getEngineFeatureUGCValidateEditableMeshAndImage =
-	require(Root.flags.getEngineFeatureUGCValidateEditableMeshAndImage)
-
 local Analytics = require(Root.Analytics)
+
+local getFFlagUGCValidatePartMass = require(Root.flags.getFFlagUGCValidatePartMass)
+local getFIntUGCValidationPartMaxMass = require(Root.flags.getFIntUGCValidationPartMaxMass)
 
 -- validation logic uses MeshPart.Size in several places to check asset bounds
 -- however, MeshPart.Size is based on the bounding box of the physics data
@@ -19,8 +19,7 @@ local function resetPhysicsData(roots: { Instance }, validationContext: Types.Va
 		return false, "EngineResetCollisionFidelity is not enabled"
 	end
 
-	local skipPhysicsDataReset = if getEngineFeatureUGCValidateEditableMeshAndImage()
-			and validationContext.bypassFlags
+	local skipPhysicsDataReset = if validationContext.bypassFlags
 		then validationContext.bypassFlags.skipPhysicsDataReset
 		else false
 
@@ -37,8 +36,29 @@ local function resetPhysicsData(roots: { Instance }, validationContext: Types.Va
 						if validationContext.isServer then
 							error("Failed to load mesh data")
 						end
-						Analytics.reportFailure(Analytics.ErrorType.resetPhysicsData_FailedToLoadMesh)
+						Analytics.reportFailure(
+							Analytics.ErrorType.resetPhysicsData_FailedToLoadMesh,
+							nil,
+							validationContext
+						)
 						return false, "Failed to load mesh data"
+					end
+
+					if getFFlagUGCValidatePartMass() then
+						if instance:GetMass() > getFIntUGCValidationPartMaxMass() then
+							Analytics.reportFailure(
+								Analytics.ErrorType.resetPhysicsData_LargeMass,
+								nil,
+								validationContext
+							)
+							return false,
+								string.format(
+									"%s has too much %d mass while the limit is %d.",
+									instance.Name,
+									instance:GetMass(),
+									getFIntUGCValidationPartMaxMass()
+								)
+						end
 					end
 				end
 			end

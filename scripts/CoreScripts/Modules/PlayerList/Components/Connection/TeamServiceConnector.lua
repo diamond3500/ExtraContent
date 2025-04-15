@@ -1,7 +1,7 @@
 local CorePackages = game:GetService("CorePackages")
 
-local Roact = require(CorePackages.Roact)
-local RoactRodux = require(CorePackages.RoactRodux)
+local Roact = require(CorePackages.Packages.Roact)
+local RoactRodux = require(CorePackages.Packages.RoactRodux)
 
 local Components = script.Parent.Parent
 local PlayerList = Components.Parent
@@ -21,7 +21,7 @@ local TeamServiceConnector = Roact.PureComponent:extend("TeamServiceConnector")
 function TeamServiceConnector:init()
 	-- We use FindService here so that we don't cause the Teams to be added to the explorer in Studio.
 	self.state = {
-		teams = game:FindService("Teams")
+		teams = game:FindService("Teams"),
 	}
 end
 
@@ -80,7 +80,7 @@ function TeamServiceConnector:render()
 			callback = function(child)
 				if child:IsA("Teams") then
 					self:setState({
-						teams = child
+						teams = child,
 					})
 				end
 			end,

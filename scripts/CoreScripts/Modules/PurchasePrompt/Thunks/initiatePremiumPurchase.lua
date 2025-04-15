@@ -41,7 +41,7 @@ local function initiatePremiumPurchase(id, infoType, equipIfPurchased)
 			canShowUpsell = shouldPrecheck and getPremiumUpsellPrecheck(network) or Promise.resolve(true),
 			premiumProductInfo = getPremiumProductInfo(network),
 			accountInfo = getAccountInfo(network, externalSettings),
-			balanceInfo = getBalanceInfo(network, externalSettings),
+			balanceInfo = getBalanceInfo(network, externalSettings, false --[[overrideStudioMock]]),
 		})
 			:andThen(function(results)
 				store:dispatch(resolvePremiumPromptState(results.accountInfo, results.balanceInfo, results.premiumProductInfo, results.canShowUpsell))

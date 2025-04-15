@@ -15,7 +15,7 @@ local ReactOtter = require(CorePackages.Packages.ReactOtter)
 
 local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 
-local GetFFlagFixChromeReferences = require(RobloxGui.Modules.Flags.GetFFlagFixChromeReferences)
+local GetFFlagFixChromeReferences = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagFixChromeReferences
 
 local Chrome = RobloxGui.Modules.Chrome
 local ChromeEnabled = if GetFFlagFixChromeReferences()
@@ -24,7 +24,7 @@ local ChromeEnabled = if GetFFlagFixChromeReferences()
 local ChromeService = if GetFFlagFixChromeReferences()
 	then if ChromeEnabled() then require(Chrome.Service) else nil
 	else require(Chrome.Service)
-local ChromeConstants = require(Chrome.Unibar.Constants)
+local ChromeConstants = require(Chrome.ChromeShared.Unibar.Constants)
 
 local TopBar = RobloxGui.Modules.TopBar
 local TopBarConstants = require(TopBar.Constants)
@@ -78,8 +78,8 @@ local function CallBarContainer(passedProps: Props)
 	end)
 
 	--[[
-		Updates the screenPosition for the call bar given the current state of the unibar. If the
-		call bar collides with the unibar then move call bar towards the right. If the
+		Updates the screenPosition for the call bar.
+		If the call bar collides with the unibar then move call bar towards the right. If the
 		call bar won't fit in the viewport then adjust the call bar downwards.
 		If unibar is not enabled, we just align it with the tilt icon.
 
@@ -102,10 +102,8 @@ local function CallBarContainer(passedProps: Props)
 
 		if ChromeEnabled() and ChromeService then
 			-- It is possible unibar has not been initialized here.
-
-			local unibarStatus = ChromeService:status():get()
 			local unibarDimensions = ChromeService:layout():get()
-			local unibarMax = unibarDimensions[unibarStatus].Max
+			local unibarMax = unibarDimensions.Max
 
 			if unibarMax.X + CALL_BAR_MARGIN > (Camera.ViewportSize.X / 2) - (CALL_BAR_SIZE.X / 2) then
 				-- If CallBar default position (middle of screen) doesn't fit nicely with unibar
@@ -210,23 +208,12 @@ local function CallBarContainer(passedProps: Props)
 
 		updateCallBarPosition(if isVisible then ScreenPosition.On else ScreenPosition.Off)
 
-		local unibarStatusConnection
-		if ChromeEnabled() and ChromeService then
-			unibarStatusConnection = ChromeService:status():connect(function()
-				updateCallBarPosition(if isVisible then ScreenPosition.On else ScreenPosition.Off)
-			end)
-		end
-
 		-- Listen for screen size changes
 		local viewportSizeConnection = Camera:GetPropertyChangedSignal("ViewportSize"):Connect(function()
 			updateCallBarPosition(if isVisible then ScreenPosition.On else ScreenPosition.Off)
 		end)
 
 		return function()
-			if ChromeEnabled() then
-				unibarStatusConnection:disconnect()
-			end
-
 			viewportSizeConnection:Disconnect()
 		end
 	end, { currentCallStatus, instanceId, unibarMounted })

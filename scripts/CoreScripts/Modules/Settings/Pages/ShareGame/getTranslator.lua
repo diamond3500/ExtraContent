@@ -1,8 +1,8 @@
 --!nonstrict
 local CoreGui = game:GetService("CoreGui")
+local CorePackages = game:GetService("CorePackages")
 
-local RobloxGui = CoreGui:WaitForChild("RobloxGui")
-local RobloxTranslator = require(RobloxGui.Modules.RobloxTranslator)
+local RobloxTranslator = require(CorePackages.Workspace.Packages.RobloxTranslator)
 
 local mockTranslator = require(script.Parent.mockTranslator)
 

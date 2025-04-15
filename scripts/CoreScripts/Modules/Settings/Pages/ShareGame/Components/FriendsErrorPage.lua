@@ -5,7 +5,7 @@ local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 
 local ShareGame = RobloxGui.Modules.Settings.Pages.ShareGame
 
-local Roact = require(CorePackages.Roact)
+local Roact = require(CorePackages.Packages.Roact)
 local Constants = require(ShareGame.Constants)
 local Theme = require(RobloxGui.Modules.Settings.Theme)
 

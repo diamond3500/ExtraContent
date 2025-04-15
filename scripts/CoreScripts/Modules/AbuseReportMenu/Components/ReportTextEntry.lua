@@ -1,25 +1,26 @@
-local root = script:FindFirstAncestor("AbuseReportMenu")
 local CorePackages = game:GetService("CorePackages")
 local React = require(CorePackages.Packages.React)
 local UIBlox = require(CorePackages.Packages.UIBlox)
 local useStyle = UIBlox.Core.Style.useStyle
-local getMenuItemSizings = require(root.Utility.getMenuItemSizings)
+
+local FFlagReportTextEntryBackgroundColor = game:DefineFastFlag("ReportTextEntryBackgroundColor", false)
 
 type Props = { text: string, placeholderText: string, onUpdate: (newValue: string) -> () }
 
 local TEXT_ENTRY_HEIGHT = 40
 
 local function ReportTextEntry(props: Props)
-	local sizings = getMenuItemSizings()
 	local style = useStyle()
 	local font = style.Font.Body.Font
-	local textSize = style.Font.BaseSize * sizings.TextEntryRelativeSize
+	local textSize = style.Tokens.Global.FontSize_100
 	local theme = style.Theme
 
 	return React.createElement("Frame", {
-		Size = UDim2.new(1, 0, 0, TEXT_ENTRY_HEIGHT + sizings.TextOffset + 20),
+		Size = UDim2.new(1, 0, 0, TEXT_ENTRY_HEIGHT + style.Tokens.Global.Space_300 + 20),
 		BackgroundTransparency = style.Theme.BackgroundDefault.Transparency,
-		BackgroundColor3 = style.Theme.BackgroundDefault.Color,
+		BackgroundColor3 = if FFlagReportTextEntryBackgroundColor
+			then style.Theme.BackgroundUIDefault.Color
+			else style.Theme.BackgroundDefault.Color,
 		AutomaticSize = Enum.AutomaticSize.Y,
 	}, {
 		UIPadding = React.createElement("UIPadding", {
@@ -32,11 +33,13 @@ local function ReportTextEntry(props: Props)
 			CornerRadius = UDim.new(0, 8),
 		}),
 		AbuseReportsText = React.createElement("TextBox", {
-			Size = UDim2.new(1, 0, 0, TEXT_ENTRY_HEIGHT + sizings.TextOffset),
+			Size = UDim2.new(1, 0, 0, TEXT_ENTRY_HEIGHT + style.Tokens.Global.Space_300),
 			AutomaticSize = Enum.AutomaticSize.Y,
 			Position = UDim2.new(0, 0, 0, 0),
 			AnchorPoint = Vector2.new(0, 0),
-			BackgroundColor3 = theme.BackgroundDefault.Color,
+			BackgroundColor3 = if FFlagReportTextEntryBackgroundColor
+				then theme.BackgroundUIDefault.Color
+				else theme.BackgroundDefault.Color,
 			PlaceholderText = props.placeholderText,
 			Font = font,
 			Text = props.text,
@@ -53,7 +56,6 @@ local function ReportTextEntry(props: Props)
 			TextWrapped = true,
 			ClearTextOnFocus = false,
 			OverlayNativeInput = true,
-			ClipsDescendants = true,
 			[React.Event.FocusLost] = function() end,
 			[React.Event.Focused] = function() end,
 			[React.Change.AbsoluteSize] = function() end,

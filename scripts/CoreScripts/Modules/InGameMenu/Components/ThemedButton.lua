@@ -20,7 +20,7 @@
 
 local CorePackages = game:GetService("CorePackages")
 
-local InGameMenuDependencies = require(CorePackages.InGameMenuDependencies)
+local InGameMenuDependencies = require(CorePackages.Packages.InGameMenuDependencies)
 local Roact = InGameMenuDependencies.Roact
 local UIBlox = InGameMenuDependencies.UIBlox
 local t = InGameMenuDependencies.t
@@ -71,7 +71,6 @@ function ThemedButton:init()
 	})
 end
 
-
 function ThemedButton:renderWithSelectionCursor(getSelectionCursor)
 	local props = self.props
 	local styleKey = props.normalThemeKey
@@ -117,25 +116,27 @@ function ThemedButton:renderWithSelectionCursor(getSelectionCursor)
 				})
 			end,
 			[Roact.Event.InputBegan] = function(rbx, input)
-				if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+				if
+					input.UserInputType == Enum.UserInputType.MouseButton1
+					or input.UserInputType == Enum.UserInputType.Touch
+				then
 					self:setState({
 						press = true,
 					})
 				end
 			end,
 			[Roact.Event.InputEnded] = function(rbx, input)
-				if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+				if
+					input.UserInputType == Enum.UserInputType.MouseButton1
+					or input.UserInputType == Enum.UserInputType.Touch
+				then
 					self:setState({
 						press = false,
 					})
 				end
 			end,
-			[Roact.Ref] = self.props.ButtonRef
-		}, props.renderChildren(
-			transparency,
-			props.enabled and self.state.hover,
-			props.enabled and self.state.press
-		))
+			[Roact.Ref] = self.props.ButtonRef,
+		}, props.renderChildren(transparency, props.enabled and self.state.hover, props.enabled and self.state.press))
 	end)
 end
 

@@ -1,13 +1,12 @@
 --!nonstrict
 local CorePackages = game:GetService("CorePackages")
-local CoreGui = game:GetService("CoreGui")
 local Players = game:GetService("Players")
 local InspectAndBuyFolder = script.Parent.Parent
-local Roact = require(CorePackages.Roact)
-local RoactRodux = require(CorePackages.RoactRodux)
+local Roact = require(CorePackages.Packages.Roact)
+local RoactRodux = require(CorePackages.Packages.RoactRodux)
 local AppFonts = require(CorePackages.Workspace.Packages.Style).AppFonts
 local Colors = require(InspectAndBuyFolder.Colors)
-local RobloxTranslator = require(CoreGui.RobloxGui.Modules.RobloxTranslator)
+local RobloxTranslator = require(CorePackages.Workspace.Packages.RobloxTranslator)
 local VerifiedBadges = require(CorePackages.Workspace.Packages.VerifiedBadges)
 local UserLib = require(CorePackages.Workspace.Packages.UserLib)
 

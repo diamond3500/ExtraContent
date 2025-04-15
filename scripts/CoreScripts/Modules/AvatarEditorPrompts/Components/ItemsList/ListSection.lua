@@ -1,10 +1,10 @@
 local CorePackages = game:GetService("CorePackages")
 
-local Cryo = require(CorePackages.Cryo)
-local Roact = require(CorePackages.Roact)
+local Cryo = require(CorePackages.Packages.Cryo)
+local Roact = require(CorePackages.Packages.Roact)
 local RoactGamepad = require(CorePackages.Packages.RoactGamepad)
 local t = require(CorePackages.Packages.t)
-local AvatarExperienceDeps = require(CorePackages.AvatarExperienceDeps)
+local AvatarExperienceDeps = require(CorePackages.Packages.AvatarExperienceDeps)
 
 local RoactFitComponents = AvatarExperienceDeps.RoactFitComponents
 
@@ -82,7 +82,10 @@ function ListSection:render()
 end
 
 return Roact.forwardRef(function(props, ref)
-	return Roact.createElement(ListSection, Cryo.Dictionary.join(props, {
-		forwardRef = ref,
-	}))
+	return Roact.createElement(
+		ListSection,
+		Cryo.Dictionary.join(props, {
+			forwardRef = ref,
+		})
+	)
 end)

@@ -2,10 +2,10 @@
 local CorePackages = game:GetService("CorePackages")
 local CoreGui = game:GetService("CoreGui")
 
-local Roact = require(CorePackages.Roact)
-local RoactRodux = require(CorePackages.RoactRodux)
+local Roact = require(CorePackages.Packages.Roact)
+local RoactRodux = require(CorePackages.Packages.RoactRodux)
 local t = require(CorePackages.Packages.t)
-local UIBlox = require(CorePackages.UIBlox)
+local UIBlox = require(CorePackages.Packages.UIBlox)
 
 local withStyle = UIBlox.Style.withStyle
 
@@ -16,7 +16,7 @@ local WithLayoutValues = LayoutValues.WithLayoutValues
 
 local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 local GameTranslator = require(RobloxGui.Modules.GameTranslator)
-local RobloxTranslator = require(RobloxGui.Modules.RobloxTranslator)
+local RobloxTranslator = require(CorePackages.Workspace.Packages.RobloxTranslator)
 
 local TitleBar = Roact.PureComponent:extend("TitleBar")
 
@@ -61,7 +61,7 @@ function TitleBar:render()
 			}, {
 				Padding = Roact.createElement("UIPadding", {
 					PaddingLeft = UDim.new(0, 14),
-				})
+				}),
 			})
 
 			local maxLeaderstats = layoutValues.MaxLeaderstats

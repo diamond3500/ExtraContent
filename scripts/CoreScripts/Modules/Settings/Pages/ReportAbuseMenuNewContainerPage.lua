@@ -3,12 +3,11 @@ local CoreGui = game:GetService("CoreGui")
 local CorePackages = game:GetService("CorePackages")
 local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 
-local Roact = require(CorePackages.Roact)
+local Roact = require(CorePackages.Packages.Roact)
 local utility = require(RobloxGui.Modules.Settings.Utility)
 
 local AbuseReportMenu = require(RobloxGui.Modules.AbuseReportMenu).AbuseReportMenu
 local ReportAbuseAnalytics = require(RobloxGui.Modules.AbuseReportMenu).ReportAbuseAnalytics
-local GetFFlagOpenControlsOnMenuOpen = require(RobloxGui.Modules.Chrome.Flags.GetFFlagOpenControlsOnMenuOpen)
 
 ------------ Variables -------------------
 local PageInstance = nil
@@ -37,7 +36,7 @@ local function Initialize()
 
 		this.HubRef.SettingsShowSignal:connect(function(isOpen)
 			if not isOpen then
-				this:onSettingsHidden()	
+				this:onSettingsHidden()
 			end
 		end)
 
@@ -52,12 +51,8 @@ local function Initialize()
 		this.HubRef.ReportSentPageV2:ShowReportedPlayer(reportedPlayer, true)
 	end
 
-	function this:HideMenu(takingScreenshot)
-		if GetFFlagOpenControlsOnMenuOpen() then
-			this.HubRef:SetVisibility(false, true, nil, nil, nil, takingScreenshot)
-		else
-			this.HubRef:SetVisibility(false, true)
-		end
+	function this:HideMenu()
+		this.HubRef:SetVisibility(false, true)
 	end
 
 	function this:ShowMenu()
@@ -105,11 +100,7 @@ local function Initialize()
 
 	local abuseReportMenu = Roact.createElement(AbuseReportMenu, {
 		hideReportTab = function()
-			if GetFFlagOpenControlsOnMenuOpen() then 
-				this:HideMenu(true) 
-			else 
-				this:HideMenu() 
-			end
+			this:HideMenu()
 		end,
 		showReportTab = function()
 			this:ShowMenu()
@@ -133,7 +124,7 @@ local function Initialize()
 			this:showReportSentPage(reportedPlayer)
 		end,
 		onReportComplete = function(text)
-			this:showAlert(text,"Ok", function()
+			this:showAlert(text, "Ok", function()
 				-- callback function once we click "Ok" in the success screen
 				this:HideMenu()
 			end)

@@ -5,17 +5,17 @@
 local CorePackages = game:GetService("CorePackages")
 local CoreGui = game:GetService("CoreGui")
 
-local Roact = require(CorePackages.Roact)
-local RoactRodux = require(CorePackages.RoactRodux)
+local Roact = require(CorePackages.Packages.Roact)
+local RoactRodux = require(CorePackages.Packages.RoactRodux)
 local t = require(CorePackages.Packages.t)
-local UIBlox = require(CorePackages.UIBlox)
+local UIBlox = require(CorePackages.Packages.UIBlox)
 
 local InteractiveAlert = UIBlox.App.Dialog.Alert.InteractiveAlert
 local ButtonType = UIBlox.App.Button.Enum.ButtonType
 local LoadableImage = UIBlox.App.Loading.LoadableImage
 
 local RobloxGui = CoreGui:WaitForChild("RobloxGui")
-local RobloxTranslator = require(RobloxGui.Modules.RobloxTranslator)
+local RobloxTranslator = require(CorePackages.Workspace.Packages.RobloxTranslator)
 
 local Components = script.Parent.Parent
 local AvatarEditorPrompts = Components.Parent
@@ -42,7 +42,7 @@ DeleteOutfitPrompt.validateProps = t.strictInterface({
 
 function DeleteOutfitPrompt:init()
 	self.renderAlertMiddleContent = function()
-		local imageUrl = "rbxthumb://type=Outfit&id=" ..self.props.outfitId.. "&w=150&h=150"
+		local imageUrl = "rbxthumb://type=Outfit&id=" .. self.props.outfitId .. "&w=150&h=150"
 
 		return Roact.createElement("Frame", {
 			BackgroundTransparency = 1,

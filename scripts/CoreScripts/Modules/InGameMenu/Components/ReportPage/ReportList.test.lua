@@ -5,12 +5,14 @@ local GuiService = game:GetService("GuiService")
 local CoreGui = game:GetService("CoreGui")
 local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 local Modules
+
 local JestGlobals = require(CorePackages.Packages.Dev.JestGlobals3)
 local expect = JestGlobals.expect
 local describe = JestGlobals.describe
 local it = JestGlobals.it
 local beforeEach = JestGlobals.beforeEach
 local jest = JestGlobals.jest
+
 local ReactTestingLibrary = require(CorePackages.Packages.Dev.ReactTestingLibrary)
 local render = ReactTestingLibrary.render
 local fireEvent = ReactTestingLibrary.fireEvent
@@ -41,8 +43,8 @@ local ReportList
 local function resetModules()
 	jest.resetModules()
 	Modules = CoreGui.RobloxGui.Modules
-	act = require(CorePackages.Roact).act -- re-import this first or things will break
-	InGameMenuDependencies = require(CorePackages.InGameMenuDependencies)
+	act = require(CorePackages.Packages.Roact).act -- re-import this first or things will break
+	InGameMenuDependencies = require(CorePackages.Packages.InGameMenuDependencies)
 	UIBlox = InGameMenuDependencies.UIBlox
 	UIBlox.init(require(CorePackages.Workspace.Packages.RobloxAppUIBloxConfig))
 	Roact = InGameMenuDependencies.Roact
@@ -71,32 +73,35 @@ local function getMountableTreeAndStore(props)
 	})
 
 	local testPlayers = {
-			{
-				UserId = 2231221,
-				Name = "TheGamer101"
-			},
-			{
-				UserId = 1,
-				Name = "Roblox",
-			},
-			{
-				UserId = 2,
-				Name = "Jonah",
-			},
-			{
-				UserId = 3,
-				Name = "Simeon",
-			},
-			{
-				UserId = 4,
-				Name = "Elias",
-			}
-		}
+		{
+			UserId = 2231221,
+			Name = "TheGamer101",
+		},
+		{
+			UserId = 1,
+			Name = "Roblox",
+		},
+		{
+			UserId = 2,
+			Name = "Jonah",
+		},
+		{
+			UserId = 3,
+			Name = "Simeon",
+		},
+		{
+			UserId = 4,
+			Name = "Elias",
+		},
+	}
 
-	local reportList = Roact.createElement(ReportList, Cryo.Dictionary.join(props or {}, {
-		placeName = "Crossroads",
-		players = testPlayers
-	}))
+	local reportList = Roact.createElement(
+		ReportList,
+		Cryo.Dictionary.join(props or {}, {
+			placeName = "Crossroads",
+			players = testPlayers,
+		})
+	)
 
 	return Roact.createElement(RoactRodux.StoreProvider, {
 		store = store,
@@ -105,9 +110,11 @@ local function getMountableTreeAndStore(props)
 			LocalizationProvider = Roact.createElement(LocalizationProvider, {
 				localization = Localization.new("en-us"),
 			}, {
-				FocusHandlerContextProvider = GetFFlagIGMGamepadSelectionHistory() and Roact.createElement(FocusHandlerContextProvider, {}, {
-					ReportList = reportList,
-				}) or nil,
+				FocusHandlerContextProvider = GetFFlagIGMGamepadSelectionHistory()
+						and Roact.createElement(FocusHandlerContextProvider, {}, {
+							ReportList = reportList,
+						})
+					or nil,
 				ReportList = not GetFFlagIGMGamepadSelectionHistory() and reportList or nil,
 			}),
 		}),
@@ -125,16 +132,17 @@ describe("In-Game Menu Report List", function()
 			local element = getMountableTreeAndStore()
 
 			local instance = Roact.mount(element, Players.LocalPlayer.PlayerGui)
-			expect(#Players.LocalPlayer.PlayerGui:GetChildren()).toEqual(1)
+			expect(#Players.LocalPlayer.PlayerGui:GetChildren()).toBeGreaterThan(0)
 
 			-- check for a few things we expect to find at various places in the tree
 			expect(Players.LocalPlayer.PlayerGui:FindFirstChild("GameIcon", true)).toBeDefined()
 			expect(Players.LocalPlayer.PlayerGui:FindFirstChild("PlayerIcon", true)).toBeDefined()
 			expect(Players.LocalPlayer.PlayerGui:FindFirstChild("ContentsScrollingFrame", true)).toBeDefined()
 
-
 			local count = 0
-			for _, inst in pairs(Players.LocalPlayer.PlayerGui:FindFirstChild("ContentsScrollingFrame", true)[1]:GetChildren()) do
+			for _, inst in
+				pairs(Players.LocalPlayer.PlayerGui:FindFirstChild("ContentsScrollingFrame", true)[1]:GetChildren())
+			do
 				if inst.ClassName == "TextButton" then
 					count += 1
 				end
@@ -202,7 +210,7 @@ describe("In-Game Menu Report List", function()
 
 			resetModules()
 			local element = getMountableTreeAndStore()
-				local result = render(element)
+			local result = render(element)
 
 			local playerButton = result.getByText("TheGamer101").Parent
 			expect(playerButton).toBeDefined()

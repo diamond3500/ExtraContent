@@ -2,7 +2,7 @@ local RunService = game:GetService("RunService")
 local CorePackages = game:GetService("CorePackages")
 local RobloxGui = game:GetService("CoreGui"):WaitForChild("RobloxGui")
 
-local InGameMenuDependencies = require(CorePackages.InGameMenuDependencies)
+local InGameMenuDependencies = require(CorePackages.Packages.InGameMenuDependencies)
 local Roact = InGameMenuDependencies.Roact
 local RoactRodux = InGameMenuDependencies.RoactRodux
 local t = InGameMenuDependencies.t
@@ -34,8 +34,11 @@ LeaveGamePrompt.validateProps = t.strictInterface({
 
 function LeaveGamePrompt:init()
 	self.leaveGameConfirm = function()
-		SendAnalytics(Constants.AnalyticsInGameMenuName, Constants.AnalyticsLeaveGameName,
-						{confirmed = Constants.AnalyticsConfirmedName})
+		SendAnalytics(
+			Constants.AnalyticsInGameMenuName,
+			Constants.AnalyticsLeaveGameName,
+			{ confirmed = Constants.AnalyticsConfirmedName }
+		)
 		RunService.Heartbeat:Wait()
 		game:Shutdown()
 		settings().Rendering.QualityLevel = GetDefaultQualityLevel()
@@ -45,7 +48,7 @@ end
 function LeaveGamePrompt:render()
 	return withLocalization({
 		titleText = "CoreScripts.InGameMenu.Prompt.LeaveGameTitle",
-		bodyText = if (GetFFlagEnableVRFTUXExperience() and IsFTUXExperience(PlatformEnum.QuestVR)) 
+		bodyText = if (GetFFlagEnableVRFTUXExperience() and IsFTUXExperience(PlatformEnum.QuestVR))
 			then "CoreScripts.InGameMenu.Prompt.VRFTUXLeaveGameBodyText"
 			else "CoreScripts.InGameMenu.Prompt.LeaveGameBodyText",
 		confirmText = "CoreScripts.InGameMenu.Prompt.LeaveGame",
@@ -64,32 +67,30 @@ function LeaveGamePrompt:render()
 	end)
 end
 
-return RoactRodux.UNSTABLE_connect2(
-	 function(state, props)
-		local canGamepadCaptureFocus = state.menuPage == Constants.LeaveGamePromptPageKey
-			and state.displayOptions.inputType == Constants.InputType.Gamepad
-			and not state.respawn.dialogOpen
-			and state.currentZone == 1
+return RoactRodux.UNSTABLE_connect2(function(state, props)
+	local canGamepadCaptureFocus = state.menuPage == Constants.LeaveGamePromptPageKey
+		and state.displayOptions.inputType == Constants.InputType.Gamepad
+		and not state.respawn.dialogOpen
+		and state.currentZone == 1
 
-		local canKeyboardCaptureFocus = state.menuPage == Constants.LeaveGamePromptPageKey
-			and state.displayOptions.inputType == Constants.InputType.MouseAndKeyboard
-			and not state.respawn.dialogOpen
+	local canKeyboardCaptureFocus = state.menuPage == Constants.LeaveGamePromptPageKey
+		and state.displayOptions.inputType == Constants.InputType.MouseAndKeyboard
+		and not state.respawn.dialogOpen
 
-		return {
-			canGamepadCaptureFocus = canGamepadCaptureFocus,
-			canKeyboardCaptureFocus = canKeyboardCaptureFocus,
-		}
-	end,
-	function(dispatch)
-		return {
-			closeMenu = function()
-				-- Since we dont have a navigation stack we will just close the menu for now.
-				dispatch(CloseMenu)
-				SendAnalytics(
-					Constants.AnalyticsInGameMenuName,
-					Constants.AnalyticsLeaveGameName,
-					{confirmed = Constants.AnalyticsCancelledName})
-			end,
-		}
-	end
-)(LeaveGamePrompt)
+	return {
+		canGamepadCaptureFocus = canGamepadCaptureFocus,
+		canKeyboardCaptureFocus = canKeyboardCaptureFocus,
+	}
+end, function(dispatch)
+	return {
+		closeMenu = function()
+			-- Since we dont have a navigation stack we will just close the menu for now.
+			dispatch(CloseMenu)
+			SendAnalytics(
+				Constants.AnalyticsInGameMenuName,
+				Constants.AnalyticsLeaveGameName,
+				{ confirmed = Constants.AnalyticsCancelledName }
+			)
+		end,
+	}
+end)(LeaveGamePrompt)

@@ -1,6 +1,6 @@
 --!nonstrict
 local CorePackages = game:GetService("CorePackages")
-local Roact = require(CorePackages.Roact)
+local Roact = require(CorePackages.Packages.Roact)
 
 local LineGraphHoverDisplay = require(script.Parent.LineGraphHoverDisplay)
 
@@ -36,19 +36,19 @@ function LineGraph:init()
 		if input.UserInputType == Enum.UserInputType.MouseMovement then
 			if not self.state.holdPos then
 				self:setState({
-					inputPosition = false
+					inputPosition = false,
 				})
 			end
 		elseif input.UserInputType == Enum.UserInputType.MouseButton1 then
 			self:setState({
-				holdPos = not self.state.holdPos
+				holdPos = not self.state.holdPos,
 			})
 		end
 	end
 
 	self.graphRef = Roact.createRef()
 	self.state = {
-		selectedTimeStamps = {}
+		selectedTimeStamps = {},
 	}
 end
 
@@ -95,7 +95,6 @@ function LineGraph:render()
 	local absGraphSize = self.state.absGraphSize
 	local absGraphPos = self.state.absGraphPos
 
-
 	local maxX = getX(graphData:back())
 	local minX = getX(graphData:front())
 	local maxY = self.props.maxY
@@ -112,8 +111,8 @@ function LineGraph:render()
 			local datapoint = getY(data)
 			local time = getX(data)
 
-			local xdivisor  = maxX - minX
-			local xPosition = xdivisor > 0  and (time - minX) / xdivisor or 0
+			local xdivisor = maxX - minX
+			local xPosition = xdivisor > 0 and (time - minX) / xdivisor or 0
 
 			local ydivisor = maxY - minY
 			local yPosition = ydivisor > 0 and (datapoint - minY) / ydivisor or 1
@@ -145,20 +144,26 @@ function LineGraph:render()
 				local length = math.sqrt((vecX * vecX) + (vecY * vecY))
 				local rot = math.deg(math.atan2(vecY, vecX))
 
-				table.insert(elements, Roact.createElement("Frame", {
-					Size = UDim2.new(0, length, 0, LINE_WIDTH),
-					Position = UDim2.new(0, vecPosX - length / 2, 1 - GRAPH_Y_INNER_PADDING, -vecPosY),
-					BackgroundColor3 = MAIN_LINE_COLOR,
-					BorderSizePixel = 0,
-					Rotation = -rot,
-				}))
+				table.insert(
+					elements,
+					Roact.createElement("Frame", {
+						Size = UDim2.new(0, length, 0, LINE_WIDTH),
+						Position = UDim2.new(0, vecPosX - length / 2, 1 - GRAPH_Y_INNER_PADDING, -vecPosY),
+						BackgroundColor3 = MAIN_LINE_COLOR,
+						BorderSizePixel = 0,
+						Rotation = -rot,
+					})
+				)
 
-				table.insert(elements, Roact.createElement("Frame", {
-					Size = UDim2.new(0, POINT_WIDTH, 0, POINT_WIDTH),
-					Position = UDim2.new(0, aX, 1 - GRAPH_Y_INNER_PADDING, -aY - POINT_OFFSET),
-					BackgroundColor3 = MAIN_LINE_COLOR,
-					BorderSizePixel = 0,
-				}))
+				table.insert(
+					elements,
+					Roact.createElement("Frame", {
+						Size = UDim2.new(0, POINT_WIDTH, 0, POINT_WIDTH),
+						Position = UDim2.new(0, aX, 1 - GRAPH_Y_INNER_PADDING, -aY - POINT_OFFSET),
+						BackgroundColor3 = MAIN_LINE_COLOR,
+						BorderSizePixel = 0,
+					})
+				)
 
 				if inputPosition then
 					local hoverLineX = inputPosition.X - absGraphPos.X
@@ -206,7 +211,7 @@ function LineGraph:render()
 					Size = UDim2.new(1, TEXT_PADDING, 0, LINE_WIDTH),
 					Position = UDim2.new(0, -TEXT_PADDING, 1 - GRAPH_Y_INNER_PADDING, -lastEntryHeight),
 					BackgroundColor3 = LINE_COLOR,
-					BackgroundTransparency = .5,
+					BackgroundTransparency = 0.5,
 					BorderSizePixel = 0,
 				})
 
@@ -226,7 +231,7 @@ function LineGraph:render()
 					TextColor3 = TEXT_COLOR,
 					TextXAlignment = Enum.TextXAlignment.Right,
 
-					Position = UDim2.new(0, -TEXT_PADDING - 2, 1 - GRAPH_Y_INNER_PADDING,0),
+					Position = UDim2.new(0, -TEXT_PADDING - 2, 1 - GRAPH_Y_INNER_PADDING, 0),
 					BackgroundTransparency = 1,
 				})
 			end
@@ -286,7 +291,7 @@ function LineGraph:render()
 			TextXAlignment = Enum.TextXAlignment.Center,
 
 			-- adding 2 to padding to push the label away from the axis line
-			Position = UDim2.new(.5, 0, GRAPH_PADDING + GRAPH_SCALE, axisTextPadding),
+			Position = UDim2.new(0.5, 0, GRAPH_PADDING + GRAPH_SCALE, axisTextPadding),
 			BackgroundTransparency = 1,
 		}),
 
@@ -299,7 +304,7 @@ function LineGraph:render()
 
 			[Roact.Event.InputChanged] = self.onGraphInputChanged,
 			[Roact.Event.InputEnded] = self.onGraphInputEnded,
-		}, elements)
+		}, elements),
 	})
 end
 

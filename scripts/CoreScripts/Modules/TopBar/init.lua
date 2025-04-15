@@ -6,20 +6,25 @@ local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 local IXPService = game:GetService("IXPService")
 local LocalizationService = game:GetService("LocalizationService")
 
+
+local SharedFlags = require(CorePackages.Workspace.Packages.SharedFlags)
+local FFlagAdaptUnibarAndTiltSizing = SharedFlags.GetFFlagAdaptUnibarAndTiltSizing()
+
 local Localization = require(CorePackages.Workspace.Packages.InExperienceLocales).Localization
 local LocalizationProvider = require(CorePackages.Workspace.Packages.Localization).LocalizationProvider
 local DesignTokenProvider = require(CorePackages.Workspace.Packages.Style).DesignTokenProvider
 local CrossExperienceVoice = require(CorePackages.Workspace.Packages.CrossExperienceVoice)
 local ReactSceneUnderstanding = require(CorePackages.Packages.ReactSceneUnderstanding)
 
-local Roact = require(CorePackages.Roact)
-local Rodux = require(CorePackages.Rodux)
-local RoactRodux = require(CorePackages.RoactRodux)
-local UIBlox = require(CorePackages.UIBlox)
+local Roact = require(CorePackages.Packages.Roact)
+local Rodux = require(CorePackages.Packages.Rodux)
+local RoactRodux = require(CorePackages.Packages.RoactRodux)
+local UIBlox = require(CorePackages.Packages.UIBlox)
 
 local StyleConstants = UIBlox.App.Style.Constants
 local UiModeStyleProvider = require(CorePackages.Workspace.Packages.Style).UiModeStyleProvider
 local Songbird = require(CorePackages.Workspace.Packages.Songbird)
+local VoiceStateContext = require(RobloxGui.Modules.VoiceChat.VoiceStateContext)
 
 local SettingsUtil = require(RobloxGui.Modules.Settings.Utility)
 local TenFootInterface = require(RobloxGui.Modules.TenFootInterface)
@@ -28,10 +33,10 @@ local ChromeEnabled = require(RobloxGui.Modules.Chrome.Enabled)()
 local Constants = require(script.Constants)
 local MenuNavigationPromptTokenMapper = require(script.TokenMappers.MenuNavigationPromptTokenMapper)
 
-local GetFFlagMountSceneAnalysisProvider = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagMountSceneAnalysisProvider
-local GetFFlagSongbirdUseReportAudioModal = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagSongbirdUseReportAudioModal
+local FFlagUIBloxFoundationProvider = SharedFlags.GetFFlagUIBloxFoundationProvider()
+local GetFFlagSimpleChatUnreadMessageCount = SharedFlags.GetFFlagSimpleChatUnreadMessageCount
 
-if ChromeEnabled and not TenFootInterface:IsEnabled() then
+if ChromeEnabled and (not TenFootInterface:IsEnabled() or FFlagAdaptUnibarAndTiltSizing) then
 	-- set this prior to TopBarApp require
 	local guiInsetTopLeft, guiInsetBottomRight = GuiService:GetGuiInset()
 	GuiService:SetGlobalGuiInset(
@@ -60,7 +65,6 @@ local registerSetCores = require(script.registerSetCores)
 local GlobalConfig = require(script.GlobalConfig)
 
 local RoactAppExperiment = require(CorePackages.Packages.RoactAppExperiment)
-local SharedFlags = require(CorePackages.Workspace.Packages.SharedFlags)
 local FFlagAddMenuNavigationToggleDialog = SharedFlags.FFlagAddMenuNavigationToggleDialog
 local FFlagGamepadNavigationDialogABTest = require(script.Flags.FFlagGamepadNavigationDialogABTest)
 
@@ -174,28 +178,35 @@ function TopBar.new()
 							{ value = IXPService },
 							{ TopBarApp = TopBarWithProviders }
 						),
-						CrossExperienceVoice = GetFFlagEnableCrossExpVoice() and Roact.createElement(CrossExperienceVoiceComponent) or nil,
+						CrossExperienceVoice = GetFFlagEnableCrossExpVoice() and Roact.createElement(
+							CrossExperienceVoiceComponent
+						) or nil,
 					}),
 				}),
 			})
 		),
 	})
 
-	if GetFFlagMountSceneAnalysisProvider() then
-		self.root = Roact.createElement(ReactSceneUnderstanding.SceneAnalysisProvider, nil, self.root)
-	end
+	self.root = Roact.createElement(ReactSceneUnderstanding.SceneAnalysisProvider, nil, self.root)
 
-	if GetFFlagSongbirdUseReportAudioModal() then
-		self.root = Roact.createElement(Songbird.ReportAudioPopupContext.Provider, nil, self.root)
-	end
+	self.root = Roact.createElement(Songbird.ReportAudioPopupContext.Provider, nil, self.root)
+	self.root = Roact.createElement(VoiceStateContext.Provider, nil, self.root)
 
+	-- Root should be a Folder so that style provider stylesheet elements can be portaled properly; otherwise, they will attach to CoreGui
+	if FFlagUIBloxFoundationProvider then
+		self.root = Roact.createElement("Folder", {
+			Name = "TopBarApp",
+		}, self.root)
+	end
 	self.element = Roact.mount(self.root, CoreGui, "TopBar")
 
 	-- add binding
-	local TextChatService = game:GetService("TextChatService")
-	TextChatService.MessageReceived:Connect(function()
-		self.store:dispatch(UpdateUnreadMessagesBadge(1))
-	end)
+	if not GetFFlagSimpleChatUnreadMessageCount() then
+		local TextChatService = game:GetService("TextChatService")
+		TextChatService.MessageReceived:Connect(function()
+			self.store:dispatch(UpdateUnreadMessagesBadge(1))
+		end)
+	end
 
 	if FFlagGamepadNavigationDialogABTest then
 		local UserInputService = game:GetService("UserInputService")

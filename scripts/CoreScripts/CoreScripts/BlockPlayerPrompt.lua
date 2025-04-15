@@ -20,7 +20,7 @@ end
 local CoreGuiModules = RobloxGui.Modules
 local PromptCreator = require(CoreGuiModules.PromptCreator)
 local SocialUtil = require(CoreGuiModules.SocialUtil)
-local BlockingUtility = require(CoreGuiModules.BlockingUtility)
+local BlockingUtility = require(CorePackages.Workspace.Packages.BlockingUtility)
 
 local REGULAR_THUMBNAIL_IMAGE_SIZE = Enum.ThumbnailSize.Size150x150
 local CONSOLE_THUMBNAIL_IMAGE_SIZE = Enum.ThumbnailSize.Size352x352
@@ -171,8 +171,3 @@ end
 StarterGui:RegisterSetCore("PromptBlockPlayer", PromptBlockPlayer)
 StarterGui:RegisterSetCore("PromptUnblockPlayer", PromptUnblockPlayer)
 StarterGui:RegisterGetCore("GetBlockedUserIds", GetBlockedUserIds)
-
--- fetch and store player block list
--- This needs to be done after the SetCore and GetCore registrations above so these are registered as early as developers
--- might want to use them
-BlockingUtility:InitBlockListAsync()

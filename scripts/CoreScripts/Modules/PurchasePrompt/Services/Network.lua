@@ -7,8 +7,9 @@ local InsertService = game:GetService("InsertService")
 local UserInputService = game:GetService("UserInputService")
 local Players = game:GetService("Players")
 local CorePackages = game:GetService("CorePackages")
+local CreatorStoreService = game:GetService("CreatorStoreService")
 
-local PurchasePromptDeps = require(CorePackages.PurchasePromptDeps)
+local PurchasePromptDeps = require(CorePackages.Workspace.Packages.PurchasePromptDeps)
 local UrlBuilder = PurchasePromptDeps.UrlBuilder.UrlBuilder
 
 local Promise = require(Root.Promise)
@@ -24,6 +25,7 @@ local GetFFlagEnablePromptPurchaseRequestedV2 = require(Root.Flags.GetFFlagEnabl
 local GetFFlagEnablePromptPurchaseRequestedV2Take2 = require(Root.Flags.GetFFlagEnablePromptPurchaseRequestedV2Take2)
 local GetFFlagUseCatalogItemDetailsToResolveBundlePurchase =
 	require(Root.Flags.GetFFlagUseCatalogItemDetailsToResolveBundlePurchase)
+local GetFFlagEnableCreatorStorePurchasingCutover = require(Root.Flags.GetFFlagEnableCreatorStorePurchasingCutover)
 local FFlagEnablePreSignedVngShopRedirectUrl =
 	require(CorePackages.Workspace.Packages.SharedFlags).FFlagEnablePreSignedVngShopRedirectUrl
 
@@ -230,6 +232,34 @@ local function performPurchaseV2(
 	error(tostring(result))
 end
 
+local function performCreatorStorePurchase(assetId, assetType)
+	local success, result = pcall(function()
+		return CreatorStoreService:performCreatorStorePurchase(assetId, assetType)
+	end)
+
+	if success then
+		return result
+	end
+
+	--[[ Generic Challenge Responses are HTTP 403 Forbidden responses with a unique
+	response pattern. We explicitly identify the response and return the result.
+	]]
+	--
+	if isGenericChallengeResponse(result) then
+		return result
+	end
+
+	error(tostring(result))
+end
+
+local function getAssetInfo(assetId: number)
+	return CreatorStoreService:getAssetInfoAsync(assetId)
+end
+
+local function getCreatorStoreProductInfo(assetId: number, assetType: string)
+	return CreatorStoreService:getCreatorStoreProductInfoAsync(assetId, assetType)
+end
+
 local function loadAssetForEquip(assetId)
 	return InsertService:LoadAsset(assetId)
 end
@@ -315,6 +345,31 @@ local function getRobuxUpsellProduct(price: number, robuxBalance: number, upsell
 	end)
 end
 
+local function getRobuxUpsellProductWithUniverseItemInfo(price: number, robuxBalance: number, upsellPlatform: string,  itemProductId: number?, itemName:string?, universeId: number?)
+	local options = {
+		Url = APIS_URL .. "payments-gateway/v1/products/get-upsell-product",
+		Method = "POST",
+		Body = HttpService:JSONEncode({
+			upsell_platform = upsellPlatform,
+			user_robux_balance = robuxBalance,
+			attempt_robux_amount = price,
+			item_product_id = itemProductId,
+			item_name = itemName,
+			universe_id = universeId,
+		}),
+		Headers = {
+			["Content-Type"] = "application/json",
+			["Accept"] = "application/json",
+		},
+	}
+
+	return Promise.new(function(resolve, reject)
+		spawn(function()
+			request(options, resolve, reject)
+		end)
+	end)
+end
+
 local function postPremiumImpression()
 	local url = ECONOMY_CREATOR_STATS_URL
 		.. "v1/universes/"
@@ -366,11 +421,6 @@ end
 
 local function getSubscriptionPurchaseInfo(subscriptinId)
 	return MarketplaceService:GetSubscriptionPurchaseInfoAsync(subscriptinId)
-end
-
-local function DEPRECATED_performSubscriptionPurchase(subscriptinId)
-	-- remove with Flag EnableRobloxCreditPurchase
-	return MarketplaceService:performSubscriptionPurchase(subscriptinId)
 end
 
 local function performSubscriptionPurchase(subscriptinId, paymentMethod)
@@ -460,20 +510,27 @@ function Network.new()
 		getPlayerOwns = Promise.promisify(getPlayerOwns),
 		performPurchase = Promise.promisify(performPurchase),
 		performPurchaseV2 = Promise.promisify(performPurchaseV2),
+		performCreatorStorePurchase = if GetFFlagEnableCreatorStorePurchasingCutover()
+			then Promise.promisify(performCreatorStorePurchase)
+			else nil,
 		loadAssetForEquip = Promise.promisify(loadAssetForEquip),
 		getAccountInfo = Promise.promisify(getAccountInfo),
+		getAssetInfo = if GetFFlagEnableCreatorStorePurchasingCutover() then Promise.promisify(getAssetInfo) else nil,
 		getBalanceInfo = Promise.promisify(getBalanceInfo),
 		getBundleDetails = getBundleDetails,
 		getProductPurchasableDetails = getProductPurchasableDetails,
 		getCatalogItemDetails = if GetFFlagUseCatalogItemDetailsToResolveBundlePurchase()
 			then getCatalogItemDetails
 			else nil,
+		getCreatorStoreProductInfo = if GetFFlagEnableCreatorStorePurchasingCutover()
+			then Promise.promisify(getCreatorStoreProductInfo)
+			else nil,
 		getRobuxUpsellProduct = Promise.promisify(getRobuxUpsellProduct),
+		getRobuxUpsellProductWithUniverseItemInfo = Promise.promisify(getRobuxUpsellProductWithUniverseItemInfo),
 		getPremiumProductInfo = Promise.promisify(getPremiumProductInfo),
 		postPremiumImpression = Promise.promisify(postPremiumImpression),
 		getPremiumUpsellPrecheck = Promise.promisify(getPremiumUpsellPrecheck),
 		getSubscriptionPurchaseInfo = Promise.promisify(getSubscriptionPurchaseInfo),
-		DEPRECATED_performSubscriptionPurchase = Promise.promisify(DEPRECATED_performSubscriptionPurchase),
 		performSubscriptionPurchase = Promise.promisify(performSubscriptionPurchase),
 		getPurchaseWarning = Promise.promisify(getPurchaseWarning),
 		postPurchaseWarningAcknowledge = Promise.promisify(postPurchaseWarningAcknowledge),

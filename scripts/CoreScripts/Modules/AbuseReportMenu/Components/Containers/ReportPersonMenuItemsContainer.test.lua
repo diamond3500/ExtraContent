@@ -8,6 +8,7 @@ local RobloxGui = CoreGui.RobloxGui
 local Players = game:GetService("Players")
 local TnSIXPWrapper = require(root.IXP.TnSIXPWrapper)
 
+local Foundation = require(CorePackages.Packages.Foundation)
 local Roact = require(CorePackages.Packages.Roact)
 local React = require(CorePackages.Packages.React)
 local Style = require(CorePackages.Workspace.Packages.Style)
@@ -65,9 +66,13 @@ local element = React.createElement(StyleProviderWithDefaultTheme, {
 	LocalizationProvider = React.createElement(LocalizationProvider, {
 		localization = Localization.new(LocalizationService.RobloxLocaleId),
 	}, {
-		menuItems = React.createElement(ReportPersonMenuItemsContainer, {
-			utilityProps = utilityProps,
-			isSmallPortraitViewport = false,
+		FoundationProvider = React.createElement(Foundation.FoundationProvider, {
+			theme = Foundation.Enums.Theme.Dark,
+		}, {
+			menuItems = React.createElement(ReportPersonMenuItemsContainer, {
+				utilityProps = utilityProps,
+				isSmallPortraitViewport = false,
+			}),
 		}),
 	}),
 })

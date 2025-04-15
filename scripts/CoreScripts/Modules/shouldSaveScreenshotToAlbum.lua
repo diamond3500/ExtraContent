@@ -1,8 +1,9 @@
 local CoreGui = game:GetService("CoreGui")
 local UserInputService = game:GetService("UserInputService")
+local CorePackages = game:GetService("CorePackages")
 
 local RobloxGui = CoreGui:WaitForChild("RobloxGui")
-local PolicyService = require(RobloxGui.Modules.Common.PolicyService)
+local CachedPolicyService = require(CorePackages.Workspace.Packages.CachedPolicyService)
 local GetFFlagScreenshotHudApi = require(RobloxGui.Modules.Flags.GetFFlagScreenshotHudApi)
 
 return function()
@@ -11,7 +12,7 @@ return function()
 	local shouldSaveScreenshotToAlbum = false
 
 	if GetFFlagScreenshotHudApi() and isMobile and
-		not PolicyService:IsSubjectToChinaPolicies() then
+		not CachedPolicyService:IsSubjectToChinaPolicies() then
 		shouldSaveScreenshotToAlbum = true
 	end
 

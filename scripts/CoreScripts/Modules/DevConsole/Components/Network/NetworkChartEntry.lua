@@ -1,6 +1,6 @@
 --!nonstrict
 local CorePackages = game:GetService("CorePackages")
-local Roact = require(CorePackages.Roact)
+local Roact = require(CorePackages.Packages.Roact)
 
 local Constants = require(script.Parent.Parent.Parent.Constants)
 local ENTRY_HEIGHT = Constants.NetworkFormatting.EntryFrameHeight
@@ -27,7 +27,6 @@ return function(props)
 	local layoutOrder = props.layoutOrder
 	local showResponse = props.showResponse
 	local responseBodyHeight = props.responseBodyHeight
-
 
 	local onButtonPress = props.onButtonPress
 
@@ -69,7 +68,7 @@ return function(props)
 	})
 
 	for i = 2, #verticalOffsets do
-		local key = string.format("VerticalLine_%d",i)
+		local key = string.format("VerticalLine_%d", i)
 		row[key] = Roact.createElement("Frame", {
 			Size = UDim2.new(0, LINE_WIDTH, 0, ENTRY_HEIGHT),
 			Position = verticalOffsets[i],
@@ -104,9 +103,9 @@ return function(props)
 			}),
 			ResponseBody = Roact.createElement(CellLabel, {
 				text = entry.Response,
-				size = UDim2.new(.8, 0, 1, -RESPONSE_STR_TEXT_HEIGHT),
+				size = UDim2.new(0.8, 0, 1, -RESPONSE_STR_TEXT_HEIGHT),
 				pos = UDim2.new(0, 0, 0, RESPONSE_STR_TEXT_HEIGHT),
-			})
-		})
+			}),
+		}),
 	})
 end

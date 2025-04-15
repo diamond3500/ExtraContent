@@ -4,7 +4,7 @@ local UserInputService = game:GetService("UserInputService")
 local ContextActionService = game:GetService("ContextActionService")
 local GuiService = game:GetService("GuiService")
 
-local InGameMenuDependencies = require(CorePackages.InGameMenuDependencies)
+local InGameMenuDependencies = require(CorePackages.Packages.InGameMenuDependencies)
 local Roact = InGameMenuDependencies.Roact
 local UIBlox = InGameMenuDependencies.UIBlox
 local Cryo = InGameMenuDependencies.Cryo
@@ -26,58 +26,61 @@ SliderWithInput.defaultProps = {
 	width = UDim.new(1, 0),
 }
 
-SliderWithInput.validateProps = t.intersection(t.strictInterface({
-	-- The minimum value of the slider.
-	min = t.number,
-	-- The maximum value of the slider.
-	max = t.number,
-	-- How big the chunks that the slider bar is split up into are.
-	stepInterval = t.numberPositive,
-	-- If non-nil, specifies a keyboard input granularity that can be different than stepInterval
-	keyboardInputStepInterval = t.optional(t.numberPositive),
-	-- The current value of the slider.
-	value = t.number,
-	-- A callback function that is invoked whenever the slider value changes.
-	valueChanged = t.callback,
-	-- Whether the slider is enabled or not.
-	disabled = t.optional(t.boolean),
+SliderWithInput.validateProps = t.intersection(
+	t.strictInterface({
+		-- The minimum value of the slider.
+		min = t.number,
+		-- The maximum value of the slider.
+		max = t.number,
+		-- How big the chunks that the slider bar is split up into are.
+		stepInterval = t.numberPositive,
+		-- If non-nil, specifies a keyboard input granularity that can be different than stepInterval
+		keyboardInputStepInterval = t.optional(t.numberPositive),
+		-- The current value of the slider.
+		value = t.number,
+		-- A callback function that is invoked whenever the slider value changes.
+		valueChanged = t.callback,
+		-- Whether the slider is enabled or not.
+		disabled = t.optional(t.boolean),
 
-	-- The width of the slider. The slider's height is fixed, but the width can
-	-- be adjusted. Defaults to UDim.new(1, 0).
-	width = t.optional(t.UDim),
-	-- The anchor point of the slider.
-	AnchorPoint = t.optional(t.Vector2),
-	-- The layout order of the slider.
-	LayoutOrder = t.optional(t.integer),
-	-- The position of the slider.
-	Position = t.optional(t.UDim2),
-	-- can capture focus when other dialogs are up
-	canCaptureFocus = t.optional(t.boolean),
-	-- Whether IGM is open or not
-	isMenuOpen = t.optional(t.boolean),
-	-- Ref to the sliderDot
-	sliderDotRef = t.optional(t.table),
-	-- Callback for when selection of text box / slider dot is lost
-	onSelectionLost = t.callback,
-	-- Callback for when selection of text box / slider dot is gained
-	onSelectionGained = t.callback,
-}), function(props)
-	if props.min > props.max then
-		return false, "min must be less than or equal to max"
+		-- The width of the slider. The slider's height is fixed, but the width can
+		-- be adjusted. Defaults to UDim.new(1, 0).
+		width = t.optional(t.UDim),
+		-- The anchor point of the slider.
+		AnchorPoint = t.optional(t.Vector2),
+		-- The layout order of the slider.
+		LayoutOrder = t.optional(t.integer),
+		-- The position of the slider.
+		Position = t.optional(t.UDim2),
+		-- can capture focus when other dialogs are up
+		canCaptureFocus = t.optional(t.boolean),
+		-- Whether IGM is open or not
+		isMenuOpen = t.optional(t.boolean),
+		-- Ref to the sliderDot
+		sliderDotRef = t.optional(t.table),
+		-- Callback for when selection of text box / slider dot is lost
+		onSelectionLost = t.callback,
+		-- Callback for when selection of text box / slider dot is gained
+		onSelectionGained = t.callback,
+	}),
+	function(props)
+		if props.min > props.max then
+			return false, "min must be less than or equal to max"
+		end
+
+		if props.value > props.max or props.value < props.min then
+			return false, "value must be within min and max"
+		end
+
+		return true
 	end
-
-	if props.value > props.max or props.value < props.min then
-		return false, "value must be within min and max"
-	end
-
-	return true
-end)
+)
 
 function SliderWithInput:init()
 	self.textBoxRef = Roact.createRef()
 
 	self.state = {
-		textEntryMode = false
+		textEntryMode = false,
 	}
 end
 
@@ -96,7 +99,7 @@ function SliderWithInput:renderFocusHandler()
 			-- reverts value when the 'B' button is pressed on the gamepad
 			ContextActionService:BindCoreAction("LeaveTextEntryMode", function(actionName, inputState)
 				if inputState == Enum.UserInputState.End then
-					self:setState({textEntryMode = false})
+					self:setState({ textEntryMode = false })
 					local box = self.textBoxRef.current
 					box.Text = oldSliderValue
 					box:ReleaseFocus()
@@ -164,10 +167,10 @@ function SliderWithInput:renderWithSelectionCursor(getSelectionCursor)
 					[Roact.Event.Focused] = props.disabled and function(rbx)
 						rbx:ReleaseFocus(false)
 					end or function()
-						self:setState({textEntryMode = true})
+						self:setState({ textEntryMode = true })
 					end,
 					[Roact.Event.FocusLost] = function(rbx, enterPressed)
-						self:setState({textEntryMode = false})
+						self:setState({ textEntryMode = false })
 
 						local textValue = tonumber(rbx.Text)
 						if textValue ~= props.value then
@@ -184,7 +187,8 @@ function SliderWithInput:renderWithSelectionCursor(getSelectionCursor)
 							local newValue = math.clamp(
 								math.floor(textValue / textInputGranularity + 0.5) * textInputGranularity,
 								props.min,
-								props.max)
+								props.max
+							)
 
 							rbx.Text = tostring(newValue)
 
@@ -197,8 +201,8 @@ function SliderWithInput:renderWithSelectionCursor(getSelectionCursor)
 					TextSizeConstraint = Roact.createElement("UITextSizeConstraint", {
 						MinTextSize = style.Font.Body.RelativeMinSize * style.Font.BaseSize,
 						MaxTextSize = style.Font.Body.RelativeSize * style.Font.BaseSize,
-					})
-				})
+					}),
+				}),
 			})
 		end),
 		UserInputConnection = not props.disabled and Roact.createElement(ExternalEventConnection, {
@@ -219,22 +223,27 @@ function SliderWithInput:renderWithSelectionCursor(getSelectionCursor)
 					direction = -1
 				end
 
-				if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) or UserInputService:IsKeyDown(Enum.KeyCode.RightShift) then
+				if
+					UserInputService:IsKeyDown(Enum.KeyCode.LeftShift)
+					or UserInputService:IsKeyDown(Enum.KeyCode.RightShift)
+				then
 					direction = direction * 10
 				end
 
 				if direction ~= 0 then
 					local newValue = math.clamp(
-						math.floor((props.value + props.stepInterval * direction) / props.stepInterval + 0.5) * props.stepInterval,
+						math.floor((props.value + props.stepInterval * direction) / props.stepInterval + 0.5)
+							* props.stepInterval,
 						props.min,
-						props.max)
+						props.max
+					)
 
 					if newValue ~= props.value then
 						props.valueChanged(newValue)
 					end
 				end
 			end,
-		})
+		}),
 	})
 end
 

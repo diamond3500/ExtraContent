@@ -1,11 +1,12 @@
 --!nonstrict
+local CorePackages = game:GetService("CorePackages")
 local RobloxGui = game:GetService("CoreGui"):WaitForChild("RobloxGui")
 local Players = game:GetService("Players")
 local VRService = game:GetService("VRService")
 local RobloxReplicatedStorage = game:GetService("RobloxReplicatedStorage")
 local RbxAnalyticsService = game:GetService("RbxAnalyticsService")
-local AvatarUtil = require(RobloxGui.Modules.Common.AvatarUtil)
-local ConnectionUtil = require(RobloxGui.Modules.Common.ConnectionUtil)
+local AvatarUtil = require(CorePackages.Workspace.Packages.CoreScriptsCommon).AvatarUtil
+local ConnectionUtil = require(CorePackages.Workspace.Packages.CoreScriptsCommon).ConnectionUtil
 
 local VRPLAYERS_REMOTE_EVENT_NAME = "AvatarGesturesVRPlayer"
 local VR_AVATAR_GESTURES_ANALYTICS_EVENT_NAME = "VRAvatarGestures"
@@ -173,7 +174,7 @@ function VRAvatarGesturesServer:findOrCreateColliders(partName, character)
 		alignPosition.Position = character.WorldPivot.Position
 		alignOrientation.CFrame = character.WorldPivot
 	end
-	
+
 	-- IK control so that the hands follow the collider
 	local humanoid = character:FindFirstChild("Humanoid")
 	if humanoid then
@@ -195,13 +196,13 @@ end
 function VRAvatarGesturesServer:createHandCollider(side, character)
 	self:findOrCreateColliders(side .. "Hand", character)
     local part = character:FindFirstChild(side .. "Hand")
-	
+
 	-- IK control
 	local humanoid = character:FindFirstChild("Humanoid")
 	if humanoid then
 		local ikControlName = "TrackedIK" .. side .. "Hand"
 		local ikControl = humanoid:FindFirstChild(ikControlName)
-		
+
 		if ikControl then
 			ikControl.Type = Enum.IKControlType.Transform
 
@@ -233,7 +234,7 @@ end
 function VRAvatarGesturesServer:createHeadCollider(character)
 	self:findOrCreateColliders("Head", character)
     local part = character:FindFirstChild("Head")
-	
+
 	-- IK control
 	local humanoid = character:FindFirstChild("Humanoid")
 	if humanoid then

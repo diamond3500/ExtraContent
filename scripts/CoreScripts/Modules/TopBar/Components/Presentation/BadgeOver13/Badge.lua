@@ -4,7 +4,7 @@ local RoactUtils = require(CorePackages.Workspace.Packages.RoactUtils)
 local AppFonts = require(CorePackages.Workspace.Packages.Style).AppFonts
 local e = React.createElement
 
-local UIBlox = require(CorePackages.UIBlox)
+local UIBlox = require(CorePackages.Packages.UIBlox)
 local useStyle = UIBlox.Core.Style.useStyle
 local Interactable = UIBlox.Core.Control.Interactable
 local ControlState = UIBlox.Core.Control.Enum.ControlState
@@ -33,8 +33,10 @@ return function(props: Props)
 	local onAreaChanged = function(rbx: GuiObject?)
 		if FFlagEnableChromeBackwardsSignalAPI and rbx then
 			-- Need to recalculate the position as stroke is not part of AbsolutePosition/AbsoluteSize
-			local strokePosition = Vector2.new(rbx.AbsolutePosition.X - STROKE_THICKNESS, rbx.AbsolutePosition.Y - STROKE_THICKNESS)
-			local strokeSize = Vector2.new(rbx.AbsoluteSize.X + 2 * STROKE_THICKNESS, rbx.AbsoluteSize.Y + 2 * STROKE_THICKNESS)
+			local strokePosition =
+				Vector2.new(rbx.AbsolutePosition.X - STROKE_THICKNESS, rbx.AbsolutePosition.Y - STROKE_THICKNESS)
+			local strokeSize =
+				Vector2.new(rbx.AbsoluteSize.X + 2 * STROKE_THICKNESS, rbx.AbsoluteSize.Y + 2 * STROKE_THICKNESS)
 			dispatch(SetKeepOutArea(Constants.BadgeOver13KeepOutAreaId, strokePosition, strokeSize))
 		end
 	end
@@ -73,13 +75,13 @@ return function(props: Props)
 				PaddingRight = UDim.new(0, 6),
 			}),
 			shape = e("UICorner", {
-				CornerRadius = UDim.new(0, 4)
+				CornerRadius = UDim.new(0, 4),
 			}),
 			stroke = e("UIStroke", {
 				Thickness = STROKE_THICKNESS,
 				Color = style.Theme.BackgroundMuted.Color,
 				ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
 			}),
-		})
+		}),
 	})
 end

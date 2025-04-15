@@ -1,8 +1,6 @@
 local CoreGui = game:GetService("CoreGui")
 local CorePackages = game:GetService("CorePackages")
 local Players = game:GetService("Players")
-local CoreGui = game:GetService("CoreGui")
-local RobloxGuiModules = CoreGui:WaitForChild("RobloxGui").Modules
 local EventIngestService = game:GetService("EventIngestService")
 
 local SocialContextToastPackage = require(CorePackages.Workspace.Packages.SocialContextToasts)
@@ -19,7 +17,7 @@ local ApolloClient = require(CoreGui.RobloxGui.Modules.ApolloClient)
 local Analytics = require(CorePackages.Workspace.Packages.Analytics).Analytics
 local EventIngest = require(CorePackages.Workspace.Packages.Analytics).AnalyticsReporters.EventIngest
 
-local IXPServiceWrapper = require(RobloxGuiModules.Common.IXPServiceWrapper)
+local IXPServiceWrapper = require(CorePackages.Workspace.Packages.IxpServiceWrapper).IXPServiceWrapper
 
 local services = {
     networking = httpRequest,

@@ -1,14 +1,13 @@
 local CorePackages = game:GetService("CorePackages")
-local CoreGui = game:GetService("CoreGui")
-local UIBlox = require(CorePackages.UIBlox)
+local UIBlox = require(CorePackages.Packages.UIBlox)
 local Images = UIBlox.App.ImageSet.Images
 local InspectAndBuyFolder = script.Parent.Parent
 local LimitedLabel = require(InspectAndBuyFolder.Components.LimitedLabel)
 local Constants = require(InspectAndBuyFolder.Constants)
-local Roact = require(CorePackages.Roact)
-local RoactRodux = require(CorePackages.RoactRodux)
+local Roact = require(CorePackages.Packages.Roact)
+local RoactRodux = require(CorePackages.Packages.RoactRodux)
 local UtilityFunctions = require(InspectAndBuyFolder.UtilityFunctions)
-local RobloxTranslator = require(CoreGui.RobloxGui.Modules.RobloxTranslator)
+local RobloxTranslator = require(CorePackages.Workspace.Packages.RobloxTranslator)
 
 local InspectAndBuyContext = require(InspectAndBuyFolder.Components.InspectAndBuyContext)
 

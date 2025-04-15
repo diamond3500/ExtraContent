@@ -5,13 +5,13 @@ local CorePackages = game:GetService("CorePackages")
 local CoreGui = game:GetService("CoreGui")
 local Players = game:GetService("Players")
 
-local Roact = require(CorePackages.Roact)
-local RoactRodux = require(CorePackages.RoactRodux)
+local Roact = require(CorePackages.Packages.Roact)
+local RoactRodux = require(CorePackages.Packages.RoactRodux)
 local t = require(CorePackages.Packages.t)
 local RobloxGui = CoreGui:WaitForChild("RobloxGui")
-local RobloxTranslator = require(RobloxGui.Modules.RobloxTranslator)
+local RobloxTranslator = require(CorePackages.Workspace.Packages.RobloxTranslator)
 local AvatarPartGrid = require(script.Parent.AvatarParts.AvatarPartGrid)
-local UIBlox = require(CorePackages.UIBlox)
+local UIBlox = require(CorePackages.Packages.UIBlox)
 local withStyle = UIBlox.Style.withStyle
 local mutedError = require(CorePackages.Workspace.Packages.Loggers).mutedError
 
@@ -26,8 +26,6 @@ local Analytics = PurchasePrompt.PublishAssetAnalytics
 local Actions = script.Parent.Parent.Parent.Actions
 local SetPromptVisibility = require(Actions.SetPromptVisibility)
 
-local FFlagCoreScriptPublishAssetAnalytics = require(RobloxGui.Modules.Flags.FFlagCoreScriptPublishAssetAnalytics)
-
 local PADDING = UDim.new(0, 20)
 local CAMERA_FOV = 30
 local DELAYED_INPUT_ANIM_SEC = 3
@@ -35,6 +33,7 @@ local DESC_TEXTBOX_HEIGHT = 104
 local DESC_TEXTBOX_MAXLENGTH = 1000
 
 local DESC_LABEL_KEY = "CoreScripts.PublishAssetPrompt.Description"
+local DESC_INVALID_KEY = "CoreScripts.PublishAssetPrompt.InvalidDescription"
 
 local PublishAvatarPrompt = Roact.PureComponent:extend("PublishAvatarPrompt")
 
@@ -66,9 +65,7 @@ function PublishAvatarPrompt:init()
 		purchasePromptReady = true,
 	})
 	self.openPreviewView = function()
-		if FFlagCoreScriptPublishAssetAnalytics then
-			Analytics.sendButtonClicked(Analytics.Section.BuyCreationPage, Analytics.Element.Expand)
-		end
+		Analytics.sendButtonClicked(Analytics.Section.BuyCreationPage, Analytics.Element.Expand)
 		self:setState({
 			showingPreviewView = true,
 		})
@@ -88,9 +85,7 @@ function PublishAvatarPrompt:init()
 	end
 
 	self.onSubmit = function()
-		if FFlagCoreScriptPublishAssetAnalytics then
-			Analytics.sendButtonClicked(Analytics.Section.BuyCreationPage, Analytics.Element.Buy)
-		end
+		Analytics.sendButtonClicked(Analytics.Section.BuyCreationPage, Analytics.Element.Buy)
 
 		local avatarPublishMetadata = {}
 		avatarPublishMetadata.name = self.state.name
@@ -114,7 +109,7 @@ function PublishAvatarPrompt:init()
 			isNameValid = isNameValid,
 		})
 
-		if FFlagCoreScriptPublishAssetAnalytics and not self.sentNameFieldTouched then
+		if not self.sentNameFieldTouched then
 			self.sentNameFieldTouched = true
 			Analytics.sendFieldTouched(Analytics.Section.BuyCreationPage, Analytics.Element.Name)
 		end
@@ -126,7 +121,7 @@ function PublishAvatarPrompt:init()
 			isDescValid = isDescValid,
 		})
 
-		if FFlagCoreScriptPublishAssetAnalytics and not self.sentDescriptionFieldTouched then
+		if not self.sentDescriptionFieldTouched then
 			self.sentDescriptionFieldTouched = true
 			Analytics.sendFieldTouched(Analytics.Section.BuyCreationPage, Analytics.Element.Description)
 		end
@@ -165,10 +160,8 @@ function PublishAvatarPrompt:init()
 end
 
 function PublishAvatarPrompt:didMount()
-	if FFlagCoreScriptPublishAssetAnalytics then
-		self.sentNameFieldTouched = false
-		self.sentDescriptionFieldTouched = false
-	end
+	self.sentNameFieldTouched = false
+	self.sentDescriptionFieldTouched = false
 
 	local windowStateChangedEvent = PurchasePrompt.windowStateChangedEvent
 	local promptStateSetToNoneEvent = PurchasePrompt.promptStateSetToNoneEvent
@@ -182,9 +175,7 @@ function PublishAvatarPrompt:didMount()
 		)
 	end
 
-	if FFlagCoreScriptPublishAssetAnalytics then
-		Analytics.sendPageLoad(Analytics.Section.BuyCreationPage)
-	end
+	Analytics.sendPageLoad(Analytics.Section.BuyCreationPage)
 end
 
 function PublishAvatarPrompt:willUnmount()
@@ -231,6 +222,7 @@ function PublishAvatarPrompt:renderPromptBody()
 				maxLength = DESC_TEXTBOX_MAXLENGTH,
 				onTextUpdated = self.onDescriptionUpdated,
 				textBoxHeight = DESC_TEXTBOX_HEIGHT,
+				invalidInputText = RobloxTranslator:FormatByKey(DESC_INVALID_KEY),
 			}),
 			InfoList = Roact.createElement(PublishInfoList, {
 				typeName = RobloxTranslator:FormatByKey("Feature.Catalog.Label.Body"),

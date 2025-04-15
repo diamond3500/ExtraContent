@@ -1,5 +1,5 @@
 local CorePackages = game:GetService("CorePackages")
-local InGameMenuDependencies = require(CorePackages.InGameMenuDependencies)
+local InGameMenuDependencies = require(CorePackages.Packages.InGameMenuDependencies)
 local PolicyProvider = InGameMenuDependencies.PolicyProvider
 local SharedFlags = CorePackages.Workspace.Packages.SharedFlags
 local GetFFlagUseVoiceExitBetaLanguage = require(SharedFlags).GetFFlagUseVoiceExitBetaLanguage
@@ -8,8 +8,8 @@ local GetFFlagGateEducationalPopupVisibilityViaGUAC = require(SharedFlags).GetFF
 local implementation = PolicyProvider.GetPolicyImplementations.MemStorageService("app-policy")
 local InGameMenuPolicy = PolicyProvider.withGetPolicyImplementation(implementation)
 
-local GetFIntEducationalPopupDisplayMaxCount = require(
-	script.Parent.Parent.Flags.GetFIntEducationalPopupDisplayMaxCount)
+local GetFIntEducationalPopupDisplayMaxCount =
+	require(script.Parent.Parent.Flags.GetFIntEducationalPopupDisplayMaxCount)
 
 local isSubjectToDesktopPolicies = require(CorePackages.Workspace.Packages.SharedFlags).isSubjectToDesktopPolicies
 
@@ -29,7 +29,9 @@ InGameMenuPolicy.Mapper = function(policy)
 			local isNativeCloseIntercept = game:GetEngineFeature("NativeCloseIntercept")
 			if isSubjectToDesktopPolicies() and isNativeCloseIntercept then
 				if GetFFlagGateEducationalPopupVisibilityViaGUAC() then
-					return if policy.InExperienceCanViewEducationalPopup == nil then true else policy.InExperienceCanViewEducationalPopup
+					return if policy.InExperienceCanViewEducationalPopup == nil
+						then true
+						else policy.InExperienceCanViewEducationalPopup
 				end
 				return true
 			end

@@ -1,6 +1,6 @@
 --!nonstrict
 local CorePackages = game:GetService("CorePackages")
-local Roact = require(CorePackages.Roact)
+local Roact = require(CorePackages.Packages.Roact)
 
 local Components = script.Parent.Parent.Parent.Components
 local DataConsumer = require(Components.DataConsumer)
@@ -40,10 +40,10 @@ end
 function ServerStats:init()
 	local currStatsData = self.props.ServerStatsData:getCurrentData()
 
-	self.getOnButtonPress = function (name)
+	self.getOnButtonPress = function(name)
 		return function(rbx, input)
 			self:setState({
-				expandedEntry = self.state.expandedEntry ~= name and name
+				expandedEntry = self.state.expandedEntry ~= name and name,
 			})
 		end
 	end
@@ -197,7 +197,7 @@ function ServerStats:render()
 
 			[HEADER_NAMES[2]] = Roact.createElement(CellLabel, {
 				text = HEADER_NAMES[2],
-				size = UDim2.new(VALUE_CELL_WIDTH , -CELL_PADDING, 1, 0),
+				size = UDim2.new(VALUE_CELL_WIDTH, -CELL_PADDING, 1, 0),
 				pos = UDim2.new(1 - VALUE_CELL_WIDTH, CELL_PADDING, 0, 0),
 			}),
 

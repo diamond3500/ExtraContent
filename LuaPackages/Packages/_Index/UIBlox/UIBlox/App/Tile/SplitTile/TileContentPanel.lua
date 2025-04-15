@@ -13,7 +13,6 @@ local useTextSizeOffset = require(UIBlox.Core.Style.useTextSizeOffset)
 local Fonts = require(UIBlox.App.Style.Fonts)
 local StyleTypes = require(UIBlox.App.Style.StyleTypes)
 local setDefault = require(UIBlox.Utility.setDefault)
-local UIBloxConfig = require(UIBlox.UIBloxConfig)
 
 local TEXT_LINE_COUNT = 2
 local TITLE_PADDING = 8
@@ -73,11 +72,9 @@ local function TileContentPanel(props: Props)
 	local titleFont = setDefault(props.titleFont, font.Header2)
 	local theme = stylePalette.Theme
 
-	local maxTextHeight = if UIBloxConfig.useTextSizeOffsetTileContentPanel
-		then (font.BaseSize + textSizeOffset) * titleFont.RelativeSize * titleTextLineCount
-		else font.BaseSize * titleFont.RelativeSize * titleTextLineCount
+	local maxTextHeight = (font.BaseSize + textSizeOffset) * titleFont.RelativeSize * titleTextLineCount
 
-	local titleColorStyle = if UIBloxConfig.useNewThemeColorPalettes then theme.TextDefault else theme.TextEmphasis
+	local titleColorStyle = theme.TextEmphasis
 
 	return React.createElement("Frame", {
 		Size = UDim2.new(UDim.new(1, 0), panelHeight),

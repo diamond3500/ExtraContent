@@ -2,7 +2,7 @@
 local CoreGui = game:GetService("CoreGui")
 local CorePackages = game:GetService("CorePackages")
 
-local InGameMenuDependencies = require(CorePackages.InGameMenuDependencies)
+local InGameMenuDependencies = require(CorePackages.Packages.InGameMenuDependencies)
 local Roact = InGameMenuDependencies.Roact
 local t = InGameMenuDependencies.t
 
@@ -39,7 +39,7 @@ VolumeEntry.validateProps = t.strictInterface({
 function VolumeEntry:init()
 	self.onVolumeChanged = function()
 		self:setState({
-			volume = math.floor(UserGameSettings.MasterVolume * 10 + 0.5)
+			volume = math.floor(UserGameSettings.MasterVolume * 10 + 0.5),
 		})
 	end
 
@@ -62,7 +62,7 @@ function VolumeEntry:render()
 			end,
 			canCaptureFocus = self.props.canCaptureFocus,
 			isMenuOpen = self.props.isMenuOpen,
-			buttonRef = self.props.buttonRef
+			buttonRef = self.props.buttonRef,
 		}),
 		VolumeListener = Roact.createElement(ExternalEventConnection, {
 			event = MasterVolumeChanged,

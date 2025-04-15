@@ -8,7 +8,7 @@ local Players = game:GetService("Players")
 local EngineFeatureRbxAnalyticsServiceExposePlaySessionId =
 	game:GetEngineFeature("RbxAnalyticsServiceExposePlaySessionId")
 
-local Cryo = require(CorePackages.Cryo)
+local Cryo = require(CorePackages.Packages.Cryo)
 
 local TopBar = script.Parent
 local Constants = require(TopBar.Constants)

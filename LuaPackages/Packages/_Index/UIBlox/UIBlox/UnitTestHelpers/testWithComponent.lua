@@ -25,6 +25,9 @@ local UnitTestHelpers = script.Parent
 local UIBlox = UnitTestHelpers.Parent
 local Packages = UIBlox.Parent
 
+local FoundationProvider = require(Packages.Foundation).FoundationProvider
+local UIBloxConfig = require(UIBlox.UIBloxConfig)
+
 local Roact = require(Packages.Roact)
 
 local dumpInstanceTree = require(UnitTestHelpers.dumpInstanceTree)
@@ -36,9 +39,17 @@ local function TestApp(props)
 end
 
 local function testWithComponent(component, callback)
-	local app = Roact.createElement(TestApp, nil, {
-		TestComponent = component,
-	})
+	local app
+
+	if UIBloxConfig.useFoundationProvider then
+		app = Roact.createElement(TestApp, nil, {
+			FoundationProvider = Roact.createElement(FoundationProvider, {
+				theme = "Dark",
+			}, { TestComponent = component }),
+		})
+	else
+		app = Roact.createElement(TestApp, nil, { TestComponent = component })
+	end
 
 	local instanceName = ("TestApp-%s"):format(HttpService:GenerateGUID(false))
 	local handle = Roact.mount(app, CoreGui, instanceName)

@@ -1,8 +1,8 @@
 --!nonstrict
 local CorePackages = game:GetService("CorePackages")
 
-local Rodux = require(CorePackages.Rodux)
-local Cryo = require(CorePackages.Cryo)
+local Rodux = require(CorePackages.Packages.Rodux)
+local Cryo = require(CorePackages.Packages.Cryo)
 
 local TopBar = script.Parent.Parent
 local Actions = TopBar.Actions
@@ -17,6 +17,7 @@ local SetInspectMenuOpen = require(Actions.SetInspectMenuOpen)
 local SetGamepadMenuOpen = require(Actions.SetGamepadMenuOpen)
 local SetGamepadNavigationDialogOpen = require(Actions.SetGamepadNavigationDialogOpen)
 
+local FFlagRemoveTopBarInputTypeRodux = require(script.Parent.Parent.Flags.GetFFlagRemoveTopBarInputTypeRodux)()
 local FFlagGamepadNavigationDialogABTest = require(script.Parent.Parent.Flags.FFlagGamepadNavigationDialogABTest)
 
 local Constants = require(TopBar.Constants)
@@ -31,7 +32,7 @@ local initialDisplayOptions = {
 	topbarEnabled = true, --If the top bar is enabled from the SetCore API
 	isSmallTouchDevice = false,
 	screenSize = Vector2.new(0, 0),
-	inputType = InputType.MouseAndKeyBoard,
+	inputType = if FFlagRemoveTopBarInputTypeRodux then nil else InputType.MouseAndKeyBoard,
 	isGamepadMenuOpen = false,
 	isGamepadNavigationDialogOpen = if FFlagGamepadNavigationDialogABTest then false else nil,
 	keepOutAreas = {},
@@ -69,11 +70,13 @@ local DisplayOptions = Rodux.createReducer(initialDisplayOptions, {
 		})
 	end,
 
-	[SetInputType.name] = function(state, action)
-		return Cryo.Dictionary.join(state, {
-			inputType = action.inputType,
-		})
-	end,
+	[SetInputType.name] = if not FFlagRemoveTopBarInputTypeRodux then 
+		function(state, action)
+			return Cryo.Dictionary.join(state, {
+				inputType = action.inputType,
+			}) 
+		end
+	else nil,
 
 	[SetInspectMenuOpen.name] = function(state, action)
 		return Cryo.Dictionary.join(state, {

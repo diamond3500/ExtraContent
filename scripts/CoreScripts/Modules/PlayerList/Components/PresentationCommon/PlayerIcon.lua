@@ -4,9 +4,9 @@ local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 
 local FFlagPlayerIconAvatarFix = require(RobloxGui.Modules.Flags.FFlagPlayerIconAvatarFix)
 
-local Roact = require(CorePackages.Roact)
-local RoactRodux = require(CorePackages.RoactRodux)
-local UIBlox = require(CorePackages.UIBlox)
+local Roact = require(CorePackages.Packages.Roact)
+local RoactRodux = require(CorePackages.Packages.RoactRodux)
+local UIBlox = require(CorePackages.Packages.UIBlox)
 local t = require(CorePackages.Packages.t)
 
 local playerInterface = require(RobloxGui.Modules.Interfaces.playerInterface)
@@ -36,7 +36,7 @@ PlayerIcon.validateProps = t.strictInterface({
 		friendStatus = t.enum(Enum.FriendStatus),
 		isFollowing = t.boolean,
 		isFollower = t.boolean,
-	})
+	}),
 })
 
 local function getSocialIconImage(layoutValues, relationship)
@@ -97,9 +97,8 @@ function PlayerIcon:render()
 					BackgroundTransparency = 1,
 					Image = avatarIcon,
 					BorderSizePixel = 0,
-				})
+				}),
 			})
-
 		elseif self.props.isSmallTouchDevice then
 			return Roact.createElement(ImageSetLabel, {
 				AnchorPoint = Vector2.new(0, 0.5),
@@ -114,7 +113,6 @@ function PlayerIcon:render()
 				),
 				BorderSizePixel = 0,
 			})
-
 		else
 			return Roact.createElement(ImageSetLabel, {
 				LayoutOrder = self.props.layoutOrder,

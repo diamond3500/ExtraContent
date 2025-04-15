@@ -12,9 +12,6 @@ local Analytics = require(root.Analytics)
 local ParseContentIds = require(root.util.ParseContentIds)
 local getMeshMinMax = require(root.util.getMeshMinMax)
 
--- TODO remove with getEngineFeatureUGCValidateEditableMeshAndImage
-type MeshInputData = { id: string, scale: Vector3?, context: string }
-
 local function formatError(mesh: Types.MeshInfo, otherMesh: Types.MeshInfo, maxDiff: number)
 	local function getContext(data: Types.MeshInfo)
 		local result = (data.context and (data.context .. " mesh ") or "mesh ")
@@ -55,7 +52,7 @@ local function validateMeshComparison(
 	local otherMeshMax = meshMaxOptOther :: Vector3
 
 	if (meshMin - otherMeshMin).Magnitude > maxDiff or (meshMax - otherMeshMax).Magnitude > maxDiff then
-		Analytics.reportFailure(Analytics.ErrorType.validateMeshComparison)
+		Analytics.reportFailure(Analytics.ErrorType.validateMeshComparison, nil, validationContext)
 		return false, { formatError(mesh, otherMesh, maxDiff) }
 	end
 	return true

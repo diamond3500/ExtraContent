@@ -10,7 +10,7 @@ local AnalyticsService = game:GetService("RbxAnalyticsService")
 local EventIngestService = game:GetService("EventIngestService")
 local Analytics = require(CorePackages.Workspace.Packages.Analytics).Analytics.new(AnalyticsService)
 local EventIngest = require(CorePackages.Workspace.Packages.Analytics).AnalyticsReporters.EventIngest
-local Roact = require(CorePackages.Roact)
+local Roact = require(CorePackages.Packages.Roact)
 local Settings = script:FindFirstAncestor("Settings")
 local settingsPageFactory = require(RobloxGuiModules.Settings.SettingsPageFactory)
 local Create = require(CorePackages.Workspace.Packages.AppCommonLib).Create
@@ -35,12 +35,13 @@ while not localPlayer do
 	localPlayer = PlayersService.LocalPlayer
 end
 
-local reportAbuseAnalytics = ReportAbuseAnalytics.new(EventIngest.new(EventIngestService), Analytics.Diag, ReportAbuseAnalytics.MenuContexts.LegacySentPage)
-
-local blockingAnalytics = BlockingAnalytics.new(
-	localPlayer.UserId,
-	{ EventStream = AnalyticsService }
+local reportAbuseAnalytics = ReportAbuseAnalytics.new(
+	EventIngest.new(EventIngestService),
+	Analytics.Diag,
+	ReportAbuseAnalytics.MenuContexts.LegacySentPage
 )
+
+local blockingAnalytics = BlockingAnalytics.new(localPlayer.UserId, { EventStream = AnalyticsService })
 
 local function Initialize()
 	local instance = settingsPageFactory:CreateNewPage()
@@ -81,7 +82,6 @@ function ReportSentPageV2:UpdateMenu()
 		end
 	end)
 
-
 	local SizeChangedProxy
 	if GetFFlagReportAbuseThankYouPageSizeFix() then
 		SizeChangedProxy = Instance.new("BindableEvent")
@@ -101,10 +101,10 @@ function ReportSentPageV2:UpdateMenu()
 			self:HandleDone()
 		end,
 		isVoiceReport = self.isVoiceReport,
-		ZIndex = self.HubRef.Shield.ZIndex+1,
+		ZIndex = self.HubRef.Shield.ZIndex + 1,
 		reportAbuseAnalytics = reportAbuseAnalytics,
 		blockingAnalytics = blockingAnalytics,
-		onSizeChanged = if GetFFlagReportAbuseThankYouPageSizeFix() then SizeChangedProxy.Event else nil
+		onSizeChanged = if GetFFlagReportAbuseThankYouPageSizeFix() then SizeChangedProxy.Event else nil,
 	})
 
 	handle = Roact.mount(reportConfirmationScreen, self.Root, "ReportSentPageV2")
@@ -131,7 +131,7 @@ function ReportSentPageV2:HandleDone()
 		self.SizeChangedSignal = nil
 	end
 
-    self.HubRef:SetVisibility(false, true)
+	self.HubRef:SetVisibility(false, true)
 end
 
 return ReportSentPageV2

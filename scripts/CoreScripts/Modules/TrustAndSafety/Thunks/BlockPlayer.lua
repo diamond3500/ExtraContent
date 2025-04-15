@@ -1,6 +1,5 @@
-local CoreGui = game:GetService("CoreGui")
-local RobloxGui = CoreGui:WaitForChild("RobloxGui")
-local BlockingUtility = require(RobloxGui.Modules.BlockingUtility)
+local CorePackages = game:GetService("CorePackages")
+local BlockingUtility = require(CorePackages.Workspace.Packages.BlockingUtility)
 
 local TnsModule = script.Parent.Parent
 local ShowToast = require(TnsModule.Actions.ShowToast)

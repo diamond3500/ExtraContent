@@ -1,11 +1,12 @@
 --!nonstrict
 local CorePackages = game:GetService("CorePackages")
 local Modules = game:GetService("CoreGui").RobloxGui.Modules
-local Roact = require(CorePackages.Roact)
+local Roact = require(CorePackages.Packages.Roact)
 local Constants = require(Modules.Settings.Pages.ShareGame.Constants)
 local UserLibConstants = require(CorePackages.Workspace.Packages.UserLib).Utils.Constants
 
-local getRbxthumbWithTypeSizeAndOptions = require(CorePackages.Workspace.Packages.UserLib).Utils.getRbxthumbWithTypeSizeAndOptions
+local getRbxthumbWithTypeSizeAndOptions =
+	require(CorePackages.Workspace.Packages.UserLib).Utils.getRbxthumbWithTypeSizeAndOptions
 
 local BORDER_SIZE = 1
 local BORDER_COLOR = Constants.Color.GRAY3
@@ -131,7 +132,7 @@ function ConversationThumbnail:render()
 		end
 
 		-- Render the avatar inside a clipping container
-		thumbnailContents["AvatarHolder-"..i] = Roact.createElement("Frame", {
+		thumbnailContents["AvatarHolder-" .. i] = Roact.createElement("Frame", {
 			BackgroundTransparency = 1,
 			ClipsDescendants = true,
 			Size = layoutData.FrameSize,
@@ -144,12 +145,12 @@ function ConversationThumbnail:render()
 				Position = layoutData.Position,
 				Image = thumbnailImage,
 				ZIndex = zIndex,
-			})
+			}),
 		})
 
 		-- Render any borders between avatars
 		if layoutData.Border then
-			thumbnailContents["Border-"..i] = Roact.createElement("Frame", {
+			thumbnailContents["Border-" .. i] = Roact.createElement("Frame", {
 				Size = layoutData.Border.BorderSize,
 				Position = layoutData.Border.BorderPosition,
 				BorderSizePixel = 0,

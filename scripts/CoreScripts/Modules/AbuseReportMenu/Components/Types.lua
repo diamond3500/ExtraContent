@@ -161,6 +161,7 @@ type PartialAnalyticsState = {
 	reasonSelection: string?,
 	commentAdded: boolean,
 	experiencePersonSelection: string?,
+	memoryRequirementMet: number,
 }
 
 type AnalayticsExtras = {

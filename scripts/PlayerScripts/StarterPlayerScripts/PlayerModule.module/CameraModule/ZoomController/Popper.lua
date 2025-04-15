@@ -6,13 +6,20 @@
 
 local Players = game:GetService("Players")
 
-local camera = game.Workspace.CurrentCamera
-
 local CommonUtils = script.Parent.Parent.Parent:WaitForChild("CommonUtils")
 local FlagUtil = require(CommonUtils:WaitForChild("FlagUtil"))
+local CameraWrapper = require(CommonUtils:WaitForChild("CameraWrapper"))
 
 -- Flags
-local FFlagUserRaycastPerformanceImprovements = FlagUtil.getUserFlag("UserRaycastPerformanceImprovements")
+local FFlagUserRaycastUpdateAPI = FlagUtil.getUserFlag("UserRaycastUpdateAPI")
+local FFlagUserCurrentCameraUpdate = FlagUtil.getUserFlag("UserCurrentCameraUpdate")
+
+local cameraWrapper = if FFlagUserCurrentCameraUpdate then CameraWrapper.new() else nil
+local camera = if FFlagUserCurrentCameraUpdate then nil else game.Workspace.CurrentCamera
+
+if FFlagUserCurrentCameraUpdate then
+	cameraWrapper:Enable()
+end
 
 local min = math.min
 local tan = math.tan
@@ -38,25 +45,50 @@ local function eraseFromEnd(t, toSize)
 	end
 end
 
-local nearPlaneZ, projX, projY do
-	local function updateProjection()
-		local fov = rad(camera.FieldOfView)
-		local view = camera.ViewportSize
-		local ar = view.X/view.Y
+-- On removing the flag, put this back before the do statement
+local nearPlaneZ, projX, projY
+if FFlagUserCurrentCameraUpdate then
+	do
+		local function updateProjection()
+			local camera = cameraWrapper:getCamera()
+			local fov = rad(camera.FieldOfView)
+			local view = camera.ViewportSize
+			local ar = view.X/view.Y
 
-		projY = 2*tan(fov/2)
-		projX = ar*projY
+			projY = 2*tan(fov/2)
+			projX = ar*projY
+		end
+
+		cameraWrapper:Connect("FieldOfView", updateProjection)
+		cameraWrapper:Connect("ViewportSize", updateProjection)
+
+		updateProjection()
+
+		nearPlaneZ = cameraWrapper:getCamera().NearPlaneZ
+		cameraWrapper:Connect("NearPlaneZ", function()
+			nearPlaneZ = cameraWrapper:getCamera().NearPlaneZ
+		end)
 	end
-
-	camera:GetPropertyChangedSignal("FieldOfView"):Connect(updateProjection)
-	camera:GetPropertyChangedSignal("ViewportSize"):Connect(updateProjection)
-
-	updateProjection()
-
-	nearPlaneZ = camera.NearPlaneZ
-	camera:GetPropertyChangedSignal("NearPlaneZ"):Connect(function()
+else
+	do
+		local function updateProjection()
+			local fov = rad(camera.FieldOfView)
+			local view = camera.ViewportSize
+			local ar = view.X/view.Y
+			projY = 2*tan(fov/2)
+			projX = ar*projY
+		end
+	
+		camera:GetPropertyChangedSignal("FieldOfView"):Connect(updateProjection)
+		camera:GetPropertyChangedSignal("ViewportSize"):Connect(updateProjection)
+	
+		updateProjection()
+	
 		nearPlaneZ = camera.NearPlaneZ
-	end)
+		camera:GetPropertyChangedSignal("NearPlaneZ"):Connect(function()
+			nearPlaneZ = camera.NearPlaneZ
+		end)
+	end
 end
 
 local excludeList = {} do
@@ -122,16 +154,29 @@ end
 local subjectRoot
 local subjectPart
 
-camera:GetPropertyChangedSignal("CameraSubject"):Connect(function()
-	local subject = camera.CameraSubject
-	if subject:IsA("Humanoid") then
-		subjectPart = subject.RootPart
-	elseif subject:IsA("BasePart") then
-		subjectPart = subject
-	else
-		subjectPart = nil
-	end
-end)
+if FFlagUserCurrentCameraUpdate then
+	cameraWrapper:Connect("CameraSubject", function()
+		local subject = cameraWrapper:getCamera().CameraSubject
+		if subject:IsA("Humanoid") then
+			subjectPart = subject.RootPart
+		elseif subject:IsA("BasePart") then
+			subjectPart = subject
+		else
+			subjectPart = nil
+		end
+	end)
+else
+	camera:GetPropertyChangedSignal("CameraSubject"):Connect(function()
+		local subject = camera.CameraSubject
+		if subject:IsA("Humanoid") then
+			subjectPart = subject.RootPart
+		elseif subject:IsA("BasePart") then
+			subjectPart = subject
+		else
+			subjectPart = nil
+		end
+	end)
+end
 
 local function canOcclude(part)
 	-- Occluders must be:
@@ -162,7 +207,7 @@ local QUERY_POINT_CAST_LIMIT = 64
 -- Piercing raycasts
 
 local function getCollisionPoint(origin, dir)
-	if FFlagUserRaycastPerformanceImprovements then
+	if FFlagUserRaycastUpdateAPI then
 		excludeParams.FilterDescendantsInstances = excludeList
 		repeat
 			local raycastResult = workspace:Raycast(origin, dir, excludeParams)
@@ -213,47 +258,46 @@ local function queryPoint(origin, unitDir, dist, lastPos)
 
 	local numPierced = 0
 	
-	if FFlagUserRaycastPerformanceImprovements then
+	if FFlagUserRaycastUpdateAPI then
+		excludeParams.FilterDescendantsInstances = excludeList
 		repeat
-			excludeParams.FilterDescendantsInstances = excludeList
-
 			local enterRaycastResult = workspace:Raycast(movingOrigin, target - movingOrigin, excludeParams)
-			local entryInstance, entryPosition
-			if enterRaycastResult then
-				entryInstance, entryPosition = enterRaycastResult.Instance, enterRaycastResult.Position
-				numPierced += 1
 
-				local earlyAbort = numPierced >= QUERY_POINT_CAST_LIMIT
-
-				if canOcclude(entryInstance) or earlyAbort then
-					local includeList = { entryInstance }
-					includeParams.FilterDescendantsInstances = includeList
-
-					local exitRaycastResult = workspace:Raycast(target, entryPosition - target, includeParams)
-
-					local lim = (entryPosition - origin).Magnitude
-
-					if exitRaycastResult and not earlyAbort then
-						local promote = if lastPos then
-							workspace:Raycast(lastPos, target - lastPos, includeParams) or
-								workspace:Raycast(target, lastPos - target, includeParams) else nil
-
-						if promote then
-							-- Ostensibly a soft limit, but the camera has passed through it in the last frame, so promote to a hard limit.
-							hardLimit = lim
-						elseif dist < softLimit then
-							-- Trivial soft limit
-							softLimit = lim
-						end
-					else
-						-- Trivial hard limit
-						hardLimit = lim
-					end
-				end
-
-				excludeParams:AddToFilter(entryInstance)
-				movingOrigin = entryPosition - unitDir*1e-3
+			if not enterRaycastResult then
+				break
 			end
+
+			numPierced += 1
+
+			local entryInstance, entryPosition = enterRaycastResult.Instance, enterRaycastResult.Position
+			local lim = (entryPosition - origin).Magnitude
+
+			if numPierced >= QUERY_POINT_CAST_LIMIT then
+				hardLimit = lim
+			elseif canOcclude(entryInstance) then
+				includeParams.FilterDescendantsInstances = { entryInstance }
+
+				local exitRaycastResult = workspace:Raycast(target, entryPosition - target, includeParams)
+				if exitRaycastResult then
+					local promote = if lastPos then
+						(workspace:Raycast(lastPos, target - lastPos, includeParams) or
+							workspace:Raycast(target, lastPos - target, includeParams)) else false
+
+					if promote then
+						-- Ostensibly a soft limit, but the camera has passed through it in the last frame, so promote to a hard limit.
+						hardLimit = lim
+					elseif dist < softLimit then
+						-- Trivial soft limit
+						softLimit = lim
+					end
+				else
+					-- Trivial hard limit
+					hardLimit = lim
+				end
+			end
+
+			excludeParams:AddToFilter(entryInstance)
+			movingOrigin = entryPosition - unitDir*1e-3
 		until hardLimit < inf or not entryInstance
 	else
 		repeat
@@ -310,6 +354,8 @@ local function queryViewport(focus, dist)
 	local fX =  focus.rightVector
 	local fY =  focus.upVector
 	local fZ = -focus.lookVector
+
+	camera = if FFlagUserCurrentCameraUpdate then cameraWrapper:getCamera() else camera
 
 	local viewport = camera.ViewportSize
 

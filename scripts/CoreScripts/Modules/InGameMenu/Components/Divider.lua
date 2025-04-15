@@ -1,6 +1,6 @@
 local CorePackages = game:GetService("CorePackages")
 
-local InGameMenuDependencies = require(CorePackages.InGameMenuDependencies)
+local InGameMenuDependencies = require(CorePackages.Packages.InGameMenuDependencies)
 local Roact = InGameMenuDependencies.Roact
 local UIBlox = InGameMenuDependencies.UIBlox
 local Cryo = InGameMenuDependencies.Cryo
@@ -27,13 +27,20 @@ local function Divider(props)
 
 	return withStyle(function(style)
 		-- Divider relies on being right-aligned in order to be left-indented.
-		return Roact.createElement("Frame", Cryo.Dictionary.join({
-			Size = UDim2.new(1, 0, 0, 1),
-		}, props, {
-			BorderSizePixel = 0,
-			BackgroundColor3 = style.Theme.Divider.Color,
-			BackgroundTransparency = style.Theme.Divider.Transparency,
-		}))
+		return Roact.createElement(
+			"Frame",
+			Cryo.Dictionary.join(
+				{
+					Size = UDim2.new(1, 0, 0, 1),
+				},
+				props,
+				{
+					BorderSizePixel = 0,
+					BackgroundColor3 = style.Theme.Divider.Color,
+					BackgroundTransparency = style.Theme.Divider.Transparency,
+				}
+			)
+		)
 	end)
 end
 

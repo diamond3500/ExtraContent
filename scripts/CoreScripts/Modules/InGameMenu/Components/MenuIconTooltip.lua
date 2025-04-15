@@ -1,7 +1,7 @@
 local CoreGui = game:GetService("CoreGui")
 local CorePackages = game:GetService("CorePackages")
 
-local InGameMenuDependencies = require(CorePackages.InGameMenuDependencies)
+local InGameMenuDependencies = require(CorePackages.Packages.InGameMenuDependencies)
 local Roact = InGameMenuDependencies.Roact
 local RoactRodux = InGameMenuDependencies.RoactRodux
 local t = InGameMenuDependencies.t
@@ -19,7 +19,7 @@ local MENU_ICON_POSITION = Vector2.new(TobBarConstants.ScreenSideOffset, TobBarC
 local MenuIconTooltip = Roact.PureComponent:extend("MenuIconTooltip")
 
 MenuIconTooltip.validateProps = t.strictInterface({
-	isTooltipOpen  = t.boolean,
+	isTooltipOpen = t.boolean,
 	onDismiss = t.callback,
 })
 
@@ -27,23 +27,24 @@ function MenuIconTooltip:render()
 	return withLocalization({
 		bodyText = "CoreScripts.InGameMenu.EducationalPopup.MenuIconTooltip",
 	})(function(localized)
-		return self.props.isTooltipOpen and Roact.createElement(Roact.Portal, {
-			-- LUAU FIXME: Need read-write syntax for props to obviate the need for this cast
-			target = CoreGui :: Instance,
-		}, {
-			TooltipScreenGui = Roact.createElement("ScreenGui", {
-				IgnoreGuiInset = true,
-				ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
+		return self.props.isTooltipOpen
+			and Roact.createElement(Roact.Portal, {
+				-- LUAU FIXME: Need read-write syntax for props to obviate the need for this cast
+				target = CoreGui :: Instance,
 			}, {
-				Tooltip = Roact.createElement(Tooltip, {
-					triggerPosition = MENU_ICON_POSITION,
-					triggerSize = Vector2.new(MENU_ICON_SIZE, MENU_ICON_SIZE),
-					bodyText = localized.bodyText,
-					onDismiss = self.props.onDismiss,
-					forceClickTriggerPoint = true,
-				})
+				TooltipScreenGui = Roact.createElement("ScreenGui", {
+					IgnoreGuiInset = true,
+					ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
+				}, {
+					Tooltip = Roact.createElement(Tooltip, {
+						triggerPosition = MENU_ICON_POSITION,
+						triggerSize = Vector2.new(MENU_ICON_SIZE, MENU_ICON_SIZE),
+						bodyText = localized.bodyText,
+						onDismiss = self.props.onDismiss,
+						forceClickTriggerPoint = true,
+					}),
+				}),
 			})
-		})
 	end)
 end
 

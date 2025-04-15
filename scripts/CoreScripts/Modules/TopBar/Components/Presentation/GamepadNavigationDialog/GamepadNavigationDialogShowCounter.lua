@@ -4,7 +4,7 @@ local AppStorageService = game:GetService("AppStorageService")
 local HttpService = game:GetService("HttpService")
 
 local React = require(CorePackages.Packages.React)
-local UIBlox = require(CorePackages.UIBlox)
+local UIBlox = require(CorePackages.Packages.UIBlox)
 local GamepadNavigationDialog = require(script.Parent.GamepadNavigationDialog)
 
 local GamepadNavigationDialogShowCounter = React.PureComponent:extend("GamepadNavigationDialogShowCounter")

@@ -1,8 +1,8 @@
 local CorePackages = game:GetService("CorePackages")
 
-local Roact = require(CorePackages.Roact)
+local Roact = require(CorePackages.Packages.Roact)
 local t = require(CorePackages.Packages.t)
-local Otter = require(CorePackages.Otter)
+local Otter = require(CorePackages.Packages.Otter)
 
 local Components = script.Parent.Parent
 local Connection = Components.Connection
@@ -12,13 +12,13 @@ local WithLayoutValues = LayoutValues.WithLayoutValues
 local DropDownButton = require(script.Parent.DropDownButton)
 
 local POSITION_MOTOR_OPTIONS = {
-    dampingRatio = 1,
-    frequency = 4,
+	dampingRatio = 1,
+	frequency = 4,
 }
 
 local OVERLAY_MOTOR_OPTIONS = {
 	dampingRatio = 1,
-    frequency = 4,
+	frequency = 4,
 }
 
 local DropDownAnimator = Roact.PureComponent:extend("DropDownAnimator")
@@ -128,7 +128,7 @@ function DropDownAnimator:render()
 			Position = self.currentButtonPosition,
 			BackgroundTransparency = 1,
 		}, {
-			DropDownButton = Roact.createElement(DropDownButton, self:getButtonProps(self.props))
+			DropDownButton = Roact.createElement(DropDownButton, self:getButtonProps(self.props)),
 		})
 
 		if self.state.lastButtonProps then
@@ -137,7 +137,10 @@ function DropDownAnimator:render()
 				Position = self.lastButtonPosition,
 				BackgroundTransparency = 1,
 			}, {
-				DropDownButton = Roact.createElement(DropDownButton, self:getButtonProps(self.state.lastButtonProps, true))
+				DropDownButton = Roact.createElement(
+					DropDownButton,
+					self:getButtonProps(self.state.lastButtonProps, true)
+				),
 			})
 		end
 

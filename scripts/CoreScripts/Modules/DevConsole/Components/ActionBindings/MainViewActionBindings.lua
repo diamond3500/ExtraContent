@@ -1,6 +1,6 @@
 local CorePackages = game:GetService("CorePackages")
-local Roact = require(CorePackages.Roact)
-local RoactRodux = require(CorePackages.RoactRodux)
+local Roact = require(CorePackages.Packages.Roact)
+local RoactRodux = require(CorePackages.Packages.RoactRodux)
 
 local Components = script.Parent.Parent.Parent.Components
 local ActionBindingsChart = require(Components.ActionBindings.ActionBindingsChart)
@@ -17,7 +17,7 @@ local MainViewActionBindings = Roact.Component:extend("MainViewActionBindings")
 function MainViewActionBindings:init()
 	self.onUtilTabHeightChanged = function(utilTabHeight)
 		self:setState({
-			utilTabHeight = utilTabHeight
+			utilTabHeight = utilTabHeight,
 		})
 	end
 
@@ -28,14 +28,14 @@ function MainViewActionBindings:init()
 	self.utilRef = Roact.createRef()
 
 	self.state = {
-		utilTabHeight = 0
+		utilTabHeight = 0,
 	}
 end
 
 function MainViewActionBindings:didMount()
 	local utilSize = self.utilRef.current.Size
 	self:setState({
-		utilTabHeight = utilSize.Y.Offset
+		utilTabHeight = utilSize.Y.Offset,
 	})
 end
 
@@ -43,7 +43,7 @@ function MainViewActionBindings:didUpdate()
 	local utilSize = self.utilRef.current.Size
 	if utilSize.Y.Offset ~= self.state.utilTabHeight then
 		self:setState({
-			utilTabHeight = utilSize.Y.Offset
+			utilTabHeight = utilSize.Y.Offset,
 		})
 	end
 end
@@ -80,7 +80,7 @@ function MainViewActionBindings:render()
 			onSearchTermChanged = self.onSearchTermChanged,
 		}),
 
-		ActionBindings = utilTabHeight > 0  and Roact.createElement(ActionBindingsChart, {
+		ActionBindings = utilTabHeight > 0 and Roact.createElement(ActionBindingsChart, {
 			size = UDim2.new(1, 0, 1, -utilTabHeight),
 			searchTerm = searchTerm,
 			layoutOrder = 2,
@@ -98,7 +98,7 @@ local function mapDispatchToProps(dispatch)
 	return {
 		dispatchActionBindingsUpdateSearchFilter = function(searchTerm, filters)
 			dispatch(ActionBindingsUpdateSearchFilter(searchTerm, filters))
-		end
+		end,
 	}
 end
 

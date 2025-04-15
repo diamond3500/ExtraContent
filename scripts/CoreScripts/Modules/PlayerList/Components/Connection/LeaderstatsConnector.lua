@@ -23,9 +23,9 @@ local RobloxReplicatedStorage = game:GetService("RobloxReplicatedStorage")
 local CorePackages = game:GetService("CorePackages")
 local Players = game:GetService("Players")
 
-local Cryo = require(CorePackages.Cryo)
-local Roact = require(CorePackages.Roact)
-local RoactRodux = require(CorePackages.RoactRodux)
+local Cryo = require(CorePackages.Packages.Cryo)
+local Roact = require(CorePackages.Packages.Roact)
+local RoactRodux = require(CorePackages.Packages.RoactRodux)
 
 local Components = script.Parent.Parent
 local PlayerList = Components.Parent
@@ -42,8 +42,12 @@ local LeaderstatsConnector = Roact.PureComponent:extend("LeaderstatsConnector")
 local FFlagLeaderstatsWithASideOfClient = require(PlayerList.Flags.FFlagLeaderstatsWithASideOfClient)
 
 local function isValidStat(obj)
-	return obj:IsA("StringValue") or obj:IsA("IntValue") or obj:IsA("BoolValue") or obj:IsA("NumberValue") or
-		obj:IsA("DoubleConstrainedValue") or obj:IsA("IntConstrainedValue")
+	return obj:IsA("StringValue")
+		or obj:IsA("IntValue")
+		or obj:IsA("BoolValue")
+		or obj:IsA("NumberValue")
+		or obj:IsA("DoubleConstrainedValue")
+		or obj:IsA("IntConstrainedValue")
 end
 
 local function getScoreValue(statObject)
@@ -64,19 +68,17 @@ local serverAddOrder
 local serverOrderUpdated
 
 if FFlagLeaderstatsWithASideOfClient then
-
 	serverOrderUpdated = Instance.new("BindableEvent")
 
 	-- Attributes
 	serverAddOrder = RobloxReplicatedStorage:GetAttribute(REPLICATED_ATTRIBUTE_NAME) or {}
-	RobloxReplicatedStorage:GetAttributeChangedSignal(REPLICATED_ATTRIBUTE_NAME):Connect(function ()
+	RobloxReplicatedStorage:GetAttributeChangedSignal(REPLICATED_ATTRIBUTE_NAME):Connect(function()
 		serverAddOrder = RobloxReplicatedStorage:GetAttribute(REPLICATED_ATTRIBUTE_NAME) or {}
 		serverOrderUpdated:Fire(serverAddOrder)
 	end)
 
 	-- StringValue Fallback
 	do
-
 		local HttpService = game:GetService("HttpService")
 
 		local function decodeJSON(jsonString)
@@ -96,7 +98,7 @@ if FFlagLeaderstatsWithASideOfClient then
 			end
 			addedListener:Disconnect()
 			serverAddOrder = decodeAddOrder(instance.Value)
-			instance.Changed:Connect(function (newValue)
+			instance.Changed:Connect(function(newValue)
 				serverAddOrder = decodeAddOrder(newValue)
 				serverOrderUpdated:Fire(serverAddOrder)
 			end)
@@ -107,9 +109,7 @@ if FFlagLeaderstatsWithASideOfClient then
 		for _, instance in ipairs(RobloxReplicatedStorage:GetChildren()) do
 			childAdded(instance)
 		end
-
 	end
-
 end
 
 function LeaderstatsConnector:init()
@@ -321,7 +321,7 @@ end
 local function mapStateToProps(state)
 	return {
 		players = state.players,
-		gameStats = state.gameStats
+		gameStats = state.gameStats,
 	}
 end
 

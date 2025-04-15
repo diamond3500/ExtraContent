@@ -8,6 +8,13 @@
  *
  * @flow
  ]]
+
+local Shared = script.Parent
+local Packages = Shared.Parent
+local SafeFlags = require(Packages.SafeFlags)
+local GetFFlagReactEnableSchedulingProfiler =
+	SafeFlags.createGetFFlag("ReactEnableSchedulingProfiler")
+
 -- Unknown globals fail type checking (see "Unknown symbols" section of
 -- https://roblox.github.io/luau/typecheck.html)
 local exports = {}
@@ -22,7 +29,8 @@ exports.enableDebugTracing = false
 
 -- Adds user timing marks for e.g. state updates, suspense, and work loop stuff,
 -- for an experimental scheduling profiler tool.
-exports.enableSchedulingProfiler = _G.__PROFILE__ and _G.__EXPERIMENTAL__
+exports.enableSchedulingProfiler = GetFFlagReactEnableSchedulingProfiler()
+	or (_G.__PROFILE__ and _G.__EXPERIMENTAL__)
 
 -- Helps identify side effects in render-phase lifecycle hooks and setState
 -- reducers by double invoking them in Strict Mode.
@@ -40,10 +48,10 @@ exports.warnAboutDeprecatedLifecycles = true
 exports.enableProfilerTimer = _G.__PROFILE__
 
 -- Record durations for commit and passive effects phases.
-exports.enableProfilerCommitHooks = false
+exports.enableProfilerCommitHooks = _G.__PROFILE__
 
 -- Trace which interactions trigger each commit.
-exports.enableSchedulerTracing = _G.__PROFILE__
+exports.enableSchedulerTracing = false
 
 -- SSR experiments
 exports.enableSuspenseServerRenderer = _G.__EXPERIMENTAL__

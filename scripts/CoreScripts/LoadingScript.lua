@@ -14,6 +14,18 @@ if PLACE_ID_FROM_ENGINE <= 0 and numArgs > 0 then
 	PLACE_ID_FROM_ENGINE = select(1, ...)
 end
 
+local FFlagEnableExperienceGenericChallengeRenderingOnLoadingScript = game:DefineFastFlag("EnableExperienceGenericChallengeRenderingOnLoadingScript", false)
+
+
+if FFlagEnableExperienceGenericChallengeRenderingOnLoadingScript then
+	-- Initializes the in-experience challenge interceptor, used to handle
+	-- rendering challenges such as 2-Step-Verification on suspicious actions e.g. economic actions.
+	coroutine.wrap(function()
+		local initChallengeInterceptor = require(CorePackages.Workspace.Packages.GenericChallenges).Middleware.InitExperienceChallengeInterceptor
+		initChallengeInterceptor()
+	end)()
+end
+
 -- Currently this is only used by VR, where refresh rate in experiences is set to 90,
 -- so that the FRM oscillates somewhere between 72 and 90 instead of dipping below 72.
 -- So the actual target FPS should be anything above 72.

@@ -1,5 +1,5 @@
 local CorePackages = game:GetService("CorePackages")
-local Roact = require(CorePackages.Roact)
+local Roact = require(CorePackages.Packages.Roact)
 
 local Immutable = require(script.Parent.Parent.Immutable)
 local Constants = require(script.Parent.Parent.Constants)
@@ -33,7 +33,7 @@ function BannerButton:render()
 			Image = isExpanded and OPEN_ARROW or CLOSE_ARROW,
 			BackgroundTransparency = 1,
 			Size = UDim2.new(0, ARROW_WIDTH, 0, ARROW_WIDTH),
-			Position = UDim2.new(0, inset, .5, -ARROW_WIDTH / 2),
+			Position = UDim2.new(0, inset, 0.5, -ARROW_WIDTH / 2),
 		}),
 
 		HorizontalLineTop = Roact.createElement("Frame", {

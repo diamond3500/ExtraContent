@@ -3,7 +3,7 @@ local CorePackages = game:GetService("CorePackages")
 local SoundService = game:GetService("SoundService")
 
 local RobloxGui = CoreGui:WaitForChild("RobloxGui")
-local InGameMenuDependencies = require(CorePackages.InGameMenuDependencies)
+local InGameMenuDependencies = require(CorePackages.Packages.InGameMenuDependencies)
 local Roact = InGameMenuDependencies.Roact
 local t = InGameMenuDependencies.t
 
@@ -35,7 +35,7 @@ DeviceSelectionEntry.validateProps = t.strictInterface({
 })
 
 DeviceSelectionEntry.defaultProps = {
-	canOpen = true
+	canOpen = true,
 }
 
 function DeviceSelectionEntry:init()
@@ -43,31 +43,32 @@ function DeviceSelectionEntry:init()
 		deviceNames = {},
 		deviceGuids = {},
 		selectedIndex = 0,
-		ready = false
+		ready = false,
 	})
 
-	VoiceChatServiceManager:asyncInit():andThen(function()
-		self:setState({
-			ready = true
-		})
-		VoiceChatServiceManager:SetupParticipantListeners()
-		if SoundService.DeviceListChanged then
-			SoundService.DeviceListChanged:Connect(function()
-				if self.props.isMenuOpen then
-					self:pollDevices(self.props.deviceType)
-				end
-			end)
-		end
-	end):catch(function()
-		if GetFFlagVoiceChatUILogging() then
-			log:warning("Failed to init VoiceChatServiceManager")
-		end
-	end)
+	VoiceChatServiceManager:asyncInit()
+		:andThen(function()
+			self:setState({
+				ready = true,
+			})
+			VoiceChatServiceManager:SetupParticipantListeners()
+			if SoundService.DeviceListChanged then
+				SoundService.DeviceListChanged:Connect(function()
+					if self.props.isMenuOpen then
+						self:pollDevices(self.props.deviceType)
+					end
+				end)
+			end
+		end)
+		:catch(function()
+			if GetFFlagVoiceChatUILogging() then
+				log:warning("Failed to init VoiceChatServiceManager")
+			end
+		end)
 end
 
 function DeviceSelectionEntry:render()
-	if not self.state.ready or self.state.deviceNames == nil or
-		#self.state.deviceNames == 0 then
+	if not self.state.ready or self.state.deviceNames == nil or #self.state.deviceNames == 0 then
 		return nil
 	end
 
@@ -87,8 +88,7 @@ function DeviceSelectionEntry:render()
 			Size = UDim2.new(1, 0, 0, 56),
 			Position = UDim2.new(0, 0, 0, 0),
 			AnchorPoint = Vector2.new(0, 0),
-			Text = self.props.deviceType == DeviceSelectionEntry.DeviceType.Input and
-				"Input Device" or "Output Device",
+			Text = self.props.deviceType == DeviceSelectionEntry.DeviceType.Input and "Input Device" or "Output Device",
 			TextTruncate = Enum.TextTruncate.AtEnd,
 			TextXAlignment = Enum.TextXAlignment.Left,
 		}),
@@ -101,7 +101,7 @@ function DeviceSelectionEntry:render()
 			placeHolderText = "",
 			enabled = true,
 			localize = false,
-			selectionParentName = self.props.deviceType.."DeviceSelectionEntryDropdown",
+			selectionParentName = self.props.deviceType .. "DeviceSelectionEntryDropdown",
 			canOpen = self.props.canOpen,
 			canCaptureFocus = self.props.canCaptureFocus,
 			selectionChanged = function(newIndex)
@@ -115,7 +115,7 @@ function DeviceSelectionEntry:render()
 					selectedIndex = newIndex,
 				})
 			end,
-		})
+		}),
 	})
 end
 
@@ -139,7 +139,6 @@ function DeviceSelectionEntry:pollDevices(deviceType)
 			})
 		end
 	end)
-
 end
 
 function DeviceSelectionEntry:willUpdate(nextProps)

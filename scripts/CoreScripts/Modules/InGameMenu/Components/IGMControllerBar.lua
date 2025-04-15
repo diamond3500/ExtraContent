@@ -1,11 +1,11 @@
 --!nonstrict
 local CorePackages = game:GetService("CorePackages")
 
-local InGameMenuDependencies = require(CorePackages.InGameMenuDependencies)
+local InGameMenuDependencies = require(CorePackages.Packages.InGameMenuDependencies)
 local t = InGameMenuDependencies.t
 local Roact = InGameMenuDependencies.Roact
 local RoactRodux = InGameMenuDependencies.RoactRodux
-local UIBlox = require(CorePackages.UIBlox)
+local UIBlox = require(CorePackages.Packages.UIBlox)
 local ControllerBar = UIBlox.App.Bar.ControllerBar
 
 local SetControllerBarHeight = require(script.Parent.Parent.Actions.SetControllerBarHeight)
@@ -58,7 +58,6 @@ function IGMControllerBar:willUnmount()
 	self.props.setControllerBarHeight(0)
 end
 
-
 function IGMControllerBar:getHints(localize)
 	if self.props.inputType == Constants.InputType.Gamepad then
 		if self.props.respawnDialogOpen then
@@ -72,11 +71,10 @@ function IGMControllerBar:getHints(localize)
 						text = localize.respawn,
 						keyCode = Enum.KeyCode.ButtonA,
 					},
-				}
+				},
 			}
 		elseif self.props.isMenuOpen then
 			if self.props.currentPage == "MainPage" then
-
 				local leftStickHintText
 				if not self.props.isMainPageMoreMenuOpen then
 					leftStickHintText = localize.openMoreMenu
@@ -102,7 +100,7 @@ function IGMControllerBar:getHints(localize)
 							text = localize.leave,
 							keyCode = Enum.KeyCode.ButtonX,
 						},
-					}
+					},
 				}
 			end
 		end
@@ -138,4 +136,4 @@ return RoactRodux.connect(mapStateToProps, function(dispatch)
 			dispatch(SetControllerBarHeight(height))
 		end,
 	}
-end) (IGMControllerBar)
+end)(IGMControllerBar)

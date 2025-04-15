@@ -2,7 +2,7 @@
 local RunService = game:GetService("RunService")
 local CorePackages = game:GetService("CorePackages")
 
-local InGameMenuDependencies = require(CorePackages.InGameMenuDependencies)
+local InGameMenuDependencies = require(CorePackages.Packages.InGameMenuDependencies)
 local Roact = InGameMenuDependencies.Roact
 local UIBlox = InGameMenuDependencies.UIBlox
 local t = InGameMenuDependencies.t
@@ -26,19 +26,19 @@ SendInviteButton.validateProps = t.strictInterface({
 	onActivated = t.callback,
 	animationBegun = t.callback,
 	animationEnded = t.callback,
-	userInviteStatus = t.optional(t.string)
+	userInviteStatus = t.optional(t.string),
 })
 
 local FPS = 30
 
 -- Returns 0-1 based on the value of time betweenStartFrame and endFrame
 local function linearTween(dTime, startFrame, endFrame)
-	local range = (endFrame - startFrame)/FPS
-	return (dTime - (startFrame/FPS)) / range
+	local range = (endFrame - startFrame) / FPS
+	return (dTime - (startFrame / FPS)) / range
 end
 
 local function isBetweenFrames(dTime, startFrame, endFrame)
-	return dTime >= (startFrame/FPS) and dTime <= (endFrame/FPS)
+	return dTime >= (startFrame / FPS) and dTime <= (endFrame / FPS)
 end
 
 local STATUS_TO_ANIMATION_MAP = {
@@ -56,11 +56,11 @@ local STATUS_TO_ANIMATION_MAP = {
 		if isBetweenFrames(timeElapsed, 0, 4) then
 			local scaledElapse = linearTween(timeElapsed, 0, 4)
 			updateBindings.sendTransparency(scaledElapse)
-			updateBindings.successTransparency(1-scaledElapse)
+			updateBindings.successTransparency(1 - scaledElapse)
 
 			local successSizeMax = 1.5
 			local successSizeMin = 0.75
-			local range = successSizeMax-successSizeMin
+			local range = successSizeMax - successSizeMin
 			local size = successSizeMin + (range * (1 - scaledElapse))
 			updateBindings.successSize(size)
 
@@ -72,8 +72,8 @@ local STATUS_TO_ANIMATION_MAP = {
 			local scaledElapse = linearTween(timeElapsed, 4, 9)
 			local successSizeMax = 1
 			local successSizeMin = 0.75
-			local range = successSizeMax-successSizeMin
-			local size = successSizeMin + (range * (scaledElapse))
+			local range = successSizeMax - successSizeMin
+			local size = successSizeMin + (range * scaledElapse)
 			updateBindings.successSize(size)
 
 		-- Complete success icon size tween,
@@ -95,7 +95,7 @@ local STATUS_TO_ANIMATION_MAP = {
 		-- Fade in send icon
 		elseif isBetweenFrames(timeElapsed, 52, 57) then
 			local scaledElapse = linearTween(timeElapsed, 52, 57)
-			updateBindings.sendTransparency(1-scaledElapse)
+			updateBindings.sendTransparency(1 - scaledElapse)
 
 		-- Finish send fade-in and stop animation
 		else
@@ -106,7 +106,7 @@ local STATUS_TO_ANIMATION_MAP = {
 		-- Fade in fail icon
 		if isBetweenFrames(timeElapsed, 0, 4) then
 			local scaledElapse = linearTween(timeElapsed, 0, 4)
-			updateBindings.failTransparency(1-scaledElapse)
+			updateBindings.failTransparency(1 - scaledElapse)
 
 		-- Shake fail icon
 		elseif isBetweenFrames(timeElapsed, 4, 42) then
@@ -121,8 +121,8 @@ local STATUS_TO_ANIMATION_MAP = {
 			local k = 8
 
 			-- Damped oscillation https://www.desmos.com/calculator/ajx32emroq
-			local et = timeElapsed - 4/FPS
-			local pos = a * e^(-et * k) * math.sin(et * f)
+			local et = timeElapsed - 4 / FPS
+			local pos = a * e ^ (-et * k) * math.sin(et * f)
 			updateBindings.failPos(pos)
 
 		-- Fadeout fail icon
@@ -190,7 +190,7 @@ function SendInviteButton:renderWithSelectionCursor(getSelectionCursor)
 				if not self.renderSteppedConnection and not (isPending or isSuccess) then
 					props.onActivated()
 				end
-			end
+			end,
 		}, {
 			SendLabel = Roact.createElement(ImageSetLabel, {
 				BackgroundTransparency = 1,
@@ -208,7 +208,7 @@ function SendInviteButton:renderWithSelectionCursor(getSelectionCursor)
 				ImageColor3 = style.Theme.IconEmphasis.Color,
 
 				ImageTransparency = self.bindings.successTransparency,
-				Size = self.bindings.successSize
+				Size = self.bindings.successSize,
 			}),
 			FailLabel = Roact.createElement(ImageSetLabel, {
 				BackgroundTransparency = 1,
@@ -217,8 +217,8 @@ function SendInviteButton:renderWithSelectionCursor(getSelectionCursor)
 				ImageColor3 = style.Theme.IconEmphasis.Color,
 
 				ImageTransparency = self.bindings.failTransparency,
-				Position = self.bindings.failPos
-			})
+				Position = self.bindings.failPos,
+			}),
 		})
 	end)
 end

@@ -12,7 +12,14 @@ local StateLayerAffordance = require(Foundation.Enums.StateLayerAffordance)
 local useTokens = require(Foundation.Providers.Style.useTokens)
 local useCursor = require(Foundation.Providers.Cursor.useCursor)
 local withCommonProps = require(Foundation.Utility.withCommonProps)
+local withDefaults = require(Foundation.Utility.withDefaults)
+local getInputTextSize = require(Foundation.Utility.getInputTextSize)
 
+local useRadioGroupItemVariants = require(script.Parent.useRadioGroupItemVariants)
+type RadioItemState = useRadioGroupItemVariants.RadioItemState
+
+local InputSize = require(Foundation.Enums.InputSize)
+type InputSize = InputSize.InputSize
 local InputLabelSize = require(Foundation.Enums.InputLabelSize)
 type InputLabelSize = InputLabelSize.InputLabelSize
 
@@ -33,10 +40,19 @@ type Props = {
 	-- A label for the radio item. To omit, set it to an empty string.
 	-- When nil, defaults to `value`.
 	label: string | React.ReactNode?,
+	-- Size of the radio item
+	size: InputSize?,
 } & Types.CommonProps
 
-local function RadioGroupItem(props: Props, ref: React.Ref<GuiObject>?)
-	local isHovering, setIsHovering = React.useBinding(false)
+local defaultProps = {
+	size = InputSize.Medium,
+	isDisabled = false,
+}
+
+local function RadioGroupItem(radioGroupItemProps: Props, ref: React.Ref<GuiObject>?)
+	local props = withDefaults(radioGroupItemProps, defaultProps)
+	local isDisabled = props.isDisabled
+	local isHovering, setIsHovering = React.useState(false)
 	local value, setValue = useCheckedValue()
 
 	local isChecked = value == props.value
@@ -49,41 +65,40 @@ local function RadioGroupItem(props: Props, ref: React.Ref<GuiObject>?)
 		borderWidth = tokens.Stroke.Thicker,
 	})
 
-	local getContentStyle = React.useCallback(function(isHovering)
-		if isHovering and not props.isDisabled then
-			return tokens.Color.Content.Emphasis
-		else
-			return tokens.Color.Content.Default
-		end
-	end, { tokens :: any, isChecked, props.isDisabled })
-
 	local onActivated = React.useCallback(function()
-		if not props.isDisabled then
+		if not isDisabled then
 			setValue(props.value)
 		end
-	end, { props.isDisabled :: any, props.value, setValue })
+	end, { isDisabled :: any, props.value, setValue })
 
 	local onInputStateChanged = React.useCallback(function(newState: ControlState)
 		setIsHovering(newState == ControlState.Hover)
 	end, {})
 
-	local buttonSize = tokens.Size.Size_600 - math.ceil(tokens.Stroke.Standard) * 2
+	local itemState: RadioItemState = React.useMemo(function()
+		if isChecked then
+			return "Checked"
+		elseif isHovering and not isDisabled then
+			return ControlState.Hover
+		else
+			return ControlState.Default
+		end
+	end, { isChecked, isHovering, isDisabled }) :: RadioItemState
+
+	local variantProps = useRadioGroupItemVariants(tokens, props.size, itemState)
 
 	local radioGroupItem = React.createElement(View, {
-		Size = UDim2.new(0, buttonSize, 0, buttonSize),
+		Size = variantProps.radioItem.size,
+		LayoutOrder = 1,
 		stroke = {
-			Color = isHovering:map(function(hovering)
-				return getContentStyle(hovering).Color3
-			end),
-			Transparency = isHovering:map(function(hovering)
-				return getContentStyle(hovering).Transparency
-			end),
+			Color = variantProps.radioItem.stroke.Color3,
+			Transparency = variantProps.radioItem.stroke.Transparency,
 		},
-		tag = "radius-circle stroke-standard",
+		tag = variantProps.radioItem.tag,
 	}, {
 		Center = if isChecked
 			then React.createElement(View, {
-				tag = "position-center-center anchor-center-center radius-circle size-400 bg-action-sub-emphasis",
+				tag = variantProps.checkmark.tag,
 			})
 			else nil,
 	})
@@ -95,24 +110,20 @@ local function RadioGroupItem(props: Props, ref: React.Ref<GuiObject>?)
 	return React.createElement(
 		View,
 		withCommonProps(props, {
-			Active = not props.isDisabled,
-			GroupTransparency = if props.isDisabled then 0.5 else 0,
-			isDisabled = props.isDisabled,
+			Active = not isDisabled,
+			GroupTransparency = if isDisabled then 0.5 else 0,
+			isDisabled = isDisabled,
 			onActivated = onActivated,
 			onStateChanged = onInputStateChanged,
 			selection = {
-				Selectable = not props.isDisabled,
+				Selectable = not isDisabled,
 				SelectionImageObject = cursor,
 			},
 			stateLayer = { affordance = StateLayerAffordance.None },
-			-- Add padding around checkbox to ensure it's not cut off
+			-- Add padding around radio item to ensure it's not cut off
 			-- by the bounds of the canvas group
-			padding = {
-				top = UDim.new(0, math.ceil(tokens.Stroke.Standard)),
-				bottom = UDim.new(0, math.ceil(tokens.Stroke.Standard)),
-				left = UDim.new(0, math.ceil(tokens.Stroke.Standard)),
-			},
-			tag = "row gap-small auto-xy align-x-left align-y-center",
+			padding = variantProps.container.padding,
+			tag = variantProps.container.tag,
 			ref = ref,
 		}),
 		{
@@ -120,10 +131,8 @@ local function RadioGroupItem(props: Props, ref: React.Ref<GuiObject>?)
 			Label = if type(label) == "string"
 				then React.createElement(InputLabel, {
 					Text = label,
-					textStyle = isHovering:map(function(hovering)
-						return getContentStyle(hovering)
-					end),
-					size = InputLabelSize.Large,
+					textStyle = variantProps.label.style,
+					size = getInputTextSize(props.size, true),
 					LayoutOrder = 2,
 				})
 				else label,

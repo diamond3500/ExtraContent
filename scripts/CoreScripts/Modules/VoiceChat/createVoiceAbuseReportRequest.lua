@@ -1,7 +1,7 @@
 local HttpService = game:GetService("HttpService")
 local CorePackages = game:GetService("CorePackages")
 
-local Cryo = require(CorePackages.Cryo)
+local Cryo = require(CorePackages.Packages.Cryo)
 
 local VCSM = require(script.Parent.VoiceChatServiceManager)
 local VoiceUsersByProximity = require(script.Parent.VoiceUsersByProximity)

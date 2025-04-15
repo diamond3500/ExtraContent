@@ -1,5 +1,5 @@
 local CorePackages = game:GetService("CorePackages")
-local UIBlox = require(CorePackages.UIBlox)
+local UIBlox = require(CorePackages.Packages.UIBlox)
 local TooltipOrientation = UIBlox.App.Dialog.Enum.TooltipOrientation
 local withTooltip = UIBlox.App.Dialog.TooltipV2.withTooltip
 local React = require(CorePackages.Packages.React)

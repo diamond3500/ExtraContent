@@ -1,7 +1,7 @@
 local CorePackages = game:GetService("CorePackages")
 local CoreGui = game:GetService("CoreGui")
 
-local InGameMenuDependencies = require(CorePackages.InGameMenuDependencies)
+local InGameMenuDependencies = require(CorePackages.Packages.InGameMenuDependencies)
 
 local UIBlox = InGameMenuDependencies.UIBlox
 local ControllerBar = UIBlox.App.Bar.ControllerBar
@@ -41,7 +41,7 @@ function IGMControllerBar2:render()
 				rightHints = self.props.rightHints,
 				leftHint = self.props.leftHint,
 			}),
-		})
+		}),
 	})
 end
 

@@ -66,7 +66,7 @@ local function meetsBundlePrerequisitesV2(catalogItemDetails, bundleDetails, bal
 			-- Non-limited collectibles can only be purchased once
 			return false, PurchaseError.AlreadyOwn
 		end
- else
+	else
 		if isOwned then
 			-- Legacy bundles can only be puchased once
 			return false, PurchaseError.AlreadyOwn
@@ -223,7 +223,15 @@ local function resolveBundlePromptState(
 								state.requestType,
 								product.providerId
 							)
-							store:dispatch(PromptNativeUpsell(product.providerId, product.id, product.robuxAmount))
+							store:dispatch(
+								PromptNativeUpsell(
+									product.providerId,
+									product.id,
+									product.robuxAmount,
+									product.robuxAmountBeforeBonus,
+									product.price
+								)
+							)
 						end,
 						function()
 							-- No upsell item will provide sufficient funds to make this purchase

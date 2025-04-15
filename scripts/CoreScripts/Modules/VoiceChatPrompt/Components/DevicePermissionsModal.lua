@@ -1,19 +1,17 @@
 local CorePackages = game:GetService("CorePackages")
 local TextService = game:GetService("TextService")
-local CoreGui = game:GetService("CoreGui")
-local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 
 local React = require(CorePackages.Packages.React)
 local t = require(CorePackages.Packages.t)
 local ArgCheck = require(CorePackages.Workspace.Packages.ArgCheck)
 
-local UIBlox = require(CorePackages.UIBlox)
+local UIBlox = require(CorePackages.Packages.UIBlox)
 local Button = UIBlox.App.Button.Button
 local ButtonType = UIBlox.App.Button.Enum.ButtonType
 local Images = UIBlox.App.ImageSet.Images
 local Assets = require(script.Parent.Parent.Parent.InGameMenu.Resources.Assets)
 
-local RobloxTranslator = require(RobloxGui.Modules.RobloxTranslator)
+local RobloxTranslator = require(CorePackages.Workspace.Packages.RobloxTranslator)
 
 local getMicDeeplinkDirections = require(script.Parent.Parent.Helpers.getMicDeeplinkDirections)
 local getPrimingText = require(script.Parent.Parent.Helpers.getPrimingText)
@@ -250,11 +248,13 @@ local function DevicePermissionsModal(props: Props)
 					}),
 				})
 				else nil,
-			SpaceContainer = if not primingText then React.createElement("Frame", {
-				BackgroundTransparency = 1,
-				LayoutOrder = 7,
-				Size = UDim2.new(1, 0, 0, if infoText then 40 else 20),
-			}) else nil,
+			SpaceContainer = if not primingText
+				then React.createElement("Frame", {
+					BackgroundTransparency = 1,
+					LayoutOrder = 7,
+					Size = UDim2.new(1, 0, 0, if infoText then 40 else 20),
+				})
+				else nil,
 			PrimingTextContainer = if primingText
 				then React.createElement("Frame", {
 					BackgroundTransparency = 1,

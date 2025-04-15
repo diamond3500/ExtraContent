@@ -1,7 +1,7 @@
 --!nonstrict
 local CorePackages = game:GetService("CorePackages")
 
-local InGameMenuDependencies = require(CorePackages.InGameMenuDependencies)
+local InGameMenuDependencies = require(CorePackages.Packages.InGameMenuDependencies)
 local Roact = InGameMenuDependencies.Roact
 local Cryo = InGameMenuDependencies.Cryo
 local UIBlox = InGameMenuDependencies.UIBlox
@@ -42,17 +42,21 @@ local function ThemedTextLabel(props)
 
 		-- We want to allow you to override TextColor3 or TextTransparency if
 		-- desired, so those two props come first.
-		local primitiveProps = Cryo.Dictionary.join({
-			TextColor3 = textTheme.Color,
-			TextTransparency = textTheme.Transparency,
-		}, props, {
-			fontKey = Cryo.None,
-			themeKey = Cryo.None,
+		local primitiveProps = Cryo.Dictionary.join(
+			{
+				TextColor3 = textTheme.Color,
+				TextTransparency = textTheme.Transparency,
+			},
+			props,
+			{
+				fontKey = Cryo.None,
+				themeKey = Cryo.None,
 
-			BackgroundTransparency = 1,
-			Font = textFont.Font,
-			TextSize = textFont.RelativeSize * style.Font.BaseSize,
-		})
+				BackgroundTransparency = 1,
+				Font = textFont.Font,
+				TextSize = textFont.RelativeSize * style.Font.BaseSize,
+			}
+		)
 
 		return Roact.createElement("TextLabel", primitiveProps)
 	end)

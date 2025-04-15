@@ -1,4 +1,5 @@
 --!nonstrict
+-- moving this file to LuaApps, please replicate any changes in the LuaApps file as well
 local MediaGallery = script.Parent
 local Container = MediaGallery.Parent
 local App = Container.Parent
@@ -20,6 +21,8 @@ local Images = require(App.ImageSet.Images)
 local Button = require(App.Button.Button)
 local ButtonType = require(App.Button.Enum.ButtonType)
 local LoadableImage = require(App.Loading.LoadableImage)
+
+local UIBloxConfig = require(UIBlox.UIBloxConfig)
 
 local IMAGE_UNAVAILABLE = "icons/imageUnavailable"
 local ICON_SIZE = getIconSize(IconSize.Large)
@@ -190,4 +193,4 @@ function ThumbnailButton:render()
 	return self:renderButton()
 end
 
-return ThumbnailButton
+return if UIBloxConfig.moveMediaGalleryToLuaApps then nil else ThumbnailButton

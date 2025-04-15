@@ -9,9 +9,8 @@ local HttpService = game:GetService("HttpService")
 local ScreenTimeHttpRequests = require(CorePackages.Regulations.ScreenTime.HttpRequests)
 local ScreenTimeConstants = require(CorePackages.Regulations.ScreenTime.Constants)
 local GetFFlagScreenTimeSignalR = require(CorePackages.Regulations.ScreenTime.GetFFlagScreenTimeSignalR)
-local Logging = require(CorePackages.Logging)
+local Logging = require(CorePackages.Workspace.Packages.AppCommonLib).Logging
 local ErrorPrompt = require(RobloxGui.Modules.ErrorPrompt)
-local FFlagErrorPromptResizesHeight = require(RobloxGui.Modules.Flags.FFlagErrorPromptResizesHeight)
 
 local function leaveGame()
 	GuiService.SelectedCoreObject = nil
@@ -121,7 +120,7 @@ local buttonList = {
 		LayoutOrder = 1,
 		Callback = resolveMessage,
 		Primary = true,
-	}
+	},
 }
 
 messageQueue.displayMessageCallback = displayMessage
@@ -130,28 +129,18 @@ prompt:updateButtons(buttonList)
 prompt:setErrorTitle("Warning", "InGame.CommonUI.Title.Warning")
 
 local screenWidth = RobloxGui.AbsoluteSize.X
-local screenHeight
-if FFlagErrorPromptResizesHeight() then
-	screenHeight = RobloxGui.AbsoluteSize.Y
-end
+local screenHeight = RobloxGui.AbsoluteSize.Y
 
 local function onScreenSizeChanged()
 	if not prompt then
 		return
 	end
 	local newWidth = RobloxGui.AbsoluteSize.X
-	if FFlagErrorPromptResizesHeight() then
-		local newHeight = RobloxGui.AbsoluteSize.Y
-		if screenWidth ~= newWidth or screenHeight ~= newHeight then
-			screenWidth = newWidth
-			screenHeight = newHeight
-			prompt:resizeWidthAndHeight(screenWidth, screenHeight)
-		end
-	else
-		if screenWidth ~= newWidth then
-			screenWidth = newWidth
-			prompt:resizeWidth(screenWidth)
-		end
+	local newHeight = RobloxGui.AbsoluteSize.Y
+	if screenWidth ~= newWidth or screenHeight ~= newHeight then
+		screenWidth = newWidth
+		screenHeight = newHeight
+		prompt:resizeWidthAndHeight(screenWidth, screenHeight)
 	end
 end
 
@@ -192,8 +181,10 @@ end
 
 screenTimeUpdatedConnection = NotificationService.RobloxEventReceived:Connect(function(eventData)
 	if GetFFlagScreenTimeSignalR() then
-		if eventData.namespace == ScreenTimeConstants.SIGNALR_NAMESPACE and
-			eventData.detailType == ScreenTimeConstants.SIGNALR_TYPE_NEW_INSTRUCTION then
+		if
+			eventData.namespace == ScreenTimeConstants.SIGNALR_NAMESPACE
+			and eventData.detailType == ScreenTimeConstants.SIGNALR_TYPE_NEW_INSTRUCTION
+		then
 			requestInstructions()
 		end
 	else

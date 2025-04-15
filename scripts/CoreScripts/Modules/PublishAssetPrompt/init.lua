@@ -10,15 +10,16 @@ local renderWithCoreScriptsStyleProvider = require(script.Parent.Common.renderWi
 local Localization = require(CorePackages.Workspace.Packages.InExperienceLocales).Localization
 local LocalizationProvider = require(CorePackages.Workspace.Packages.Localization).LocalizationProvider
 
-local Roact = require(CorePackages.Roact)
-local Rodux = require(CorePackages.Rodux)
-local RoactRodux = require(CorePackages.RoactRodux)
+local Roact = require(CorePackages.Packages.Roact)
+local Rodux = require(CorePackages.Packages.Rodux)
+local RoactRodux = require(CorePackages.Packages.RoactRodux)
 
 local PublishAssetPromptApp = require(script.Components.PublishAssetPromptApp)
 local Reducer = require(script.Reducer)
 local ConnectAssetServiceEvents = require(script.ConnectAssetServiceEvents)
 
-local FFlagPublishAvatarPromptEnabled = require(script.FFlagPublishAvatarPromptEnabled)
+local FFlagUIBloxFoundationProvider =
+	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagUIBloxFoundationProvider()
 
 local PublishAssetPrompt = {}
 PublishAssetPrompt.__index = PublishAssetPrompt
@@ -31,20 +32,23 @@ function PublishAssetPrompt.new()
 		Rodux.thunkMiddleware,
 	})
 
-	self.root = Roact.createElement(RoactRodux.StoreProvider, {
+	local providerWrappedApp = Roact.createElement(RoactRodux.StoreProvider, {
 		store = self.store,
 	}, {
 		ThemeProvider = renderWithCoreScriptsStyleProvider({
-			LocalizationProvider = if FFlagPublishAvatarPromptEnabled
-				then Roact.createElement(LocalizationProvider, {
-					localization = Localization.new(LocalizationService.RobloxLocaleId),
-				}, {
-					PublishAssetPromptApp = PublishAssetPromptApp,
-				})
-				else nil,
-			PublishAssetPromptApp = if not FFlagPublishAvatarPromptEnabled then PublishAssetPromptApp else nil,
+			LocalizationProvider = Roact.createElement(LocalizationProvider, {
+				localization = Localization.new(LocalizationService.RobloxLocaleId),
+			}, {
+				PublishAssetPromptApp = PublishAssetPromptApp,
+			}),
 		}),
 	})
+	-- Root should be a Folder so that style provider stylesheet elements can be portaled properly; otherwise, they will attach to CoreGui
+	self.root = if FFlagUIBloxFoundationProvider
+		then Roact.createElement("Folder", {
+			Name = "PublishAssetPrompt",
+		}, providerWrappedApp)
+		else providerWrappedApp
 
 	self.element = Roact.mount(self.root, CoreGui, "PublishAssetPrompt")
 

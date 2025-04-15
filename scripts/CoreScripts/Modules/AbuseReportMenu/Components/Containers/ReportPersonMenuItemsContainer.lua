@@ -18,14 +18,7 @@ local handlePreselectedPlayer = require(root.Utility.handlePreselectedPlayer)
 local VoiceChatServiceManager = require(RobloxGui.Modules.VoiceChat.VoiceChatServiceManager).default
 local VoiceUsersByProximity = require(RobloxGui.Modules.VoiceChat.VoiceUsersByProximity)
 
-local RoactAppExperiment = require(CorePackages.Packages.RoactAppExperiment)
-local useUserExperiment = RoactAppExperiment.useUserExperiment
-
 local PlayerMenuActions = Constants.PlayerMenuActions
-
-local FFlagEnableVoiceProximityExperiment =
-	require(CorePackages.Workspace.Packages.SharedFlags).FFlagEnableVoiceProximityExperiment
-local FStringReportMenuIXPLayer = require(CorePackages.Workspace.Packages.SharedFlags).FStringReportMenuIXPLayer
 
 type Props = {
 	utilityProps: Types.MenuUtilityProps,
@@ -39,13 +32,6 @@ end
 local function ReportPersonMenuItemsContainer(props: Props)
 	local sizings = getMenuItemSizings()
 	local menuUIStates, dispatchUIStates = React.useReducer(reportPersonUIStateReducer, Constants.InitPersonUIState)
-
-	local isInVoiceProximityExperimentTreatment = if FFlagEnableVoiceProximityExperiment
-		then useUserExperiment({ FStringReportMenuIXPLayer }, function(layer)
-			local reportMenuLayer: any = layer[FStringReportMenuIXPLayer] or {}
-			return reportMenuLayer.EnableProximitySort
-		end)
-		else false
 
 	React.useEffect(function()
 		if props.utilityProps.isReportTabVisible ~= true then
@@ -83,120 +69,124 @@ local function ReportPersonMenuItemsContainer(props: Props)
 	end, { props.utilityProps.isReportTabVisible })
 
 	-- player list related updates
-	React.useEffect(function()
-		local playerObjects = {}
-		if menuUIStates.methodOfAbuse == Constants.AbuseMethods.VoiceChat then
-			if isInVoiceProximityExperimentTreatment then
-				-- Determine local player camera position
-				local humanoidRootPart = PlayersService.LocalPlayer
-					and PlayersService.LocalPlayer.Character
-					and PlayersService.LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+	React.useEffect(
+		function()
+			local playerObjects = {}
+			if menuUIStates.methodOfAbuse == Constants.AbuseMethods.VoiceChat then
+				-- TODO: Revisit voice proximity sorting after player report list has been updated
+				if false then
+					-- Determine local player camera position
+					local humanoidRootPart = PlayersService.LocalPlayer
+						and PlayersService.LocalPlayer.Character
+						and PlayersService.LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
 
-				local humanoidRootPartPosition = humanoidRootPart
-					and humanoidRootPart.CFrame
-					and humanoidRootPart.CFrame.Position
+					local humanoidRootPartPosition = humanoidRootPart
+						and humanoidRootPart.CFrame
+						and humanoidRootPart.CFrame.Position
 
-				-- Determine workspace camera position
-				local cameraPosition = workspace.CurrentCamera and workspace.CurrentCamera.CFrame.Position
+					-- Determine workspace camera position
+					local cameraPosition = workspace.CurrentCamera and workspace.CurrentCamera.CFrame.Position
 
-				-- Include all players who have interacted with the local player
-				local maxRadius = nil
-				local interactedWithLocalPlayer = true
-				local excludedPlayer = nil
-				local keepPlayersWithNoCharacter = true
+					-- Include all players who have interacted with the local player
+					local maxRadius = nil
+					local interactedWithLocalPlayer = true
+					local excludedPlayer = nil
+					local keepPlayersWithNoCharacter = true
 
-				if cameraPosition then
-					-- Voice proximity based sorting using camera position
-					playerObjects = VoiceUsersByProximity.getSortedPlayers(
-						PlayersService,
-						VoiceChatServiceManager,
-						cameraPosition,
-						maxRadius,
-						interactedWithLocalPlayer,
-						excludedPlayer,
-						keepPlayersWithNoCharacter
-					)
-				elseif humanoidRootPartPosition then
-					-- Voice proximity based sorting using local player humanoid root part position
-					playerObjects = VoiceUsersByProximity.getSortedPlayers(
-						PlayersService,
-						VoiceChatServiceManager,
-						humanoidRootPartPosition,
-						maxRadius,
-						interactedWithLocalPlayer,
-						excludedPlayer,
-						keepPlayersWithNoCharacter
-					)
+					if cameraPosition then
+						-- Voice proximity based sorting using camera position
+						playerObjects = VoiceUsersByProximity.getSortedPlayers(
+							PlayersService,
+							VoiceChatServiceManager,
+							cameraPosition,
+							maxRadius,
+							interactedWithLocalPlayer,
+							excludedPlayer,
+							keepPlayersWithNoCharacter
+						)
+					elseif humanoidRootPartPosition then
+						-- Voice proximity based sorting using local player humanoid root part position
+						playerObjects = VoiceUsersByProximity.getSortedPlayers(
+							PlayersService,
+							VoiceChatServiceManager,
+							humanoidRootPartPosition,
+							maxRadius,
+							interactedWithLocalPlayer,
+							excludedPlayer,
+							keepPlayersWithNoCharacter
+						)
+					else
+						-- cameraPosition and humanoidRootPartPosition are nil, so we cannot sort by proximity
+						-- Obtain the list of players who had been heard by the user
+						local voiceData = VoiceChatServiceManager:getRecentUsersInteractionData()
+						-- voiceData here consists of {player, lastHeardTime} we need to extract the player object
+						for _userId, playerVoiceData in pairs(voiceData) do
+							table.insert(playerObjects, playerVoiceData.player)
+						end
+						-- Do alphabetical sort since cameraPosition and humanoidRootPartPosition are nil
+						table.sort(playerObjects, alphabeticalSort)
+					end
 				else
-					-- cameraPosition and humanoidRootPartPosition are nil, so we cannot sort by proximity
 					-- Obtain the list of players who had been heard by the user
 					local voiceData = VoiceChatServiceManager:getRecentUsersInteractionData()
 					-- voiceData here consists of {player, lastHeardTime} we need to extract the player object
 					for _userId, playerVoiceData in pairs(voiceData) do
 						table.insert(playerObjects, playerVoiceData.player)
 					end
-					-- Do alphabetical sort since cameraPosition and humanoidRootPartPosition are nil
+					-- TODO add the proximity based sorting logic
 					table.sort(playerObjects, alphabeticalSort)
 				end
-			else
-				-- Obtain the list of players who had been heard by the user
-				local voiceData = VoiceChatServiceManager:getRecentUsersInteractionData()
-				-- voiceData here consists of {player, lastHeardTime} we need to extract the player object
-				for _userId, playerVoiceData in pairs(voiceData) do
-					table.insert(playerObjects, playerVoiceData.player)
-				end
-				-- TODO add the proximity based sorting logic
+			elseif
+				menuUIStates.methodOfAbuse == Constants.AbuseMethods.TextChat
+				or menuUIStates.methodOfAbuse == Constants.AbuseMethods.Other
+				or menuUIStates.methodOfAbuse == Constants.AbuseMethods.Avatar
+				or menuUIStates.methodOfAbuse == nil
+			then
+				playerObjects = PlayersService:GetPlayers()
 				table.sort(playerObjects, alphabeticalSort)
 			end
-		elseif
-			menuUIStates.methodOfAbuse == Constants.AbuseMethods.TextChat
-			or menuUIStates.methodOfAbuse == Constants.AbuseMethods.Other
-			or menuUIStates.methodOfAbuse == Constants.AbuseMethods.Avatar
-			or menuUIStates.methodOfAbuse == nil
-		then
-			playerObjects = PlayersService:GetPlayers()
-			table.sort(playerObjects, alphabeticalSort)
-		end
 
-		local preselectedPlayerInList = false
-		local currentSelectedPlayerInList = false
-		-- remove the current user itself and bad userId
-		playerObjects = Cryo.List.filter(playerObjects, function(playerObject)
-			if menuUIStates.preselectedPlayer and playerObject.UserId == menuUIStates.preselectedPlayer.UserId then
-				preselectedPlayerInList = true
+			local preselectedPlayerInList = false
+			local currentSelectedPlayerInList = false
+			-- remove the current user itself and bad userId
+			playerObjects = Cryo.List.filter(playerObjects, function(playerObject)
+				if menuUIStates.preselectedPlayer and playerObject.UserId == menuUIStates.preselectedPlayer.UserId then
+					preselectedPlayerInList = true
+				end
+				if menuUIStates.allegedAbuser and playerObject.UserId == menuUIStates.allegedAbuserId then
+					currentSelectedPlayerInList = true
+				end
+
+				return playerObject ~= PlayersService.LocalPlayer and playerObject.UserId > 0
+			end)
+
+			dispatchUIStates({ type = PlayerMenuActions.UpdatePlayerNameMap, playerObjects = playerObjects })
+			if menuUIStates.preselectedPlayer and preselectedPlayerInList then
+				dispatchUIStates({
+					type = Constants.PlayerMenuActions.UpdateAbuser,
+					abuseId = menuUIStates.preselectedPlayer.UserId,
+					abuser = menuUIStates.preselectedPlayer,
+				})
+				-- Clear this out since we don't want to keep setting it if the user changes the Method of Abuse
+				dispatchUIStates({
+					type = Constants.PlayerMenuActions.SetPreselectedPlayer,
+					player = nil,
+				})
+			elseif not currentSelectedPlayerInList then
+				dispatchUIStates({
+					type = Constants.PlayerMenuActions.UpdateAbuser,
+					abuseId = nil,
+					abuser = nil,
+				})
 			end
-			if menuUIStates.allegedAbuser and playerObject.UserId == menuUIStates.allegedAbuserId then
-				currentSelectedPlayerInList = true
-			end
-
-			return playerObject ~= PlayersService.LocalPlayer and playerObject.UserId > 0
-		end)
-
-		dispatchUIStates({ type = PlayerMenuActions.UpdatePlayerNameMap, playerObjects = playerObjects })
-		if menuUIStates.preselectedPlayer and preselectedPlayerInList then
-			dispatchUIStates({
-				type = Constants.PlayerMenuActions.UpdateAbuser,
-				abuseId = menuUIStates.preselectedPlayer.UserId,
-				abuser = menuUIStates.preselectedPlayer,
-			})
-			-- Clear this out since we don't want to keep setting it if the user changes the Method of Abuse
-			dispatchUIStates({
-				type = Constants.PlayerMenuActions.SetPreselectedPlayer,
-				player = nil,
-			})
-		elseif not currentSelectedPlayerInList then
-			dispatchUIStates({
-				type = Constants.PlayerMenuActions.UpdateAbuser,
-				abuseId = nil,
-				abuser = nil,
-			})
-		end
-	end, {
-		menuUIStates.methodOfAbuse,
-		menuUIStates.isVoiceEnabled,
-		props.utilityProps.isReportTabVisible,
-		menuUIStates.preselectedPlayer,
-	} :: { any })
+		end,
+		{
+			menuUIStates.methodOfAbuse,
+			menuUIStates.isVoiceEnabled,
+			props.utilityProps.isReportTabVisible,
+			menuUIStates.preselectedPlayer,
+		} :: { any }
+	)
 
 	local configItems = getMenuItemsFromConfigs(
 		menuUIStates,

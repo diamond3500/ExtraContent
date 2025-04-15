@@ -4,12 +4,16 @@
 		It will be replaced by design tokens in the near future.
 ]]
 
+-- moving this file to LuaApps, please replicate any changes in the LuaApps file as well
 local DetailsPage = script.Parent
 local App = DetailsPage.Parent.Parent
 
 local Constants = require(App.Style.Constants)
 type DeviceType = Constants.DeviceType
 local DeviceType = Constants.DeviceType
+
+local UIBlox = App.Parent
+local UIBloxConfig = require(UIBlox.UIBloxConfig)
 
 export type DetailsPageConfig = {
 	startingOffsetPosition: number,
@@ -67,4 +71,4 @@ local function getPlatformConfig(deviceType: DeviceType): DetailsPageConfig
 	end
 end
 
-return getPlatformConfig
+return (if UIBloxConfig.moveDetailsPageToLuaApps then nil else getPlatformConfig) :: typeof(getPlatformConfig)

@@ -1,7 +1,7 @@
 local RunService = game:GetService("RunService")
 local CorePackages = game:GetService("CorePackages")
 
-local InGameMenuDependencies = require(CorePackages.InGameMenuDependencies)
+local InGameMenuDependencies = require(CorePackages.Packages.InGameMenuDependencies)
 local Roact = InGameMenuDependencies.Roact
 local RoactRodux = InGameMenuDependencies.RoactRodux
 local t = InGameMenuDependencies.t
@@ -23,7 +23,7 @@ local SendAnalytics = require(InGameMenu.Utility.SendAnalytics)
 local GetDefaultQualityLevel = require(CorePackages.Workspace.Packages.AppCommonLib).GetDefaultQualityLevel
 
 local validateProps = t.strictInterface({
-	isLeavingGame  = t.boolean,
+	isLeavingGame = t.boolean,
 	onCancel = t.callback,
 	sendAnalytics = t.callback,
 })
@@ -49,8 +49,11 @@ local function LeaveGameDialog(props)
 
 			onCancel = props.onCancel,
 			onConfirm = function()
-				SendAnalytics(Constants.AnalyticsInGameMenuName, Constants.AnalyticsLeaveGameName,
-								{confirmed = Constants.AnalyticsConfirmedName})
+				SendAnalytics(
+					Constants.AnalyticsInGameMenuName,
+					Constants.AnalyticsLeaveGameName,
+					{ confirmed = Constants.AnalyticsConfirmedName }
+				)
 				RunService.Heartbeat:Wait()
 				game:Shutdown()
 				settings().Rendering.QualityLevel = GetDefaultQualityLevel()
@@ -71,7 +74,11 @@ end, function(dispatch)
 	return {
 		onCancel = function()
 			dispatch(CancelLeavingGame())
-			SendAnalytics(Constants.AnalyticsInGameMenuName, Constants.AnalyticsLeaveGameName, {confirmed = Constants.AnalyticsCancelledName})
+			SendAnalytics(
+				Constants.AnalyticsInGameMenuName,
+				Constants.AnalyticsLeaveGameName,
+				{ confirmed = Constants.AnalyticsCancelledName }
+			)
 		end,
 	}
 end)(LeaveGameDialog)

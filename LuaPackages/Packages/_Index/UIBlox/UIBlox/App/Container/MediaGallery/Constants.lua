@@ -1,9 +1,13 @@
+-- moving this file to LuaApps, please replicate any changes in the LuaApps file as well
 local MediaGallery = script.Parent
 local Container = MediaGallery.Parent
 local App = Container.Parent
 
 local StyleTypes = require(App.Style.StyleTypes)
 local Fonts = require(App.Style.Fonts)
+
+local UIBlox = App.Parent
+local UIBloxConfig = require(UIBlox.UIBloxConfig)
 
 export type StyleProps = {
 	-- Border radius of carousel item
@@ -32,5 +36,7 @@ local function getDefaultStyleProps(style: StyleTypes.AppStyle): StyleProps
 end
 
 return {
-	getDefaultStyleProps = getDefaultStyleProps,
+	getDefaultStyleProps = (
+			if UIBloxConfig.moveMediaGalleryToLuaApps then nil else getDefaultStyleProps
+		) :: typeof(getDefaultStyleProps),
 }

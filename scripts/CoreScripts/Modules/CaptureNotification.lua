@@ -4,8 +4,8 @@ local UserInputService = game:GetService("UserInputService")
 
 local ExternalEventConnection = require(CorePackages.Workspace.Packages.RoactUtils).ExternalEventConnection
 
-local Roact = require(CorePackages.Roact)
-local UIBlox = require(CorePackages.UIBlox)
+local Roact = require(CorePackages.Packages.Roact)
+local UIBlox = require(CorePackages.Packages.UIBlox)
 local t = require(CorePackages.Packages.t)
 
 local ButtonType = UIBlox.App.Button.Enum.ButtonType
@@ -15,7 +15,7 @@ local Images = UIBlox.App.ImageSet.Images
 
 local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 local shouldSaveScreenshotToAlbum = require(RobloxGui.Modules.shouldSaveScreenshotToAlbum)
-local RobloxTranslator = require(RobloxGui.Modules.RobloxTranslator)
+local RobloxTranslator = require(CorePackages.Workspace.Packages.RobloxTranslator)
 
 local renderWithCoreScriptsStyleProvider = require(RobloxGui.Modules.Common.renderWithCoreScriptsStyleProvider)
 
@@ -53,8 +53,7 @@ function CaptureNotification:init()
 	end
 
 	self.getToastContent = function(notificationType)
-		if notificationType == NotificationType.Success or
-			notificationType == NotificationType.Fail then
+		if notificationType == NotificationType.Success or notificationType == NotificationType.Fail then
 			local isSuccessToast = (notificationType == NotificationType.Success)
 			return {
 				iconImage = isSuccessToast and Images["icons/status/success"] or Images["icons/status/alert"],
@@ -94,8 +93,11 @@ function CaptureNotification:init()
 			-- Pop up Capture Saved toast
 			notificationType = NotificationType.Success
 		else
-			if not self.state.dismissedPermission and
-				message:find("Domain=ALAssetsLibraryErrorDomain") and message:find("Data unavailable") then
+			if
+				not self.state.dismissedPermission
+				and message:find("Domain=ALAssetsLibraryErrorDomain")
+				and message:find("Data unavailable")
+			then
 				-- Pop up permission alert (only show up when user hasn't dismissed it before during each game session)
 				notificationType = NotificationType.Permission
 			else
@@ -109,7 +111,7 @@ function CaptureNotification:init()
 			toastContent = self.getToastContent(notificationType),
 		})
 	end
-	
+
 	self.permissionEventCallback = function()
 		self:setState({
 			notificationType = NotificationType.Permission,
@@ -176,7 +178,9 @@ function CaptureNotification:render()
 									buttonType = ButtonType.PrimarySystem,
 									props = {
 										onActivated = self.dismissPermissionAlert,
-										text = RobloxTranslator:FormatByKey("NotificationScript2.Capture.Permission.AlertButtonText"),
+										text = RobloxTranslator:FormatByKey(
+											"NotificationScript2.Capture.Permission.AlertButtonText"
+										),
 									},
 								},
 							},
@@ -185,24 +189,28 @@ function CaptureNotification:render()
 						screenSize = self.state.screenSize,
 					}),
 				}),
-				ScreenshotSavedToAlbumConnection = shouldSaveScreenshotToAlbum() and Roact.createElement(ExternalEventConnection, {
-					event = game.ScreenshotSavedToAlbum :: RBXScriptSignal,
-					callback = self.screenshotSavedToAlbumCallback,
-				}),
-				PermissionEventConnection = self.props.permissionEvent and Roact.createElement(ExternalEventConnection, {
-					event = self.props.permissionEvent.Event,
-					callback = self.permissionEventCallback,
-				}),
-			})
-		})
+				ScreenshotSavedToAlbumConnection = shouldSaveScreenshotToAlbum()
+					and Roact.createElement(ExternalEventConnection, {
+						event = game.ScreenshotSavedToAlbum :: RBXScriptSignal,
+						callback = self.screenshotSavedToAlbumCallback,
+					}),
+				PermissionEventConnection = self.props.permissionEvent
+					and Roact.createElement(ExternalEventConnection, {
+						event = self.props.permissionEvent.Event,
+						callback = self.permissionEventCallback,
+					}),
+			}),
+		}),
 	})
 end
 
 function CaptureNotification:didUpdate(prevProps)
 	local forceDismissToast = self.props.forceDismissToast
 	if prevProps.forceDismissToast ~= forceDismissToast then
-		local showToast = (self.state.notificationType == NotificationType.Success or
-			self.state.notificationType == NotificationType.Fail) and self.state.toastContent
+		local showToast = (
+			self.state.notificationType == NotificationType.Success
+			or self.state.notificationType == NotificationType.Fail
+		) and self.state.toastContent
 
 		-- No toast to show right now, call onDismissed() directly, otherwise call it when toast gets dismissed
 		if not showToast and forceDismissToast and forceDismissToast.onDismissed then

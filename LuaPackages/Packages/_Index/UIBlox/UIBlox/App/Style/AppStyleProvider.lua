@@ -9,6 +9,19 @@ local getTextSizeOffset = require(UIBlox.Utility.getTextSizeOffset)
 local Packages = UIBlox.Parent
 local React = require(Packages.React)
 local Roact = require(Packages.Roact)
+
+local GlobalPackages = UIBlox:FindFirstAncestor("Packages") or UIBlox:FindFirstAncestor("CorePackages") :: any
+
+local isJest = if GlobalPackages
+		and GlobalPackages:FindFirstChild("Dev")
+		and GlobalPackages.Dev:FindFirstChild("JestGlobals")
+	then pcall(require, GlobalPackages.Dev.JestGlobals)
+	else false
+
+local Foundation = require(Packages.Foundation)
+local FoundationProvider = Foundation.FoundationProvider
+
+local useTokens = Foundation.Hooks.useTokens
 local LuauPolyfill = require(Packages.LuauPolyfill)
 local Object = LuauPolyfill.Object
 
@@ -19,6 +32,7 @@ local StyleTypes = require(script.Parent.StyleTypes)
 local TokenPackage = require(script.Parent.Tokens)
 local StyleContext = require(UIBlox.Core.Style.StyleContext)
 local UIBloxConfig = require(UIBlox.UIBloxConfig)
+local Logger = require(UIBlox.Logger)
 
 local getTokens = TokenPackage.getTokens
 local validateTokens = TokenPackage.validateTokens
@@ -32,6 +46,11 @@ type FontName = Constants.FontName
 type DeviceType = Constants.DeviceType
 type Settings = StyleTypes.Settings
 
+local FOUNDATION_THEME_MAP = {
+	["dark"] = Foundation.Enums.Theme.Dark,
+	["light"] = Foundation.Enums.Theme.Light,
+}
+
 -- We accept both strings and enum values for theme and font name
 -- in case there are any casing inconsistencies.
 export type Props = {
@@ -42,6 +61,9 @@ export type Props = {
 		settings: Settings?,
 	},
 	children: { [string]: React.ReactElement? }?,
+
+	-- Only for color experiment on SignUp/Login
+	DONOTUSE_disableColorMapping: boolean?,
 }
 
 -- After join, there are no optional values
@@ -65,11 +87,27 @@ local function AppStyleProvider(props: Props)
 	local tokens: Tokens = getTokens(style.deviceType, themeName) :: Tokens
 	local textSizeOffset, setTextSizeOffset = React.useState(0)
 	local theme = getThemeFromName(themeName)
+	local foundationProviderPresent = if UIBloxConfig.useFoundationProvider then useTokens().Config ~= nil else false
+	local disableColorMapping = false
+
+	if UIBloxConfig.allowDisableColorMapping then
+		disableColorMapping = if props.DONOTUSE_disableColorMapping ~= nil
+			then props.DONOTUSE_disableColorMapping
+			else false
+	end
 
 	if UIBloxConfig.useFoundationColors then
-		local foundationTokens = getFoundationTokens(style.deviceType, themeName)
-		tokens = TokensMappers.mapColorTokensToFoundation(tokens, foundationTokens)
-		theme = TokensMappers.mapThemeToFoundation(theme, foundationTokens)
+		if UIBloxConfig.allowDisableColorMapping then
+			if not disableColorMapping then
+				local foundationTokens = getFoundationTokens(style.deviceType, themeName)
+				tokens = TokensMappers.mapColorTokensToFoundation(tokens, foundationTokens)
+				theme = TokensMappers.mapThemeToFoundation(theme, foundationTokens)
+			end
+		else
+			local foundationTokens = getFoundationTokens(style.deviceType, themeName)
+			tokens = TokensMappers.mapColorTokensToFoundation(tokens, foundationTokens)
+			theme = TokensMappers.mapThemeToFoundation(theme, foundationTokens)
+		end
 	end
 
 	-- TODO: Add additional validation for tokens here to make it safe. We can remove the call after design token stuff is fully stable.
@@ -109,32 +147,45 @@ local function AppStyleProvider(props: Props)
 		end
 	end, { isMountedRef, setThemeName } :: { any })
 
-	local themeNameConstant = if UIBloxConfig.enableUseStyleMetadata
-		then React.useMemo(function()
-			if themeName:lower() == Constants.ThemeName.Dark:lower() then
-				return Constants.ThemeName.Dark
-			elseif themeName:lower() == Constants.ThemeName.Light:lower() then
-				return Constants.ThemeName.Light
-			else
-				return Constants.DefaultThemeName
-			end
-		end, { themeName })
-		else nil
+	local themeNameConstant = React.useMemo(function()
+		if themeName:lower() == Constants.ThemeName.Dark:lower() then
+			return Constants.ThemeName.Dark
+		elseif themeName:lower() == Constants.ThemeName.Light:lower() then
+			return Constants.ThemeName.Light
+		else
+			return Constants.DefaultThemeName
+		end
+	end, { themeName })
 
-	return React.createElement(StyleContext.Provider, {
+	local styleProvider = React.createElement(StyleContext.Provider, {
 		value = {
 			style = appStyle,
 			updateTheme = handleThemeUpdate,
 			derivedValues = {
 				textSizeOffset = textSizeOffset,
 			},
-			styleMetadata = if UIBloxConfig.enableUseStyleMetadata
-				then {
-					ThemeName = themeNameConstant,
-				}
-				else nil,
+			styleMetadata = {
+				ThemeName = themeNameConstant,
+			},
 		},
 	}, Roact.oneChild(props.children :: any))
+
+	if not foundationProviderPresent and UIBloxConfig.useFoundationProvider then
+		if not isJest and _G.__DEV__ then
+			Logger:warning(
+				debug.traceback(
+					"FoundationProvider not found. Please ensure that the FoundationProvider is present in the component tree."
+				)
+			)
+		end
+		return React.createElement(FoundationProvider, {
+			theme = FOUNDATION_THEME_MAP[themeName:lower()],
+			device = style.deviceType,
+			preferences = style.settings,
+		}, styleProvider)
+	else
+		return styleProvider
+	end
 end
 
 return AppStyleProvider

@@ -12,18 +12,16 @@ local ExternalEventConnection = require(CorePackages.Workspace.Packages.RoactUti
 local openWebview = require(script.openWebview)
 local BadgeOver13 = require(script.BadgeOver13)
 
-local CoreGui = game:GetService("CoreGui")
-local RobloxGui = CoreGui:WaitForChild("RobloxGui")
-local RobloxTranslator = require(RobloxGui.Modules.RobloxTranslator)
+local RobloxTranslator = require(CorePackages.Workspace.Packages.RobloxTranslator)
 
-local GetFFlagFixChromeReferences = require(RobloxGui.Modules.Flags.GetFFlagFixChromeReferences)
+local GetFFlagFixChromeReferences = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagFixChromeReferences
 
 local TopBar = script.Parent.Parent.Parent
 local Chrome = TopBar.Parent.Chrome
 local ChromeEnabled = require(Chrome.Enabled)
-local ChromeService = if GetFFlagFixChromeReferences() 
+local ChromeService = if GetFFlagFixChromeReferences()
     then if ChromeEnabled() then require(Chrome.Service) else nil
-    else if ChromeEnabled then require(Chrome.Service) else nil 
+    else if ChromeEnabled then require(Chrome.Service) else nil
 
 local COPY_ID_TO_LOCALIZATION_KEY = {
     TextFilter = "InGame.CommonUI.Badge.Popup.TextFilterOnlyInfo",
@@ -44,14 +42,8 @@ return function(props)
         end):catch(function() end)
     end, {})
 
-    local chromeClosed = true
-    if ChromeService then
-        local menuStatus = require(Chrome.Hooks.useChromeMenuStatus)()
-        chromeClosed = menuStatus == ChromeService.MenuStatus.Closed
-    end
-
     local shouldRender = (isVREnabled == false or isGamepadCursorEnabled == true) and (isUnfilteredChat == true or isVoiceEnabled == true)
-    shouldRender = shouldRender and chromeClosed
+    shouldRender = shouldRender and not ChromeService
 
     if props.visibilityChanged then
         props.visibilityChanged(shouldRender)

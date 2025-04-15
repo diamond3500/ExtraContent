@@ -38,6 +38,8 @@ local function analyticsReducer(state: Types.AnalyticsState, action: any): Types
 		newState.viewportSizeX = action.viewportSizeX
 		newState.viewportSizeY = action.viewportSizeY
 		newState.isPortraitMode = action.viewportSizeX < action.viewportSizeY
+	elseif actionType == Actions.SetMemoryRequirementMet then
+		newState.memoryRequirementMet = action.memoryRequirementMet
 	elseif actionType == Actions.SetSubmissionCompleted then
 		newState.isSubmissionCompleted = true
 

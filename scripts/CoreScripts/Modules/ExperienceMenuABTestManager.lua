@@ -6,25 +6,18 @@
 ]]
 
 local AppStorageService = game:GetService("AppStorageService")
-local CoreGui = game:GetService("CoreGui")
 local CorePackages = game:GetService("CorePackages")
-local RobloxGui = CoreGui:WaitForChild("RobloxGui")
+
+local SharedFlags = require(CorePackages.Workspace.Packages.SharedFlags)
+local FFlagUnibarMenuOpenSelectionIXP = SharedFlags.FFlagUnibarMenuOpenSelectionIXP
 
 local InGameMenu = script.Parent.InGameMenu
 
-local IXPServiceWrapper = require(RobloxGui.Modules.Common.IXPServiceWrapper)
+local IXPServiceWrapper = require(CorePackages.Workspace.Packages.IxpServiceWrapper).IXPServiceWrapper
 local IsExperienceMenuABTestEnabled = require(script.Parent.IsExperienceMenuABTestEnabled)
 
-local GetFStringLuaAppExperienceMenuLayer = require(CorePackages.Workspace.Packages.SharedFlags).GetFStringLuaAppExperienceMenuLayer
+local GetFStringLuaAppExperienceMenuLayer = SharedFlags.GetFStringLuaAppExperienceMenuLayer
 local GetFStringLuaAppConsoleExperienceMenuLayer = require(script.Parent.Flags.GetFStringLuaAppConsoleExperienceMenuLayer)
-
-local GetFFlagDisableChromeUnibar = require(script.Parent.Flags.GetFFlagDisableChromeUnibar)()
-local GetFFlagDisableChromePinnedChat = require(script.Parent.Flags.GetFFlagDisableChromePinnedChat)()
-local GetFFlagDisableChromeDefaultOpen = require(script.Parent.Flags.GetFFlagDisableChromeDefaultOpen)()
-
-local GetFFlagDisableChromeFollowupUnibar = require(script.Parent.Flags.GetFFlagDisableChromeFollowupUnibar)()
-local GetFFlagDisableChromeFollowupFTUX = require(script.Parent.Flags.GetFFlagDisableChromeFollowupFTUX)()
-local GetFFlagDisableChromeFollowupOcclusion = require(script.Parent.Flags.GetFFlagDisableChromeFollowupOcclusion)()
 
 local GetFFlagDisableChromeV3Baseline = require(script.Parent.Flags.GetFFlagDisableChromeV3Baseline)()
 local GetFFlagDisableChromeV3Captures = require(script.Parent.Flags.GetFFlagDisableChromeV3Captures)()
@@ -35,7 +28,7 @@ local GetFFlagDisableChromeV3DockedMic = require(script.Parent.Flags.GetFFlagDis
 local GetFFlagDisableChromeV4Baseline = require(script.Parent.Flags.GetFFlagDisableChromeV4Baseline)()
 local GetFFlagDisableChromeV4ClosedSelfView = require(script.Parent.Flags.GetFFlagDisableChromeV4ClosedSelfView)()
 
-local GetFFlagSetupSongbirdWindowExperiment = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagSetupSongbirdWindowExperiment
+local GetFFlagSetupSongbirdWindowExperimentFeb2025 = SharedFlags.GetFFlagSetupSongbirdWindowExperimentFeb2025
 
 local LOCAL_STORAGE_KEY_EXPERIENCE_MENU_VERSION = "ExperienceMenuVersion"
 local ACTION_TRIGGER_THRESHOLD = game:DefineFastInt("CSATV3MenuActionThreshold", 7)
@@ -43,24 +36,12 @@ local ACTION_TRIGGER_LATCHED = 10000
 
 local TEST_VERSION = "t10" -- bump on new A/B campaigns
 local REPORT_ABUSE_MENU_TEST_VERSION = "art2"
-local SONGBIRD_TEST_VERSION = if GetFFlagSetupSongbirdWindowExperiment() then "s2" else "s1"
+local SONGBIRD_TEST_VERSION = if GetFFlagSetupSongbirdWindowExperimentFeb2025() then "s3" else "s2"
 
 local DEFAULT_MENU_VERSION = "v1"..TEST_VERSION
 local MENU_VERSION_V2 = "v2"..TEST_VERSION
 local MENU_VERSION_V3 = "v3"..TEST_VERSION
 local REPORT_ABUSE_MENU_VERSION_V2 = "ARv2"..REPORT_ABUSE_MENU_TEST_VERSION
-
-local MENU_VERSION_CHROME_ENUM = {
-	UNIBAR = "v6.1"..TEST_VERSION,
-	PINNED_CHAT = "v6.2"..TEST_VERSION,
-	DEFAULT_OPEN = "v6.3"..TEST_VERSION,
-}
-
-local MENU_VERSION_CHROME_FOLLOWUP_ENUM = {
-	UNIBAR = "v7.1.1"..TEST_VERSION,
-	FTUX = "v7.2.1"..TEST_VERSION,
-	OCCLUSION = "v7.3"..TEST_VERSION,
-}
 
 local MENU_VERSION_CHROME_V3_ENUM = {
 	BASELINE = "v8.1"..TEST_VERSION,
@@ -84,21 +65,23 @@ local MENU_VERSION_CHROME_V4_ENUM = {
 	CLOSED_SELF_VIEW = "v10.2",
 }
 
+local ENUM_UNIBAR_MENU_OPEN_FOCUS = {
+	HAMBURGER = "hamburger",
+	SUBMENU = "submenu",
+	NOT_AVAILABLE = "not_available",
+}
+
 local validVersion = {
 	[DEFAULT_MENU_VERSION] = true,
 	[MENU_VERSION_V2] = false,
 	[MENU_VERSION_V3] = false,
-	[MENU_VERSION_CHROME_ENUM.UNIBAR] = not GetFFlagDisableChromeUnibar,
-	[MENU_VERSION_CHROME_ENUM.PINNED_CHAT] = not GetFFlagDisableChromePinnedChat,
-	[MENU_VERSION_CHROME_ENUM.DEFAULT_OPEN] = not GetFFlagDisableChromeDefaultOpen,
 	[REPORT_ABUSE_MENU_VERSION_V2] = false,
-	[MENU_VERSION_CHROME_FOLLOWUP_ENUM.UNIBAR] = not GetFFlagDisableChromeFollowupUnibar,
-	[MENU_VERSION_CHROME_FOLLOWUP_ENUM.FTUX] = not GetFFlagDisableChromeFollowupFTUX,
-	[MENU_VERSION_CHROME_FOLLOWUP_ENUM.OCCLUSION] = not GetFFlagDisableChromeFollowupOcclusion,
 	[MENU_VERSION_SONGBIRD_ENUM.SONGBIRD] = true,
 	[MENU_VERSION_SONGBIRD_ENUM.SONGBIRD_UNIBAR] = true,
 	[MENU_VERSION_SONGBIRD_ENUM.SONGBIRD_PEEK] = true,
-	[MENU_VERSION_SONGBIRD_ENUM.SONGBIRD_SCENE_ANALYSIS] = if GetFFlagSetupSongbirdWindowExperiment() then false else true,
+	[ENUM_UNIBAR_MENU_OPEN_FOCUS.HAMBURGER] = FFlagUnibarMenuOpenSelectionIXP,
+	[ENUM_UNIBAR_MENU_OPEN_FOCUS.SUBMENU] = FFlagUnibarMenuOpenSelectionIXP,
+	[ENUM_UNIBAR_MENU_OPEN_FOCUS.NOT_AVAILABLE] = FFlagUnibarMenuOpenSelectionIXP,
 
 	-- Invalidate Unibar test variants if the respective disable flag is turned on
 	[MENU_VERSION_CHROME_V3_ENUM.BASELINE] = not GetFFlagDisableChromeV3Baseline,
@@ -149,30 +132,6 @@ function ExperienceMenuABTestManager.reportAbuseMenuV2VersionId()
 	return REPORT_ABUSE_MENU_VERSION_V2
 end
 
-function ExperienceMenuABTestManager.chromeVersionId()
-	return MENU_VERSION_CHROME_ENUM.UNIBAR
-end
-
-function ExperienceMenuABTestManager.chromePinnedChatVersionId()
-	return MENU_VERSION_CHROME_ENUM.PINNED_CHAT
-end
-
-function ExperienceMenuABTestManager.chromeDefaultOpenVersionId()
-	return MENU_VERSION_CHROME_ENUM.DEFAULT_OPEN
-end
-
-function ExperienceMenuABTestManager.chromeFollowupVersionId()
-	return MENU_VERSION_CHROME_FOLLOWUP_ENUM.UNIBAR
-end
-
-function ExperienceMenuABTestManager.chromeFTUXVersionId()
-	return MENU_VERSION_CHROME_FOLLOWUP_ENUM.FTUX
-end
-
-function ExperienceMenuABTestManager.chromeOcclusionVersionId()
-	return MENU_VERSION_CHROME_FOLLOWUP_ENUM.OCCLUSION
-end
-
 function ExperienceMenuABTestManager.chromeV3BaselineVersionId()
 	return MENU_VERSION_CHROME_V3_ENUM.BASELINE
 end
@@ -215,12 +174,6 @@ end
 
 function ExperienceMenuABTestManager.chromeSongbirdPeekVersionId()
 	return MENU_VERSION_SONGBIRD_ENUM.SONGBIRD_PEEK
-end
-
-if not GetFFlagSetupSongbirdWindowExperiment() then
-	function ExperienceMenuABTestManager.sceneAnalysisVersionId()
-		return MENU_VERSION_SONGBIRD_ENUM.SONGBIRD_SCENE_ANALYSIS
-	end
 end
 
 function parseCountData(data)
@@ -292,73 +245,19 @@ function ExperienceMenuABTestManager:isChromeEnabled()
 		end
 	end
 
-	for _, version in MENU_VERSION_CHROME_ENUM do
-		if self:getVersion() == version then
-			return true
-		end
-	end
-
-	for _, version in MENU_VERSION_CHROME_FOLLOWUP_ENUM do
-		if self:getVersion() == version then
-			return true
-		end
-	end
-
-
 	for _, version in MENU_VERSION_SONGBIRD_ENUM do
-		if not GetFFlagSetupSongbirdWindowExperiment() then
-			if version == self.sceneAnalysisVersionId() then
-				continue
-			end
-		end
-
 		if self:getVersion() == version then
+			return true
+		end
+	end
+
+	if FFlagUnibarMenuOpenSelectionIXP then
+		if self:getVersion() == ENUM_UNIBAR_MENU_OPEN_FOCUS.HAMBURGER or self:getVersion() == ENUM_UNIBAR_MENU_OPEN_FOCUS.SUBMENU then
 			return true
 		end
 	end
 
 	return false
-end
-
-function ExperienceMenuABTestManager:shouldPinChat()
-	-- All variants in Unibar v3 have pinned chat
-	for _, version in MENU_VERSION_CHROME_V3_ENUM do
-		if self:getVersion() == version then
-			return true
-		end
-	end
-
-	-- All variants in follow up Unibar test have pinned chat
-	for _, version in MENU_VERSION_CHROME_FOLLOWUP_ENUM do
-		if self:getVersion() == version then
-			return true
-		end
-	end
-
-	return self:getVersion() == MENU_VERSION_CHROME_ENUM.PINNED_CHAT
-end
-
-function ExperienceMenuABTestManager:shouldDefaultOpen()
-	-- All variants in Unibar v4 default open
-	for _, version in MENU_VERSION_CHROME_V4_ENUM do
-		if self:getVersion() == version then
-			return true
-		end
-	end
-
-	-- All variants in Unibar v3 default open
-	for _, version in MENU_VERSION_CHROME_V3_ENUM do
-		if self:getVersion() == version then
-			return true
-		end
-	end
-
-	-- All non-FTUX variants in follow up Unibar test have "Default Open"
-	return self:getVersion() == MENU_VERSION_CHROME_ENUM.DEFAULT_OPEN or self:getVersion() == MENU_VERSION_CHROME_FOLLOWUP_ENUM.UNIBAR or self:getVersion() == MENU_VERSION_CHROME_FOLLOWUP_ENUM.OCCLUSION
-end
-
-function ExperienceMenuABTestManager:shouldShowFTUX()
-	return self:getVersion() == MENU_VERSION_CHROME_FOLLOWUP_ENUM.FTUX
 end
 
 function ExperienceMenuABTestManager:shouldShowCaptures()
@@ -380,16 +279,6 @@ function ExperienceMenuABTestManager:shouldCloseSelfViewAtStartup()
 	return self:getVersion() == MENU_VERSION_CHROME_V4_ENUM.CLOSED_SELF_VIEW
 end
 
-if not GetFFlagSetupSongbirdWindowExperiment() then
-	function ExperienceMenuABTestManager:shouldEnableSceneAnalysis()
-		local version = self:getVersion()
-		return version == MENU_VERSION_SONGBIRD_ENUM.SONGBIRD
-			or version == MENU_VERSION_SONGBIRD_ENUM.SONGBIRD_SCENE_ANALYSIS
-			or version == MENU_VERSION_SONGBIRD_ENUM.SONGBIRD_UNIBAR
-			or version == MENU_VERSION_SONGBIRD_ENUM.SONGBIRD_PEEK
-	end
-end
-
 function ExperienceMenuABTestManager:shouldShowSongbirdUnibar()
 	local version = self:getVersion()
 	return version == MENU_VERSION_SONGBIRD_ENUM.SONGBIRD or version == MENU_VERSION_SONGBIRD_ENUM.SONGBIRD_UNIBAR
@@ -398,6 +287,14 @@ end
 function ExperienceMenuABTestManager:shouldShowSongbirdPeek()
 	local version = self:getVersion()
 	return version == MENU_VERSION_SONGBIRD_ENUM.SONGBIRD or version == MENU_VERSION_SONGBIRD_ENUM.SONGBIRD_PEEK
+end
+
+function ExperienceMenuABTestManager:showConsoleExpControlsMenuOpenHamburger()
+	return self:getVersion() == ENUM_UNIBAR_MENU_OPEN_FOCUS.HAMBURGER
+end
+
+function ExperienceMenuABTestManager:showConsoleExpControlsMenuOpenSubmenu()
+	return self:getVersion() == ENUM_UNIBAR_MENU_OPEN_FOCUS.SUBMENU
 end
 
 -- this is called on the assumption that IXP layers are initialized

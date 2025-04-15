@@ -74,7 +74,7 @@ local function initiateBundlePurchase(
 		return Promise.all({
 			bundleDetails = getBundleDetails(network, bundleId),
 			accountInfo = getAccountInfo(network, externalSettings),
-			balanceInfo = getBalanceInfo(network, externalSettings),
+			balanceInfo = getBalanceInfo(network, externalSettings, false --[[overrideStudioMock]]),
 			alreadyOwned = if FFlagEnableBundlePurchaseChecks
 				then getIsAlreadyOwned(network, bundleId, Enum.InfoType.Bundle)
 				else nil,

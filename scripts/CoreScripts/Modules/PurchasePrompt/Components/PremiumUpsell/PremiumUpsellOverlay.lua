@@ -3,13 +3,13 @@ local Root = script.Parent.Parent.Parent
 local ContextActionService = game:GetService("ContextActionService")
 
 local CorePackages = game:GetService("CorePackages")
-local PurchasePromptDeps = require(CorePackages.PurchasePromptDeps)
+local PurchasePromptDeps = require(CorePackages.Workspace.Packages.PurchasePromptDeps)
 local Roact = PurchasePromptDeps.Roact
 
 local IAPExperience = PurchasePromptDeps.IAPExperience
-local PremiumUpsellFlow =  IAPExperience.PurchaseFlow.PremiumUpsellFlow
-local PremiumUpsellFlowState =  IAPExperience.PurchaseFlow.PremiumUpsellFlowState
-local PurchaseErrorType =  IAPExperience.PurchaseFlow.PurchaseErrorType
+local PremiumUpsellFlow = IAPExperience.PurchaseFlow.PremiumUpsellFlow
+local PremiumUpsellFlowState = IAPExperience.PurchaseFlow.PremiumUpsellFlowState
+local PurchaseErrorType = IAPExperience.PurchaseFlow.PurchaseErrorType
 
 local PromptState = require(Root.Enums.PromptState)
 local PurchaseError = require(Root.Enums.PurchaseError)
@@ -38,7 +38,7 @@ type Props = {
 	currencySymbol: string,
 	robuxPrice: number,
 	robuxAmount: number,
-	
+
 	isGamepadEnabled: boolean,
 
 	promptPremiumPurchase: () -> any,
@@ -77,20 +77,16 @@ function PremiumUpsellOverlay:init()
 end
 
 function PremiumUpsellOverlay:didMount()
-	ContextActionService:BindCoreAction(
-		CONFIRM_BUTTON_BIND,
-		function(actionName, inputState, inputObj)
-			if inputState == Enum.UserInputState.Begin then
-				self.confirmButtonPressed()
-			end
-		end, false, Enum.KeyCode.ButtonA)
-	ContextActionService:BindCoreAction(
-		CANCEL_BUTTON_BIND,
-		function(actionName, inputState, inputObj)
-			if inputState == Enum.UserInputState.Begin then
-				self.cancelButtonPressed()
-			end
-		end, false, Enum.KeyCode.ButtonB)
+	ContextActionService:BindCoreAction(CONFIRM_BUTTON_BIND, function(actionName, inputState, inputObj)
+		if inputState == Enum.UserInputState.Begin then
+			self.confirmButtonPressed()
+		end
+	end, false, Enum.KeyCode.ButtonA)
+	ContextActionService:BindCoreAction(CANCEL_BUTTON_BIND, function(actionName, inputState, inputObj)
+		if inputState == Enum.UserInputState.Begin then
+			self.cancelButtonPressed()
+		end
+	end, false, Enum.KeyCode.ButtonB)
 end
 
 function PremiumUpsellOverlay:willUnmount()
@@ -116,7 +112,7 @@ end
 
 function PremiumUpsellOverlay:getErrorType()
 	local props: Props = self.props
-	
+
 	if props.purchaseError == PurchaseError.AlreadyPremium then
 		return PurchaseErrorType.AlreadyPremium
 	elseif props.purchaseError == PurchaseError.PremiumUnavailablePlatform then
@@ -154,9 +150,7 @@ function PremiumUpsellOverlay:render()
 		errorType = self:getErrorType(),
 		purchaseVPCType = self:getVPCModalType(),
 
-		acceptControllerIcon = if props.isGamepadEnabled
-			then BUTTON_A_ICON
-			else nil,
+		acceptControllerIcon = if props.isGamepadEnabled then BUTTON_A_ICON else nil,
 
 		purchasePremium = if GetFFlagEnableVpcForInExperiencePremiumUpsell()
 			then props.dispatchPremiumPrecheck

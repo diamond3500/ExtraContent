@@ -5,10 +5,6 @@ local GuiService = game:GetService("GuiService")
 local Players = game:GetService("Players")
 local GamepadService = game:GetService("GamepadService")
 local CoreGui = game:GetService("CoreGui")
-local RobloxGui = CoreGui:WaitForChild("RobloxGui")
-
-local GetFFlagFixMissingPlayerGuiCrash = require(RobloxGui.Modules.Flags.GetFFlagFixMissingPlayerGuiCrash)
-local FFlagFixVirtualCursorErrorOnDyingGuiObject = game:DefineFastFlag("FixVirtualCursorErrorOnDyingGuiObject", false)
 
 local PlayerGui
 
@@ -104,15 +100,9 @@ local function processCursorPosition(pos, rad, dt)
 	pos = pos - topLeftInset
 	-- Objects are sorted with the top most rendered first
 
-	if GetFFlagFixMissingPlayerGuiCrash() then
-		-- To avoid race condition with not using a "WaitForChild" we will grab the PlayerGui instance before use
-		if PlayerGui == nil then
-			PlayerGui = (Players.LocalPlayer :: Player):FindFirstChildOfClass("PlayerGui")
-		end
-	else
-		if PlayerGui == nil then
-			PlayerGui = (Players.LocalPlayer :: Player):WaitForChild("PlayerGui")
-		end
+	-- To avoid race condition with not using a "WaitForChild" we will grab the PlayerGui instance before use
+	if PlayerGui == nil then
+		PlayerGui = (Players.LocalPlayer :: Player):FindFirstChildOfClass("PlayerGui")
 	end
 
 	local guiObjects = if PlayerGui then PlayerGui:GetGuiObjectsInCircle(pos, rad) else {}
@@ -229,16 +219,9 @@ return function(VirtualCursorMain, dt)
 		elseif VirtualCursorMain.SelectedObject:IsDescendantOf(CoreGui) then
 			GuiService.SelectedCoreObject = VirtualCursorMain.SelectedObject
 			GuiService.SelectedObject = nil
-		else
-			if FFlagFixVirtualCursorErrorOnDyingGuiObject then
-				if VirtualCursorMain.SelectedObject:IsDescendantOf(PlayerGui) then
-					GuiService.SelectedObject = VirtualCursorMain.SelectedObject
-					GuiService.SelectedCoreObject = nil
-				end
-			else
-				GuiService.SelectedObject = VirtualCursorMain.SelectedObject
-				GuiService.SelectedCoreObject = nil
-			end
+		elseif VirtualCursorMain.SelectedObject:IsDescendantOf(PlayerGui) then
+			GuiService.SelectedObject = VirtualCursorMain.SelectedObject
+			GuiService.SelectedCoreObject = nil
 		end
 	end
 end

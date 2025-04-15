@@ -1,6 +1,6 @@
 local CorePackages = game:GetService("CorePackages")
-local Roact = require(CorePackages.Roact)
-local RoactRodux = require(CorePackages.RoactRodux)
+local Roact = require(CorePackages.Packages.Roact)
+local RoactRodux = require(CorePackages.Packages.RoactRodux)
 
 local Components = script.Parent.Parent.Parent.Components
 local DataStoresChart = require(Components.DataStores.DataStoresChart)
@@ -17,7 +17,7 @@ local MainViewDataStores = Roact.PureComponent:extend("MainViewDataStores")
 function MainViewDataStores:init()
 	self.onUtilTabHeightChanged = function(utilTabHeight)
 		self:setState({
-			utilTabHeight = utilTabHeight
+			utilTabHeight = utilTabHeight,
 		})
 	end
 
@@ -28,14 +28,14 @@ function MainViewDataStores:init()
 	self.utilRef = Roact.createRef()
 
 	self.state = {
-		utilTabHeight = 0
+		utilTabHeight = 0,
 	}
 end
 
 function MainViewDataStores:didMount()
 	local utilSize = self.utilRef.current.Size
 	self:setState({
-		utilTabHeight = utilSize.Y.Offset
+		utilTabHeight = utilSize.Y.Offset,
 	})
 end
 
@@ -43,7 +43,7 @@ function MainViewDataStores:didUpdate()
 	local utilSize = self.utilRef.current.Size
 	if utilSize.Y.Offset ~= self.state.utilTabHeight then
 		self:setState({
-			utilTabHeight = utilSize.Y.Offset
+			utilTabHeight = utilSize.Y.Offset,
 		})
 	end
 end
@@ -62,7 +62,7 @@ function MainViewDataStores:render()
 		BackgroundTransparency = 1,
 		LayoutOrder = 3,
 	}, {
-		UIListLayout = 	Roact.createElement("UIListLayout", {
+		UIListLayout = Roact.createElement("UIListLayout", {
 			Padding = UDim.new(0, PADDING),
 			SortOrder = Enum.SortOrder.LayoutOrder,
 		}),
@@ -80,11 +80,11 @@ function MainViewDataStores:render()
 			onSearchTermChanged = self.onSearchTermChanged,
 		}),
 
-		DataStores = utilTabHeight > 0  and Roact.createElement(DataStoresChart, {
+		DataStores = utilTabHeight > 0 and Roact.createElement(DataStoresChart, {
 			size = UDim2.new(1, 0, 1, -utilTabHeight),
 			searchTerm = searchTerm,
 			layoutOrder = 2,
-		})
+		}),
 	})
 end
 

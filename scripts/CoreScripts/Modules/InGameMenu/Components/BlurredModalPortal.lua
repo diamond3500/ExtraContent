@@ -3,7 +3,7 @@ local CorePackages = game:GetService("CorePackages")
 local RunService = game:GetService("RunService")
 local VRService = game:GetService("VRService")
 
-local InGameMenuDependencies = require(CorePackages.InGameMenuDependencies)
+local InGameMenuDependencies = require(CorePackages.Packages.InGameMenuDependencies)
 local Roact = InGameMenuDependencies.Roact
 local t = InGameMenuDependencies.t
 

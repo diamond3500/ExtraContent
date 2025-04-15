@@ -3,7 +3,7 @@ local Players = game:GetService("Players")
 local HttpService = game:GetService("HttpService")
 local RunService = game:GetService("RunService")
 local React = require(CorePackages.Packages.React)
-local UIBlox = require(CorePackages.UIBlox)
+local UIBlox = require(CorePackages.Packages.UIBlox)
 
 local CrossExperienceVoice = require(CorePackages.Workspace.Packages.CrossExperienceVoice)
 local VoiceChat = require(CorePackages.Workspace.Packages.VoiceChat)
@@ -11,6 +11,7 @@ local VoiceChat = require(CorePackages.Workspace.Packages.VoiceChat)
 local useParticipant = CrossExperienceVoice.Hooks.useParticipant
 local useIsVoiceConnected = CrossExperienceVoice.Hooks.useIsVoiceConnected
 local useIsActiveParticipant = CrossExperienceVoice.Hooks.useIsActiveParticipant
+local useIsParticipantMuted = CrossExperienceVoice.Hooks.useIsParticipantMuted
 
 local ImageSetLabel = UIBlox.Core.ImageSet.ImageSetLabel
 
@@ -18,15 +19,16 @@ local ICON_SIZE = 36
 
 local VOICE_INDICATOR_ICON_FOLDER = "MicLight"
 
-local VOICE_INDICATOR_FRAME_IGNORE_BUGGER = 3
+local FIntPartyMicVoiceIndicatorFrameBuffer = game:DefineFastInt("PartyMicVoiceIndicatorFrameBuffer", 3)
 
 local function getLoadingIndicatorIcon(
 	voiceParticipant: any,
+	isMuted: boolean,
 	isVoiceConnected: boolean,
 	isActive: boolean?,
 	level: number?
 )
-	if not isVoiceConnected or not voiceParticipant or voiceParticipant.isMuted then
+	if not isVoiceConnected or not voiceParticipant or isMuted then
 		return VoiceChat.Utils.GetIcon("Muted", VOICE_INDICATOR_ICON_FOLDER :: any)
 	end
 	if isActive then
@@ -40,6 +42,8 @@ function PartyMicIcon(props)
 	local isVoiceConnected = useIsVoiceConnected()
 	local voiceParticipant = useParticipant(userId)
 	local isActive = useIsActiveParticipant(userId)
+	local isActiveRef = React.useRef(isActive)
+	local isMuted = useIsParticipantMuted(userId) == true
 	local frameCounter = React.useRef(0)
 	local level, setLevel = React.useState(0)
 	local renderStepName = React.useMemo(function()
@@ -56,22 +60,32 @@ function PartyMicIcon(props)
 		props.isVoiceConnectedSignal:fire(isVoiceConnected)
 	end, { isVoiceConnected })
 
-	React.useEffect(function()
-		RunService:BindToRenderStep(renderStepName, 1, function()
-			if frameCounter.current > VOICE_INDICATOR_FRAME_IGNORE_BUGGER then
+	local onRenderStep = React.useCallback(function()
+		if isActiveRef.current then
+			if frameCounter.current > FIntPartyMicVoiceIndicatorFrameBuffer then
 				setLevel(math.random())
 				frameCounter.current = 0
 			else
 				frameCounter.current = frameCounter.current + 1
 			end
-		end)
+		end
+	end, {})
+
+	React.useEffect(function()
+		isActiveRef.current = isActive
+	end, { isActive })
+
+	React.useEffect(function()
+		RunService:BindToRenderStep(renderStepName, 1, onRenderStep)
 
 		return function()
 			RunService:UnbindFromRenderStep(renderStepName)
 		end
 	end, {})
 
-	local icon = getLoadingIndicatorIcon(voiceParticipant, isVoiceConnected, isActive, level)
+	local icon = React.useMemo(function()
+		return getLoadingIndicatorIcon(voiceParticipant, isMuted, isVoiceConnected, isActive, level)
+	end, { voiceParticipant, isMuted, isVoiceConnected, isActive, level } :: { any })
 
 	return React.createElement("Frame", {
 		Size = UDim2.new(0, ICON_SIZE, 0, ICON_SIZE),
