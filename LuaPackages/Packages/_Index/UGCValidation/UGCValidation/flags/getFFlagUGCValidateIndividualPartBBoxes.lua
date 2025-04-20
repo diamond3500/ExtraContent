@@ -1,7 +1,7 @@
 --!strict
 
-game:DefineFastFlag("UGCValidateIndividualPartBBoxes", false)
+game:DefineFastFlag("UGCValidateIndividualPartBBoxes2", false)
 
 return function()
-	return game:GetFastFlag("UGCValidateIndividualPartBBoxes")
+	return game:GetFastFlag("UGCValidateIndividualPartBBoxes2")
 end

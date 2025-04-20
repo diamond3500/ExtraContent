@@ -7,6 +7,11 @@ local ContextActionService = game:GetService("ContextActionService")
 
 local SharedFlags = require(CorePackages.Workspace.Packages.SharedFlags)
 local FFlagTiltIconUnibarFocusNav = SharedFlags.FFlagTiltIconUnibarFocusNav
+local FFlagEnableUnibarFtuxTooltips = SharedFlags.FFlagEnableUnibarFtuxTooltips
+local FFlagHideTopBarConsole = SharedFlags.FFlagHideTopBarConsole
+local FFlagEnableChromeShortcutBar = SharedFlags.FFlagEnableChromeShortcutBar
+local FFlagReduceTopBarInsetsWhileHidden = SharedFlags.FFlagReduceTopBarInsetsWhileHidden
+local FFlagShowUnibarOnVirtualCursor = SharedFlags.FFlagShowUnibarOnVirtualCursor
 
 local Roact = require(CorePackages.Packages.Roact)
 local RoactRodux = require(CorePackages.Packages.RoactRodux)
@@ -19,7 +24,7 @@ local TooltipOrientation = UIBlox.App.Dialog.Enum.TooltipOrientation
 local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 local Chrome = RobloxGui.Modules.Chrome
 local ChromeEnabled = require(Chrome.Enabled)
-local ChromeService = if ChromeEnabled() and FFlagTiltIconUnibarFocusNav then require(Chrome.Service) else nil :: never
+local ChromeService = if ChromeEnabled() and (FFlagTiltIconUnibarFocusNav or FFlagEnableChromeShortcutBar) then require(Chrome.Service) else nil :: never
 local UnibarConstants = if ChromeEnabled() and FFlagTiltIconUnibarFocusNav then require(Chrome.ChromeShared.Unibar.Constants) else nil :: never
 local TenFootInterface = require(RobloxGui.Modules.TenFootInterface)
 local isNewInGameMenuEnabled = require(RobloxGui.Modules.isNewInGameMenuEnabled)
@@ -38,11 +43,7 @@ local GetFFlagChangeTopbarHeightCalculation =
 	require(script.Parent.Parent.Parent.Flags.GetFFlagChangeTopbarHeightCalculation)
 local FFlagEnableChromeBackwardsSignalAPI =
 	require(script.Parent.Parent.Parent.Flags.GetFFlagEnableChromeBackwardsSignalAPI)()
-local FFlagEnableUnibarFtuxTooltips = SharedFlags.FFlagEnableUnibarFtuxTooltips
-local FFlagHideTopBarConsole = SharedFlags.FFlagHideTopBarConsole
-local FFlagEnableChromeShortcutBar = SharedFlags.FFlagEnableChromeShortcutBar
-local FFlagReduceTopBarInsetsWhileHidden = SharedFlags.FFlagReduceTopBarInsetsWhileHidden
-local FFlagShowUnibarOnVirtualCursor = SharedFlags.FFlagShowUnibarOnVirtualCursor
+local FFlagFixMenuIconBackground = game:DefineFastFlag("FixMenuIconBackground", false)
 
 
 local Components = script.Parent.Parent
@@ -343,7 +344,8 @@ function MenuIcon:render()
 			}, {
 				BadgeOver12 = badgeOver12,
 				Background = if ChromeEnabled() and FFlagTiltIconUnibarFocusNav then nil else background,
-				IconHitArea = if ChromeEnabled() and FFlagTiltIconUnibarFocusNav then IconHitArea else background :: never,
+				IconHitArea = if ChromeEnabled() and FFlagTiltIconUnibarFocusNav then IconHitArea else 
+					if FFlagFixMenuIconBackground then nil else background :: never,
 				ShowTopBarListener = showTopBarListener,
 			})
 		end)

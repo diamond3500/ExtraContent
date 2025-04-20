@@ -2,30 +2,20 @@
 local root = script.Parent
 
 local Cryo = require(root.Parent.Cryo)
-local DEPRECATED_Constants = require(root.DEPRECATED_Constants)
-
-local getEngineFeatureEngineUGCValidationEnableGetValidationRules =
-	require(root.flags.getEngineFeatureEngineUGCValidationEnableGetValidationRules)
-
 local getEngineFeatureRemoveProxyWrap = require(root.flags.getEngineFeatureRemoveProxyWrap)
-
-if not getEngineFeatureEngineUGCValidationEnableGetValidationRules() then
-	return DEPRECATED_Constants
-end
 
 local ValidationRulesUtil = require(root.util.ValidationRulesUtil)
 local ConstantBounds = require(root.ConstantBounds)
 
 local getFFlagAddUGCValidationForPackage = require(root.flags.getFFlagAddUGCValidationForPackage)
 local getFFlagUGCValidateSurfaceAppearanceAlphaMode = require(root.flags.getFFlagUGCValidateSurfaceAppearanceAlphaMode)
-local getFFlagUGCValidateAddSpecificPropertyRequirements =
-	require(root.flags.getFFlagUGCValidateAddSpecificPropertyRequirements)
 local getFFlagFixPackageIDFieldName = require(root.flags.getFFlagFixPackageIDFieldName)
 local getEngineFeatureUGCValidateFullBodyBoundsAvatarRules =
 	require(root.flags.getEngineFeatureUGCValidateFullBodyBoundsAvatarRules)
 local getFFlagUGCValidateConfigurableFullBodyBounds = require(root.flags.getFFlagUGCValidateConfigurableFullBodyBounds)
 local getFFlagFixValidateTransparencyProperty = require(root.flags.getFFlagFixValidateTransparencyProperty)
 local getFFlagUGCValidateWrapLayersEnabled = require(root.flags.getFFlagUGCValidateWrapLayersEnabled)
+local getFFlagUGCValidatePropertiesRefactor = require(root.flags.getFFlagUGCValidatePropertiesRefactor)
 
 -- switch this to Cryo.List.toSet when available
 local function convertArrayToTable(array)
@@ -217,13 +207,45 @@ Constants.BODYPART_TO_PARENT = {
 
 Constants.RenderVsWrapMeshMaxDiff = ValidationRulesUtil:getRules().MeshRules.CageMeshMaxDistanceFromRenderMesh
 
-if getFFlagUGCValidateAddSpecificPropertyRequirements() then
-	-- this is used to specify that we don't care about a property's value
-	Constants.PROPERTIES_UNRESTRICTED = {}
-end
+if getFFlagUGCValidatePropertiesRefactor() then
+	Constants.COMPARISON_METHODS = {
+		-- We want [actual] to be [method] compared to [expected]
+		-- Numbers, vector3, and colors are currently supported, and default is FUZZY_EQ. EXACT_EQ is done for anything else.
+		-- Strings can be arbitrary but must be unique and determine the resulting error statement
+		SMALLER = "<",
+		SMALLER_EQ = "<=",
+		FUZZY_EQ = "=",
+		EXACT_EQ = "==",
+		GREATER_EQ = ">=",
+		GREATER = ">",
+	}
 
-if getFFlagFixValidateTransparencyProperty() then
-	Constants.PROP_PRECISE = {}
+	setmetatable(Constants.COMPARISON_METHODS, {
+		__index = function(_, index)
+			return error("Invalid COMPARISON_METHOD " .. tostring(index))
+		end,
+	})
+
+	Constants.INCLUSION_METHODS = {
+		-- We want tests with INCLUSION_LIST to only be run on assetTypeEnums that match
+		-- Tests with EXCLUSION_LIST will run on any assetTypeEnums not in the list
+		-- default value used in validateProperties is RUN_ON_ALL
+		RUN_ON_ALL = "RUN_ON_ALL",
+		INCLUSION_LIST = "INCLUSION_LIST",
+		EXCLUSION_LIST = "EXCLUSION_LIST",
+	}
+
+	setmetatable(Constants.INCLUSION_METHODS, {
+		__index = function(_, index)
+			return error("Invalid INCLUSION_METHOD " .. tostring(index))
+		end,
+	})
+else
+	Constants.PROPERTIES_UNRESTRICTED = {}
+
+	if getFFlagFixValidateTransparencyProperty() then
+		Constants.PROP_PRECISE = {}
+	end
 end
 
 Constants.PROPERTIES = {
@@ -239,8 +261,8 @@ Constants.PROPERTIES = {
 		VertexColor = Vector3.new(1, 1, 1),
 	},
 	BasePart = {
+		-- ====== Simple checks ======
 		Anchored = false,
-		Color = BrickColor.new("Medium stone grey").Color, -- luacheck: ignore BrickColor
 		CollisionGroupId = 0, -- collision groups can change by place
 		CustomPhysicalProperties = Cryo.None, -- ensure CustomPhysicalProperties is _not_ defined
 		Elasticity = 0.5,
@@ -250,7 +272,6 @@ Constants.PROPERTIES = {
 		Reflectance = 0,
 		RootPriority = 0,
 		RotVelocity = Vector3.new(0, 0, 0),
-		Transparency = if getFFlagFixValidateTransparencyProperty() then { 0, Constants.PROP_PRECISE } else 0,
 		Velocity = Vector3.new(0, 0, 0),
 
 		-- surface properties
@@ -279,6 +300,27 @@ Constants.PROPERTIES = {
 		LeftSurface = Enum.SurfaceType.Smooth,
 		RightSurface = Enum.SurfaceType.Smooth,
 		TopSurface = Enum.SurfaceType.Smooth,
+
+		-- ====== Extra Context checks ======
+		--Transparency = { [Constants.COMPARISON_METHODS.EXACT_EQ] = 0 },
+		Transparency = if getFFlagUGCValidatePropertiesRefactor()
+			then { [Constants.COMPARISON_METHODS.EXACT_EQ] = 0 }
+			elseif getFFlagFixValidateTransparencyProperty() then { 0, Constants.PROP_PRECISE }
+			else 0,
+
+		Color = if getFFlagUGCValidatePropertiesRefactor()
+			then {
+				[Constants.COMPARISON_METHODS.FUZZY_EQ] = BrickColor.new("Medium stone grey").Color,
+				[Constants.INCLUSION_METHODS.EXCLUSION_LIST] = {
+					Enum.AssetType.DynamicHead,
+					Enum.AssetType.Torso,
+					Enum.AssetType.LeftArm,
+					Enum.AssetType.RightArm,
+					Enum.AssetType.LeftLeg,
+					Enum.AssetType.RightLeg,
+				},
+			}
+			else BrickColor.new("Medium stone grey").Color,
 	},
 	Part = {
 		Shape = Enum.PartType.Block,
@@ -288,14 +330,61 @@ Constants.PROPERTIES = {
 			AlphaMode = Enum.AlphaMode.Overlay,
 		}
 		else nil,
-	WrapLayer = if getFFlagUGCValidateWrapLayersEnabled()
+	WrapLayer = if getFFlagUGCValidatePropertiesRefactor()
 		then {
-			Enabled = true,
+			-- ====== Simple checks ======
+			Enabled = if getFFlagUGCValidateWrapLayersEnabled() then true else nil,
+
+			-- ====== Extra Context checks ======
+			CageOrigin = {
+				PositionMagnitude = {
+					[Constants.COMPARISON_METHODS.SMALLER_EQ] = 10,
+				},
+				Orientation = {
+					[Constants.COMPARISON_METHODS.EXACT_EQ] = Vector3.new(0, 0, 0),
+				},
+			},
+			ReferenceOrigin = {
+				PositionMagnitude = {
+					[Constants.COMPARISON_METHODS.SMALLER_EQ] = 10,
+				},
+				Orientation = {
+					[Constants.COMPARISON_METHODS.EXACT_EQ] = Vector3.new(0, 0, 0),
+				},
+			},
+			ImportOrigin = {
+				PositionMagnitude = {
+					[Constants.COMPARISON_METHODS.SMALLER_EQ] = 8,
+				},
+			},
+		}
+		elseif getFFlagUGCValidateWrapLayersEnabled() then { Enabled = true }
+		else nil,
+
+	WrapTarget = if getFFlagUGCValidatePropertiesRefactor()
+		then {
+			-- ====== Simple checks ======
+
+			-- ====== Extra Context checks ======
+			CageOrigin = {
+				PositionMagnitude = {
+					[Constants.COMPARISON_METHODS.SMALLER_EQ] = 10,
+				},
+				Orientation = {
+					[Constants.COMPARISON_METHODS.EXACT_EQ] = Vector3.new(0, 0, 0),
+				},
+			},
+
+			ImportOrigin = {
+				PositionMagnitude = {
+					[Constants.COMPARISON_METHODS.SMALLER_EQ] = 8,
+				},
+			},
 		}
 		else nil,
 }
 
-if getFFlagUGCValidateAddSpecificPropertyRequirements() then
+if not getFFlagUGCValidatePropertiesRefactor() then
 	local bodyPartSpecificProperties = {
 		BasePart = {
 			Color = Constants.PROPERTIES_UNRESTRICTED, -- for body parts, we don't care about the color

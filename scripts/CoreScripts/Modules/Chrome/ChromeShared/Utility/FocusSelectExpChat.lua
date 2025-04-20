@@ -12,8 +12,8 @@ return function(id: Types.IntegrationId)
 	if UserInputService.GamepadEnabled and ChatSelector:GetVisibility() then
 		ChromeService:disableFocusNav()
 		ChatSelector:FocusSelectChatBar(function()
-			ChromeService:enableFocusNav()
 			ChromeService:setSelected(id)
+			ChromeService:enableFocusNav()
 		end, {
 			Enum.KeyCode.DPadUp,
 			Enum.KeyCode.ButtonB,

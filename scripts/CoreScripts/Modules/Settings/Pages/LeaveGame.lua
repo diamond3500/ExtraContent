@@ -33,6 +33,7 @@ RobloxGui:WaitForChild("Modules"):WaitForChild("TenFootInterface")
 local isTenFootInterface = require(RobloxGui.Modules.TenFootInterface):IsEnabled()
 
 local FFlagEnableChromeShortcutBar = require(CorePackages.Workspace.Packages.SharedFlags).FFlagEnableChromeShortcutBar
+local FFlagAddNextUpContainer = require(RobloxGui.Modules.Settings.Flags.FFlagAddNextUpContainer)
 
 local Constants = require(RobloxGui.Modules:WaitForChild("InGameMenu"):WaitForChild("Resources"):WaitForChild("Constants"))
 
@@ -159,5 +160,9 @@ PageInstance.Hidden.Event:connect(function()
 	ContextActionService:UnbindCoreAction(LEAVE_GAME_ACTION)
 end)
 
-
-return PageInstance
+if FFlagAddNextUpContainer then
+	local LeaveGameWithNextupPage = require(script.Parent.LeaveGameWithNextUp)
+	return LeaveGameWithNextupPage
+else
+	return PageInstance
+end

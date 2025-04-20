@@ -22,6 +22,7 @@ local CoreGui = game:GetService("CoreGui")
 local GetFFlagDisplayServerChannel = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagDisplayServerChannel
 local getFFlagExpChatAlwaysRunTCS = require(CorePackages.Workspace.Packages.SharedFlags).getFFlagExpChatAlwaysRunTCS
 local getFFlagExpChatMigrationSetup = require(CorePackages.Workspace.Packages.SharedFlags).getFFlagExpChatMigrationSetup
+local GetFFlagEnableReferredPlayerJoinRemoteEvent = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagEnableReferredPlayerJoinRemoteEvent
 local FFlagDebugLogExpchatMigration = game:DefineFastFlag("DebugLogExpchatMigration", false)
 
 local RobloxGui = CoreGui:WaitForChild("RobloxGui", math.huge)
@@ -175,6 +176,10 @@ local GetFFlagEnableVoiceDefaultServerScript =
 
 if GetFFlagEnableVoiceDefaultServerScript() then
 	ScriptContext:AddCoreScriptLocal("ServerCoreScripts/VoiceDefault", script.Parent)
+end
+
+if GetFFlagEnableReferredPlayerJoinRemoteEvent() then
+	ScriptContext:AddCoreScriptLocal("ServerCoreScripts/ReferredByPlayerRemoteEvent", script.Parent)
 end
 
 -- controls avatar gestures using VR controls

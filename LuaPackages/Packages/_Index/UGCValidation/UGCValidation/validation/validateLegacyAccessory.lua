@@ -40,7 +40,6 @@ local getEngineFeatureEngineUGCValidateRigidNonSkinned =
 
 local FFlagLegacyAccessoryCheckAvatarPartScaleType =
 	game:DefineFastFlag("LegacyAccessoryCheckAvatarPartScaleType", false)
-local FFlagLegacyAccessoryCheckCategory = game:DefineFastFlag("LegacyAccessoryCheckCategory", false)
 local getFFlagUGCValidateTotalSurfaceAreaTestAccessory =
 	require(root.flags.getFFlagUGCValidateTotalSurfaceAreaTestAccessory)
 
@@ -50,7 +49,7 @@ local function validateLegacyAccessory(validationContext: Types.ValidationContex
 	local isServer = validationContext.isServer
 	local allowUnreviewedAssets = validationContext.allowUnreviewedAssets
 
-	if FFlagLegacyAccessoryCheckCategory and not RigidOrLayeredAllowed.isRigidAccessoryAllowed(assetTypeEnum) then
+	if not RigidOrLayeredAllowed.isRigidAccessoryAllowed(assetTypeEnum) then
 		Analytics.reportFailure(
 			Analytics.ErrorType.validateLegacyAccessory_AssetTypeNotAllowedAsRigidAccessory,
 			nil,

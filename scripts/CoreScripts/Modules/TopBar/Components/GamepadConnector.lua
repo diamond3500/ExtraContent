@@ -216,9 +216,7 @@ function GamepadConnector:_toggleTopbar(actionName, userInputState, input): Enum
 					self.setTopbarActive(true)
 				end
 			else
-				if FFlagIgnoreDevGamepadBindingsMenuOpen then
-					ChromeService:disableFocusNav()
-				end
+				ChromeService:disableFocusNav()
 				GuiService.SelectedCoreObject = nil
 			end
 		else

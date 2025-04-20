@@ -20,6 +20,7 @@ local FFlagHideTopBarConsole = SharedFlags.FFlagHideTopBarConsole
 local GetFFlagEnableSongbirdInChrome = require(Root.Parent.Flags.GetFFlagEnableSongbirdInChrome)
 local GetFFlagSimpleChatUnreadMessageCount = SharedFlags.GetFFlagSimpleChatUnreadMessageCount
 local FFlagSubmenuFocusNavFixes = SharedFlags.FFlagSubmenuFocusNavFixes
+local FFlagConsoleChatOnExpControls = SharedFlags.FFlagConsoleChatOnExpControls
 
 local ChromeFlags = script.Parent.Parent.Parent.Flags
 local FFlagUnibarMenuOpenSubmenu = require(ChromeFlags.FFlagUnibarMenuOpenSubmenu)
@@ -184,7 +185,7 @@ function AnimationStateHelper(props)
 				end, false, Enum.KeyCode.ButtonB)
 			end
 
-			if FFlagTiltIconUnibarFocusNav then
+			if FFlagTiltIconUnibarFocusNav or FFlagConsoleChatOnExpControls then
 				if props.menuFrameRef.current then
 					local selectedChild = getSelectedChild(props.menuFrameRef, selectedItem)
 					if selectedChild then

@@ -107,6 +107,7 @@ dependencies = [
     "LuauPolyfill LuauPolyfill 0.4.2 registry",
     "Lumberyak lumberyak 0.1.1 registry",
     "Merge Merge 0.3.1 registry",
+    "Motion Motion 0.0.7 registry",
     "NetworkingFriends NetworkingFriends 2.12.1 registry",
     "NetworkingGames NetworkingGames 1.2.0 registry",
     "NetworkingUsers NetworkingUsers 1.2.1 registry",
@@ -149,7 +150,7 @@ dependencies = [
     "StringUtilities string-utilities 1.0.0 registry",
     "TagUtils TagUtils 0.1.0 registry",
     "Thumbnailing Thumbnailing 0.3.0 registry",
-    "UGCValidation UGCValidation 1.16.0 registry",
+    "UGCValidation UGCValidation 1.16.2 registry",
     "UIBlox UIBlox 0.2.74 registry",
     "UrlBuilder UrlBuilder 1.2.9 registry",
     "UsageTracker UsageTracker 0.1.1 registry",
@@ -1773,7 +1774,7 @@ dependencies = ["Collections Collections 1.2.3 registry"]
 
 [[package]]
 name = "UGCValidation"
-version = "1.16.0"
+version = "1.16.2"
 source = "registry"
 dependencies = [
     "Cryo Cryo 1.1.0 registry",

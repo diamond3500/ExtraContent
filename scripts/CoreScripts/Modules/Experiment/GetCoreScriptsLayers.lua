@@ -41,10 +41,6 @@ local GetFFlagEnableAppChatInExperience =
 	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagEnableAppChatInExperience
 local getFStringAppChatInExperienceIXPLayer =
 	require(CorePackages.Workspace.Packages.SharedFlags).getFStringAppChatInExperienceIXPLayer
-local FFlagLowCogsBannerExperiment =
-	require(CorePackages.Workspace.Packages.SharedFlags).FFlagLowCogsBannerExperiment
-local GetFStringPurchaseModalBonusBannerLayer =
-	require(CorePackages.Workspace.Packages.SharedFlags).GetFStringPurchaseModalBonusBannerLayer
 local FStringReportMenuIXPLayer = require(CorePackages.Workspace.Packages.SharedFlags).FStringReportMenuIXPLayer
 local FStringReportingIXPLayer = require(CorePackages.Workspace.Packages.SharedFlags).FStringReportingIXPLayer
 local FStringEARReportMenuIXPLayer = require(CorePackages.Workspace.Packages.SharedFlags).FStringEARReportMenuIXPLayer
@@ -110,10 +106,6 @@ return function()
 
 	if GetFFlagEnableAppChatInExperience() then
 		table.insert(layers, getFStringAppChatInExperienceIXPLayer())
-	end
-
-	if FFlagLowCogsBannerExperiment then
-		table.insert(layers, GetFStringPurchaseModalBonusBannerLayer())
 	end
 
 	return layers

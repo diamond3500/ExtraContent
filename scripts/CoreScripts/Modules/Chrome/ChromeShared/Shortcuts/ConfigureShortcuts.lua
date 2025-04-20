@@ -10,6 +10,7 @@ local GuiService = game:GetService("GuiService")
 local Constants = require(Root.Unibar.Constants)
 local SharedFlags = require(CorePackages.Workspace.Packages.SharedFlags)
 local FFlagConsoleChatOnExpControls = SharedFlags.FFlagConsoleChatOnExpControls
+local FFlagTweakTiltMenuShortcuts = SharedFlags.FFlagTweakTiltMenuShortcuts
 
 local ChatSelector = if FFlagConsoleChatOnExpControls then require(RobloxGui.Modules.ChatSelector) else nil :: never
 local leaveGame = require(RobloxGui.Modules.Settings.leaveGame)
@@ -187,7 +188,9 @@ function configureShortcutBars()
 
 	ChromeService:configureShortcutBar(
 		Constants.TILTMENU_SHORTCUTBAR_ID,
-		{ "leave", "respawn", "tiltMenuPreviousTab", "tiltMenuNextTab", "back", "close" }
+		if FFlagTweakTiltMenuShortcuts
+			then { "tiltMenuPreviousTab", "tiltMenuNextTab", "back", "close" }
+			else { "leave", "respawn", "tiltMenuPreviousTab", "tiltMenuNextTab", "back", "close" }
 	)
 
 	-- in the future, some kind of availability system for shortcuts would probably be cleaner

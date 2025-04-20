@@ -21,6 +21,7 @@ local FailureReasonsAccumulator = require(root.util.FailureReasonsAccumulator)
 
 local getFFlagUGCValidateCageOrigin = require(root.flags.getFFlagUGCValidateCageOrigin)
 local getFIntUGCValidateBodyPartMaxCageOrigin = require(root.flags.getFIntUGCValidateBodyPartMaxCageOrigin)
+local getFFlagUGCValidatePropertiesRefactor = require(root.flags.getFFlagUGCValidatePropertiesRefactor)
 
 local maxBodyPartCageOrigin = if getFFlagUGCValidateCageOrigin()
 	then getFIntUGCValidateBodyPartMaxCageOrigin() / 100
@@ -180,9 +181,12 @@ local function validateInternal(
 	local meshScale = getExpectedPartSize(meshHandle, validationContext) / meshSize
 
 	local reasonsAccumulator = FailureReasonsAccumulator.new()
-	if getFFlagUGCValidateCageOrigin() then
-		reasonsAccumulator:updateReasons(validateCageOrigin(meshHandle, validationContext))
+	if not getFFlagUGCValidatePropertiesRefactor() then
+		if getFFlagUGCValidateCageOrigin() then
+			reasonsAccumulator:updateReasons(validateCageOrigin(meshHandle, validationContext))
+		end
 	end
+
 	reasonsAccumulator:updateReasons(validateWrapTargetComparison(meshScale, meshHandle, validationContext))
 
 	Analytics.recordScriptTime(script.Name, startTime, validationContext)

@@ -41,6 +41,9 @@ local getFFlagUGCValidateAllowFlexibleTriangleLimit = require(root.flags.getFFla
 local getFIntUGCValidateTriangleLimitTolerance = require(root.flags.getFIntUGCValidateTriangleLimitTolerance)
 local getFFlagUGCValidateImportOrigin = require(root.flags.getFFlagUGCValidateImportOrigin)
 local getFIntUGCValidateBodyImportOriginMax = require(root.flags.getFIntUGCValidateBodyImportOriginMax)
+local getFFlagUGCValidatePropertiesRefactor = require(root.flags.getFFlagUGCValidatePropertiesRefactor)
+local getEngineFeatureEngineEditableMeshAvatarPublish =
+	require(root.flags.getEngineFeatureEngineEditableMeshAvatarPublish)
 
 local function validateIsSkinned(
 	obj: MeshPart,
@@ -65,7 +68,15 @@ local function validateIsSkinned(
 	end
 
 	local retrievedMeshData, testsPassed = pcall(function()
-		return UGCValidationService:ValidateSkinnedMesh(getMeshIdForSkinningValidation(obj, allowEditableInstances))
+		if getEngineFeatureEngineEditableMeshAvatarPublish() then
+			local getEditableMeshSuccess, editableMesh = getEditableMeshFromContext(obj, "MeshId", validationContext)
+			if not getEditableMeshSuccess then
+				error("Failed to retrieve MeshContent")
+			end
+			return UGCValidationService:ValidateSkinnedEditableMesh(editableMesh :: EditableMesh)
+		else
+			return UGCValidationService:ValidateSkinnedMesh(getMeshIdForSkinningValidation(obj, allowEditableInstances))
+		end
 	end)
 
 	if not retrievedMeshData then
@@ -351,18 +362,20 @@ local function validateDescendantMeshMetrics(
 
 			reasonsAccumulator:updateReasons(validateMeshTriangleArea(meshInfo, validationContext))
 
-			if getFFlagUGCValidateImportOrigin() then
-				local importOriginMagnitude = data.instance.ImportOrigin.Position.Magnitude
-				local importOriginMax = getFIntUGCValidateBodyImportOriginMax() / 100
-				if importOriginMagnitude > importOriginMax then
-					reasonsAccumulator:updateReasons(false, {
-						string.format(
-							"WrapTarget '%s' has ImportOrigin %.2f away from the origin. The max is %.2f. You should move the Position closer to the origin",
-							data.instance:GetFullName(),
-							importOriginMagnitude,
-							importOriginMax
-						),
-					})
+			if not getFFlagUGCValidatePropertiesRefactor() then
+				if getFFlagUGCValidateImportOrigin() then
+					local importOriginMagnitude = data.instance.ImportOrigin.Position.Magnitude
+					local importOriginMax = getFIntUGCValidateBodyImportOriginMax() / 100
+					if importOriginMagnitude > importOriginMax then
+						reasonsAccumulator:updateReasons(false, {
+							string.format(
+								"WrapTarget '%s' has ImportOrigin %.2f away from the origin. The max is %.2f. You should move the Position closer to the origin",
+								data.instance:GetFullName(),
+								importOriginMagnitude,
+								importOriginMax
+							),
+						})
+					end
 				end
 			end
 		end

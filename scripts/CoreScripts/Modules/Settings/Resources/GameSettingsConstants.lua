@@ -20,6 +20,7 @@ local FFlagOverrideInExperienceMenuReorderFirstVariant = require(Modules.Setting
 
 -------------- Modules ----------------
 local IXPServiceWrapper = require(CorePackages.Workspace.Packages.IxpServiceWrapper).IXPServiceWrapper
+local isInExperienceUIVREnabled = require(CorePackages.Workspace.Packages.SharedExperimentDefinition).isInExperienceUIVREnabled
 
 -------------- LAYOUT ORDER -----------
 -- Recall that layout order values are relative
@@ -48,6 +49,14 @@ SETTINGS_MENU_LAYOUT_ORDER.FeedbackModeButton = 30
 SETTINGS_MENU_LAYOUT_ORDER.ChatTranslationFrame = 40
 SETTINGS_MENU_LAYOUT_ORDER.ChatLanguageSelectorFrame = 41
 SETTINGS_MENU_LAYOUT_ORDER.ChatTranslationToggleFrame = 42
+-- VR Settings
+if isInExperienceUIVREnabled then
+	SETTINGS_MENU_LAYOUT_ORDER.VRComfortSettingFrame = 54
+	SETTINGS_MENU_LAYOUT_ORDER.VRVignetteEnabledFrame = 55
+	SETTINGS_MENU_LAYOUT_ORDER.VRSteppedRotationEnabledFrame = 56
+	SETTINGS_MENU_LAYOUT_ORDER.VRThirdPersonFixedCamEnabledFrame = 57
+	SETTINGS_MENU_LAYOUT_ORDER.VRSafetyBubbleModeFrame = 58
+end
 -- Input/Output and Volume
 SETTINGS_MENU_LAYOUT_ORDER.DeviceFrameInput = 60
 SETTINGS_MENU_LAYOUT_ORDER.DeviceFrameOutput = 61
@@ -82,6 +91,14 @@ local LAYOUT_REORDER_VARIANT_1 = {}
 
 -- Overscan Entry point, console only
 LAYOUT_REORDER_VARIANT_1.OverscanAdjustButton = 1
+-- VR Settings
+if isInExperienceUIVREnabled then
+	LAYOUT_REORDER_VARIANT_1.VRComfortSettingFrame = 4
+	LAYOUT_REORDER_VARIANT_1.VRVignetteEnabledFrame = 5
+	LAYOUT_REORDER_VARIANT_1.VRSteppedRotationEnabledFrame = 6
+	LAYOUT_REORDER_VARIANT_1.VRThirdPersonFixedCamEnabledFrame = 7
+	LAYOUT_REORDER_VARIANT_1.VRSafetyBubbleModeFrame = 8
+end
 -- Volumes
 LAYOUT_REORDER_VARIANT_1.VolumeFrame = 10
 if PartyVoiceVolumeFeatureAvailable then

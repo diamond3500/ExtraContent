@@ -2,10 +2,15 @@ local CoreGui = game:GetService("CoreGui")
 local CorePackages = game:GetService("CorePackages")
 local Players = game:GetService("Players")
 local EventIngestService = game:GetService("EventIngestService")
+local RobloxReplicatedStorage = game:GetService("RobloxReplicatedStorage")
 
 local SocialContextToastPackage = require(CorePackages.Workspace.Packages.SocialContextToasts)
 local SocialContextToastContainer = SocialContextToastPackage.SocialContextToastContainer
 local GetFFlagSocialContextToastEventStream = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagSocialContextToastEventStream
+local GetFFlagEnableReferredPlayerJoinRemoteEvent =
+	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagEnableReferredPlayerJoinRemoteEvent
+local GetFIntReferredPlayerJoinRemoteEventTimeout =
+	require(CorePackages.Workspace.Packages.SharedFlags).GetFIntReferredPlayerJoinRemoteEventTimeout
 
 local HttpRequest = require(CorePackages.Packages.HttpRequest)
 local httpRequest = HttpRequest.config({
@@ -19,6 +24,11 @@ local EventIngest = require(CorePackages.Workspace.Packages.Analytics).Analytics
 
 local IXPServiceWrapper = require(CorePackages.Workspace.Packages.IxpServiceWrapper).IXPServiceWrapper
 
+local ReferredPlayerJoin = nil
+if GetFFlagEnableReferredPlayerJoinRemoteEvent() then
+    ReferredPlayerJoin = RobloxReplicatedStorage:WaitForChild("ReferredPlayerJoin", GetFIntReferredPlayerJoinRemoteEventTimeout()) :: RemoteEvent
+end
+
 local services = {
     networking = httpRequest,
     playersService = Players, 
@@ -26,6 +36,7 @@ local services = {
     analytics = Analytics.new(),
     ixpService = IXPServiceWrapper,
     eventIngest = EventIngest.new(EventIngestService),
+    referredPlayerJoinRemoteEvent = ReferredPlayerJoin
 }
 
 SocialContextToastContainer(

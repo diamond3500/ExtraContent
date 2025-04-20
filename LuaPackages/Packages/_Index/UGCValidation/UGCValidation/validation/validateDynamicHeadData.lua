@@ -21,6 +21,8 @@ local getEngineFeatureUGCValidateGetInactiveControls =
 local EngineFeatureGCValidateCompareTextureOverlap = game:GetEngineFeature("UGCValidateCompareTextureOverlap")
 local getEngineFeatureViewportFrameSnapshotEngineFeature =
 	require(root.flags.getEngineFeatureViewportFrameSnapshotEngineFeature)
+local getEngineFeatureEngineEditableMeshAvatarPublish =
+	require(root.flags.getEngineFeatureEngineEditableMeshAvatarPublish)
 local UGCValidateFacialBoundsScale = game:DefineFastInt("UGCValidateFacialBoundsScale", 120) / 100
 local UGCValidateFacialExpressivenessThreshold = game:DefineFastInt("UGCValidateFacialExpressivenessThreshold", 10)
 	/ 100
@@ -34,6 +36,7 @@ local Thumbnailer = require(root.util.Thumbnailer)
 local Types = require(root.util.Types)
 local pcallDeferred = require(root.util.pcallDeferred)
 local getMeshIdForSkinningValidation = require(root.util.getMeshIdForSkinningValidation)
+local getEditableMeshFromContext = require(root.util.getEditableMeshFromContext)
 
 local requiredActiveFACSControls = {
 	"LipsTogether",
@@ -165,13 +168,27 @@ local function validateFacialBounds(
 	local allowEditableInstances = validationContext.allowEditableInstances
 
 	local success, result = pcallDeferred(function()
-		local meshId = getMeshIdForSkinningValidation(meshPartHead, allowEditableInstances)
 		local partSize = getExpectedPartSize(meshPartHead, validationContext)
-		return UGCValidationService:ValidateFacialBounds(meshId, UGCValidateFacialBoundsScale, partSize)
+
+		if getEngineFeatureEngineEditableMeshAvatarPublish() then
+			local getEditableMeshSuccess, editableMesh =
+				getEditableMeshFromContext(meshPartHead, "MeshId", validationContext)
+			if not getEditableMeshSuccess then
+				error("Failed to retrieve MeshContent")
+			end
+			return UGCValidationService:ValidateEditableMeshFacialBounds(
+				editableMesh,
+				UGCValidateFacialBoundsScale,
+				partSize
+			)
+		else
+			local meshId = getMeshIdForSkinningValidation(meshPartHead, allowEditableInstances)
+			return UGCValidationService:ValidateFacialBounds(meshId, UGCValidateFacialBoundsScale, partSize)
+		end
 	end, validationContext)
 
 	if not success then
-		local errorMessage = string.format(MESH_DATA_LOAD_FAILED_STRING, meshPartHead.fullName)
+		local errorMessage = string.format(MESH_DATA_LOAD_FAILED_STRING, meshPartHead:GetFullName())
 		if nil ~= isServer and isServer then
 			error(errorMessage)
 		end
@@ -197,17 +214,31 @@ local function validateFacialExpressiveness(
 	local allowEditableInstances = validationContext.allowEditableInstances
 
 	local success, result = pcallDeferred(function()
-		local meshId = getMeshIdForSkinningValidation(meshPartHead, allowEditableInstances)
 		local partSize = getExpectedPartSize(meshPartHead, validationContext)
-		return UGCValidationService:ValidateFacialExpressiveness(
-			meshId,
-			UGCValidateFacialExpressivenessMinVertDelta,
-			partSize
-		)
+
+		if getEngineFeatureEngineEditableMeshAvatarPublish() then
+			local getEditableMeshSuccess, editableMesh =
+				getEditableMeshFromContext(meshPartHead, "MeshId", validationContext)
+			if not getEditableMeshSuccess then
+				error("Failed to retrieve MeshContent")
+			end
+			return UGCValidationService:ValidateEditableMeshFacialExpressiveness(
+				editableMesh,
+				UGCValidateFacialExpressivenessMinVertDelta,
+				partSize
+			)
+		else
+			local meshId = getMeshIdForSkinningValidation(meshPartHead, allowEditableInstances)
+			return UGCValidationService:ValidateFacialExpressiveness(
+				meshId,
+				UGCValidateFacialExpressivenessMinVertDelta,
+				partSize
+			)
+		end
 	end, validationContext)
 
 	if not success then
-		local errorMessage = string.format(MESH_DATA_LOAD_FAILED_STRING, meshPartHead.fullName)
+		local errorMessage = string.format(MESH_DATA_LOAD_FAILED_STRING, meshPartHead:GetFullName())
 		if nil ~= isServer and isServer then
 			error(errorMessage)
 		end
@@ -242,9 +273,18 @@ local function validateDynamicHeadData(
 
 	do
 		local retrievedMeshData, testsPassed = pcall(function()
-			return UGCValidationService:ValidateDynamicHeadMesh(
-				getMeshIdForSkinningValidation(meshPartHead, allowEditableInstances)
-			)
+			if getEngineFeatureEngineEditableMeshAvatarPublish() then
+				local getEditableMeshSuccess, editableMesh =
+					getEditableMeshFromContext(meshPartHead, "MeshId", validationContext)
+				if not getEditableMeshSuccess then
+					error("Failed to retrieve MeshContent")
+				end
+				return UGCValidationService:ValidateDynamicHeadEditableMesh(editableMesh)
+			else
+				return UGCValidationService:ValidateDynamicHeadMesh(
+					getMeshIdForSkinningValidation(meshPartHead, allowEditableInstances)
+				)
+			end
 		end)
 
 		if not retrievedMeshData then
@@ -271,10 +311,22 @@ local function validateDynamicHeadData(
 
 	if getEngineFeatureUGCValidateGetInactiveControls() then
 		local commandExecuted, missingControlsOrErrorMessage, inactiveControls = pcall(function()
-			return UGCValidationService:GetDynamicHeadMeshInactiveControls(
-				getMeshIdForSkinningValidation(meshPartHead, allowEditableInstances),
-				requiredActiveFACSControls
-			)
+			if getEngineFeatureEngineEditableMeshAvatarPublish() then
+				local getEditableMeshSuccess, editableMesh =
+					getEditableMeshFromContext(meshPartHead, "MeshId", validationContext)
+				if not getEditableMeshSuccess then
+					error("Failed to retrieve MeshContent")
+				end
+				return UGCValidationService:GetDynamicHeadEditableMeshInactiveControls(
+					editableMesh,
+					requiredActiveFACSControls
+				)
+			else
+				return UGCValidationService:GetDynamicHeadMeshInactiveControls(
+					getMeshIdForSkinningValidation(meshPartHead, allowEditableInstances),
+					requiredActiveFACSControls
+				)
+			end
 		end)
 
 		if not commandExecuted then

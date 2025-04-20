@@ -44,8 +44,6 @@ local getFFlagUGCValidateLCCagesQuality = require(root.flags.getFFlagUGCValidate
 local getFFlagUGCValidationNameCheck = require(root.flags.getFFlagUGCValidationNameCheck)
 local getEngineFeatureEngineUGCValidationMaxVerticesCollision =
 	require(root.flags.getEngineFeatureEngineUGCValidationMaxVerticesCollision)
-local getEngineFeatureEngineUGCValidationEnableGetValidationRules =
-	require(root.flags.getEngineFeatureEngineUGCValidationEnableGetValidationRules)
 
 local getFFlagUGCValidateTotalSurfaceAreaTestAccessory =
 	require(root.flags.getFFlagUGCValidateTotalSurfaceAreaTestAccessory)
@@ -53,6 +51,8 @@ local getFFlagUGCValidateCageOrigin = require(root.flags.getFFlagUGCValidateCage
 local getFIntUGCValidateAccessoryMaxCageOrigin = require(root.flags.getFIntUGCValidateAccessoryMaxCageOrigin)
 local getFFlagUGCValidateLCHandleScale = require(root.flags.getFFlagUGCValidateLCHandleScale)
 local getFFlagUGCValidationRefactorMeshScale = require(root.flags.getFFlagUGCValidationRefactorMeshScale)
+local getFFlagUGCValidatePropertiesRefactor = require(root.flags.getFFlagUGCValidatePropertiesRefactor)
+
 local getFIntUGCValidationLCHandleScaleOffsetMaximum =
 	require(root.flags.getFIntUGCValidationLCHandleScaleOffsetMaximum) -- / 1000
 
@@ -224,15 +224,7 @@ local function validateLayeredClothingAccessory(validationContext: Types.Validat
 
 	local attachment = getAttachment(handle, assetInfo.attachmentNames)
 
-	local boundsInfo
-	if getEngineFeatureEngineUGCValidationEnableGetValidationRules() then
-		boundsInfo = assetInfo.bounds[attachment.Name]
-	else
-		boundsInfo = Constants.LC_BOUNDS
-		if assetInfo.layeredClothingBounds and assetInfo.layeredClothingBounds[attachment.Name] then
-			boundsInfo = assetInfo.layeredClothingBounds[attachment.Name]
-		end
-	end
+	local boundsInfo = assetInfo.bounds[attachment.Name]
 
 	local failedReason: any = {}
 	success, failedReason = validateMaterials(instance, validationContext)
@@ -306,28 +298,30 @@ local function validateLayeredClothingAccessory(validationContext: Types.Validat
 				validationResult = false
 			end
 
-			if getFFlagUGCValidateCageOrigin() then
-				Analytics.reportFailure(
-					Analytics.ErrorType.validateLayeredClothingAccessory_CageOriginOutOfBounds,
-					nil,
-					validationContext
-				)
-				-- for layered clothing accessories there is no reason not to have the CageOrigin of the WrapLayer at 0,0,0 as the item should get
-				-- fitted to the character's WrapTarget mesh regardless of the CageOrigin position. There is an exploit that if you have identical
-				-- CageMesh and ReferenceMesh in the WrapLayer then your Accessory will not deform to the character's WrapTarget, then you can
-				-- have a large CageOrigin Position to put Accessories far above the character. This check protects against that
-				if wrapLayer.CageOrigin.Position.Magnitude > maxAccessoryCageOrigin then
-					table.insert(
-						reasons,
-						string.format(
-							"WrapLayer %s found under %s.%s has a CageOrigin position greater than %.2f. You need to set CageOrigin.Position to 0,0,0.",
-							wrapLayer.Name,
-							instance.Name,
-							handle.Name,
-							maxAccessoryCageOrigin
-						)
+			if not getFFlagUGCValidatePropertiesRefactor() then
+				if getFFlagUGCValidateCageOrigin() then
+					Analytics.reportFailure(
+						Analytics.ErrorType.validateLayeredClothingAccessory_CageOriginOutOfBounds,
+						nil,
+						validationContext
 					)
-					validationResult = false
+					-- for layered clothing accessories there is no reason not to have the CageOrigin of the WrapLayer at 0,0,0 as the item should get
+					-- fitted to the character's WrapTarget mesh regardless of the CageOrigin position. There is an exploit that if you have identical
+					-- CageMesh and ReferenceMesh in the WrapLayer then your Accessory will not deform to the character's WrapTarget, then you can
+					-- have a large CageOrigin Position to put Accessories far above the character. This check protects against that
+					if wrapLayer.CageOrigin.Position.Magnitude > maxAccessoryCageOrigin then
+						table.insert(
+							reasons,
+							string.format(
+								"WrapLayer %s found under %s.%s has a CageOrigin position greater than %.2f. You need to set CageOrigin.Position to 0,0,0.",
+								wrapLayer.Name,
+								instance.Name,
+								handle.Name,
+								maxAccessoryCageOrigin
+							)
+						)
+						validationResult = false
+					end
 				end
 			end
 		end

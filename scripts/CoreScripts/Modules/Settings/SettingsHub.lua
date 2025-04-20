@@ -114,6 +114,7 @@ local FFlagFixDisableTopPaddingError = game:DefineFastFlag("FixDisableTopPadding
 local FFlagCenterIGMConsoleBottomButtons = game:DefineFastFlag("CenterIGMConsoleBottomButtons", false)
 local FFlagDelayEscCoreActionIEMOpen = game:DefineFastFlag("DelayEscCoreActionIEMOpen", false)
 local GetFFlagRemovePermissionsButtons = require(RobloxGui.Modules.Settings.Flags.GetFFlagRemovePermissionsButtons)
+local FFlagAddNextUpContainer = require(RobloxGui.Modules.Settings.Flags.FFlagAddNextUpContainer)
 local FFlagUpdateTiltMenuButtonIcons = require(SharedFlags).FFlagUpdateTiltMenuButtonIcons
 local isInExperienceUIVREnabled =
 	require(CorePackages.Workspace.Packages.SharedExperimentDefinition).isInExperienceUIVREnabled
@@ -2300,6 +2301,12 @@ local function CreateSettingsHub()
 			bufferSize = math.min(10, (1-0.99) * fullScreenSize)
 		end
 
+		if FFlagAddNextUpContainer then
+			if this.Pages.CurrentPage.DisableTopPadding and this.Pages.CurrentPage.MaintainVerticalSize then 
+				largestPageSize += this.HubBar.AbsoluteSize.Y
+			end
+		end
+
 		this.MenuContainer.Size = menuPos.Size
 		if Theme.UIBloxThemeEnabled then
 			this.MenuContainer.Position = menuPos.Position
@@ -2393,7 +2400,9 @@ local function CreateSettingsHub()
 		--This is in the same frame, so the delay should be very minimal.
 		--Maybe in the future we need to have a way to force AbsoluteSize
 		--to update, or we can just avoid using it so soon.
-		RunService.Heartbeat:wait()
+		if not FFlagAddNextUpContainer then
+			RunService.Heartbeat:wait()
+		end
 
 		if shouldShowBottomBar() then
 			setBottomBarBindings()
@@ -3028,9 +3037,13 @@ local function CreateSettingsHub()
 			end
 		end
 
-		-- When switching page, we want to call this to expand PageViewClipper size if needed by TopPadding being disabled
-		if pageToSwitchTo.DisableTopPadding then
+		if FFlagAddNextUpContainer then
 			onScreenSizeChanged()
+		else 
+			-- When switching page, we want to call this to expand PageViewClipper size if needed by TopPadding being disabled
+			if pageToSwitchTo.DisableTopPadding then
+				onScreenSizeChanged()
+			end
 		end
 
 		local eventTable = {}

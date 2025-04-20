@@ -4,6 +4,7 @@ local SharedFlags = require(CorePackages.Workspace.Packages.SharedFlags)
 local FFlagAdaptUnibarAndTiltSizing = SharedFlags.GetFFlagAdaptUnibarAndTiltSizing()
 local FFlagTiltIconUnibarFocusNav = SharedFlags.FFlagTiltIconUnibarFocusNav
 local FFlagReplaceChromeNotificationBadge = SharedFlags.FFlagReplaceChromeNotificationBadge
+local FFlagConsoleChatOnExpControls = SharedFlags.FFlagConsoleChatOnExpControls
 
 local ReactOtter = require(CorePackages.Packages.ReactOtter)
 local TenFootInterface = require(script.Parent.Parent.Parent.Parent.TenFootInterface)
@@ -40,7 +41,7 @@ return {
 	ICON_CELL_WIDTH = if FFlagAdaptUnibarAndTiltSizing then StyleTokens.Size.Size_1100 else 44,
 	DIVIDER_CELL_WIDTH = if FFlagAdaptUnibarAndTiltSizing then withUIScale(5) else 5,
 	ICON_SIZE = if FFlagAdaptUnibarAndTiltSizing then StyleTokens.Size.Size_900 else 36,
-	ICON_NAME_PREFIX = if FFlagTiltIconUnibarFocusNav then "IconHitArea_" else nil,
+	ICON_NAME_PREFIX = if FFlagTiltIconUnibarFocusNav or FFlagConsoleChatOnExpControls then "IconHitArea_" else nil,
 	ICON_HIGHLIGHT_SIZE = if FFlagAdaptUnibarAndTiltSizing
 		then UDim2.new(0, StyleTokens.Size.Size_900, 0, StyleTokens.Size.Size_900)
 		else UDim2.new(0, 36, 0, 36),

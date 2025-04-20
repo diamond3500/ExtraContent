@@ -1,10 +1,9 @@
 --!nonstrict
+
 local root = script.Parent.Parent
 
 local Cryo = require(root.Parent.Cryo)
 
-local getFFlagUGCValidateAddSpecificPropertyRequirements =
-	require(root.flags.getFFlagUGCValidateAddSpecificPropertyRequirements)
 local getFFlagFixValidateTransparencyProperty = require(root.flags.getFFlagFixValidateTransparencyProperty)
 
 local Analytics = require(root.Analytics)
@@ -12,6 +11,8 @@ local Constants = require(root.Constants)
 
 local Types = require(root.util.Types)
 local valueToString = require(root.util.valueToString)
+local getFFlagUGCValidatePropertiesRefactor = require(root.flags.getFFlagUGCValidatePropertiesRefactor)
+local validatePropertyRequirements = require(root.validation.validatePropertyRequirements)
 
 local EPSILON = 1e-5
 
@@ -54,6 +55,7 @@ end
 
 local function propEq(propValue: any, expectedValue: any)
 	local checkPrecise = false
+
 	if getFFlagFixValidateTransparencyProperty() then
 		local expectedPreciseValue = getPrecisePropValue(expectedValue)
 		if expectedPreciseValue ~= nil then
@@ -99,6 +101,10 @@ local function validateProperties(
 	validationContext: Types.ValidationContext
 ): (boolean, { string }?)
 	-- full tree of instance + descendants
+	if getFFlagUGCValidatePropertiesRefactor() then
+		return validatePropertyRequirements(instance, assetTypeEnum, validationContext)
+	end
+
 	local objects: { Instance } = instance:GetDescendants()
 	table.insert(objects, instance)
 
@@ -128,12 +134,9 @@ local function validateProperties(
 					end
 
 					local specificExpectedValue = expectedValue
-					if getFFlagUGCValidateAddSpecificPropertyRequirements() then
-						specificExpectedValue =
-							getSpecificExpectedValue(expectedValue, className, propName, assetTypeEnum)
-						if specificExpectedValue == Constants.PROPERTIES_UNRESTRICTED then
-							continue
-						end
+					specificExpectedValue = getSpecificExpectedValue(expectedValue, className, propName, assetTypeEnum)
+					if specificExpectedValue == Constants.PROPERTIES_UNRESTRICTED then
+						continue
 					end
 
 					if not propEq(propValue, specificExpectedValue) then

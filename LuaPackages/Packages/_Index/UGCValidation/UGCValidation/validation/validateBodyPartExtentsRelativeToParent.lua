@@ -188,7 +188,7 @@ function validateBodyPartExtentsRelativeToParent.runValidation(
 		end
 
 		local attName = partInfo["rigAttachmentToParent"].name
-		reasonsAccumulator:updateReasons(
+		local validationSuccess, validationIssues =
 			validateBodyPartExtentsRelativeToParent.validateSinglePartBasedOnBBoxes(
 				upperPart,
 				lowerPart,
@@ -196,10 +196,10 @@ function validateBodyPartExtentsRelativeToParent.runValidation(
 				attName,
 				validationContext
 			)
-		)
+		reasonsAccumulator:updateReasons(validationSuccess, validationIssues)
 
 		if getFFlagUGCValidatePrimativeBBoxes() then
-			if APPLY_PRIMATIVE_BBOX_CHECK[assetTypeEnum] then
+			if validationSuccess and APPLY_PRIMATIVE_BBOX_CHECK[assetTypeEnum] then
 				-- Secondary check based on just part size.Y and att pos.Y
 				-- This is done to guarentee humanoid scaling doesn't break
 				reasonsAccumulator:updateReasons(

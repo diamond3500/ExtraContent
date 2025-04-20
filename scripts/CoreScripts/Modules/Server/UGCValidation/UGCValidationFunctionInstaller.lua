@@ -4,6 +4,8 @@ local UGCValidationService = game:GetService("UGCValidationService")
 local UGCValidation = require(CorePackages.Packages.UGCValidation)
 local EngineFeatureUGCValidationWithContextEntrypoint = game:GetEngineFeature("UGCValidationWithContextEntrypointFeature")
 
+local FFlagSkipHsrRCCUgcValidation = game:DefineFastFlag("SkipHsrRCCUgcValidation", false)
+
 local function UGCValidationFunction(args)
 	local objectInstances = args["instances"]
 	local assetTypeEnum = args["assetType"]
@@ -18,6 +20,7 @@ local function UGCValidationFunction(args)
 	local bypassFlags = {
 		skipSnapshot = true,
 		skipPhysicsDataReset = true,
+		skipValidateHSR = ((if FFlagSkipHsrRCCUgcValidation then true else nil) :: boolean?)
 	}
 
 	local validationContext, fullBodyValidationContext

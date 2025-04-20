@@ -34,8 +34,11 @@ if game:GetEngineFeature("CaptureModeEnabled") then
 end
 local GetFFlagEnableConnectDisconnectInSettingsAndChrome =
 	require(RobloxGui.Modules.Flags.GetFFlagEnableConnectDisconnectInSettingsAndChrome)
+local isInExperienceUIVREnabled =
+	require(CorePackages.Workspace.Packages.SharedExperimentDefinition).isInExperienceUIVREnabled
+
 local locales = nil
-if GetFFlagEnableConnectDisconnectInSettingsAndChrome() then
+if GetFFlagEnableConnectDisconnectInSettingsAndChrome() or isInExperienceUIVREnabled then
 	local LocalizationService = game:GetService("LocalizationService")
 	local Localization = require(CorePackages.Workspace.Packages.InExperienceLocales).Localization
 
@@ -72,6 +75,7 @@ local GetFFlagFixSeamlessVoiceIntegrationWithPrivateVoice = SharedFlags.GetFFlag
 local GetFFlagVoiceChatClientRewriteMasterLua = SharedFlags.GetFFlagVoiceChatClientRewriteMasterLua
 
 local CrossExpVoiceIXPManager = require(CorePackages.Workspace.Packages.CrossExperienceVoice).IXPManager.default
+local isSpatial = require(CorePackages.Workspace.Packages.AppCommonLib).isSpatial
 
 local GameSettingsConstants
 
@@ -162,6 +166,12 @@ else
 		["ChatTranslationToggleFrame"] = 42,
 		-- Camera Sensitivity
 		["MouseAdvancedFrame"] = 50,
+		-- VR Settings
+		["VRComfortSettingFrame"] = if isInExperienceUIVREnabled then 54 else nil,
+		["VRVignetteEnabledFrame"] = if isInExperienceUIVREnabled then 55 else nil,
+		["VRSteppedRotationEnabledFrame"] = if isInExperienceUIVREnabled then 56 else nil,
+		["VRThirdPersonFixedCamEnabledFrame"] = if isInExperienceUIVREnabled then 57 else nil,
+		["VRSafetyBubbleModeFrame"] = if isInExperienceUIVREnabled then 58 else nil,
 		-- Input/Output and Volume
 		["DeviceFrameInput"] = 60,
 		["DeviceFrameOutput"] = 61,
@@ -264,7 +274,9 @@ local isDesktopClient = (platform == Enum.Platform.Windows)
 	or (platform == Enum.Platform.OSX)
 	or (platform == Enum.Platform.UWP)
 local isMobileClient = (platform == Enum.Platform.IOS) or (platform == Enum.Platform.Android)
-local UseMicroProfiler = (isMobileClient or isDesktopClient) and canUseMicroProfiler
+local UseMicroProfiler = if isInExperienceUIVREnabled
+	then ((isMobileClient or isDesktopClient or isSpatial()) and canUseMicroProfiler)
+	else ((isMobileClient or isDesktopClient) and canUseMicroProfiler)
 
 local GetFIntVoiceChatDeviceChangeDebounceDelay =
 	require(RobloxGui.Modules.Flags.GetFIntVoiceChatDeviceChangeDebounceDelay)
@@ -988,7 +1000,7 @@ local function Initialize()
 				if GetFFlagEnableExplicitSettingsChangeAnalytics() then
 					newValue = GameSettings.MicroProfilerWebServerEnabled
 				end
-			elseif isDesktopClient then
+			elseif isDesktopClient or (isInExperienceUIVREnabled and isSpatial()) then
 				if GetFFlagEnableExplicitSettingsChangeAnalytics() then
 					microprofilerType = "regular"
 					oldValue = GameSettings.OnScreenProfilerEnabled
@@ -1019,7 +1031,7 @@ local function Initialize()
 				else
 					return 2
 				end
-			elseif isDesktopClient then
+			elseif isDesktopClient or (isInExperienceUIVREnabled and isSpatial()) then
 				if GameSettings.OnScreenProfilerEnabled then
 					return 1
 				else
@@ -3276,7 +3288,10 @@ local function Initialize()
 			voiceConnectSetRowRef(voiceConnectRow)
 			voiceDisconnectSetRowRef(voiceDisconnectRow)
 
-			if VoiceChatServiceManager:ShouldShowJoinVoice() then
+			if GetFFlagFixSeamlessVoiceIntegrationWithPrivateVoice() and isVoiceFocused() then
+				voiceConnectRow.Visible = false
+				voiceDisconnectRow.Visible = false
+			elseif VoiceChatServiceManager:ShouldShowJoinVoice() then
 				voiceConnectRow.Visible = true
 				voiceDisconnectRow.Visible = false
 			else
@@ -3285,6 +3300,193 @@ local function Initialize()
 			end
 		end
 	end
+
+	local function createVRComfortSettingOptions()
+		local vrComfortSettingEnumValues = Enum.VRComfortSetting:GetEnumItems()
+		local localizationKeys = {
+			title = "CoreScripts.InGameMenu.PageTitle.VRComfortSettings",
+			description = "CoreScripts.InGameMenu.GameSettings.ComfortSettingsDescription",
+			["Enum.VRComfortSetting.Comfort"] = "CoreScripts.InGameMenu.GameSettings.ComfortSettingComfort",
+			["Enum.VRComfortSetting.Normal"] = "CoreScripts.InGameMenu.GameSettings.ComfortSettingNormal",
+			["Enum.VRComfortSetting.Expert"] = "CoreScripts.InGameMenu.GameSettings.ComfortSettingExpert",
+			["Enum.VRComfortSetting.Custom"] = "CoreScripts.InGameMenu.GameSettings.ComfortSettingCustom",
+			vignetteEnabled = "CoreScripts.InGameMenu.GameSettings.VignetteEnabled",
+			steppedRotationEnabled = "CoreScripts.InGameMenu.GameSettings.VRSteppedRotationEnabled",
+			thirdPersonFixedCamEnabled = "CoreScripts.InGameMenu.GameSettings.VRThirdPersonFixedCamEnabled",
+			on = "InGame.CommonUI.Label.On",
+			off = "InGame.CommonUI.Label.Off",
+		}
+
+		local vrComfortSettingLabels = {}
+		for i, value in ipairs(vrComfortSettingEnumValues) do
+			vrComfortSettingLabels[i] = locales:Format(localizationKeys[tostring(value)])
+		end
+
+		local vrComfortSettingIndex = table.find(vrComfortSettingEnumValues, GameSettings.VRComfortSetting)
+		this.VRComfortSettingFrame, this.VRComfortSettingLabel, this.VRComfortSettingSelector = utility:AddNewRow(
+			this,
+			locales:Format(localizationKeys.title),
+			"Selector",
+			vrComfortSettingLabels,
+			vrComfortSettingIndex,
+			nil,
+			locales:Format(localizationKeys.description)
+		)
+		this.VRComfortSettingFrame.LayoutOrder = SETTINGS_MENU_LAYOUT_ORDER["VRComfortSettingFrame"]
+
+		local vrVignetteEnabledIndex = if GameSettings.VignetteEnabled then 1 else 2
+		this.VRVignetteEnabledFrame, this.VRVignetteEnabledLabel, this.VRVignetteEnabledSelector = utility:AddNewRow(
+			this,
+			locales:Format(localizationKeys.vignetteEnabled),
+			"Selector",
+			{ locales:Format(localizationKeys.on), locales:Format(localizationKeys.off) },
+			vrVignetteEnabledIndex
+		)
+		this.VRVignetteEnabledFrame.LayoutOrder = SETTINGS_MENU_LAYOUT_ORDER["VRVignetteEnabledFrame"]
+
+		local vrSteppedRotationEnabledIndex = if GameSettings.VRSmoothRotationEnabled then 2 else 1
+		this.VRSteppedRotationEnabledFrame, this.VRSteppedRotationEnabledLabel, this.VRSteppedRotationEnabledSelector =
+			utility:AddNewRow(
+				this,
+				locales:Format(localizationKeys.steppedRotationEnabled),
+				"Selector",
+				{ locales:Format(localizationKeys.on), locales:Format(localizationKeys.off) },
+				vrSteppedRotationEnabledIndex
+			)
+		this.VRSteppedRotationEnabledFrame.LayoutOrder = SETTINGS_MENU_LAYOUT_ORDER["VRSteppedRotationEnabledFrame"]
+
+		local vrThirdPersonFixedCamEnabledIndex = if GameSettings.VRThirdPersonFollowCamEnabled then 2 else 1
+		this.VRThirdPersonFixedCamEnabledFrame, this.VRThirdPersonFixedCamEnabledLabel, this.VRThirdPersonFixedCamEnabledSelector =
+			utility:AddNewRow(
+				this,
+				locales:Format(localizationKeys.thirdPersonFixedCamEnabled),
+				"Selector",
+				{ locales:Format(localizationKeys.on), locales:Format(localizationKeys.off) },
+				vrThirdPersonFixedCamEnabledIndex
+			)
+		this.VRThirdPersonFixedCamEnabledFrame.LayoutOrder =
+			SETTINGS_MENU_LAYOUT_ORDER["VRThirdPersonFixedCamEnabledFrame"]
+
+		local updateComfortSettingsInteractable = function(vrComfortSettingValue)
+			if vrComfortSettingValue == Enum.VRComfortSetting.Custom then
+				this.VRVignetteEnabledSelector:SetZIndex(2)
+				this.VRVignetteEnabledLabel.ZIndex = 2
+				this.VRVignetteEnabledSelector:SetInteractable(true)
+				this.VRSteppedRotationEnabledSelector:SetZIndex(2)
+				this.VRSteppedRotationEnabledLabel.ZIndex = 2
+				this.VRSteppedRotationEnabledSelector:SetInteractable(true)
+				this.VRThirdPersonFixedCamEnabledSelector:SetZIndex(2)
+				this.VRThirdPersonFixedCamEnabledLabel.ZIndex = 2
+				this.VRThirdPersonFixedCamEnabledSelector:SetInteractable(true)
+			else
+				this.VRVignetteEnabledSelector:SetZIndex(1)
+				this.VRVignetteEnabledLabel.ZIndex = 1
+				this.VRVignetteEnabledSelector:SetInteractable(false)
+				this.VRSteppedRotationEnabledSelector:SetZIndex(1)
+				this.VRSteppedRotationEnabledLabel.ZIndex = 1
+				this.VRSteppedRotationEnabledSelector:SetInteractable(false)
+				this.VRThirdPersonFixedCamEnabledSelector:SetZIndex(1)
+				this.VRThirdPersonFixedCamEnabledLabel.ZIndex = 1
+				this.VRThirdPersonFixedCamEnabledSelector:SetInteractable(false)
+			end
+		end
+
+		this.VRComfortSettingSelector.IndexChanged:connect(function(newIndex)
+			local enumValue = vrComfortSettingEnumValues[newIndex]
+			GameSettings.VRComfortSetting = enumValue
+			updateComfortSettingsInteractable(enumValue)
+		end)
+		updateComfortSettingsInteractable(GameSettings.VRComfortSetting)
+
+		this.VRVignetteEnabledSelector.IndexChanged:connect(function(newIndex)
+			if GameSettings.VRComfortSetting == Enum.VRComfortSetting.Custom then
+				GameSettings.VignetteEnabledCustomOption = newIndex == 1
+			end
+		end)
+
+		this.VRSteppedRotationEnabledSelector.IndexChanged:connect(function(newIndex)
+			if GameSettings.VRComfortSetting == Enum.VRComfortSetting.Custom then
+				GameSettings.VRSmoothRotationEnabledCustomOption = newIndex == 2
+			end
+		end)
+
+		this.VRThirdPersonFixedCamEnabledSelector.IndexChanged:connect(function(newIndex)
+			if GameSettings.VRComfortSetting == Enum.VRComfortSetting.Custom then
+				GameSettings.VRThirdPersonFollowCamEnabledCustomOption = newIndex == 2
+			end
+		end)
+
+		GameSettings:GetPropertyChangedSignal("VRComfortSetting"):Connect(function()
+			local index = table.find(vrComfortSettingEnumValues, GameSettings.VRComfortSetting)
+			if this.VRComfortSettingSelector:GetSelectedIndex() ~= index then
+				this.VRComfortSettingSelector:SetSelectionIndex(index)
+			end
+		end)
+
+		GameSettings:GetPropertyChangedSignal("VignetteEnabled"):Connect(function()
+			local index = if GameSettings.VignetteEnabled then 1 else 2
+			if this.VRVignetteEnabledSelector:GetSelectedIndex() ~= index then
+				this.VRVignetteEnabledSelector:SetSelectionIndex(index)
+			end
+		end)
+
+		GameSettings:GetPropertyChangedSignal("VRSmoothRotationEnabled"):Connect(function()
+			local index = if GameSettings.VRSmoothRotationEnabled then 2 else 1
+			if this.VRSteppedRotationEnabledSelector:GetSelectedIndex() ~= index then
+				this.VRSteppedRotationEnabledSelector:SetSelectionIndex(index)
+			end
+		end)
+
+		GameSettings:GetPropertyChangedSignal("VRThirdPersonFollowCamEnabled"):Connect(function()
+			local index = if GameSettings.VRThirdPersonFollowCamEnabled then 2 else 1
+			if this.VRThirdPersonFixedCamEnabledSelector:GetSelectedIndex() ~= index then
+				this.VRThirdPersonFixedCamEnabledSelector:SetSelectionIndex(index)
+			end
+		end)
+	end -- of createVRComfortSettingOptions
+
+	local function createVRSafetyBubbleModeOptions()
+		local vrSafetyBubbleModeEnumValues = Enum.VRSafetyBubbleMode:GetEnumItems()
+		local localizationKeys = {
+			title = "CoreScripts.InGameMenu.GameSettings.SafetyBubbleModeTitle",
+			description = "CoreScripts.InGameMenu.GameSettings.SafetyBubbleModeDescription",
+			["Enum.VRSafetyBubbleMode.NoOne"] = "CoreScripts.InGameMenu.GameSettings.SafetyBubbleModeNoOne",
+			["Enum.VRSafetyBubbleMode.OnlyFriends"] = "CoreScripts.InGameMenu.GameSettings.SafetyBubbleModeOnlyFriends",
+			["Enum.VRSafetyBubbleMode.Anyone"] = "CoreScripts.InGameMenu.GameSettings.SafetyBubbleModeAnyone",
+		}
+
+		local vrSafetyBubbleModeLabels = {}
+		for i, value in ipairs(vrSafetyBubbleModeEnumValues) do
+			vrSafetyBubbleModeLabels[i] = locales:Format(localizationKeys[tostring(value)])
+		end
+
+		local vrSafetyBubbleModeIndex = table.find(vrSafetyBubbleModeEnumValues, GameSettings.VRSafetyBubbleMode)
+		task.defer(function()
+			this.VRSafetyBubbleModeFrame, this.VRSafetyBubbleModeLabel, this.VRSafetyBubbleModeSelector =
+				utility:AddNewRow(
+					this,
+					locales:Format(localizationKeys.title),
+					"DropDown",
+					vrSafetyBubbleModeLabels,
+					vrSafetyBubbleModeIndex,
+					nil,
+					locales:Format(localizationKeys.description)
+				)
+			this.VRSafetyBubbleModeFrame.LayoutOrder = SETTINGS_MENU_LAYOUT_ORDER["VRSafetyBubbleModeFrame"]
+
+			this.VRSafetyBubbleModeSelector.IndexChanged:connect(function(newIndex)
+				local enumValue = vrSafetyBubbleModeEnumValues[newIndex]
+				GameSettings.VRSafetyBubbleMode = enumValue
+			end)
+
+			GameSettings:GetPropertyChangedSignal("VRSafetyBubbleMode"):Connect(function()
+				local index = table.find(vrSafetyBubbleModeEnumValues, GameSettings.VRSafetyBubbleMode)
+				if this.VRSafetyBubbleModeSelector:GetSelectedIndex() ~= index then
+					this.VRSafetyBubbleModeSelector:SetSelectionIndex(index)
+				end
+			end)
+		end)
+	end -- of createVRSafetyBubbleModeOptions
 
 	this.VoiceChatOptionsEnabled = false
 	local crossExperienceVoiceJoinedListener = nil
@@ -3334,7 +3536,11 @@ local function Initialize()
 						this[VOICE_CONNECT_FRAME_KEY].Visible = false
 					end
 					if GetFFlagEnableConnectDisconnectInSettingsAndChrome() and this[VOICE_DISCONNECT_FRAME_KEY] then
-						this[VOICE_DISCONNECT_FRAME_KEY].Visible = true
+						if GetFFlagFixSeamlessVoiceIntegrationWithPrivateVoice() then
+							this[VOICE_DISCONNECT_FRAME_KEY].Visible = not isCurrentlyVoiceFocused
+						else
+							this[VOICE_DISCONNECT_FRAME_KEY].Visible = true
+						end
 					end
 
 					if GetFFlagEnableShowVoiceUI() then
@@ -3496,6 +3702,13 @@ local function Initialize()
 				end
 			end
 		end)
+	end
+
+	if isInExperienceUIVREnabled then
+		if isSpatial() then
+			createVRComfortSettingOptions()
+			createVRSafetyBubbleModeOptions()
+		end
 	end
 
 	createVolumeOptions()

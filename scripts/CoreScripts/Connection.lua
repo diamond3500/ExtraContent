@@ -37,7 +37,6 @@ local DEFAULT_ERROR_PROMPT_KEY = "ErrorPrompt"
 local FFlagCoreScriptShowTeleportPrompt = require(RobloxGui.Modules.Flags.FFlagCoreScriptShowTeleportPrompt)
 
 local FFlagCreatorBanLocalization = require(RobloxGui.Modules.Flags.FFlagCreatorBanLocalization)
-local FFlagErrorStringRefactor = game:DefineFastFlag("ErrorStringRefactor", false)
 
 local FFlagAllowDisconnectGuiForOkUnknown = require(RobloxGui.Modules.Flags.FFlagAllowDisconnectGuiForOkUnknown)
 
@@ -564,70 +563,6 @@ local function getCreatorBanString(errorMsg: string)
 	return errorMsg
 end
 
--- Look up in corelocalization for new string. Otherwise fallback to the original string
--- If it is teleport error but not TELEPORT_FAILED, use general string "Reconnect failed."
-local function getErrorString_deprecated(errorMsg: string, errorCode, reconnectError)
-	if errorCode == Enum.ConnectionError.OK then
-		return ""
-	end
-
-	if reconnectError then
-		local success, attemptTranslation = pcall(function()
-			return coreScriptTableTranslator:FormatByKey("InGame.ConnectionError.ReconnectFailed")
-		end)
-		if success then
-			return attemptTranslation
-		end
-		return "Reconnect was unsuccessful. Please try again."
-	end
-
-	if errorCode == Enum.ConnectionError.DisconnectLuaKick then
-		-- Limit final message length to a reasonable value
-		errorMsg = errorMsg:sub(1, fintMaxKickMessageLength)
-
-		-- errorMsg is dev message
-		local success = false
-		local attemptTranslation = errorMsg
-		if errorMsg == '' then
-			success, attemptTranslation = pcall(function()
-				return coreScriptTableTranslator:FormatByKey("InGame.ConnectionError.DisconnectLuaKick")
-			end)
-		else
-			success, attemptTranslation = pcall(function()
-				local luaKickMessageKey = "InGame.ConnectionError.DisconnectLuaKickWithMessage"
-				return coreScriptTableTranslator:FormatByKey(luaKickMessageKey, { RBX_STR = errorMsg })
-			end)
-		end
-		if success then
-			return attemptTranslation
-		end
-		return errorMsg
-	end
-
-	local key = string.gsub(tostring(errorCode), "Enum", "InGame")
-	if coreScriptTableTranslator then
-		local success, attemptTranslation = pcall(function()
-			if errorCode == Enum.ConnectionError.DisconnectIdle then
-				return coreScriptTableTranslator:FormatByKey(key, { RBX_NUM = tostring(20) })
-			end
-			return coreScriptTableTranslator:FormatByKey(key)
-		end)
-
-		-- Mute errors for jv app if they are not successfully translated
-		if not success and fflagShouldMuteUnlocalizedError then
-			local successUnknownError, localizedUnknownError = pcall(function()
-				return coreScriptTableTranslator:FormatByKey("InGame.ConnectionError.UnknownError")
-			end)
-			return successUnknownError and localizedUnknownError or ""
-		end
-
-		if success then
-			return attemptTranslation
-		end
-	end
-	return errorMsg
-end
-
 -- Localize the error string, with a fallback to the original string upon failure.
 -- If it is a teleport error but not TELEPORT_FAILED, use general string "Reconnect failed."
 local function getErrorString(errorMsg: string, errorCode, reconnectError)
@@ -685,23 +620,13 @@ local function updateErrorPrompt(errorMsg, errorCode, errorType)
 
 	if FFlagCreatorBanLocalization() and errorCode == Enum.ConnectionError.PlacelaunchCreatorBan then
 		errorMsg = getCreatorBanString(errorMsg)
-	elseif FFlagErrorStringRefactor then
-		if errorType == Enum.ConnectionError.TeleportErrors
+	elseif errorType == Enum.ConnectionError.TeleportErrors
 		and connectionPromptState ~= ConnectionPromptState.TELEPORT_FAILED
 		then
 			errorMsg = getErrorString(errorMsg, errorCode, true)
 		else
 			errorMsg = getErrorString(errorMsg, errorCode)
 		end
-	else
-		if errorType == Enum.ConnectionError.TeleportErrors
-		and connectionPromptState ~= ConnectionPromptState.TELEPORT_FAILED
-		then
-			errorMsg = getErrorString_deprecated(errorMsg, errorCode, true)
-		else
-			errorMsg = getErrorString_deprecated(errorMsg, errorCode)
-		end
-	end
 
 	if connectionPromptState == ConnectionPromptState.RECONNECT_DISABLED then
 		errorMsg = reconnectDisabledReason

@@ -4,6 +4,8 @@
 local root = script.Parent.Parent
 
 local getEngineFeatureRemoveProxyWrap = require(root.flags.getEngineFeatureRemoveProxyWrap)
+local getEngineFeatureEngineEditableMeshAvatarPublish =
+	require(root.flags.getEngineFeatureEngineEditableMeshAvatarPublish)
 
 local AssetService = game:GetService("AssetService")
 
@@ -27,7 +29,11 @@ end
 local function createEditableInstanceFromId(content, contentIdMap, contentType)
 	local success, result = pcall(function()
 		if contentType == "EditableMesh" then
-			return AssetService:CreateEditableMeshStripSkinningAsync(content.Uri) :: any
+			if getEngineFeatureEngineEditableMeshAvatarPublish() then
+				return AssetService:CreateEditableMeshAsync(content)
+			else
+				return AssetService:CreateEditableMeshStripSkinningAsync(content.Uri) :: any
+			end
 		else
 			return (AssetService :: any):CreateEditableImageAsync(content) :: any
 		end

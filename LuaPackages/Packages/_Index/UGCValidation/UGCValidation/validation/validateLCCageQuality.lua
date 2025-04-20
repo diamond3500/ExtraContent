@@ -13,6 +13,7 @@ local getFStringLCCageQualityDocumentationLink = require(root.flags.getFStringLC
 local getEngineFeatureUGCValidateCageMeshDistance = require(root.flags.getEngineFeatureUGCValidateCageMeshDistance)
 local getFFlagUGCValidateImportOrigin = require(root.flags.getFFlagUGCValidateImportOrigin)
 local getFIntUGCValidateImportOriginMax = require(root.flags.getFIntUGCValidateImportOriginMax)
+local getFFlagUGCValidatePropertiesRefactor = require(root.flags.getFFlagUGCValidatePropertiesRefactor)
 
 local getEngineFeatureEngineUGCValidationCageUVDuplicates =
 	require(root.flags.getEngineFeatureEngineUGCValidationCageUVDuplicates)
@@ -90,19 +91,21 @@ local function validateLCCageQuality(
 		end
 	end
 
-	if getFFlagUGCValidateImportOrigin() then
-		local importOriginMagnitude = wrapLayer.ImportOrigin.Position.Magnitude
-		local importOriginMax = getFIntUGCValidateImportOriginMax() / 100
-		if importOriginMagnitude > importOriginMax then
-			table.insert(
-				issues,
-				string.format(
-					"WrapLayer ImportOrigin.Position is %.2f from the origin. The max is %.2f. You should move the Position closer to the origin",
-					importOriginMagnitude,
-					importOriginMax
+	if not getFFlagUGCValidatePropertiesRefactor() then
+		if getFFlagUGCValidateImportOrigin() then
+			local importOriginMagnitude = wrapLayer.ImportOrigin.Position.Magnitude
+			local importOriginMax = getFIntUGCValidateImportOriginMax() / 100
+			if importOriginMagnitude > importOriginMax then
+				table.insert(
+					issues,
+					string.format(
+						"WrapLayer ImportOrigin.Position is %.2f from the origin. The max is %.2f. You should move the Position closer to the origin",
+						importOriginMagnitude,
+						importOriginMax
+					)
 				)
-			)
-			validationResult = false
+				validationResult = false
+			end
 		end
 	end
 
