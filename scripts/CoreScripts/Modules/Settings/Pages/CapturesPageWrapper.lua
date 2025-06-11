@@ -17,12 +17,6 @@ local SettingsPageFactory = require(Modules.Settings.SettingsPageFactory)
 local Theme = require(Modules.Settings.Theme)
 local ChromeEnabled = require(RobloxGui.Modules.Chrome.Enabled)()
 
-local FFlagUseNotificationsLocalization do
-	local flagSuccess, flagResult = pcall(function()
-		return settings():GetFFlag('UseNotificationsLocalization')
-	end)
-	FFlagUseNotificationsLocalization = flagSuccess and flagResult
-end
 local GetFFlagFixIGMTabTransitions = require(script.Parent.Parent.Flags.GetFFlagFixIGMTabTransitions)
 
 -- Initialize page
@@ -31,25 +25,13 @@ local this = SettingsPageFactory:CreateNewPage()
 -- Tab Header customization
 this.TabHeader.Name = "CapturesTab"
 
-if Theme.UIBloxThemeEnabled then
-	local icon = if ChromeEnabled then Theme.Images["icons/controls/cameraOff"] else Theme.Images["icons/controls/screenshot"]
-	this.TabHeader.TabLabel.Icon.Image = icon.Image
-	this.TabHeader.TabLabel.Icon.ImageRectOffset = icon.ImageRectOffset
-	this.TabHeader.TabLabel.Icon.ImageRectSize = icon.ImageRectSize
+local icon = if ChromeEnabled then Theme.Images["icons/controls/cameraOff"] else Theme.Images["icons/controls/screenshot"]
+this.TabHeader.TabLabel.Icon.Image = icon.Image
+this.TabHeader.TabLabel.Icon.ImageRectOffset = icon.ImageRectOffset
+this.TabHeader.TabLabel.Icon.ImageRectSize = icon.ImageRectSize
 
-	this.TabHeader.TabLabel.Title.AutoLocalize = false
-	this.TabHeader.TabLabel.Title.Text = RobloxTranslator:FormatByKey("Feature.SettingsHub.Label.Captures")
-else
-	this.TabHeader.Icon.Image = "rbxasset://textures/ui/Settings/MenuBarIcons/CaptureTab.png"
-
-	if FFlagUseNotificationsLocalization then
-		this.TabHeader.Title.AutoLocalize = false
-		this.TabHeader.Title.Text = RobloxTranslator:FormatByKey("Feature.SettingsHub.Label.Captures")
-	else
-		this.TabHeader.Icon.Title.AutoLocalize = false
-		this.TabHeader.Icon.Title.Text = RobloxTranslator:FormatByKey("Feature.SettingsHub.Label.Captures")
-	end
-end
+this.TabHeader.TabLabel.Title.AutoLocalize = false
+this.TabHeader.TabLabel.Title.Text = RobloxTranslator:FormatByKey("Feature.SettingsHub.Label.Captures")
 
 this.PageListLayout.Parent = nil
 this.ShouldShowBottomBar = true
@@ -58,8 +40,6 @@ this.ShouldShowHubBar = true
 this.Page.Name = "Captures"
 this.Page.Size = UDim2.fromScale(1, 0)
 
--- When Theme.UIBloxThemeEnabled is true there is a padding element added
--- This isn't needed for the Captures page, which has its own padding
 local paddingInstance = this.Page:FindFirstChildWhichIsA("UIPadding")
 if paddingInstance then
 	paddingInstance:Destroy()

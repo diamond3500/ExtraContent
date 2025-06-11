@@ -1,20 +1,8 @@
 local CorePackages = game:GetService("CorePackages")
 
 local Roact = require(CorePackages.Packages.Roact)
-
-local BUTTON_IMAGE = "rbxasset://textures/ui/Settings/MenuBarAssets/MenuButton.png"
-local BUTTON_IMAGE_ACTIVE = "rbxasset://textures/ui/Settings/MenuBarAssets/MenuButtonSelected.png"
-local BUTTON_SLICE = Rect.new(8, 6, 46, 44)
-
 local Modules = game:GetService("CoreGui").RobloxGui.Modules
 local Theme = require(Modules.Settings.Theme)
-
-local DROPSHADOW_SIZE = {
-	Left = 4,
-	Right = 4,
-	Top = 2,
-	Bottom = 6,
-}
 
 local RectangleButton = Roact.PureComponent:extend("RectangleButton")
 RectangleButton.defaultProps = {
@@ -35,36 +23,17 @@ function RectangleButton:render()
 	local zIndex = self.props.zIndex
 	local onClick = self.props.onClick
 	local visible = self.props.visible
-
 	local children = self.props[Roact.Children] or {}
+	local borderColor = "DefaultButtonStroke"
 
-	local buttonImage = self.state.isHovering and BUTTON_IMAGE_ACTIVE or BUTTON_IMAGE
-
-	if not Theme.UIBloxThemeEnabled then
-		-- This is just needed if the button contains a drop shadow.
-		-- Insert padding so that child elements of this component are positioned
-		-- inside the button as expected. This is to offset the dropshadow
-		-- extending outside the button bounds.
-		children["UIPadding"] = Roact.createElement("UIPadding", {
-			PaddingLeft = UDim.new(0, DROPSHADOW_SIZE.Left),
-			PaddingRight = UDim.new(0, DROPSHADOW_SIZE.Right),
-			PaddingTop = UDim.new(0, DROPSHADOW_SIZE.Top),
-			PaddingBottom = UDim.new(0, DROPSHADOW_SIZE.Bottom),
-		})
-	end
-
-	if Theme.UIBloxThemeEnabled then
-		local borderColor = "DefaultButtonStroke"
-
-		children["Border"] = Roact.createElement("UIStroke", {
-			Color = Theme.color(borderColor),
-			Transparency = Theme.transparency(borderColor),
-			Thickness = Theme.DefaultStokeThickness,
-		})
-		children["UICorner"] = Roact.createElement("UICorner", {
-			CornerRadius = Theme.DefaultCornerRadius,
-		})
-	end
+	children["Border"] = Roact.createElement("UIStroke", {
+		Color = Theme.color(borderColor),
+		Transparency = Theme.transparency(borderColor),
+		Thickness = Theme.DefaultStokeThickness,
+	})
+	children["UICorner"] = Roact.createElement("UICorner", {
+		CornerRadius = Theme.DefaultCornerRadius,
+	})
 
 	local isSelectable = false
 
@@ -93,21 +62,7 @@ function RectangleButton:render()
 			end
 		end,
 	}, {
-		ButtonBackground = not Theme.UIBloxThemeEnabled and Roact.createElement("ImageLabel", {
-			BackgroundTransparency = 1,
-			Position = UDim2.new(0, -DROPSHADOW_SIZE.Left, 0, -DROPSHADOW_SIZE.Top),
-			Size = UDim2.new(
-				1,
-				DROPSHADOW_SIZE.Left + DROPSHADOW_SIZE.Right,
-				1,
-				DROPSHADOW_SIZE.Top + DROPSHADOW_SIZE.Bottom
-			),
-			Image = buttonImage,
-			ScaleType = Enum.ScaleType.Slice,
-			SliceCenter = BUTTON_SLICE,
-			ZIndex = zIndex,
-		}, children),
-		ButtonBackgroundUIBlox = Theme.UIBloxThemeEnabled and Roact.createElement("ImageLabel", {
+		ButtonBackgroundUIBlox = Roact.createElement("ImageLabel", {
 			BackgroundColor3 = Theme.color(if self.state.isHovering then "DefaultButtonHover" else "DefaultButton"),
 			BackgroundTransparency = Theme.transparency(
 				if self.state.isHovering then "DefaultButtonHover" else "DefaultButton"

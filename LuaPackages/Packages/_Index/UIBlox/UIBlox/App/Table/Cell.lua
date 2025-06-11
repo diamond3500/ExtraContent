@@ -47,6 +47,8 @@ Cell.validateProps = t.strictInterface({
 	horizontalPadding = t.optional(t.number),
 	-- A Boolean value that determines whether the cell can be selected using a gamepad.
 	selectable = t.optional(t.boolean),
+	-- A boolean value that determines whether the cell's listLayout wraps
+	layoutWraps = t.optional(t.boolean),
 
 	-- A Boolean value that determines whether the cell is disabled.
 	isDisabled = t.optional(t.boolean),
@@ -194,6 +196,7 @@ function Cell:renderWithProviders(style, getSelectionCursor)
 					FillDirection = Enum.FillDirection.Horizontal,
 					VerticalAlignment = Enum.VerticalAlignment.Center,
 					HorizontalFlex = Enum.UIFlexAlignment.SpaceBetween,
+					Wraps = self.props.layoutWraps,
 				}),
 				Padding = Roact.createElement("UIPadding", {
 					PaddingLeft = UDim.new(0, self.props.horizontalPadding),

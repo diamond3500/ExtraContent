@@ -10,7 +10,6 @@ local Modules = CoreGui.RobloxGui.Modules
 local ShareGame = Modules.Settings.Pages.ShareGame
 local Promise = require(CorePackages.Packages.Promise)
 local utility = require(RobloxGui.Modules.Settings.Utility)
-local Theme = require(RobloxGui.Modules.Settings.Theme)
 
 local GetFFlagEnableNewInviteMenu = require(Modules.Flags.GetFFlagEnableNewInviteMenu)
 
@@ -89,7 +88,7 @@ function ShareGamePageFrame:render()
 	local showInviteLink = self:shouldShowInviteLink(self.props.gameInfo)
 	local listHeightOffset = 0
 	local listPositionOffset = 0
-	if showInviteLink and Theme.UIBloxThemeEnabled then
+	if showInviteLink then
 		listHeightOffset = listHeightOffset - SHARE_INVITE_LINK_HEIGHT
 		listPositionOffset = 10
 	end

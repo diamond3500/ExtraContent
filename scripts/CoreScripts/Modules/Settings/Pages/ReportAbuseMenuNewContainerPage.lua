@@ -13,11 +13,6 @@ local ReportAbuseAnalytics = require(RobloxGui.Modules.AbuseReportMenu).ReportAb
 local PageInstance = nil
 local Theme = require(RobloxGui.Modules.Settings.Theme)
 
-local success, result = pcall(function()
-	return settings():GetFFlag("UseNotificationsLocalization")
-end)
-local FFlagUseNotificationsLocalization = success and result
-
 ----------- CLASS DECLARATION --------------
 
 local function Initialize()
@@ -77,21 +72,11 @@ local function Initialize()
 
 	------ TAB CUSTOMIZATION -------
 	this.TabHeader.Name = "ReportAbuseTab"
-	if Theme.UIBloxThemeEnabled then
-		local icon = Theme.Images["icons/actions/feedback"]
-		this.TabHeader.TabLabel.Icon.ImageRectOffset = icon.ImageRectOffset
-		this.TabHeader.TabLabel.Icon.ImageRectSize = icon.ImageRectSize
-		this.TabHeader.TabLabel.Icon.Image = icon.Image
-
-		this.TabHeader.TabLabel.Title.Text = "Report"
-	else
-		this.TabHeader.Icon.Image = "rbxasset://textures/ui/Settings/MenuBarIcons/ReportAbuseTab.png"
-		if FFlagUseNotificationsLocalization then
-			this.TabHeader.Title.Text = "Report"
-		else
-			this.TabHeader.Icon.Title.Text = "Report"
-		end
-	end
+	local icon = Theme.Images["icons/actions/feedback"]
+	this.TabHeader.TabLabel.Icon.ImageRectOffset = icon.ImageRectOffset
+	this.TabHeader.TabLabel.Icon.ImageRectSize = icon.ImageRectSize
+	this.TabHeader.TabLabel.Icon.Image = icon.Image
+	this.TabHeader.TabLabel.Title.Text = "Report"
 
 	------ PAGE CUSTOMIZATION -------
 	this.Page.Name = "ReportAbuseMenuNewContainerPage"

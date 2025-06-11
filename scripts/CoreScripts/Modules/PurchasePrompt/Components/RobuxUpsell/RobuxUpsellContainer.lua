@@ -104,7 +104,7 @@ function RobuxUpsellContainer:createElement()
 			selectedUpsellIndex = props.robuxPackageSelection,
 			virtualItemBadgeType = props.virtualItemBadgeType,
 			onUpsellSuggestionsSelected = function(index: number)
-				props.onUpsellSuggestionsSelected(props.robuxSuggestions, index)
+				props.onUpsellSuggestionsSelected(props.robuxSuggestions, index, props.virtualItemBadgeType)
 			end,
 
 			robuxProviderId = props.robuxProductId,
@@ -236,8 +236,8 @@ end, function(dispatch)
 			GuiService.SelectedCoreObject = nil
 			return dispatch(completeRequest())
 		end,
-		onUpsellSuggestionsSelected = function(products: {[number]: RobuxUpsellProduct}, index: number)
-			return dispatch(PromptNativeUpsellSuggestions(products, index))
+		onUpsellSuggestionsSelected = function(products: {[number]: RobuxUpsellProduct}, index: number, virtualItemBadgeType: string)
+			return dispatch(PromptNativeUpsellSuggestions(products, index, virtualItemBadgeType))
 		end,
 		onAnalyticEvent = function(name, data)
 			return dispatch(sendEvent(name, data))

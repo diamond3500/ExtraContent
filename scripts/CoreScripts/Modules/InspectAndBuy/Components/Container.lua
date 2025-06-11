@@ -72,7 +72,7 @@ function Container:render()
 	local localPlayerModel = self.props.localPlayerModel
 	local visible = self.props.visible
 	local panelLayout = Theme.UseInspectAndBuyPanel()
-	local topBarHeight = if Theme.UIBloxThemeEnabled then TopBarConstants.TopBarHeight else 46
+	local topBarHeight = TopBarConstants.TopBarHeight
 
 	return Roact.createElement(InspectAndBuyContext.Consumer, {
 		render = function(views)

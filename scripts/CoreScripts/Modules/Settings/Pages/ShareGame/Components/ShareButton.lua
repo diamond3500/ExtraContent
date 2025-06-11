@@ -25,21 +25,15 @@ function ShareButton:render()
 	local text = self.props.text
 
 	local children = {}
-	if Theme.UIBloxThemeEnabled then
-		children["Border"] = Roact.createElement("UIStroke", {
-			ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
-			Color = if self.state.isHovering and isEnabled then HOVERED_BACKGROUND_COLOR else BACKGROUND_COLOR,
-			Thickness = Theme.DefaultStokeThickness,
-			Transparency = if isEnabled then 0 else 0.5,
-		})
-		children["UICorner"] = Roact.createElement("UICorner", {
-			CornerRadius = Theme.DefaultCornerRadius,
-		})
-	else
-		children["UICorner"] = Roact.createElement("UICorner", {
-			CornerRadius = UDim.new(0, 4),
-		})
-	end
+	children["Border"] = Roact.createElement("UIStroke", {
+		ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+		Color = if self.state.isHovering and isEnabled then HOVERED_BACKGROUND_COLOR else BACKGROUND_COLOR,
+		Thickness = Theme.DefaultStokeThickness,
+		Transparency = if isEnabled then 0 else 0.5,
+	})
+	children["UICorner"] = Roact.createElement("UICorner", {
+		CornerRadius = Theme.DefaultCornerRadius,
+	})
 
 	return Roact.createElement("TextButton", {
 		LayoutOrder = layoutOrder,

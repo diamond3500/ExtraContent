@@ -25,6 +25,8 @@ local LocalPlayer = Players.LocalPlayer
 local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 local RobloxTranslator = require(CorePackages.Workspace.Packages.RobloxTranslator)
 
+local onBlockButtonActivated = require(RobloxGui.Modules.Settings.onBlockButtonActivated)
+
 local Images = UIBlox.App.ImageSet.Images
 
 local isNewInGameMenuEnabled = require(RobloxGui.Modules.isNewInGameMenuEnabled)
@@ -35,10 +37,12 @@ local ClosePlayerDropDown = require(PlayerList.Actions.ClosePlayerDropDown)
 
 local GetFFlagFixDropDownVisibility = require(PlayerList.Flags.GetFFlagFixDropDownVisibility)
 local FFlagPlayerListReduceRerenders = require(PlayerList.Flags.FFlagPlayerListReduceRerenders)
+local FFlagNavigateToBlockingModal = require(RobloxGui.Modules.Common.Flags.FFlagNavigateToBlockingModal)
 
 local BlockPlayer = require(PlayerList.Thunks.BlockPlayer)
 local UnblockPlayer = require(PlayerList.Thunks.UnblockPlayer)
 local RequestFriendship = require(PlayerList.Thunks.RequestFriendship)
+local SetPlayerIsBlocked = require(PlayerList.Actions.SetPlayerIsBlocked)
 
 local PlayerDropDown = Roact.PureComponent:extend("PlayerDropDown")
 
@@ -61,7 +65,8 @@ PlayerDropDown.validateProps = t.strictInterface({
 	subjectToChinaPolicies = t.boolean,
 
 	closeDropDown = t.callback,
-	blockPlayer = t.callback,
+	blockPlayer = if FFlagNavigateToBlockingModal then nil else t.callback,
+	blockPlayerSuccess = if FFlagNavigateToBlockingModal then t.callback else nil,
 	unblockPlayer = t.callback,
 	requestFriendship = t.callback,
 })
@@ -120,7 +125,15 @@ function PlayerDropDown:createBlockButton(playerRelationship)
 			if playerRelationship.isBlocked then
 				self.props.unblockPlayer(selectedPlayer)
 			else
-				self.props.blockPlayer(selectedPlayer)
+				if FFlagNavigateToBlockingModal then
+					onBlockButtonActivated(selectedPlayer, nil, self.__componentName, {
+						onBlockingSuccess = function()
+							self.props.blockPlayerSuccess(selectedPlayer)
+						end
+					})
+				else
+					self.props.blockPlayer(selectedPlayer)
+				end
 			end
 		end,
 	})
@@ -297,9 +310,13 @@ local function mapDispatchToProps(dispatch)
 			return dispatch(ClosePlayerDropDown())
 		end,
 
-		blockPlayer = function(player)
+		blockPlayer = if FFlagNavigateToBlockingModal then nil else function(player)
 			return dispatch(BlockPlayer(player))
 		end,
+
+		blockPlayerSuccess = if FFlagNavigateToBlockingModal then function(player)
+			dispatch(SetPlayerIsBlocked(player, true))
+		end else nil,
 
 		unblockPlayer = function(player)
 			return dispatch(UnblockPlayer(player))

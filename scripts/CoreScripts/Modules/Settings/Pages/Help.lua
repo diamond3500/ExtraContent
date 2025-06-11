@@ -169,14 +169,12 @@ local function Initialize()
 				Parent = pcGroupFrame
 			  };
 
-			  if Theme.UIBloxThemeEnabled then
 				actionInputFrame.BackgroundColor3 = Theme.color("InputActionBackground")
 				Create'UICorner'
 				{
 					CornerRadius = UDim.new(0, 3),
 					Parent = actionInputFrame,
 				}
-			  end
 
 			  local nameLabel = Create'TextLabel'
 			  {
@@ -725,11 +723,7 @@ local function Initialize()
 			local size = givenSize or GuiService:GetScreenResolution()
 			local ySize = size.y - 350
 			if smallScreen then
-				if Theme.UIBloxThemeEnabled then
-					ySize = size.y - 120
-				else
-					ySize = size.y - 100
-				end
+				ySize = size.y - 120
 			end
 			this.HelpPages[TOUCH_TAG].Size = UDim2.new(1,0,0,ySize)
 			updateTouchLayout(scheme)
@@ -738,26 +732,14 @@ local function Initialize()
 
 	------ TAB CUSTOMIZATION -------
 	this.TabHeader.Name = "HelpTab"
+	this.TabHeader.TabLabel.Icon.Image ="rbxasset://textures/ui/Settings/MenuBarIcons/HelpTab.png"
 
-	if Theme.UIBloxThemeEnabled then
-		this.TabHeader.TabLabel.Icon.Image ="rbxasset://textures/ui/Settings/MenuBarIcons/HelpTab.png"
-
-		local icon = Theme.Images["icons/menu/help"]
-		this.TabHeader.TabLabel.Icon.ImageRectOffset = icon.ImageRectOffset
-		this.TabHeader.TabLabel.Icon.ImageRectSize = icon.ImageRectSize
-		this.TabHeader.TabLabel.Icon.Image = icon.Image
-
-		this.TabHeader.TabLabel.Title.Text = "Help"
-	else
-		this.TabHeader.Icon.Image = "rbxasset://textures/ui/Settings/MenuBarIcons/HelpTab.png"
-
-		if FFlagUseNotificationsLocalization then
-			this.TabHeader.Title.Text = "Help"
-		else
-			this.TabHeader.Icon.Title.Text = "Help"
-		end
-	end
-
+	local icon = Theme.Images["icons/menu/help"]
+	this.TabHeader.TabLabel.Icon.ImageRectOffset = icon.ImageRectOffset
+	this.TabHeader.TabLabel.Icon.ImageRectSize = icon.ImageRectSize
+	this.TabHeader.TabLabel.Icon.Image = icon.Image
+	this.TabHeader.TabLabel.Title.Text = "Help"
+	
 	------ PAGE CUSTOMIZATION -------
 	this.Page.Name = "Help"
 

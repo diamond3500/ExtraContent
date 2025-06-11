@@ -6,41 +6,55 @@ local React = require(Packages.React)
 local useTokens = require(Foundation.Providers.Style.useTokens)
 local useCursor = require(Foundation.Providers.Cursor.useCursor)
 local Types = require(Foundation.Components.Types)
-local Icon = require(Foundation.Components.Icon)
 local View = require(Foundation.Components.View)
 local Text = require(Foundation.Components.Text)
 local Flags = require(Foundation.Utility.Flags)
 local withDefaults = require(Foundation.Utility.withDefaults)
 local withCommonProps = require(Foundation.Utility.withCommonProps)
 
-local IconSize = require(Foundation.Enums.IconSize)
+local Accessory = require(script.Parent.Accessory)
+
 local IconPosition = require(Foundation.Enums.IconPosition)
 type IconPosition = IconPosition.IconPosition
 
 local StateLayerMode = require(Foundation.Enums.StateLayerMode)
-local ControlState = require(Foundation.Enums.ControlState)
-type ControlState = ControlState.ControlState
 
 local CursorType = require(Foundation.Enums.CursorType)
 type CursorType = CursorType.CursorType
 
+local ChipSize = require(Foundation.Enums.ChipSize)
+type ChipSize = ChipSize.ChipSize
+
+local useChipVariants = require(script.Parent.useChipVariants)
+
+type Accessory = Accessory.Accessory
+
+-- DEPRECATED
 type Icon = {
 	name: string,
 	position: IconPosition,
 }
 
-type ChipProps = {
+export type ChipProps = {
+	-- Make required
 	text: string?,
-	icon: (string | Icon)?,
+	leading: string? | Accessory,
+	trailing: string? | Accessory,
 	onActivated: () -> (),
-	isDisabled: boolean?,
 	isChecked: boolean?,
+	size: ChipSize?,
+
+	-- DEPRECATED
 	children: React.ReactNode?,
+	-- DEPRECATED
+	isDisabled: boolean?,
+	-- DEPRECATED
+	icon: (string | Icon)?,
 } & Types.CommonProps
 
 local defaultProps = {
-	isDisabled = false,
 	isChecked = false,
+	size = ChipSize.Medium,
 }
 
 local function Chip(chipProps: ChipProps, ref: React.Ref<GuiObject>?)
@@ -48,59 +62,74 @@ local function Chip(chipProps: ChipProps, ref: React.Ref<GuiObject>?)
 
 	local tokens = useTokens()
 	local cursor = useCursor(CursorType.SmallPill)
+	local leading, trailing = React.useMemo(function()
+		local leading, trailing
+		if props.icon == nil then
+			return props.leading, props.trailing
+		end
 
-	local icon = React.useMemo(function(): Icon?
 		if typeof(props.icon) == "string" then
-			return {
-				name = props.icon,
-				position = IconPosition.Left,
+			leading = {
+				iconName = props.icon,
 			}
 		else
-			return props.icon
+			local icon = {
+				iconName = props.icon.name,
+			}
+			if props.icon.position == IconPosition.Left then
+				leading = icon
+			else
+				trailing = icon
+			end
 		end
-	end, { props.icon })
 
-	local contentStyle = if props.isChecked
-		then tokens.Color.ActionSubEmphasis.Foreground
-		else tokens.Color.Content.Emphasis
+		return props.leading or leading, props.trailing or trailing
+	end, { props.leading :: any, props.icon, props.trailing })
+
+	local variantProps = useChipVariants(tokens, props.size, props.isChecked, leading ~= nil, trailing ~= nil)
 
 	return React.createElement(
 		View,
 		withCommonProps(props, {
-			GroupTransparency = if props.isDisabled then 0.5 else nil,
 			selection = {
-				Selectable = not props.isDisabled,
+				Selectable = true,
 				SelectionImageObject = cursor,
 			},
 			onActivated = props.onActivated,
-			isDisabled = props.isDisabled,
 			stateLayer = if Flags.FoundationFixChipEmphasisHoverState and props.isChecked
 				then {
 					mode = StateLayerMode.Inverse,
 				}
 				else nil,
-			tag = {
-				["row gap-xsmall size-0-700 padding-medium auto-x align-y-center align-x-center clip radius-circle"] = true,
-				["bg-action-sub-emphasis"] = props.isChecked,
-				["bg-shift-200"] = not props.isChecked,
-			},
+			backgroundStyle = variantProps.chip.backgroundStyle,
+			padding = variantProps.chip.padding,
+			tag = variantProps.chip.tag,
 			ref = ref,
 		}),
 		{
-			Icon = if icon
-				then React.createElement(Icon, {
-					name = icon.name,
-					size = IconSize.Small,
-					style = contentStyle,
-					LayoutOrder = if icon.position == IconPosition.Left then 1 else 3,
+			Leading = if leading
+				then React.createElement(Accessory, {
+					isLeading = true,
+					config = leading,
+					size = props.size,
+					contentStyle = variantProps.text.contentStyle,
 				})
 				else nil,
 			Text = if props.text and props.text ~= ""
 				then React.createElement(Text, {
 					Text = props.text,
-					textStyle = contentStyle,
+					textStyle = variantProps.text.contentStyle,
 					LayoutOrder = 2,
-					tag = "auto-x size-0-full shrink text-caption-large text-truncate-end",
+					tag = variantProps.text.tag,
+					padding = variantProps.text.padding,
+				})
+				else nil,
+			Trailing = if trailing
+				then React.createElement(Accessory, {
+					isLeading = false,
+					config = trailing,
+					size = props.size,
+					contentStyle = variantProps.text.contentStyle,
 				})
 				else nil,
 		}

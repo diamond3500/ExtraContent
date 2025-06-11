@@ -8,6 +8,7 @@ local HttpService = game:GetService("HttpService")
 local Promise = require(CorePackages.Packages.Promise)
 local AnalyticsService = game:GetService("RbxAnalyticsService")
 
+
 local PlayerAudioFocusChanged = ReplicatedStorage:WaitForChild("PlayerAudioFocusChanged")
 
 local VoiceChatCore = require(CorePackages.Workspace.Packages.VoiceChatCore)
@@ -21,6 +22,10 @@ local createPersistenceMiddleware = CrossExperience.Middlewares.createPersistenc
 local BlockingUtility = require(CorePackages.Workspace.Packages.BlockingUtility)
 
 local SharedFlags = require(CorePackages.Workspace.Packages.SharedFlags)
+local FFlagEnableVoiceChatMuteForVideoCaptures = SharedFlags.GetFFlagEnableVoiceChatMuteForVideoCaptures()
+
+local CaptureService = if FFlagEnableVoiceChatMuteForVideoCaptures then game:GetService("CaptureService") else nil
+
 local LuauPolyfill = require(CorePackages.Packages.LuauPolyfill)
 local FFlagPartyVoiceBlockSync = SharedFlags.FFlagPartyVoiceBlockSync
 local FFlagPartyVoiceBypassCheck = SharedFlags.FFlagPartyVoiceBypassCheck
@@ -35,6 +40,8 @@ local FFlagEnableCrossExpVoiceDebug = game:DefineFastFlag("EnableCrossExpVoiceDe
 local GetFFlagEnableLuaVoiceChatAnalytics = require(VoiceChatCore.Flags.GetFFlagEnableLuaVoiceChatAnalytics)
 local GetFFlagFixSeamlessVoiceIntegrationWithPrivateVoice =
 	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagFixSeamlessVoiceIntegrationWithPrivateVoice
+local GetFFlagEnableCrossExperienceVoiceCaptureMute =
+	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagEnableCrossExperienceVoiceCaptureMute
 local FFlagLogPartyVoiceReconnect = game:DefineFastFlag("LogPartyVoiceReconnect", false)
 local FFlagPartyVoiceReportJoinFailed = game:DefineFastFlag("PartyVoiceReportJoinFailed", false)
 local FFlagPartyVoiceCatchError = game:DefineFastFlag("PartyVoiceCatchError", false)
@@ -280,6 +287,10 @@ local handleUnblockedParticipant = function(params: { userId: number })
 	end
 end
 
+local isCapturingVideo = function()
+	return GetFFlagEnableCrossExperienceVoiceCaptureMute() and CaptureService and CaptureService:IsCapturingVideo()
+end
+
 type PermissionResult = {
 	hasMicPermissions: boolean,
 }
@@ -463,6 +474,19 @@ local function setupListeners()
 		initializeParticipantBlockListener()
 	end
 
+	if GetFFlagEnableCrossExperienceVoiceCaptureMute() then
+		cevEventManager:addObserver(CrossExperience.Constants.EVENTS.PARTY_VOICE_MUTE_ALL, function(params)
+			executePostVoiceAsyncInit(function()
+				CoreVoiceManager:MuteAll(true, params.context)
+			end)
+		end)
+		cevEventManager:addObserver(CrossExperience.Constants.EVENTS.PARTY_VOICE_UNMUTE_ALL, function(params)
+			executePostVoiceAsyncInit(function()
+				CoreVoiceManager:MuteAll(false, params.context)
+			end)
+		end)
+	end
+
 	-- unmute mic at the start once muted state is initialized
 	unmuteMicrophoneOnce()
 
@@ -567,14 +591,20 @@ function initializeAFM()
 			AudioFocusService:RegisterContextIdFromLua(contextId)
 
 			local deafenAll = function()
-				CoreVoiceManager:MuteAll(true, "AudioFocusManagement CEV")
+				if not isCapturingVideo then
+					CoreVoiceManager:MuteAll(true, "AudioFocusManagement CEV")
+				end
+	
 				if not CoreVoiceManager.localMuted then
 					CoreVoiceManager:ToggleMic()
 				end
 			end
 
 			local undeafenAll = function()
-				CoreVoiceManager:MuteAll(false, "AudioFocusManagement CEV")
+				if not isCapturingVideo then
+					CoreVoiceManager:MuteAll(false, "AudioFocusManagement CEV")
+				end
+				
 				if CoreVoiceManager.localMuted then
 					CoreVoiceManager:ToggleMic()
 				end
@@ -611,14 +641,14 @@ function initializeAFM()
 					if focusGranted then
 						log:info("CEV audio focus request granted, preparing to undeafen.")
 						CoreVoiceManager.muteChanged.Event:Once(function(muted)
-							if muted ~= nil then
+							if muted ~= nil and not isCapturingVideo then
 								CoreVoiceManager:MuteAll(false, "AudioFocusManagement CEV")
 							end
 						end)
 					else
 						log:info("CEV audio focus request denied, preparing to deafen.")
 						CoreVoiceManager.muteChanged.Event:Once(function(muted)
-							if muted ~= nil then
+							if muted ~= nil and not isCapturingVideo then
 								CoreVoiceManager:MuteAll(true, "AudioFocusManagement CEV")
 							end
 						end)

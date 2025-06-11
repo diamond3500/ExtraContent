@@ -61,7 +61,8 @@ local FFlagAddCursorProviderToPurchasePromptApp = require(Root.Flags.FFlagAddCur
 
 -- Imports needed for analytics
 local HttpService = game:GetService("HttpService")
-local FFlagEnableAnalyticEventV1UpsellFlow = require(Root.Flags.FFlagEnableAnalyticEventV1UpsellFlow)
+local FFlagInExperiencePurchaseFlowRework = require(CorePackages.Workspace.Packages.SharedFlags).FFlagInExperiencePurchaseFlowRework
+local setPurchaseFlowUUID = require(Root.Actions.SetPurchaseFlowUUID)
 
 local ProductPurchaseContainer = Roact.Component:extend(script.Name)
 
@@ -69,8 +70,6 @@ local CONFIRM_BUTTON_BIND = "ProductPurchaseConfirmButtonBind"
 local CANCEL_BUTTON_BIND = "ProductPurchaseCancelButtonBind"
 
 -- ProductPurchaseContainer localization keys
-local PURCHASE_MESSAGE_KEY = "CoreScripts.PurchasePrompt.PurchaseMessage.%s"
-
 local BUY_ITEM_LOCALE_KEY = "CoreScripts.PurchasePrompt.Title.BuyItem"
 local SETTINGS_LOCALE_KEY = "CoreScripts.PurchasePrompt.Button.Settings"
 local OK_LOCALE_KEY = "CoreScripts.PurchasePrompt.Button.OK"
@@ -117,8 +116,9 @@ function ProductPurchaseContainer:init()
 	self.state = {
 		screenSize = Vector2.new(0, 0),
 		isLuobu = false,
-		analyticId = if FFlagEnableAnalyticEventV1UpsellFlow then HttpService:GenerateGUID(false) else nil,
+		analyticId = HttpService:GenerateGUID(false),
 	}
+	self.props.setPurchaseFlowUUID(HttpService:GenerateGUID(false))
 
 	coroutine.wrap(function()
 		if CachedPolicyService:IsSubjectToChinaPolicies() then
@@ -131,30 +131,28 @@ function ProductPurchaseContainer:init()
 	-- Desktop in game upsell follows a different flow than all other upsells
 	-- We're mimicking the events emitted in the following componenet here:
 	-- modules/economy/in-app-purchasing/iap-experience/src/PurchaseFlow/RobuxUpsell/RobuxUpsellFlow.lua
-	if FFlagEnableAnalyticEventV1UpsellFlow then
-		self.emitPurchaseFlowEvent = function(eventType, inputType)
-			-- If view name not explicitly set, don't emit event
-			local viewName = promptStateToViewName(self.props.promptState)
-			if not viewName then
-				return
-			end
-			local data = {
-				purchase_flow_uuid = self.state.analyticId,
-				purchase_flow = "InGameRobuxUpsell",
-				view_name = viewName,
-				purchase_event_type = eventType,
-				input_type = inputType,
-				event_metadata = HttpService:JSONEncode({
-					universe_id = tostring(game.GameId),
-					item_product_id = tostring(self.props.productInfo.productId),
-					item_name = self.props.productInfo.name,
-					price = tostring(self.props.productInfo.price),
-					user_balance = tostring(self.props.accountInfo.balance) or nil,
-					package_robux_amount = tostring(self.props.robuxPurchaseAmount) or nil,
-				}),
-			}
-			self.props.onAnalyticEvent("UserPurchaseFlow", data)
+	self.emitPurchaseFlowEvent = function(eventType, inputType)
+		-- If view name not explicitly set, don't emit event
+		local viewName = promptStateToViewName(self.props.promptState)
+		if not viewName then
+			return
 		end
+		local data = {
+			purchase_flow_uuid = if FFlagInExperiencePurchaseFlowRework then self.props.purchaseFlowUUID else self.state.analyticId,
+			purchase_flow = "InGameRobuxUpsell",
+			view_name = viewName,
+			purchase_event_type = eventType,
+			input_type = inputType,
+			event_metadata = HttpService:JSONEncode({
+				universe_id = tostring(game.GameId),
+				item_product_id = tostring(self.props.productInfo.productId),
+				item_name = self.props.productInfo.name,
+				price = tostring(self.props.productInfo.price),
+				user_balance = tostring(self.props.accountInfo.balance) or nil,
+				package_robux_amount = tostring(self.props.robuxPurchaseAmount) or nil,
+			}),
+		}
+		self.props.onAnalyticEvent("UserPurchaseFlow", data)
 	end
 
 	self.changeScreenSize = function(rbx)
@@ -327,6 +325,10 @@ function ProductPurchaseContainer:willUpdate(nextProps)
 end
 
 function ProductPurchaseContainer:didUpdate(prevProps, prevState)
+	-- We want to generate a new purchase flow uuid when the prompt state is reset
+	if self.props.promptState ~= prevProps.promptState and self.props.promptState == PromptState.None then
+		self.props.setPurchaseFlowUUID(HttpService:GenerateGUID(false))
+	end
 	-- Game unpause and purchase workflow could be triggered at the same time by doing some hack.
 	-- The fix is to check the game pause status in didUpdate(), and close ourchase prompt if in game pause.
 	-- More details in https://jira.rbx.com/browse/CLI-59903.
@@ -363,7 +365,7 @@ function ProductPurchaseContainer:didUpdate(prevProps, prevState)
 
 	-- Call the function anytime the prompt state changes
 	-- reportModalShown will be responsible for determining how to process the prompt state
-	if FFlagEnableAnalyticEventV1UpsellFlow and prevProps.promptState ~= self.props.promptState then
+	if prevProps.promptState ~= self.props.promptState then
 		self.emitPurchaseFlowEvent("ViewShown")
 	end
 end
@@ -376,7 +378,7 @@ function ProductPurchaseContainer:getMessageKeysFromPromptState()
 	if promptState == PromptState.PurchaseComplete then
 		return {
 			messageText = {
-				key = PURCHASE_MESSAGE_KEY:format("Succeeded"),
+				key = "CoreScripts.PurchasePrompt.PurchaseMessage.Succeeded",
 				params = {
 					ITEM_NAME = productInfo.name,
 				},
@@ -504,19 +506,14 @@ function ProductPurchaseContainer:render()
 			buyItemControllerIcon = self.props.isGamepadEnabled and BUTTON_A_ICON or nil,
 			cancelControllerIcon = self.props.isGamepadEnabled and BUTTON_B_ICON or nil,
 
-			buyItemActivated = if FFlagEnableAnalyticEventV1UpsellFlow
-				then function()
-					self.confirmButtonPressed()
-					self.emitPurchaseFlowEvent("UserInput", "Buy")
-				end
-				else self.confirmButtonPressed,
-			cancelPurchaseActivated = if FFlagEnableAnalyticEventV1UpsellFlow
-				then function()
-					self.cancelButtonPressed()
-					self.emitPurchaseFlowEvent("UserInput", "Cancel")
-				end
-				else self.cancelButtonPressed,
-
+			buyItemActivated = function()
+				self.confirmButtonPressed()
+				self.emitPurchaseFlowEvent("UserInput", "Buy")
+			end,
+			cancelPurchaseActivated = function()
+				self.cancelButtonPressed()
+				self.emitPurchaseFlowEvent("UserInput", "Cancel")
+			end,
 			isLuobu = self.state.isLuobu,
 			isVng = GetFFlagOpenVngTosForVngRobuxUpsell() and getAppFeaturePolicies().getShowVNGTosForRobuxUpsell(),
 		})
@@ -688,6 +685,7 @@ local function mapStateToProps(state)
 	local isTestPurchase = isMockingPurchases(state.promptRequest.requestType)
 	
 	return {
+		purchaseFlowUUID = state.purchaseFlowUUID,
 		purchaseFlow = state.purchaseFlow,
 		promptState = state.promptState,
 		requestType = state.promptRequest.requestType,
@@ -706,6 +704,9 @@ end
 
 local function mapDispatchToProps(dispatch)
 	return {
+		setPurchaseFlowUUID = function(purchaseFlowUUID)
+			dispatch(setPurchaseFlowUUID(purchaseFlowUUID))
+		end,
 		onBuy = function()
 			dispatch(purchaseItem())
 		end,

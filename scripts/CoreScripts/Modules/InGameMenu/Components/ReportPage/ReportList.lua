@@ -30,8 +30,6 @@ local TrustAndSafety = require(RobloxGui.Modules.TrustAndSafety)
 local ReportList = Roact.PureComponent:extend("ReportList")
 local GetFFlagIGMGamepadSelectionHistory = require(InGameMenu.Flags.GetFFlagIGMGamepadSelectionHistory)
 
-game:DefineFastFlag("IGMReportListMissingBottomEntry", false)
-
 local DIVIDER_HEIGHT = 1
 local DIVIDER_INDENT = 80
 
@@ -153,13 +151,7 @@ function ReportList:didUpdate(prevProps, prevState)
 end
 
 function ReportList:render()
-	local canvasSize = nil
-
-	if game:GetFastFlag("IGMReportListMissingBottomEntry") then
-		canvasSize = GAME_LABEL_HEIGHT + #self.props.players * (PLAYER_LABEL_HEIGHT + DIVIDER_HEIGHT)
-	else
-		canvasSize = #self.props.players * (PLAYER_LABEL_HEIGHT + 1)
-	end
+	local canvasSize = GAME_LABEL_HEIGHT + #self.props.players * (PLAYER_LABEL_HEIGHT + DIVIDER_HEIGHT)
 
 	if isShowEUDSAIllegalContentReportingLink() then
 		return withLocalization({

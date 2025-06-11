@@ -33,6 +33,8 @@ local AnalyticsService = game:GetService("RbxAnalyticsService")
 local YPOS_OFFSET = -math.floor(STYLE_PADDING / 2)
 local usingGamepad = false
 
+game:DefineFastFlag("GamepadUsesClosestVisibleDialog", false)
+
 local FlagHasReportedPlace = false
 local localPlayer = playerService.LocalPlayer
 while localPlayer == nil do
@@ -611,6 +613,9 @@ function addDialog(dialog)
 			end)
 			setChatNotificationTone(chatGui, dialog.Purpose, dialog.Tone)
 
+			if game:GetFastFlag("GamepadUsesClosestVisibleDialog") and game:GetEngineFeature("ClosestVisibleDialogAPI") then
+				dialog:SetGuiObject(chatGui)
+			end
 			dialogMap[dialog] = chatGui
 
 			dialogConnections[dialog] = dialog.Changed:connect(function(prop)
@@ -733,6 +738,10 @@ game:GetService("RunService").Heartbeat:Connect(function()
     end
 
 	if usingGamepad == true then
+		if humanoidRootPart and game:GetFastFlag("GamepadUsesClosestVisibleDialog") and game:GetEngineFeature("ClosestVisibleDialogAPI") then
+			local characterPosition = humanoidRootPart.Position
+			closestDialog = guiService.GetClosestVisibleDialogToPosition(guiService, characterPosition)
+		end
 		if closestDialog ~= lastClosestDialog then
 			if dialogMap[lastClosestDialog] then
 				dialogMap[lastClosestDialog].Background.ActivationButton.Visible = false

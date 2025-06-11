@@ -49,7 +49,7 @@ function Header:render()
 		AnchorPoint = Vector2.new(0, 1),
 		LayoutOrder = layoutOrder,
 		ZIndex = zIndex,
-		Position = if Theme.UIBloxThemeEnabled then UDim2.new(0, 0, 0, 4) else UDim2.new(0, 0, 0, 0),
+		Position = UDim2.new(0, 0, 0, 4),
 	}, {
 		Title = Roact.createElement("TextLabel", {
 			BackgroundTransparency = 1,

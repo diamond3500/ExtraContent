@@ -38,6 +38,8 @@ local FFlagCoreScriptShowTeleportPrompt = require(RobloxGui.Modules.Flags.FFlagC
 
 local FFlagAllowDisconnectGuiForOkUnknown = require(RobloxGui.Modules.Flags.FFlagAllowDisconnectGuiForOkUnknown)
 
+local FFlagEnableExperienceGenericChallengeRenderingConnection = game:DefineFastFlag("EnableExperienceGenericChallengeRenderingConnection", false)
+
 local function safeGetFInt(name, defaultValue)
 	local success, result = pcall(function()
 		return tonumber(settings():GetFVariable(name))
@@ -694,4 +696,15 @@ if coreGuiOverflowDetection then
 			end
 		end
 	end)
+end
+
+if FFlagEnableExperienceGenericChallengeRenderingConnection then
+	-- Initializes the in-experience challenge interceptor, used to handle
+	-- rendering challenges such as 2-Step-Verification on suspicious actions e.g. economic actions.
+	-- This is to support challenges at game join.
+	coroutine.wrap(function()
+		local initChallengeInterceptor =
+			require(CorePackages.Workspace.Packages.GenericChallenges).Middleware.InitExperienceChallengeInterceptor
+		initChallengeInterceptor()
+	end)()
 end

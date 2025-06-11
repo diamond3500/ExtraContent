@@ -75,7 +75,7 @@ local contentByType = {
 			return view:renderChildrenStats("UserdataBreakdown")
 		end,
 	},
-	["refs"] = {
+	[if game:GetEngineFeature("UnparentedInstances") then "UniqueRefs" else "refs"] = {
 		hint = [[This view shows engine DataModel instances that are only referenced by Luau VM and are not directly parented to the DataModel.
 		For each instance, it will show the set of paths that make it accessible and prevent garbage collection.
 		Most often, engine Luau references come from ModuleScript tables, active signal connections and active coroutines in the task scheduler.]],
@@ -86,6 +86,19 @@ local contentByType = {
 		end,
 	},
 }
+
+if game:GetEngineFeature("UnparentedInstances") then 
+	contentByType["UnparentedRefs"] = {
+		hint = [[This view shows engine DataModel instances that are not parented to any instance (and are also not unique references).
+		For each instance, it will show the set of paths that make it accessible and prevent garbage collection.
+		]],
+		headers = { "Name", "Count", "Total Instances" },
+
+		initFragmentSource = function(view)
+			return view:renderUnparentedRefs()
+		end,
+	}
+end
 
 local LuauHeapView = Roact.PureComponent:extend("LuauHeapView")
 
@@ -201,6 +214,31 @@ function LuauHeapView:renderChildrenStats(group)
 	return children
 end
 
+function LuauHeapView:renderUnparentedRefs()
+	local data = self.props.data[self.props.activeSnapshot] :: LuauHeapTypes.HeapReport
+	local refs = data.Refs
+
+	if not refs then
+		return {}
+	end
+	local roots = refs.UnparentedReferences
+	if not roots then
+		return {}
+	end
+
+	local children = {}
+
+	for key, value in roots do
+		children[key] = Roact.createElement(LuauHeapViewRefEntry, {
+			layoutOrder = -value.Instances, -- Sort by reverse instance count
+			depth = 0,
+			data = value,
+		})
+	end
+
+	return children
+end
+
 function LuauHeapView:renderChildrenRefs()
 	local data = self.props.data[self.props.activeSnapshot] :: LuauHeapTypes.HeapReport
 
@@ -255,27 +293,55 @@ function LuauHeapView:createTabSelector(size, position)
 			})
 			else nil
 	end
+	if game:GetEngineFeature("UnparentedInstances") then 
+		return Roact.createElement("Frame", {
+			Size = size,
+			Position = position,
+			BackgroundTransparency = 1,
+		}, {
+			Graph = createButton("graph", "Graph", 0),
+			GraphHighlight = createHighlight("graph", 0),
 
-	return Roact.createElement("Frame", {
-		Size = size,
-		Position = position,
-		BackgroundTransparency = 1,
-	}, {
-		Graph = createButton("graph", "Graph", 0),
-		GraphHighlight = createHighlight("graph", 0),
+			Tags = createButton("tag", "Object Tags", 1),
+			TagHighlight = createHighlight("tag", 1),
 
-		Tags = createButton("tag", "Object Tags", 1),
-		TagHighlight = createHighlight("tag", 1),
+			Memcat = createButton("memcat", "Memory Categories", 2),
+			MemcatHighlight = createHighlight("memcat", 2),
 
-		Memcat = createButton("memcat", "Memory Categories", 2),
-		MemcatHighlight = createHighlight("memcat", 2),
+			Userdata = createButton("userdata", "Object Classes", 3),
+			UserdataHighlight = createHighlight("userdata", 3),
 
-		Userdata = createButton("userdata", "Object Classes", 3),
-		UserdataHighlight = createHighlight("userdata", 3),
+			Refs = createButton("UniqueRefs", "Unique References", 4),
+			RefHighlight = createHighlight("UniqueRefs", 4),
 
-		Refs = createButton("refs", "Unique References", 4),
-		RefHighlight = createHighlight("refs", 4),
-	})
+			UnparentedInstances = createButton("UnparentedRefs", "Unparented Instances", 5),
+			UnparentedHighlight = createHighlight("UnparentedRefs", 5),
+		})
+	else 
+		return Roact.createElement("Frame", {
+			Size = size,
+			Position = position,
+			BackgroundTransparency = 1,
+		}, {
+			Graph = createButton("graph", "Graph", 0),
+			GraphHighlight = createHighlight("graph", 0),
+
+			Tags = createButton("tag", "Object Tags", 1),
+			TagHighlight = createHighlight("tag", 1),
+
+			Memcat = createButton("memcat", "Memory Categories", 2),
+			MemcatHighlight = createHighlight("memcat", 2),
+
+			Userdata = createButton("userdata", "Object Classes", 3),
+			UserdataHighlight = createHighlight("userdata", 3),
+
+			Refs = createButton("refs", "Unique References", 4),
+			RefHighlight = createHighlight("refs", 4),
+
+			UnparentedInstances = createButton("UnparentedRefs", "Unparented Instances", 5),
+			UnparentedHighlight = createHighlight("UnparentedRefs", 5),
+		})
+	end
 end
 
 function LuauHeapView:createStatsTableHeader(posScaleY, posOffsetY, headers)

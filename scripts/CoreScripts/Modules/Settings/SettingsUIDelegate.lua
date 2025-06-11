@@ -62,7 +62,6 @@ function SettingsUIDelegate.new(settingsHub)
 		_settingsHub = settingsHub,
 		_originalShieldConfig = nil,
 		_backgroundUICorner = nil,
-		_originalMenuAspectRatio = nil,
 		_vrEnabled = false,
 		_surfaceGuiEnabledConnection = nil,
 		_topBarConnection = nil,
@@ -108,10 +107,6 @@ function SettingsUIDelegate.enableVR(self)
 		})
 	end
 
-	self._originalMenuAspectRatio = self._settingsHub.MenuAspectRatio.AspectRatio
-	if self._originalMenuAspectRatio then
-		self._settingsHub.MenuAspectRatio.AspectRatio = self:getAspectRatio()
-	end
 	self._vrEnabled = true
 	if self._topBarConnection == nil then
 		-- TopBar will be always present, so we only init the connection once
@@ -165,9 +160,6 @@ function SettingsUIDelegate.disableVR(self)
 		self._backgroundUICorner.Parent = nil
 		self._backgroundUICorner = nil :: any
 	end
-
-	self._settingsHub.MenuAspectRatio.AspectRatio = self._originalMenuAspectRatio
-	self._originalMenuAspectRatio = nil
 	if self._surfaceGuiEnabledConnection ~= nil then
 		self._surfaceGuiEnabledConnection:disconnect()
 	end

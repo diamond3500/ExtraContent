@@ -13,8 +13,7 @@ pcall(function()
 	PlatformService = game:GetService("PlatformService")
 end)
 
-local GetFStringVNGWebshopUrl =
-	require(CorePackages.Workspace.Packages.SharedFlags).GetFStringVNGWebshopUrl
+local GetFStringVNGWebshopUrl = require(CorePackages.Workspace.Packages.SharedFlags).GetFStringVNGWebshopUrl
 local FFlagEnablePreSignedVngShopRedirectUrl =
 	require(CorePackages.Workspace.Packages.SharedFlags).FFlagEnablePreSignedVngShopRedirectUrl
 
@@ -24,6 +23,19 @@ local UrlBuilder = PurchasePromptDeps.UrlBuilder.UrlBuilder
 local BASE_URL = string.gsub(ContentProvider.BaseUrl:lower(), "/m.", "/www.")
 
 local PlatformInterface = {}
+
+type BaseContext = {
+	analyticId: string?,
+}
+
+local function addContextToUrl(url: string, context: any): string
+	for key, value in context do
+		if value then
+			url = url .. ("&%s=%s"):format(key, value)
+		end
+	end
+	return url
+end
 
 function PlatformInterface.new()
 	local service = {}
@@ -44,12 +56,10 @@ function PlatformInterface.new()
 		GuiService:OpenBrowserWindow(url)
 	end
 
-	function service.startRobuxUpsellWeb(productId: string?)
-		if productId then
-			GuiService:OpenBrowserWindow(("%supgrades/paymentmethods?ap=%s"):format(BASE_URL, productId))
-		else
-			GuiService:OpenBrowserWindow(("%sUpgrades/Robux.aspx"):format(BASE_URL))
-		end
+	function service.startPremiumUpsellWithContext(context: BaseContext, productId)
+		local url = ("%supgrades/paymentmethods?ap=%d"):format(BASE_URL, productId)
+		url = addContextToUrl(url, context)
+		GuiService:OpenBrowserWindow(url)
 	end
 
 	function service.startRobuxUpsellWebByFlow(purchaseFlow, productId: string)
@@ -58,6 +68,16 @@ function PlatformInterface.new()
 		else
 			GuiService:OpenBrowserWindow(("%sUpgrades/Robux.aspx?product_id=%s"):format(BASE_URL, productId))
 		end
+	end
+
+	function service.startRobuxUpsellWebByFlowWithContext(context: BaseContext, purchaseFlow, productId: string)
+		local shouldUsePaymentMethodsUrl = purchaseFlow == PurchaseFlow.RobuxUpsellV2 or purchaseFlow == PurchaseFlow.LargeRobuxUpsell
+		local url = if shouldUsePaymentMethodsUrl
+			then ("%supgrades/paymentmethods?ap=%s"):format(BASE_URL, productId)
+			else ("%sUpgrades/Robux.aspx?product_id=%s"):format(BASE_URL, productId)
+
+		url = addContextToUrl(url, context)
+		GuiService:OpenBrowserWindow(url)
 	end
 
 	function service.openSecuritySettings(challengeResponse: string?)
@@ -84,6 +104,12 @@ function PlatformInterface.new()
 		GuiService:OpenBrowserWindow(("%sUpgrades/Robux.aspx"):format(BASE_URL))
 	end
 
+	function service.openRobuxStoreWithContext(context: BaseContext)
+		local url = ("%sUpgrades/Robux.aspx"):format(BASE_URL)
+		url = addContextToUrl(url, context)
+		GuiService:OpenBrowserWindow(url)
+	end
+
 	function service.promptNativePurchaseWithLocalPlayer(mobileProductId)
 		return MarketplaceService:PromptNativePurchaseWithLocalPlayer(mobileProductId)
 	end
@@ -98,8 +124,8 @@ function PlatformInterface.new()
 
 	function service.openVngStore(vngShopRedirectUrl: string)
 		if FFlagEnablePreSignedVngShopRedirectUrl then
-			if not vngShopRedirectUrl or vngShopRedirectUrl == "" then 
-				vngShopRedirectUrl = GetFStringVNGWebshopUrl() 
+			if not vngShopRedirectUrl or vngShopRedirectUrl == "" then
+				vngShopRedirectUrl = GetFStringVNGWebshopUrl()
 			end
 			GuiService:OpenBrowserWindow(vngShopRedirectUrl)
 		else

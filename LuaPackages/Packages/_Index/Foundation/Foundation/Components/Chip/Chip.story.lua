@@ -3,52 +3,126 @@ local Packages = Foundation.Parent
 local React = require(Packages.React)
 local Dash = require(Packages.Dash)
 
-local Chip = require(Foundation.Components.Chip)
+local ChipSize = require(Foundation.Enums.ChipSize)
 local IconPosition = require(Foundation.Enums.IconPosition)
+local View = require(Foundation.Components.View)
 
-local Flags = require(Foundation.Utility.Flags)
+local Chip = require(Foundation.Components.Chip.Chip)
 
 local function Story(props)
 	return React.createElement(Chip, {
-		icon = props.icon,
+		leading = if #props.leading > 0 or type(props.leading) == "table" then props.leading else nil,
+		trailing = if #props.trailing > 0 or type(props.trailing) == "table" then props.trailing else nil,
 		text = props.text,
 		onActivated = props.onActivated,
-		isDisabled = props.isDisabled,
 		isChecked = props.isChecked,
+		size = props.size,
 	})
 end
 
 return {
 	summary = "Chip",
-	story = function(props)
-		Flags.FoundationFixChipEmphasisHoverState = props.controls.fixEmphasisHoverState
-
-		return Story({
-			icon = if props.controls.icon ~= ""
-				then {
-					name = props.controls.icon,
-					position = props.controls.iconPosition,
-				}
-				else nil,
-			text = props.controls.text,
-			onActivated = function()
-				print(`Chip activated`)
+	stories = {
+		{
+			name = "Basic",
+			story = function(props)
+				return Story({
+					text = props.controls.text,
+					onActivated = function()
+						print(`Chip activated`)
+					end,
+					leading = props.controls.leading,
+					trailing = props.controls.trailing,
+					isChecked = props.controls.isChecked,
+					size = props.controls.size,
+					chipDesignUpdate = props.controls.chipDesignUpdate,
+				})
 			end,
-			isDisabled = props.controls.isDisabled,
-			isChecked = props.controls.isChecked,
-		})
-	end,
+		} :: unknown,
+		{
+			name = "Sizes",
+			story = function(props)
+				return React.createElement(
+					View,
+					{ tag = "auto-xy row gap-xlarge" },
+					Dash.map(ChipSize, function(value, key)
+						return React.createElement(Story, {
+							key = key,
+							text = props.controls.text,
+							onActivated = function()
+								print(`Chip activated`)
+							end,
+							leading = props.controls.leading,
+							trailing = props.controls.trailing,
+							isChecked = props.controls.isChecked,
+							size = value,
+							chipDesignUpdate = props.controls.chipDesignUpdate,
+						})
+					end)
+				)
+			end,
+		},
+		{
+			name = "Back compatibility for chipDesignUpdate",
+			story = function(props)
+				return React.createElement(
+					View,
+					{ tag = "auto-xy row gap-xlarge" },
+					React.createElement(Chip, {
+						icon = "icons/common/robux",
+						text = props.controls.text,
+						onActivated = function()
+							print(`Chip activated`)
+						end,
+						isChecked = props.controls.isChecked,
+						-- Is just ignored
+						isDisabled = true,
+					}),
+					React.createElement(Chip, {
+						icon = {
+							name = "icons/common/robux",
+							position = IconPosition.Right,
+						},
+						text = props.controls.text,
+						onActivated = function()
+							print(`Chip activated`)
+						end,
+						isChecked = props.controls.isChecked,
+					})
+				)
+			end,
+		},
+	},
 	controls = {
-		fixEmphasisHoverState = Flags.FoundationFixChipEmphasisHoverState,
-		icon = {
-			"icons/actions/filter",
+		leading = {
+			"icons/actions/filter" :: any,
 			"icons/common/robux",
 			"icons/common/play",
+			{
+				iconName = "icons/actions/selectOn",
+				onActivated = function()
+					print("I've been clicked")
+				end,
+				isCircular = true,
+			},
 			"",
 		},
-		iconPosition = Dash.values(IconPosition),
+		trailing = {
+			"icons/actions/filter" :: any,
+			"icons/common/robux",
+			"icons/common/play",
+			"icons/status/success_small",
+			{
+				iconName = "icons/actions/selectOn",
+				onActivated = function()
+					print("I've been clicked")
+				end,
+				isCircular = true,
+			},
+			"",
+		},
+		size = Dash.values(ChipSize),
 		text = "Filter",
-		isDisabled = false,
 		isChecked = false,
 	},
 }

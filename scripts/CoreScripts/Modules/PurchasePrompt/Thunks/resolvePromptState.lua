@@ -190,7 +190,11 @@ local function resolvePromptState(productInfo, accountInfo, balanceInfo, already
 			end
 
 			if FFlagEnableUpsellSuggestionsAPI then
-				return getRobuxUpsellSuggestions(price, robuxBalance, paymentPlatform):andThen(
+				local universeId = game.GameId
+				local itemProductId = productInfo.ProductId
+				local itemName = productInfo.DisplayName
+				
+				return getRobuxUpsellSuggestions(price, robuxBalance, paymentPlatform, itemProductId, itemName, universeId):andThen(
 					-- success handler
 					function(upsellSuggestions)
 						return handleSuccessfulUpsellSuggestions(store, upsellSuggestions)

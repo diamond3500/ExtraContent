@@ -24,6 +24,8 @@ local FFlagEnablePreSignedVngShopRedirectUrl =
 	require(CorePackages.Workspace.Packages.SharedFlags).FFlagEnablePreSignedVngShopRedirectUrl
 local GetFStringVNGWebshopUrl =
 	require(CorePackages.Workspace.Packages.SharedFlags).GetFStringVNGWebshopUrl
+local FFlagInExperiencePurchaseFlowRework =
+	require(CorePackages.Workspace.Packages.SharedFlags).FFlagInExperiencePurchaseFlowRework
 
 local retryAfterUpsell = require(script.Parent.retryAfterUpsell)
 
@@ -109,7 +111,14 @@ local function launchRobuxUpsell()
 					store:dispatch(SetPromptState(PromptState.LeaveRobloxWarning))
 				end
 			else
-				platformInterface.startRobuxUpsellWebByFlow(state.purchaseFlow, SelectedRobuxPackage.getProductId(state))
+				if FFlagInExperiencePurchaseFlowRework then
+					local context = {
+						analyticId = state.purchaseFlowUUID,
+					}
+					platformInterface.startRobuxUpsellWebByFlowWithContext(context, state.purchaseFlow, SelectedRobuxPackage.getProductId(state))
+				else
+					platformInterface.startRobuxUpsellWebByFlow(state.purchaseFlow, SelectedRobuxPackage.getProductId(state))
+				end
 				store:dispatch(SetPromptState(PromptState.UpsellInProgress))
 			end
 		elseif upsellFlow == UpsellFlow.Mobile then

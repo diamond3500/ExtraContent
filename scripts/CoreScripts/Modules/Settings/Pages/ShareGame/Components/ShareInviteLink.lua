@@ -130,7 +130,7 @@ function ShareInviteLink:render()
 		BorderSizePixel = 0,
 	}, {
 		Corner = Roact.createElement("UICorner", {
-			CornerRadius = if Theme.UIBloxThemeEnabled then Theme.MenuContainerCornerRadius else UDim.new(0, 4),
+			CornerRadius = Theme.MenuContainerCornerRadius,
 		}),
 		UIPadding = Roact.createElement("UIPadding", {
 			PaddingLeft = UDim.new(0, CONTENTS_LEFT_RIGHT_PADDING),

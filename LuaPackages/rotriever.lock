@@ -26,8 +26,8 @@ dependencies = [
     "ApolloClient ApolloClient 0.3.10 registry",
     "GraphQL GraphQL 15.6.3 registry",
     "GraphQLTag GraphqlTag 2.12.9 registry",
-    "Jest Jest 3.13.1 registry",
-    "JestGlobals JestGlobals 3.13.1 registry",
+    "Jest Jest 3.13.3 registry",
+    "JestGlobals JestGlobals 3.13.3 registry",
     "LuauPolyfill LuauPolyfill 1.2.3 registry",
     "LuauRegExp RegExp 0.2.2 registry",
     "Promise <patched> Promise 3.5.0 registry",
@@ -97,7 +97,7 @@ dependencies = [
     "DeveloperTools DeveloperTools 0.2.7 registry",
     "EmojiList EmojiList 1.0.0 registry",
     "FitFrame RoactFitComponents 2.0.0 registry",
-    "Foundation Foundation 1.26.0 registry",
+    "Foundation Foundation 1.27.0 registry",
     "FoundationImages FoundationImages 1.25.0 registry",
     "FoundationTestingLibrary FoundationTestingLibrary 0.1.0 registry",
     "GraphQL GraphQL 15.6.3 registry",
@@ -105,10 +105,10 @@ dependencies = [
     "HttpRequest HttpRequest 1.1.1 registry",
     "InGameMenuDependencies InGameMenuDependencies 0.3.0 registry",
     "InputHandlers InputHandlers 1.3.1 registry",
-    "Jest Jest 3.13.1 registry",
-    "JestBenchmark JestBenchmark 3.13.1 registry",
+    "Jest Jest 3.13.3 registry",
+    "JestBenchmark JestBenchmark 3.13.3 registry",
     "JestGlobals JestGlobals 2.4.1 registry",
-    "JestGlobals3 JestGlobals 3.13.1 registry",
+    "JestGlobals3 JestGlobals 3.13.3 registry",
     "LazyRequire LazyRequire 0.1.4 registry",
     "LuaSocialLibrariesDeps LuaSocialLibrariesDeps 1.6.7 registry",
     "LuauPolyfill LuauPolyfill 0.4.2 registry",
@@ -118,7 +118,7 @@ dependencies = [
     "NetworkingFriends NetworkingFriends 2.12.1 registry",
     "NetworkingGames NetworkingGames 1.2.0 registry",
     "NetworkingUsers NetworkingUsers 1.2.1 registry",
-    "Otter Otter 1.3.2 registry",
+    "Otter Otter 1.3.3 registry",
     "PolicyProvider LuaRoactPolicyProvider 0.1.3 registry",
     "Promise <patched> Promise 3.5.0 registry",
     "QRCode QRCode 0.1.0 registry",
@@ -128,7 +128,7 @@ dependencies = [
     "ReactDevtoolsExtensions ReactDevtoolsExtensions 17.2.0 registry",
     "ReactFocusNavigation ReactFocusNavigation 1.3.1 registry",
     "ReactIs ReactIs 17.2.0 registry",
-    "ReactOtter ReactOtter 1.3.2 registry",
+    "ReactOtter ReactOtter 1.3.3 registry",
     "ReactReconciler ReactReconciler 17.2.0 registry",
     "ReactRoblox ReactRoblox 17.2.0 registry",
     "ReactSceneUnderstanding ReactSceneUnderstanding 0.13.0 registry",
@@ -160,8 +160,8 @@ dependencies = [
     "TagUtils TagUtils 0.1.0 registry",
     "Thumbnailing Thumbnailing 0.3.0 registry",
     "UGCValidation UGCValidation 1.16.6 registry",
-    "UIBlox UIBlox 0.2.88 registry",
-    "UrlBuilder UrlBuilder 1.2.9 registry",
+    "UIBlox UIBlox 0.2.89 registry",
+    "UrlBuilder UrlBuilder 1.2.11 registry",
     "UsageTracker UsageTracker 0.1.1 registry",
     "VirtualizedList VirtualizedList 1.4.3 registry",
     "enumerate enumerate 1.1.0 registry",
@@ -208,7 +208,7 @@ dependencies = ["LuauPolyfill LuauPolyfill 0.3.4 registry"]
 
 [[package]]
 name = "DiffSequences"
-version = "3.13.1"
+version = "3.13.3"
 source = "registry"
 dependencies = ["LuauPolyfill LuauPolyfill 1.2.3 registry"]
 
@@ -218,13 +218,13 @@ version = "8.15.0"
 source = "registry"
 dependencies = [
     "Chalk ChalkLua 0.2.0 registry",
-    "JestGetType JestGetType 3.13.1 registry",
-    "JestGlobals JestGlobals 3.13.1 registry",
+    "JestGetType JestGetType 3.13.3 registry",
+    "JestGlobals JestGlobals 3.13.3 registry",
     "LuauPolyfill LuauPolyfill 1.2.3 registry",
     "LuauRegExp RegExp 0.2.2 registry",
-    "PrettyFormat PrettyFormat 3.13.1 registry",
+    "PrettyFormat PrettyFormat 3.13.3 registry",
     "Promise <patched> Promise 3.5.0 registry",
-    "RobloxShared RobloxShared 3.13.1 registry",
+    "RobloxShared RobloxShared 3.13.3 registry",
 ]
 
 [[package]]
@@ -234,7 +234,7 @@ source = "registry"
 
 [[package]]
 name = "Emittery"
-version = "3.13.1"
+version = "3.13.3"
 source = "registry"
 dependencies = [
     "LuauPolyfill LuauPolyfill 1.2.3 registry",
@@ -268,18 +268,18 @@ dependencies = [
 
 [[package]]
 name = "Expect"
-version = "3.13.1"
+version = "3.13.3"
 source = "registry"
 dependencies = [
-    "JestGetType JestGetType 3.13.1 registry",
-    "JestMatcherUtils JestMatcherUtils 3.13.1 registry",
-    "JestMessageUtil JestMessageUtil 3.13.1 registry",
-    "JestSnapshot JestSnapshot 3.13.1 registry",
-    "JestUtil JestUtil 3.13.1 registry",
+    "JestGetType JestGetType 3.13.3 registry",
+    "JestMatcherUtils JestMatcherUtils 3.13.3 registry",
+    "JestMessageUtil JestMessageUtil 3.13.3 registry",
+    "JestSnapshot JestSnapshot 3.13.3 registry",
+    "JestUtil JestUtil 3.13.3 registry",
     "LuauPolyfill LuauPolyfill 1.2.3 registry",
     "Promise <patched> Promise 3.5.0 registry",
     "RegExp RegExp 0.2.2 registry",
-    "RobloxShared RobloxShared 3.13.1 registry",
+    "RobloxShared RobloxShared 3.13.3 registry",
 ]
 
 [[package]]
@@ -304,7 +304,7 @@ source = "registry"
 
 [[package]]
 name = "Foundation"
-version = "1.26.0"
+version = "1.27.0"
 source = "registry"
 dependencies = [
     "BuilderIcons BuilderIcons 0.1.0 registry",
@@ -313,11 +313,11 @@ dependencies = [
     "FoundationImages FoundationImages 1.25.0 registry",
     "Lumberyak lumberyak 0.1.1 registry",
     "Motion Motion 0.0.7 registry",
-    "Otter Otter 1.3.2 registry",
+    "Otter Otter 1.3.3 registry",
     "RbxDesignFoundations RbxDesignFoundations 2.0.153 registry",
     "React React 17.2.0 registry",
     "ReactIs ReactIs 17.2.0 registry",
-    "ReactOtter ReactOtter 1.3.2 registry",
+    "ReactOtter ReactOtter 1.3.3 registry",
     "ReactRoblox ReactRoblox 17.2.0 registry",
     "ReactUtils ReactUtils 1.3.1 registry",
     "Roact RoactCompat 17.2.0 registry",
@@ -400,7 +400,7 @@ dependencies = [
     "Roact RoactCompat 17.2.0 registry",
     "RoactRodux <patched> RoactRodux 0.5.1 registry",
     "Rodux <patched> Rodux 3.3.0 registry",
-    "UIBlox UIBlox 0.2.88 registry",
+    "UIBlox UIBlox 0.2.89 registry",
     "t t 1.2.6 registry",
 ]
 
@@ -429,59 +429,59 @@ dependencies = [
 
 [[package]]
 name = "Jest"
-version = "3.13.1"
+version = "3.13.3"
 source = "registry"
-dependencies = ["JestCore JestCore 3.13.1 registry"]
+dependencies = ["JestCore JestCore 3.13.3 registry"]
 
 [[package]]
 name = "JestBenchmark"
-version = "3.13.1"
+version = "3.13.3"
 source = "registry"
 dependencies = [
-    "JestGlobals JestGlobals 3.13.1 registry",
-    "JestTypes JestTypes 3.13.1 registry",
+    "JestGlobals JestGlobals 3.13.3 registry",
+    "JestTypes JestTypes 3.13.3 registry",
     "LuauPolyfill LuauPolyfill 1.2.3 registry",
 ]
 
 [[package]]
 name = "JestCircus"
-version = "3.13.1"
+version = "3.13.3"
 source = "registry"
 dependencies = [
     "ChalkLua ChalkLua 0.2.0 registry",
-    "Expect Expect 3.13.1 registry",
-    "JestEach JestEach 3.13.1 registry",
-    "JestEnvironment JestEnvironment 3.13.1 registry",
-    "JestMatcherUtils JestMatcherUtils 3.13.1 registry",
-    "JestMessageUtil JestMessageUtil 3.13.1 registry",
-    "JestRuntime JestRuntime 3.13.1 registry",
-    "JestSnapshot JestSnapshot 3.13.1 registry",
-    "JestTestResult JestTestResult 3.13.1 registry",
-    "JestTypes JestTypes 3.13.1 registry",
-    "JestUtil JestUtil 3.13.1 registry",
+    "Expect Expect 3.13.3 registry",
+    "JestEach JestEach 3.13.3 registry",
+    "JestEnvironment JestEnvironment 3.13.3 registry",
+    "JestMatcherUtils JestMatcherUtils 3.13.3 registry",
+    "JestMessageUtil JestMessageUtil 3.13.3 registry",
+    "JestRuntime JestRuntime 3.13.3 registry",
+    "JestSnapshot JestSnapshot 3.13.3 registry",
+    "JestTestResult JestTestResult 3.13.3 registry",
+    "JestTypes JestTypes 3.13.3 registry",
+    "JestUtil JestUtil 3.13.3 registry",
     "LuauPolyfill LuauPolyfill 1.2.3 registry",
-    "PrettyFormat PrettyFormat 3.13.1 registry",
+    "PrettyFormat PrettyFormat 3.13.3 registry",
     "Promise <patched> Promise 3.5.0 registry",
     "RegExp RegExp 0.2.2 registry",
-    "RobloxShared RobloxShared 3.13.1 registry",
-    "Throat Throat 3.13.1 registry",
+    "RobloxShared RobloxShared 3.13.3 registry",
+    "Throat Throat 3.13.3 registry",
 ]
 
 [[package]]
 name = "JestConfig"
-version = "3.13.1"
+version = "3.13.3"
 source = "registry"
 dependencies = [
     "ChalkLua ChalkLua 0.2.0 registry",
-    "JestEnvironmentLuau JestEnvironmentLuau 3.13.1 registry",
-    "JestGetType JestGetType 3.13.1 registry",
-    "JestTypes JestTypes 3.13.1 registry",
-    "JestUtil JestUtil 3.13.1 registry",
-    "JestValidate JestValidate 3.13.1 registry",
+    "JestEnvironmentLuau JestEnvironmentLuau 3.13.3 registry",
+    "JestGetType JestGetType 3.13.3 registry",
+    "JestTypes JestTypes 3.13.3 registry",
+    "JestUtil JestUtil 3.13.3 registry",
+    "JestValidate JestValidate 3.13.3 registry",
     "LuauPolyfill LuauPolyfill 1.2.3 registry",
     "Promise <patched> Promise 3.5.0 registry",
     "RegExp RegExp 0.2.2 registry",
-    "RobloxShared RobloxShared 3.13.1 registry",
+    "RobloxShared RobloxShared 3.13.3 registry",
 ]
 
 [[package]]
@@ -501,41 +501,41 @@ dependencies = [
 
 [[package]]
 name = "JestConsole"
-version = "3.13.1"
+version = "3.13.3"
 source = "registry"
 dependencies = [
     "ChalkLua ChalkLua 0.2.0 registry",
-    "JestEach JestEach 3.13.1 registry",
-    "JestMessageUtil JestMessageUtil 3.13.1 registry",
-    "JestMock JestMock 3.13.1 registry",
-    "JestTypes JestTypes 3.13.1 registry",
-    "JestUtil JestUtil 3.13.1 registry",
+    "JestEach JestEach 3.13.3 registry",
+    "JestMessageUtil JestMessageUtil 3.13.3 registry",
+    "JestMock JestMock 3.13.3 registry",
+    "JestTypes JestTypes 3.13.3 registry",
+    "JestUtil JestUtil 3.13.3 registry",
     "LuauPolyfill LuauPolyfill 1.2.3 registry",
-    "RobloxShared RobloxShared 3.13.1 registry",
+    "RobloxShared RobloxShared 3.13.3 registry",
 ]
 
 [[package]]
 name = "JestCore"
-version = "3.13.1"
+version = "3.13.3"
 source = "registry"
 dependencies = [
     "ChalkLua ChalkLua 0.2.0 registry",
-    "Emittery Emittery 3.13.1 registry",
-    "JestConfig JestConfig 3.13.1 registry",
-    "JestConsole JestConsole 3.13.1 registry",
-    "JestMessageUtil JestMessageUtil 3.13.1 registry",
-    "JestReporters JestReporters 3.13.1 registry",
-    "JestRunner JestRunner 3.13.1 registry",
-    "JestRuntime JestRuntime 3.13.1 registry",
-    "JestSnapshot JestSnapshot 3.13.1 registry",
-    "JestTestResult JestTestResult 3.13.1 registry",
-    "JestTypes JestTypes 3.13.1 registry",
-    "JestUtil JestUtil 3.13.1 registry",
+    "Emittery Emittery 3.13.3 registry",
+    "JestConfig JestConfig 3.13.3 registry",
+    "JestConsole JestConsole 3.13.3 registry",
+    "JestMessageUtil JestMessageUtil 3.13.3 registry",
+    "JestReporters JestReporters 3.13.3 registry",
+    "JestRunner JestRunner 3.13.3 registry",
+    "JestRuntime JestRuntime 3.13.3 registry",
+    "JestSnapshot JestSnapshot 3.13.3 registry",
+    "JestTestResult JestTestResult 3.13.3 registry",
+    "JestTypes JestTypes 3.13.3 registry",
+    "JestUtil JestUtil 3.13.3 registry",
     "LuauPolyfill LuauPolyfill 1.2.3 registry",
-    "PrettyFormat PrettyFormat 3.13.1 registry",
+    "PrettyFormat PrettyFormat 3.13.3 registry",
     "Promise <patched> Promise 3.5.0 registry",
     "RegExp RegExp 0.2.2 registry",
-    "RobloxShared RobloxShared 3.13.1 registry",
+    "RobloxShared RobloxShared 3.13.3 registry",
 ]
 
 [[package]]
@@ -552,15 +552,15 @@ dependencies = [
 
 [[package]]
 name = "JestDiff"
-version = "3.13.1"
+version = "3.13.3"
 source = "registry"
 dependencies = [
     "ChalkLua ChalkLua 0.2.0 registry",
-    "DiffSequences DiffSequences 3.13.1 registry",
-    "JestGetType JestGetType 3.13.1 registry",
-    "JestTypes JestTypes 3.13.1 registry",
+    "DiffSequences DiffSequences 3.13.3 registry",
+    "JestGetType JestGetType 3.13.3 registry",
+    "JestTypes JestTypes 3.13.3 registry",
     "LuauPolyfill LuauPolyfill 1.2.3 registry",
-    "PrettyFormat PrettyFormat 3.13.1 registry",
+    "PrettyFormat PrettyFormat 3.13.3 registry",
 ]
 
 [[package]]
@@ -579,39 +579,39 @@ dependencies = [
 
 [[package]]
 name = "JestEach"
-version = "3.13.1"
+version = "3.13.3"
 source = "registry"
 dependencies = [
     "ChalkLua ChalkLua 0.2.0 registry",
-    "JestGetType JestGetType 3.13.1 registry",
-    "JestTypes JestTypes 3.13.1 registry",
-    "JestUtil JestUtil 3.13.1 registry",
+    "JestGetType JestGetType 3.13.3 registry",
+    "JestTypes JestTypes 3.13.3 registry",
+    "JestUtil JestUtil 3.13.3 registry",
     "LuauPolyfill LuauPolyfill 1.2.3 registry",
-    "PrettyFormat PrettyFormat 3.13.1 registry",
+    "PrettyFormat PrettyFormat 3.13.3 registry",
     "RegExp RegExp 0.2.2 registry",
 ]
 
 [[package]]
 name = "JestEnvironment"
-version = "3.13.1"
+version = "3.13.3"
 source = "registry"
 dependencies = [
-    "JestFakeTimers JestFakeTimers 3.13.1 registry",
-    "JestMock JestMock 3.13.1 registry",
-    "JestMockGenv JestMockGenv 3.13.1 registry",
-    "JestTypes JestTypes 3.13.1 registry",
+    "JestFakeTimers JestFakeTimers 3.13.3 registry",
+    "JestMock JestMock 3.13.3 registry",
+    "JestMockGenv JestMockGenv 3.13.3 registry",
+    "JestTypes JestTypes 3.13.3 registry",
     "LuauPolyfill LuauPolyfill 1.2.3 registry",
 ]
 
 [[package]]
 name = "JestEnvironmentLuau"
-version = "3.13.1"
+version = "3.13.3"
 source = "registry"
 dependencies = [
-    "JestEnvironment JestEnvironment 3.13.1 registry",
-    "JestFakeTimers JestFakeTimers 3.13.1 registry",
-    "JestMock JestMock 3.13.1 registry",
-    "JestTypes JestTypes 3.13.1 registry",
+    "JestEnvironment JestEnvironment 3.13.3 registry",
+    "JestFakeTimers JestFakeTimers 3.13.3 registry",
+    "JestMock JestMock 3.13.3 registry",
+    "JestTypes JestTypes 3.13.3 registry",
     "LuauPolyfill LuauPolyfill 1.2.3 registry",
     "Promise <patched> Promise 3.5.0 registry",
 ]
@@ -628,11 +628,11 @@ dependencies = [
 
 [[package]]
 name = "JestFakeTimers"
-version = "3.13.1"
+version = "3.13.3"
 source = "registry"
 dependencies = [
-    "JestGetType JestGetType 3.13.1 registry",
-    "JestMock JestMock 3.13.1 registry",
+    "JestGetType JestGetType 3.13.3 registry",
+    "JestMock JestMock 3.13.3 registry",
     "LuauPolyfill LuauPolyfill 1.2.3 registry",
 ]
 
@@ -647,7 +647,7 @@ dependencies = [
 
 [[package]]
 name = "JestGetType"
-version = "3.13.1"
+version = "3.13.3"
 source = "registry"
 dependencies = [
     "LuauPolyfill LuauPolyfill 1.2.3 registry",
@@ -669,12 +669,12 @@ dependencies = [
 
 [[package]]
 name = "JestGlobals"
-version = "3.13.1"
+version = "3.13.3"
 source = "registry"
 dependencies = [
-    "Expect Expect 3.13.1 registry",
-    "JestEnvironment JestEnvironment 3.13.1 registry",
-    "JestTypes JestTypes 3.13.1 registry",
+    "Expect Expect 3.13.3 registry",
+    "JestEnvironment JestEnvironment 3.13.3 registry",
+    "JestTypes JestTypes 3.13.3 registry",
     "LuauPolyfill LuauPolyfill 1.2.3 registry",
 ]
 
@@ -693,14 +693,14 @@ dependencies = [
 
 [[package]]
 name = "JestMatcherUtils"
-version = "3.13.1"
+version = "3.13.3"
 source = "registry"
 dependencies = [
     "ChalkLua ChalkLua 0.2.0 registry",
-    "JestDiff JestDiff 3.13.1 registry",
-    "JestGetType JestGetType 3.13.1 registry",
+    "JestDiff JestDiff 3.13.3 registry",
+    "JestGetType JestGetType 3.13.3 registry",
     "LuauPolyfill LuauPolyfill 1.2.3 registry",
-    "PrettyFormat PrettyFormat 3.13.1 registry",
+    "PrettyFormat PrettyFormat 3.13.3 registry",
     "RegExp RegExp 0.2.2 registry",
 ]
 
@@ -712,15 +712,15 @@ dependencies = ["LuauPolyfill LuauPolyfill 0.3.4 registry"]
 
 [[package]]
 name = "JestMessageUtil"
-version = "3.13.1"
+version = "3.13.3"
 source = "registry"
 dependencies = [
     "ChalkLua ChalkLua 0.2.0 registry",
-    "JestTypes JestTypes 3.13.1 registry",
+    "JestTypes JestTypes 3.13.3 registry",
     "LuauPolyfill LuauPolyfill 1.2.3 registry",
-    "PrettyFormat PrettyFormat 3.13.1 registry",
+    "PrettyFormat PrettyFormat 3.13.3 registry",
     "RegExp RegExp 0.2.2 registry",
-    "RobloxShared RobloxShared 3.13.1 registry",
+    "RobloxShared RobloxShared 3.13.3 registry",
 ]
 
 [[package]]
@@ -731,27 +731,27 @@ dependencies = ["LuauPolyfill LuauPolyfill 0.3.4 registry"]
 
 [[package]]
 name = "JestMock"
-version = "3.13.1"
+version = "3.13.3"
 source = "registry"
 dependencies = [
-    "JestMockGenv JestMockGenv 3.13.1 registry",
-    "JestMockRbx JestMockRbx 3.13.1 registry",
-    "JestTypes JestTypes 3.13.1 registry",
+    "JestMockGenv JestMockGenv 3.13.3 registry",
+    "JestMockRbx JestMockRbx 3.13.3 registry",
+    "JestTypes JestTypes 3.13.3 registry",
     "LuauPolyfill LuauPolyfill 1.2.3 registry",
 ]
 
 [[package]]
 name = "JestMockGenv"
-version = "3.13.1"
+version = "3.13.3"
 source = "registry"
 dependencies = ["LuauPolyfill LuauPolyfill 1.2.3 registry"]
 
 [[package]]
 name = "JestMockRbx"
-version = "3.13.1"
+version = "3.13.3"
 source = "registry"
 dependencies = [
-    "JestTypes JestTypes 3.13.1 registry",
+    "JestTypes JestTypes 3.13.3 registry",
     "LuauPolyfill LuauPolyfill 1.2.3 registry",
 ]
 
@@ -774,55 +774,55 @@ dependencies = [
 
 [[package]]
 name = "JestReporters"
-version = "3.13.1"
+version = "3.13.3"
 source = "registry"
 dependencies = [
     "ChalkLua ChalkLua 0.2.0 registry",
-    "JestConsole JestConsole 3.13.1 registry",
-    "JestMessageUtil JestMessageUtil 3.13.1 registry",
-    "JestMock JestMock 3.13.1 registry",
-    "JestTestResult JestTestResult 3.13.1 registry",
-    "JestTypes JestTypes 3.13.1 registry",
-    "JestUtil JestUtil 3.13.1 registry",
+    "JestConsole JestConsole 3.13.3 registry",
+    "JestMessageUtil JestMessageUtil 3.13.3 registry",
+    "JestMock JestMock 3.13.3 registry",
+    "JestTestResult JestTestResult 3.13.3 registry",
+    "JestTypes JestTypes 3.13.3 registry",
+    "JestUtil JestUtil 3.13.3 registry",
     "LuauPolyfill LuauPolyfill 1.2.3 registry",
-    "Path Path 3.13.1 registry",
+    "Path Path 3.13.3 registry",
     "RegExp RegExp 0.2.2 registry",
-    "RobloxShared RobloxShared 3.13.1 registry",
-    "TestUtils TestUtils 3.13.1 registry",
+    "RobloxShared RobloxShared 3.13.3 registry",
+    "TestUtils TestUtils 3.13.3 registry",
 ]
 
 [[package]]
 name = "JestRunner"
-version = "3.13.1"
+version = "3.13.3"
 source = "registry"
 dependencies = [
     "ChalkLua ChalkLua 0.2.0 registry",
-    "Emittery Emittery 3.13.1 registry",
-    "JestCircus JestCircus 3.13.1 registry",
-    "JestConsole JestConsole 3.13.1 registry",
-    "JestEnvironment JestEnvironment 3.13.1 registry",
-    "JestMessageUtil JestMessageUtil 3.13.1 registry",
-    "JestRuntime JestRuntime 3.13.1 registry",
-    "JestTestResult JestTestResult 3.13.1 registry",
-    "JestTypes JestTypes 3.13.1 registry",
-    "JestUtil JestUtil 3.13.1 registry",
+    "Emittery Emittery 3.13.3 registry",
+    "JestCircus JestCircus 3.13.3 registry",
+    "JestConsole JestConsole 3.13.3 registry",
+    "JestEnvironment JestEnvironment 3.13.3 registry",
+    "JestMessageUtil JestMessageUtil 3.13.3 registry",
+    "JestRuntime JestRuntime 3.13.3 registry",
+    "JestTestResult JestTestResult 3.13.3 registry",
+    "JestTypes JestTypes 3.13.3 registry",
+    "JestUtil JestUtil 3.13.3 registry",
     "LuauPolyfill LuauPolyfill 1.2.3 registry",
     "Promise <patched> Promise 3.5.0 registry",
-    "RobloxShared RobloxShared 3.13.1 registry",
-    "Throat Throat 3.13.1 registry",
+    "RobloxShared RobloxShared 3.13.3 registry",
+    "Throat Throat 3.13.3 registry",
 ]
 
 [[package]]
 name = "JestRuntime"
-version = "3.13.1"
+version = "3.13.3"
 source = "registry"
 dependencies = [
-    "Expect Expect 3.13.1 registry",
-    "JestFakeTimers JestFakeTimers 3.13.1 registry",
-    "JestMock JestMock 3.13.1 registry",
-    "JestMockGenv JestMockGenv 3.13.1 registry",
-    "JestSnapshot JestSnapshot 3.13.1 registry",
-    "JestTypes JestTypes 3.13.1 registry",
+    "Expect Expect 3.13.3 registry",
+    "JestFakeTimers JestFakeTimers 3.13.3 registry",
+    "JestMock JestMock 3.13.3 registry",
+    "JestMockGenv JestMockGenv 3.13.3 registry",
+    "JestSnapshot JestSnapshot 3.13.3 registry",
+    "JestTypes JestTypes 3.13.3 registry",
     "LuauPolyfill LuauPolyfill 1.2.3 registry",
     "Promise <patched> Promise 3.5.0 registry",
 ]
@@ -843,18 +843,18 @@ dependencies = [
 
 [[package]]
 name = "JestSnapshot"
-version = "3.13.1"
+version = "3.13.3"
 source = "registry"
 dependencies = [
     "ChalkLua ChalkLua 0.2.0 registry",
-    "JestDiff JestDiff 3.13.1 registry",
-    "JestGetType JestGetType 3.13.1 registry",
-    "JestMatcherUtils JestMatcherUtils 3.13.1 registry",
-    "JestTypes JestTypes 3.13.1 registry",
+    "JestDiff JestDiff 3.13.3 registry",
+    "JestGetType JestGetType 3.13.3 registry",
+    "JestMatcherUtils JestMatcherUtils 3.13.3 registry",
+    "JestTypes JestTypes 3.13.3 registry",
     "LuauPolyfill LuauPolyfill 1.2.3 registry",
-    "PrettyFormat PrettyFormat 3.13.1 registry",
+    "PrettyFormat PrettyFormat 3.13.3 registry",
     "Promise <patched> Promise 3.5.0 registry",
-    "RobloxShared RobloxShared 3.13.1 registry",
+    "RobloxShared RobloxShared 3.13.3 registry",
 ]
 
 [[package]]
@@ -868,10 +868,10 @@ dependencies = [
 
 [[package]]
 name = "JestTestResult"
-version = "3.13.1"
+version = "3.13.3"
 source = "registry"
 dependencies = [
-    "JestTypes JestTypes 3.13.1 registry",
+    "JestTypes JestTypes 3.13.3 registry",
     "LuauPolyfill LuauPolyfill 1.2.3 registry",
 ]
 
@@ -886,7 +886,7 @@ dependencies = [
 
 [[package]]
 name = "JestTypes"
-version = "3.13.1"
+version = "3.13.3"
 source = "registry"
 dependencies = [
     "LuauPolyfill LuauPolyfill 1.2.3 registry",
@@ -909,21 +909,21 @@ dependencies = [
 
 [[package]]
 name = "JestUtil"
-version = "3.13.1"
+version = "3.13.3"
 source = "registry"
 dependencies = [
     "ChalkLua ChalkLua 0.2.0 registry",
-    "JestTypes JestTypes 3.13.1 registry",
+    "JestTypes JestTypes 3.13.3 registry",
     "LuauPolyfill LuauPolyfill 1.2.3 registry",
     "Picomatch <patched> Picomatch 0.3.1 registry",
     "Promise <patched> Promise 3.5.0 registry",
     "RegExp RegExp 0.2.2 registry",
-    "RobloxShared RobloxShared 3.13.1 registry",
+    "RobloxShared RobloxShared 3.13.3 registry",
 ]
 
 [[package]]
 name = "JestValidate"
-version = "3.13.1"
+version = "3.13.3"
 source = "registry"
 dependencies = [
     "ChalkLua ChalkLua 0.2.0 registry",
@@ -1041,7 +1041,7 @@ version = "0.0.7"
 source = "registry"
 dependencies = [
     "React React 17.2.0 registry",
-    "ReactOtter ReactOtter 1.3.2 registry",
+    "ReactOtter ReactOtter 1.3.3 registry",
     "RoactCompat RoactCompat 17.2.0 registry",
     "tutils tutils 0.1.2 registry",
 ]
@@ -1160,7 +1160,7 @@ source = "registry"
 
 [[package]]
 name = "Otter"
-version = "1.3.2"
+version = "1.3.3"
 source = "registry"
 dependencies = [
     "Collections Collections 1.2.3 registry",
@@ -1175,7 +1175,7 @@ dependencies = ["LuauPolyfill LuauPolyfill 0.3.4 registry"]
 
 [[package]]
 name = "Path"
-version = "3.13.1"
+version = "3.13.3"
 source = "registry"
 dependencies = ["LuauPolyfill LuauPolyfill 1.2.3 registry"]
 
@@ -1204,15 +1204,15 @@ dependencies = [
 
 [[package]]
 name = "PrettyFormat"
-version = "3.13.1"
+version = "3.13.3"
 source = "registry"
 dependencies = [
     "ChalkLua ChalkLua 0.2.0 registry",
-    "JestGetType JestGetType 3.13.1 registry",
+    "JestGetType JestGetType 3.13.3 registry",
     "LuauPolyfill LuauPolyfill 1.2.3 registry",
     "ReactIs ReactIs 17.2.0 registry",
     "RegExp RegExp 0.2.2 registry",
-    "RobloxShared RobloxShared 3.13.1 registry",
+    "RobloxShared RobloxShared 3.13.3 registry",
 ]
 
 [[package]]
@@ -1319,11 +1319,11 @@ dependencies = [
 
 [[package]]
 name = "ReactOtter"
-version = "1.3.2"
+version = "1.3.3"
 source = "registry"
 dependencies = [
-    "Dash Dash 0.1.9 registry",
-    "Otter Otter 1.3.2 registry",
+    "Dash Dash 1.1.0 registry",
+    "Otter Otter 1.3.3 registry",
     "React React 17.2.0 registry",
 ]
 
@@ -1370,7 +1370,7 @@ version = "12.3.2"
 source = "registry"
 dependencies = [
     "DomTestingLibrary DomTestingLibrary 8.15.0 registry",
-    "JestGlobals JestGlobals 3.13.1 registry",
+    "JestGlobals JestGlobals 3.13.3 registry",
     "LuauPolyfill LuauPolyfill 1.2.3 registry",
     "Promise <patched> Promise 3.5.0 registry",
     "React React 17.2.0 registry",
@@ -1517,11 +1517,11 @@ dependencies = [
 
 [[package]]
 name = "RobloxShared"
-version = "3.13.1"
+version = "3.13.3"
 source = "registry"
 dependencies = [
-    "JestGetType JestGetType 3.13.1 registry",
-    "JestMock JestMock 3.13.1 registry",
+    "JestGetType JestGetType 3.13.3 registry",
+    "JestMock JestMock 3.13.3 registry",
     "LuauPolyfill LuauPolyfill 1.2.3 registry",
 ]
 
@@ -1748,7 +1748,7 @@ dependencies = [
     "RoduxFriends RoduxFriends 4.3.0 registry",
     "RoduxPresence RoduxPresence 3.2.3 registry",
     "Symbol lua-symbol 0.1.0 registry",
-    "UIBlox UIBlox 0.2.88 registry",
+    "UIBlox UIBlox 0.2.89 registry",
     "enumerate enumerate 1.1.0 registry",
     "llama llama 1.0.0 registry",
     "t t 1.2.6 registry",
@@ -1804,19 +1804,19 @@ dependencies = [
 
 [[package]]
 name = "TestUtils"
-version = "3.13.1"
+version = "3.13.3"
 source = "registry"
 dependencies = [
     "ChalkLua ChalkLua 0.2.0 registry",
-    "JestEnvironmentLuau JestEnvironmentLuau 3.13.1 registry",
-    "JestTypes JestTypes 3.13.1 registry",
+    "JestEnvironmentLuau JestEnvironmentLuau 3.13.3 registry",
+    "JestTypes JestTypes 3.13.3 registry",
     "LuauPolyfill LuauPolyfill 1.2.3 registry",
-    "PrettyFormat PrettyFormat 3.13.1 registry",
+    "PrettyFormat PrettyFormat 3.13.3 registry",
 ]
 
 [[package]]
 name = "Throat"
-version = "3.13.1"
+version = "3.13.3"
 source = "registry"
 dependencies = [
     "LuauPolyfill LuauPolyfill 1.2.3 registry",
@@ -1845,12 +1845,12 @@ dependencies = [
 
 [[package]]
 name = "UIBlox"
-version = "0.2.88"
+version = "0.2.89"
 source = "registry"
 dependencies = [
     "Cryo Cryo 1.1.0 registry",
     "FitFrame RoactFitComponents 2.0.0 registry",
-    "Foundation Foundation 1.26.0 registry",
+    "Foundation Foundation 1.27.0 registry",
     "FoundationImages FoundationImages 1.25.0 registry",
     "LazyRequire LazyRequire 0.1.4 registry",
     "LuauPolyfill LuauPolyfill 0.3.4 registry",
@@ -1860,7 +1860,7 @@ dependencies = [
     "RbxDesignFoundations RbxDesignFoundations 1.1.107 registry",
     "RbxDesignFoundationsV2 RbxDesignFoundations 2.0.153 registry",
     "React React 17.2.0 registry",
-    "ReactOtter ReactOtter 1.3.2 registry",
+    "ReactOtter ReactOtter 1.3.3 registry",
     "ReactRoblox ReactRoblox 17.2.0 registry",
     "ReactUtils ReactUtils 1.3.1 registry",
     "Roact RoactCompat 17.2.0 registry",
@@ -1874,7 +1874,7 @@ dependencies = [
 
 [[package]]
 name = "UrlBuilder"
-version = "1.2.9"
+version = "1.2.11"
 source = "registry"
 dependencies = [
     "Cryo Cryo 1.1.0 registry",
@@ -1927,7 +1927,7 @@ version = "1.4.3"
 source = "registry"
 dependencies = [
     "LuauPolyfill LuauPolyfill 1.2.3 registry",
-    "Otter Otter 1.3.2 registry",
+    "Otter Otter 1.3.3 registry",
     "Promise <patched> Promise 3.5.0 registry",
     "React React 17.2.0 registry",
 ]

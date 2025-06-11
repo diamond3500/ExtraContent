@@ -33,7 +33,9 @@ local FocusNavigableSurfaceIdentifierEnum = FocusNavigationUtils.FocusNavigableS
 
 local RobloxTranslator = require(CorePackages.Workspace.Packages.RobloxTranslator)
 
-local FFlagCSFocusWrapperRefactor = require(CorePackages.Workspace.Packages.SharedFlags).FFlagCSFocusWrapperRefactor
+local SharedFlags = require(CorePackages.Workspace.Packages.SharedFlags)
+local FFlagCSFocusWrapperRefactor = SharedFlags.FFlagCSFocusWrapperRefactor
+local GetFFlagAvatarIdentificationSafeAreaFix = SharedFlags.GetFFlagAvatarIdentificationSafeAreaFix
 
 local TITLE_HEIGHT = 49
 local HEADER_HEIGHT = 48
@@ -42,8 +44,8 @@ local FOOTER_HEIGHT = 60
 export type Props = {
 	screenshot: string,
 	imageAspectRatio: number,
-	viewportHeight: number,
-	viewportWidth: number,
+	viewportUISafeAreaHeight: number,
+	viewportUISafeAreaWidth: number,
 	isSmallPortraitMode: boolean,
 	onBack: () -> (),
 	onRestart: () -> (),
@@ -56,7 +58,7 @@ type SmallPortraitModeHeaderRightProps = {
 	onActivated: () -> (),
 	font: any,
 	theme: any,
-	viewportWidth: number,
+	viewportUISafeAreaWidth: number,
 }
 
 local function ScreenshotReviewDialogSmallPortraitModeHeaderRight(props)
@@ -91,7 +93,7 @@ local function ScreenshotReviewDialogSmallPortraitModeHeaderRight(props)
 			-- Need to manually size this text since when used in the
 			-- `renderRight` of the HeaderBar, the container Frame here does not
 			-- expand on its own.
-			Size = UDim2.new(0, props.viewportWidth - retakeButtonWidth - 50, 1, 0),
+			Size = UDim2.new(0, props.viewportUISafeAreaWidth - retakeButtonWidth - 50, 1, 0),
 			BackgroundTransparency = 1,
 		}),
 		RetakeButton = React.createElement(Button, {
@@ -148,7 +150,9 @@ local function ScreenshotReviewDialog(props: Props)
 	local theme = stylePalette.Theme
 	local font = stylePalette.Font
 
-	local landscapeModeSize = if props.viewportHeight >= 800 then UDim2.new(0, 800, 0, 800) else UDim2.new(1, 0, 1, 0)
+	local landscapeModeSize = if props.viewportUISafeAreaHeight >= 800
+		then UDim2.new(0, 800, 0, 800)
+		else UDim2.new(1, 0, 1, 0)
 	return React.createElement("TextButton", {
 		Selectable = false, -- To prevent gamepad focus from focusing on this component
 		AutoButtonColor = false,
@@ -265,7 +269,7 @@ local function ScreenshotReviewDialog(props: Props)
 										onActivated = onRetakeHeaderButtonActivated,
 										font = font,
 										theme = theme,
-										viewportWidth = props.viewportWidth,
+										viewportUISafeAreaWidth = props.viewportUISafeAreaWidth,
 									})
 								end
 								return React.createElement(Button, {
@@ -315,7 +319,9 @@ local function ScreenshotReviewDialog(props: Props)
 								Position = UDim2.fromScale(0.5, 0.5),
 								AnchorPoint = Vector2.new(0.5, 0.5),
 								BorderSizePixel = 2,
-								BorderMode = Enum.BorderMode.Inset,
+								BorderMode = if GetFFlagAvatarIdentificationSafeAreaFix()
+									then Enum.BorderMode.Outline
+									else Enum.BorderMode.Inset,
 								BorderColor3 = Color3.fromRGB(255, 255, 255),
 								LayoutOrder = 1,
 							}, {

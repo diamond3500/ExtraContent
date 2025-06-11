@@ -40,6 +40,7 @@ local ExternalEventConnection = require(CorePackages.Workspace.Packages.RoactUti
 
 local FFlagEnableUIManagerPackgify = require(CorePackages.Workspace.Packages.SharedFlags).FFlagEnableUIManagerPackgify
 local GetFFlagEnableVrVoiceParity = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagEnableVrVoiceParity
+local FFlagEnableJoinVoiceVrTelemetry = game:DefineFastFlag("EnableJoinVoiceVrTelemetry", false)
 
 local PanelType
 local registerRoactPanel
@@ -413,6 +414,14 @@ local JoinVoice = {
 	text = "Join Voice",
 	onActivated = function()
 		VoiceChatServiceManager:JoinVoice()
+		if FFlagEnableJoinVoiceVrTelemetry then
+			local isToggleOn = VoiceChatServiceManager:ShouldShowJoinVoice()
+			VRBottomBarAnalytics.sendEventToTelemetryV2({
+				integrationId = VRBottomBarType.ButtomName.JoinVoice,
+				isToggleOn = isToggleOn,
+				source = VRBottomBarType.Source.VRBottomBar
+			})
+		end
 	end,
 }
 

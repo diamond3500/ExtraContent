@@ -1,3 +1,5 @@
+game:DefineFastFlag("EnableShopGiftCardsURL", false)
+
 return function(UrlBuilder)
 	local function isQQ()
 		return string.find(UrlBuilder.fromString("corp:")(), "qq.com")
@@ -18,7 +20,11 @@ return function(UrlBuilder)
 		blog = UrlBuilder.fromString("blog:"),
 		giftCards = function(source)
 			local sourceCode = source or ""
-			return UrlBuilder.fromString("www:giftcards?ref={source}")({ source = sourceCode })
+			local giftCardsUrl = "www:giftcards?ref={source}"
+			if game:GetFastFlag("EnableShopGiftCardsURL") then
+				giftCardsUrl = "www:shopgiftcards?ref={source}"
+			end
+			return UrlBuilder.fromString(giftCardsUrl)({ source = sourceCode })
 		end,
 		amazonStore = UrlBuilder.fromString("https://www.amazon.com/roblox"),
 		help = UrlBuilder.fromString(isQQ() and "corp:faq" or "www:help"),
@@ -92,5 +98,6 @@ return function(UrlBuilder)
 			unreadCount = UrlBuilder.fromString("notifications:stream-notifications/unread-count"),
 		},
 		securityAlert = UrlBuilder.fromString("www:security-feedback?payload={payload}&username={username}"),
+		securityAlertWithChannel = UrlBuilder.fromString("www:security-feedback?payload={payload}&username={username}&channel={channel}"),
 	}
 end

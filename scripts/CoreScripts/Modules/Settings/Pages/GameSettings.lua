@@ -72,6 +72,7 @@ local FFlagOverrideInExperienceMenuReorderFirstVariant =
 local FFlagMicroprofileGameSettingsFix = game:DefineFastFlag("MicroprofileGameSettingsFix", false)
 local GetFFlagFixSeamlessVoiceIntegrationWithPrivateVoice = SharedFlags.GetFFlagFixSeamlessVoiceIntegrationWithPrivateVoice
 local GetFFlagVoiceChatClientRewriteMasterLua = SharedFlags.GetFFlagVoiceChatClientRewriteMasterLua
+local FFlagIEMFocusNavToButtons = SharedFlags.FFlagIEMFocusNavToButtons
 
 local CrossExpVoiceIXPManager = require(CorePackages.Workspace.Packages.CrossExperienceVoice).IXPManager.default
 local isSpatial = require(CorePackages.Workspace.Packages.AppCommonLib).isSpatial
@@ -259,11 +260,6 @@ local VideoPromptSystemDefault = RobloxTranslator:FormatByKey("Feature.SettingsH
 local VideoPromptVideoCamera = RobloxTranslator:FormatByKey("Feature.SettingsHub.Video.VideoCamera")
 
 local log = require(CorePackages.Workspace.Packages.CoreScriptsInitializer).CoreLogger:new(script.Name)
-
-local UnlSuccess, UnlResult = pcall(function()
-	return settings():GetFFlag("UseNotificationsLocalization")
-end)
-local FFlagUseNotificationsLocalization = UnlSuccess and UnlResult
 game:DefineFastInt("RomarkStartWithGraphicQualityLevel", -1)
 local FIntRomarkStartWithGraphicQualityLevel = game:GetFastInt("RomarkStartWithGraphicQualityLevel")
 
@@ -392,6 +388,25 @@ local FFlagIGMEnableGFXReset = game:DefineFastFlag("IGMEnableGFXReset", false)
 local FFlagNewLanguageSelectorEndpoint = game:DefineFastFlag("NewLanguageSelectorEndpoint", false)
 
 ----------- CLASS DECLARATION --------------
+
+local function getLastValueChangerFrame(this)
+	if not FFlagIEMFocusNavToButtons then
+		return
+	end
+
+	local maxLayoutOrder = nil
+	local LastValueChangerFrame = nil
+	for _, row in pairs(this:GetRows()) do
+		local SelectionFrame = row.SelectionFrame
+
+		if not maxLayoutOrder or SelectionFrame.LayoutOrder >= maxLayoutOrder then
+			maxLayoutOrder = SelectionFrame.LayoutOrder
+			LastValueChangerFrame = this:getValueChangerFrame(row.ValueChanger)
+		end
+	end
+
+	return LastValueChangerFrame
+end
 
 local function Initialize()
 	if FFlagIGMEnableGFXReset then
@@ -2468,15 +2483,13 @@ local function Initialize()
 			ZIndex = 3,
 			Selectable = false,
 			Parent = this.MouseAdvancedEntry.SliderFrame,
-			BorderSizePixel = if Theme.UIBloxThemeEnabled then 0 else 1,
+			BorderSizePixel = 0,
 		})
 
-		if Theme.UIBloxThemeEnabled then
-			Create("UICorner")({
-				CornerRadius = Theme.DefaultCornerRadius,
-				Parent = textBox,
-			})
-		end
+		Create("UICorner")({
+			CornerRadius = Theme.DefaultCornerRadius,
+			Parent = textBox,
+		})
 
 		local function setMouseSensitivityText(num)
 			-- Round the number to 3 decimal places
@@ -3791,25 +3804,11 @@ local function Initialize()
 
 	------ TAB CUSTOMIZATION -------
 	this.TabHeader.Name = "GameSettingsTab"
-
-	if Theme.UIBloxThemeEnabled then
-		local icon = Theme.Images["icons/common/settings"]
-		this.TabHeader.TabLabel.Icon.ImageRectOffset = icon.ImageRectOffset
-		this.TabHeader.TabLabel.Icon.ImageRectSize = icon.ImageRectSize
-		this.TabHeader.TabLabel.Icon.Image = icon.Image
-
-		this.TabHeader.TabLabel.Title.Text = "Settings"
-	else
-		this.TabHeader.Icon.Image = isTenFootInterface
-				and "rbxasset://textures/ui/Settings/MenuBarIcons/GameSettingsTab@2x.png"
-			or "rbxasset://textures/ui/Settings/MenuBarIcons/GameSettingsTab.png"
-
-		if FFlagUseNotificationsLocalization then
-			this.TabHeader.Title.Text = "Settings"
-		else
-			this.TabHeader.Icon.Title.Text = "Settings"
-		end
-	end
+	local icon = Theme.Images["icons/common/settings"]
+	this.TabHeader.TabLabel.Icon.ImageRectOffset = icon.ImageRectOffset
+	this.TabHeader.TabLabel.Icon.ImageRectSize = icon.ImageRectSize
+	this.TabHeader.TabLabel.Icon.Image = icon.Image
+	this.TabHeader.TabLabel.Title.Text = "Settings"
 
 	------ PAGE CUSTOMIZATION -------
 	this.Page.ZIndex = 5
@@ -3888,6 +3887,11 @@ local function Initialize()
 					Theme.color("ButtonNonInteractable", Color3.fromRGB(100, 100, 100))
 				this.toggleFeedbackModeText.Text = "Unavailable"
 			end
+		end
+
+		-- Set the last selectable object to the last ValueChangerFrame for focus navigation
+		if FFlagIEMFocusNavToButtons then
+			table.insert(this.LastSelectableObjects, getLastValueChangerFrame(this))
 		end
 	end
 

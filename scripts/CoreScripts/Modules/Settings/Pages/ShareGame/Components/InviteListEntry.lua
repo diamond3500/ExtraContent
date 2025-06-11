@@ -29,7 +29,6 @@ local GetFIntThrottleInviteSendEndpointDelay = require(Modules.Flags.GetFIntThro
 local GetFFlagLuaAppEnableOpenTypeSupport =
 	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagLuaAppEnableOpenTypeSupport
 
-local ENTRY_BG_IMAGE = "rbxasset://textures/ui/dialog_white.png"
 local ENTRY_BG_SLICE = Rect.new(10, 10, 10, 10)
 local BUTTON_HEIGHT = 60
 local INVITE_BUTTON_WIDTH = 66
@@ -119,12 +118,9 @@ return function(props: Props)
 		return
 	end
 
-	local UIBloxTheme = Theme.UIBloxThemeEnabled
-
 	return React.createElement("ImageButton", {
 		Size = UDim2.new(1, 0, 0, BUTTON_HEIGHT),
-		Image = not UIBloxTheme and ENTRY_BG_IMAGE or nil,
-		ScaleType = not UIBloxTheme and Enum.ScaleType.Slice or Enum.ScaleType.Stretch,
+		ScaleType = Enum.ScaleType.Stretch,
 		SliceCenter = ENTRY_BG_SLICE,
 		BackgroundColor3 = Theme.color("PlayerRowFrame"),
 		BackgroundTransparency = Theme.transparency("PlayerRowFrame", 1),
@@ -132,9 +128,9 @@ return function(props: Props)
 		LayoutOrder = props.layoutOrder,
 		[ReactRoblox.Event.Activated] = if props.isFullRowActivatable then onInvite else nil,
 	}, {
-		UICorner = UIBloxTheme and React.createElement("UICorner", {
+		UICorner = React.createElement("UICorner", {
 			CornerRadius = Theme.MenuContainerCornerRadius,
-		}) or nil,
+		}),
 		Padding = React.createElement("UIPadding", {
 			PaddingRight = UDim.new(0, PADDING * 2),
 			PaddingLeft = UDim.new(0, PADDING),

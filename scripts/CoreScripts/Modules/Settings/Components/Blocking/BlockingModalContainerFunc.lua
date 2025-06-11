@@ -19,6 +19,8 @@ type Props = {
 	},
 	source: string,
 
+	onBlockingSuccess: () -> ()?,
+
 	blockingUtility: any?,
 	trustAndSafetyModule: any?,
 }
@@ -30,6 +32,7 @@ local function BlockingModalContainer(props: Props)
 	local trustAndSafetyModule = props.trustAndSafetyModule or TrustAndSafety
 	local analytics = props.analytics
 	local source = props.source
+	local onBlockingSuccess = props.onBlockingSuccess
 
 	local screenSize, setScreenSize = React.useState(Vector2.new(1000, 1000))
 
@@ -41,10 +44,13 @@ local function BlockingModalContainer(props: Props)
 				blockeeUserId = player.UserId,
 				source = source,
 			})
+			if onBlockingSuccess then
+				onBlockingSuccess()
+			end
 		end
 
 		closeModal()
-	end, { closeModal, player, analytics, source } :: { any })
+	end, { closeModal, player, analytics, source, onBlockingSuccess } :: { any })
 
 	local onBlockAndReport = React.useCallback(function()
 		onBlock()

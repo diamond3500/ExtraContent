@@ -25,9 +25,6 @@ local Create = require(CorePackages.Workspace.Packages.AppCommonLib).Create
 ------------ Variables -------------------
 local PageInstance = nil
 
-local success, result = pcall(function() return settings():GetFFlag('UseNotificationsLocalization') end)
-local FFlagUseNotificationsLocalization = success and result
-
 local Contexts = AnalyticsEnums.Contexts
 local EventTypes = AnalyticsEnums.EventTypes
 
@@ -49,20 +46,8 @@ local function Initialize()
 
 	------ TAB CUSTOMIZATION -------
 	this.TabHeader.Name = "RecordTab"
-
-	if Theme.UIBloxThemeEnabled then
-		this.TabHeader.TabLabel.Icon.Image = "rbxasset://textures/ui/Settings/MenuBarIcons/RecordTab.png"
-		this.TabHeader.TabLabel.Title.Text = "Record"
-	else
-		this.TabHeader.Icon.Image = "rbxasset://textures/ui/Settings/MenuBarIcons/RecordTab.png"
-		this.TabHeader.Icon.AspectRatioConstraint.AspectRatio = 41 / 40
-
-		if FFlagUseNotificationsLocalization then
-			this.TabHeader.Title.Text = "Record"
-		else
-			this.TabHeader.Icon.Title.Text = "Record"
-		end
-	end
+	this.TabHeader.TabLabel.Icon.Image = "rbxasset://textures/ui/Settings/MenuBarIcons/RecordTab.png"
+	this.TabHeader.TabLabel.Title.Text = "Record"
 
 
 	local function onVREnabled()

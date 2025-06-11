@@ -128,6 +128,8 @@ export type IdentificationResults = {
 	adIDStats: AdIdentificationPkg.AdIDResults,
 }
 
+export type ViewportInfo = AvatarIdentificationPkg.ViewportInfo
+
 export type ReportAnythingState = {
 	-- per screenshot
 	identificationResults: IdentificationResults,

@@ -34,6 +34,7 @@ local TitleBar = require(script.Parent.TitleBar)
 local PlayerList = Components.Parent
 local SetPlayerListVisibility = require(PlayerList.Actions.SetPlayerListVisibility)
 local FFlagPlayerListReduceRerenders = require(PlayerList.Flags.FFlagPlayerListReduceRerenders)
+local FFlagPlayerListClosedNoRenderWithTenFoot = require(PlayerList.Flags.FFlagPlayerListClosedNoRenderWithTenFoot)
 
 local FAKE_NEUTRAL_TEAM = require(PlayerList.GetFakeNeutralTeam)
 
@@ -543,7 +544,16 @@ function PlayerListDisplay:render()
 end
 
 function PlayerListDisplay:didUpdate(prevProps)
-	if self.props.isVisible ~= prevProps.isVisible then
+	local firstPlayerRendered = false
+
+	if FFlagPlayerListClosedNoRenderWithTenFoot then
+		-- Previous render didn't have a firstPlayer, so we need to try to set the selection again
+		if #prevProps.sortedPlayers == 0 and prevProps.sortedTeams == nil then
+			firstPlayerRendered = true
+		end
+	end
+
+	if self.props.isVisible ~= prevProps.isVisible or firstPlayerRendered then
 		if self.props.isVisible then
 			if self.props.isTenFootInterface and self.props.isUsingGamepad then
 				GuiService.SelectedCoreObject = self.firstPlayerRef.current

@@ -244,9 +244,8 @@ function AssetDetails:render()
 			if self.props.gamepadEnabled then
 				controllerBarOffset = -1 * CONTROLLER_BAR_HEIGHT
 			end
-			if Theme.UIBloxThemeEnabled then
-				controllerBarOffset += -Theme.DefaultCornerRadius.Offset
-			end
+			controllerBarOffset += -Theme.DefaultCornerRadius.Offset
+			
 			return Roact.createElement("Frame", {
 				Position = UDim2.new(0, viewMapping.BorderPaddingSize, 0, 0),
 				Size = UDim2.new(1, -(2 * viewMapping.BorderPaddingSize), 1, controllerBarOffset),

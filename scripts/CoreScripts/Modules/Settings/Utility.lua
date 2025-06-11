@@ -19,11 +19,6 @@ local ARROW_COLOR_HOVER = Theme.color("ARROW_COLOR_HOVER", Color3.fromRGB(255, 2
 local ARROW_COLOR_TOUCH = ARROW_COLOR_HOVER
 local ARROW_COLOR_INACTIVE = Theme.color("ARROW_COLOR_INACTIVE", Color3.fromRGB(150, 150, 150))
 
-local SELECTED_LEFT_IMAGE = "rbxasset://textures/ui/Settings/Slider/SelectedBarLeft.png"
-local NON_SELECTED_LEFT_IMAGE = "rbxasset://textures/ui/Settings/Slider/BarLeft.png"
-local SELECTED_RIGHT_IMAGE = "rbxasset://textures/ui/Settings/Slider/SelectedBarRight.png"
-local NON_SELECTED_RIGHT_IMAGE = "rbxasset://textures/ui/Settings/Slider/BarRight.png"
-
 local CONTROLLER_SCROLL_DELTA = 0.2
 local CONTROLLER_THUMBSTICK_DEADZONE = 0.8
 
@@ -60,6 +55,9 @@ local FFlagUseNonDeferredSliderSignal = game:DefineFastFlag("UseNonDeferredSlide
 local FFlagUnbindRenderSteps = game:DefineFastFlag("UnbindRenderSteps", false)
 local FFlagRefactorMenuConfirmationButtons = require(RobloxGui.Modules.Settings.Flags.FFlagRefactorMenuConfirmationButtons)
 local FFlagRemovePreferredTextSizePcall = game:DefineFastFlag("RemovePreferredTextSizePcall", false)
+
+local SharedFlags = require(CorePackages.Workspace.Packages.SharedFlags)
+local FFlagIEMFocusNavToButtons = SharedFlags.FFlagIEMFocusNavToButtons
 
 local isPreferredTextSizePropValid, _result 
 if FFlagRemovePreferredTextSizePcall then
@@ -311,49 +309,35 @@ local function MakeDefaultButton(name, size, clickFunc, pageRef, hubRef, style)
 	local buttonUIStroke
 	local borderColor = "DefaultButtonStroke"
 	local backgroundColor = "DefaultButton"
-	if Theme.UIBloxThemeEnabled then
-		if name == "DropDownFrame" then
-			borderColor = "ControlInputStroke"
-			backgroundColor = "ControlInputBackground"
-		end
-
-		if style == "ImageButton" then
-			backgroundColor = "ImageButton"
-		end
-
-		button = Create("ImageButton")({
-			Name = name .. "Button",
-			AutoButtonColor = false,
-			BackgroundColor3 = Theme.color(backgroundColor),
-			BackgroundTransparency = Theme.transparency(backgroundColor),
-			Size = size,
-			ZIndex = 2,
-			SelectionImageObject = SelectionOverrideObject,
-		})
-		Create("UICorner")({
-			CornerRadius = Theme.DefaultCornerRadius,
-			Parent = button,
-		})
-		buttonUIStroke = Create("UIStroke")({
-			Name = "Border",
-			Color = Theme.color(borderColor),
-			Transparency = Theme.transparency(borderColor),
-			Thickness = Theme.DefaultStokeThickness,
-			Parent = button,
-		})
-	else
-		button = Create("ImageButton")({
-			Name = name .. "Button",
-			Image = "rbxasset://textures/ui/Settings/MenuBarAssets/MenuButton.png",
-			ScaleType = Enum.ScaleType.Slice,
-			SliceCenter = Rect.new(8, 6, 46, 44),
-			AutoButtonColor = false,
-			BackgroundTransparency = 1,
-			Size = size,
-			ZIndex = 2,
-			SelectionImageObject = SelectionOverrideObject,
-		})
+	if name == "DropDownFrame" then
+		borderColor = "ControlInputStroke"
+		backgroundColor = "ControlInputBackground"
 	end
+
+	if style == "ImageButton" then
+		backgroundColor = "ImageButton"
+	end
+
+	button = Create("ImageButton")({
+		Name = name .. "Button",
+		AutoButtonColor = false,
+		BackgroundColor3 = Theme.color(backgroundColor),
+		BackgroundTransparency = Theme.transparency(backgroundColor),
+		Size = size,
+		ZIndex = 2,
+		SelectionImageObject = SelectionOverrideObject,
+	})
+	Create("UICorner")({
+		CornerRadius = Theme.DefaultCornerRadius,
+		Parent = button,
+	})
+	buttonUIStroke = Create("UIStroke")({
+		Name = "Border",
+		Color = Theme.color(borderColor),
+		Transparency = Theme.transparency(borderColor),
+		Thickness = Theme.DefaultStokeThickness,
+		Parent = button,
+	})
 
 	local _enabled = Create("BoolValue")({
 		Name = "Enabled",
@@ -367,12 +351,8 @@ local function MakeDefaultButton(name, size, clickFunc, pageRef, hubRef, style)
 		end)
 	else
 		if GetFFlagSettingsHubButtonCanBeDisabled() then
-			if Theme.UIBloxThemeEnabled then
-				if buttonUIStroke then
-					buttonUIStroke.Enabled = false
-				end
-			else
-				button.ImageTransparency = 1
+			if buttonUIStroke then
+				buttonUIStroke.Enabled = false
 			end
 			button.Selectable = false
 		end
@@ -397,12 +377,8 @@ local function MakeDefaultButton(name, size, clickFunc, pageRef, hubRef, style)
 		end
 
 		if (hub and hub.Active) or hub == nil then
-			if Theme.UIBloxThemeEnabled then
-				button.BackgroundColor3 = Theme.color("DefaultButtonHover")
-				button.BackgroundTransparency = Theme.transparency("DefaultButtonHover")
-			else
-				button.Image = "rbxasset://textures/ui/Settings/MenuBarAssets/MenuButtonSelected.png"
-			end
+			button.BackgroundColor3 = Theme.color("DefaultButtonHover")
+			button.BackgroundTransparency = Theme.transparency("DefaultButtonHover")
 
 			local scrollTo = button
 			if rowRef then
@@ -415,12 +391,8 @@ local function MakeDefaultButton(name, size, clickFunc, pageRef, hubRef, style)
 	end
 
 	local function deselectButton()
-		if Theme.UIBloxThemeEnabled then
-			button.BackgroundColor3 = Theme.color(backgroundColor)
-			button.BackgroundTransparency = Theme.transparency(backgroundColor)
-		else
-			button.Image = "rbxasset://textures/ui/Settings/MenuBarAssets/MenuButton.png"
-		end
+		button.BackgroundColor3 = Theme.color(backgroundColor)
+		button.BackgroundTransparency = Theme.transparency(backgroundColor)
 	end
 
 	button.InputBegan:Connect(function(inputObject)
@@ -462,170 +434,6 @@ local function MakeDefaultButton(name, size, clickFunc, pageRef, hubRef, style)
 	return button, setRowRef
 end
 
-local function MakeIconButton(name, icon, text, size, clickFunc, pageRef, hubRef)
-	local SelectionOverrideObject = Create("ImageLabel")({
-		Image = "",
-		BackgroundTransparency = 1,
-	})
-
-	local iconSize = Theme.IconSize.Medium
-
-	local getSize = function(iconSizeMeasurement)
-		if size then
-			return size
-		end
-
-		local iconSizeToSizeScale = {
-			[Theme.IconSize.Small] = 1,
-			[Theme.IconSize.Medium] = 2,
-			[Theme.IconSize.Large] = 3,
-			[Theme.IconSize.XLarge] = 4,
-			[Theme.IconSize.XXLarge] = 5,
-		}
-
-		local extents = iconSizeMeasurement + 4 * iconSizeToSizeScale[iconSize]
-		return UDim2.fromOffset(extents, extents)
-	end
-
-	local iconSizeMeasurement = Theme.getIconSize(iconSize)
-
-	local size = getSize(iconSizeMeasurement)
-	local frameSize = size + UDim2.new(0, 0, 0, 18)
-
-	local ButtonLabel = Create("Frame")({
-		Name = name .. "IconButton",
-		BackgroundTransparency = 1,
-		BorderSizePixel = 0,
-		Size = frameSize,
-	})
-
-	Create("UIListLayout")({
-		Name = "MenuListLayout",
-		Padding = UDim.new(0, 2),
-		FillDirection = Enum.FillDirection.Vertical,
-		SortOrder = Enum.SortOrder.LayoutOrder,
-		HorizontalAlignment = Enum.HorizontalAlignment.Center,
-		Parent = ButtonLabel,
-	})
-
-	Create("TextLabel")({
-		Name = name .. "TextLabel",
-		AutomaticSize = Enum.AutomaticSize.Y,
-		AnchorPoint = Vector2.new(0.5, 1.0),
-		Position = UDim2.new(0.5, 0, 1, 0),
-		BackgroundTransparency = 1,
-		BorderSizePixel = 0,
-		TextColor3 = Color3.fromRGB(255, 255, 255),
-		TextYAlignment = Enum.TextYAlignment.Center,
-		TextWrapped = true,
-		Size = UDim2.new(1.5, 0, 0, 0),
-		Font = Theme.font(Enum.Font.SourceSansBold, "Bold_Font"),
-		TextSize = Theme.textSize(14),
-		LineHeight = 0.8,
-		Text = text,
-		Parent = ButtonLabel,
-		LayoutOrder = 2,
-	})
-
-	local Button = Create("ImageButton")({
-		Name = "Button",
-		Size = size,
-		BackgroundTransparency = 1,
-		AutoButtonColor = false,
-		SelectionImageObject = SelectionOverrideObject,
-		Parent = ButtonLabel,
-	})
-	local Background = Create("ImageLabel")({
-		Name = "Background",
-		BackgroundTransparency = Theme.transparency("IconButton"),
-		BorderSizePixel = 0,
-		Size = UDim2.fromScale(1, 1),
-		BackgroundColor3 = Theme.color("IconButton"),
-		Parent = Button,
-	})
-
-	Create("UICorner")({
-		CornerRadius = UDim.new(0, 8),
-		Parent = Background,
-	})
-
-	icon = icon or {
-		Image = "",
-		ImageRectOffset = Vector2.new(),
-		ImageRectSize = Vector2.new(),
-	}
-
-	local Icon = Create("ImageLabel")({
-		Name = name .. "Icon",
-		AnchorPoint = Vector2.new(0.5, 0.5),
-		Position = UDim2.fromScale(0.5, 0.5),
-		BackgroundTransparency = 1,
-		BorderSizePixel = 0,
-		Size = UDim2.fromOffset(iconSizeMeasurement, iconSizeMeasurement),
-		Image = icon.Image,
-		ImageRectOffset = icon.ImageRectOffset,
-		ImageRectSize = icon.ImageRectSize,
-		ImageColor3 = Color3.new(1, 1, 1),
-		Parent = Button,
-	})
-
-	local mouseOutStyle = function()
-		Background.BackgroundColor3 = Theme.color("IconButton")
-		Icon.ImageColor3 = Color3.new(1, 1, 1)
-	end
-
-	local mouseOverStyle = function()
-		local hub = hubRef
-		if hub == nil then
-			if pageRef then
-				hub = pageRef.HubRef
-			end
-		end
-
-		if (hub and hub.Active) or hub == nil then
-			Background.BackgroundColor3 = Theme.color("IconButtonHover")
-			Icon.ImageColor3 = Color3.new(0, 0, 0)
-		end
-	end
-
-	if not UserInputService.TouchEnabled then
-		addHoverState(Button, Background, mouseOutStyle, mouseOverStyle)
-	end
-
-	Button.SelectionGained:Connect(function()
-		mouseOverStyle()
-	end)
-	Button.SelectionLost:Connect(function()
-		mouseOutStyle()
-	end)
-
-	if clickFunc then
-		Button.MouseButton1Click:Connect(function()
-			clickFunc(gamepadSet[UserInputService:GetLastInputType()] or false)
-		end)
-	end
-
-	local _guiServiceCon = GuiService.Changed:Connect(function(prop)
-		if prop ~= "SelectedCoreObject" then
-			return
-		end
-		if not usesSelectedObject() then
-			return
-		end
-
-		if GuiService.SelectedCoreObject == nil or GuiService.SelectedCoreObject ~= Button then
-			mouseOutStyle()
-			return
-		end
-
-		if Button.Selectable then
-			mouseOverStyle()
-		end
-	end)
-
-	return ButtonLabel
-end
-
 local function MakeButton(name, text, size, clickFunc, pageRef, hubRef)
 	local button, setRowRef = MakeDefaultButton(name, size, clickFunc, pageRef, hubRef)
 
@@ -633,7 +441,7 @@ local function MakeButton(name, text, size, clickFunc, pageRef, hubRef)
 		Name = name .. "TextLabel",
 		BackgroundTransparency = 1,
 		BorderSizePixel = 0,
-		Size = Theme.UIBloxThemeEnabled and UDim2.new(1, 0, 1, 0) or UDim2.new(1, 0, 1, -8),
+		Size = UDim2.new(1, 0, 1, 0),
 		Position = UDim2.new(0,0,0,0),
 		TextColor3 = Theme.color("WhiteButtonText", Color3.fromRGB(255, 255, 255)),
 		TextTransparency = Theme.transparency("WhiteButtonText", 0),
@@ -650,14 +458,14 @@ local function MakeButton(name, text, size, clickFunc, pageRef, hubRef)
 
 	if isSmallTouchScreen() then
 		-- Special case to increase max size for 1 row of buttons
-		if Theme.UIBloxThemeEnabled and Theme.UseBiggerText and (name == "ResumeButton" or name == "ResetButton" or name == "LeaveButton") then
+		if Theme.UseBiggerText and (name == "ResumeButton" or name == "ResetButton" or name == "LeaveButton") then
 			textLabel.TextSize = Theme.textSize(20)
 		else
 			textLabel.TextSize = Theme.textSize(18)
 		end
 	elseif isTenFootInterface() then
 		local isButtonWithOverflowingText = name == "FriendStatus" or name == "BlockButton"
-		if not (Theme.UIBloxThemeEnabled and isButtonWithOverflowingText) then 
+		if not (isButtonWithOverflowingText) then 
 			textLabel.TextSize = Theme.textSize(36)
 		end
 	end
@@ -704,7 +512,7 @@ local function MakeImageButton(name, image, size, imageSize, clickFunc, pageRef,
 		ZIndex = 2,
 		Parent = button,
 	})
-	if Theme.UIBloxThemeEnabled and style == "ImageButton" then
+	if style == "ImageButton" then
 		button.Border.Thickness = 0
 		button.Border.Transparency = 1
 	end
@@ -728,11 +536,6 @@ end
 -- adds a SelectionImageObject to instance to act as a focusState based off of UIBlox CursorKind.RoundedRect
 -- focus state is unbound when instance is un-parented
 local function MakeRoundedRectFocusState(instance, renderStepName)
-	if not Theme.UIBloxThemeEnabled then
-		return
-	end
-
-
 	local focusState = Create("Frame")({
 		BackgroundTransparency = 1,
 		Size = UDim2.new(1, FOCUS_INSET_ADJUSTMENT * 2, 1, FOCUS_INSET_ADJUSTMENT * 2),
@@ -878,8 +681,8 @@ local function CreateDropDown(dropDownStringTable, startPosition, settingsHub)
 
 	local DropDownSelectionFrame = Create("ImageLabel")({
 		Name = "DropDownSelectionFrame",
-		Image = if Theme.UIBloxThemeEnabled then "" else "rbxasset://textures/ui/Settings/MenuBarAssets/MenuButton.png",
-		ScaleType = if Theme.UIBloxThemeEnabled then Enum.ScaleType.Stretch else Enum.ScaleType.Slice,
+		Image = "",
+		ScaleType = Enum.ScaleType.Stretch,
 		SliceCenter = Rect.new(8, 6, 46, 44),
 		BackgroundTransparency = Theme.transparency("DropdownListBg", 1),
 		BackgroundColor3 = Theme.color("DropdownListBg"),
@@ -890,12 +693,10 @@ local function CreateDropDown(dropDownStringTable, startPosition, settingsHub)
 		Parent = DropDownFullscreenFrame,
 	})
 
-	if Theme.UIBloxThemeEnabled then
-		Create("UICorner")({
-			CornerRadius = Theme.DefaultCornerRadius,
-			Parent = DropDownSelectionFrame,
-		})
-	end
+	Create("UICorner")({
+		CornerRadius = Theme.DefaultCornerRadius,
+		Parent = DropDownSelectionFrame,
+	})
 
 	local DropDownScrollingFrame = Create("ScrollingFrame")({
 		Name = "DropDownScrollingFrame",
@@ -905,7 +706,7 @@ local function CreateDropDown(dropDownStringTable, startPosition, settingsHub)
 		Position = UDim2.new(0, 10, 0, 10),
 		ZIndex = 10,
 		ScrollBarThickness = Theme.DefaultScrollBarThickness,
-		ScrollingDirection = if Theme.UIBloxThemeEnabled then Enum.ScrollingDirection.Y else Enum.ScrollingDirection.XY,
+		ScrollingDirection = Enum.ScrollingDirection.Y,
 		Parent = DropDownSelectionFrame,
 	})
 
@@ -999,10 +800,7 @@ local function CreateDropDown(dropDownStringTable, startPosition, settingsHub)
 
 	local dropDownDefaultText = RobloxTranslator:FormatByKey(DROPDOWN_DEFAULT_TEXT_KEY)
 
-	local dropDownFrameSize = UDim2.new(0.6, 0, 0, 50)
-	if Theme.UIBloxThemeEnabled then
-		dropDownFrameSize = UDim2.new(0.6, 0, 0, 40)
-	end
+	local dropDownFrameSize = UDim2.new(0.6, 0, 0, 40)
 	this.DropDownFrame =
 		MakeButton("DropDownFrame", dropDownDefaultText, dropDownFrameSize, DropDownFrameClicked, nil, settingsHub)
 	this.DropDownFrame.Position = UDim2.new(1, 0, 0.5, 0)
@@ -1011,11 +809,7 @@ local function CreateDropDown(dropDownStringTable, startPosition, settingsHub)
 	dropDownButtonEnabled = this.DropDownFrame.Enabled
 	local selectedTextLabel = this.DropDownFrame.DropDownFrameTextLabel
 	selectedTextLabel.Position = UDim2.new(0, 15, 0, 0)
-	if Theme.UIBloxThemeEnabled then
-		selectedTextLabel.Size = UDim2.new(1, -50, 1, 0)
-	else
-		selectedTextLabel.Size = UDim2.new(1, -50, 1, -8)
-	end
+	selectedTextLabel.Size = UDim2.new(1, -50, 1, 0)
 	selectedTextLabel.ClipsDescendants = true
 	selectedTextLabel.TextXAlignment = Enum.TextXAlignment.Left
 	local dropDownImage = Create("ImageLabel")({
@@ -1163,12 +957,10 @@ local function CreateDropDown(dropDownStringTable, startPosition, settingsHub)
 				BorderSizePixel = 0,
 				Size = UDim2.new(1, 0, 1, 0),
 			})
-			if Theme.UIBloxThemeEnabled then
-				Create("UICorner")({
-					CornerRadius = Theme.DefaultCornerRadius,
-					Parent = SelectionOverrideObject,
-				})
-			end
+			Create("UICorner")({
+				CornerRadius = Theme.DefaultCornerRadius,
+				Parent = SelectionOverrideObject,
+			})
 
 			local text = v
 			local subtitle = ""
@@ -1537,7 +1329,9 @@ local function CreateSelector(selectionStringTable, startPosition)
 						GuiService.SelectedCoreObject = this.SelectorFrame
 					end
 				else
-					this.Selections[this.CurrentIndex].TextTransparency = 0.5
+					if FFlagIEMFocusNavToButtons and this.Selections[this.CurrentIndex] then
+						this.Selections[this.CurrentIndex].TextTransparency = 0.5
+					end
 				end
 			end
 		end)
@@ -1610,7 +1404,7 @@ local function CreateSelector(selectionStringTable, startPosition)
 				TextTransparency = 0.5,
 				Font = Theme.font(Enum.Font.SourceSans, "UtilityText"),
 				TextSize = Theme.textSize(24, "UtilityText"),
-				TextWrapped = Theme.UIBloxThemeEnabled,
+				TextWrapped = true,
 				Text = v,
 				ZIndex = 2,
 				Visible = false,
@@ -1857,7 +1651,7 @@ local function ShowAlert(alertMessage, okButtonText, settingsHub, okPressedFunc,
 		)
 	end
 
-	if Theme.UIBloxThemeEnabled and not hasBackground then
+	if not hasBackground then
 		Create("UICorner")({
 			CornerRadius = Theme.DefaultCornerRadius,
 			Parent = AlertViewBacking,
@@ -2172,15 +1966,13 @@ local function CreateNewSlider(numOfSteps, startStep, minStep, leftLabelText, ri
 		local nextStep = Create("ImageButton")({
 			Name = "Step" .. tostring(i),
 			BackgroundColor3 = SELECTED_COLOR,
-			BackgroundTransparency = if Theme.UIBloxThemeEnabled then 0 else 0.36,
+			BackgroundTransparency = 0,
 			BorderSizePixel = 0,
 			AutoButtonColor = false,
 			Active = false,
 			AnchorPoint = Vector2.new(0, 0.5),
 			Position = UDim2.new((i - 1) * stepXScale, spacing / 2, 0.5, 0),
-			Size = if Theme.UIBloxThemeEnabled
-				then UDim2.new(stepXScale, -spacing, 0, 24)
-				else UDim2.new(stepXScale, -spacing, 24 / 50, 0),
+			Size = UDim2.new(stepXScale, -spacing, 0, 24),
 			Image = "",
 			ZIndex = 3,
 			Selectable = false,
@@ -2194,38 +1986,18 @@ local function CreateNewSlider(numOfSteps, startStep, minStep, leftLabelText, ri
 		end
 
 		if i == 1 or i == steps then
-			if Theme.UIBloxThemeEnabled then
-				Create("UICorner")({
-					CornerRadius = Theme.DefaultCornerRadius,
-					Parent = nextStep,
-				})
-				Create("Frame")({
-					Name = "Filler",
-					BackgroundColor3 = nextStep.BackgroundColor3,
-					Parent = nextStep,
-					Size = UDim2.new(0.25, 0, 1, 0),
-					BorderSizePixel = 0,
-					Position = if i == 1 then UDim2.new(0.75, 0, 0, 0) else UDim2.new(0, 0, 0, 0),
-				})
-			else
-				nextStep.BackgroundTransparency = 1
-				nextStep.ScaleType = Enum.ScaleType.Slice
-				nextStep.SliceCenter = Rect.new(3, 3, 32, 21)
-
-				if i <= currentStep then
-					if i == 1 then
-						nextStep.Image = SELECTED_LEFT_IMAGE
-					else
-						nextStep.Image = SELECTED_RIGHT_IMAGE
-					end
-				else
-					if i == 1 then
-						nextStep.Image = NON_SELECTED_LEFT_IMAGE
-					else
-						nextStep.Image = NON_SELECTED_RIGHT_IMAGE
-					end
-				end
-			end
+			Create("UICorner")({
+				CornerRadius = Theme.DefaultCornerRadius,
+				Parent = nextStep,
+			})
+			Create("Frame")({
+				Name = "Filler",
+				BackgroundColor3 = nextStep.BackgroundColor3,
+				Parent = nextStep,
+				Size = UDim2.new(0.25, 0, 1, 0),
+				BorderSizePixel = 0,
+				Position = if i == 1 then UDim2.new(0.75, 0, 0, 0) else UDim2.new(0, 0, 0, 0),
+			})
 		end
 
 		this.Steps[#this.Steps + 1] = nextStep
@@ -2235,16 +2007,8 @@ local function CreateNewSlider(numOfSteps, startStep, minStep, leftLabelText, ri
 	local function hideSelection()
 		for i = 1, steps do
 			this.Steps[i].BackgroundColor3 = NON_SELECTED_COLOR
-			if Theme.UIBloxThemeEnabled then
-				if i == 1 or i == steps then
-					this.Steps[i].Filler.BackgroundColor3 = NON_SELECTED_COLOR
-				end
-			else
-				if i == 1 then
-					this.Steps[i].Image = NON_SELECTED_LEFT_IMAGE
-				elseif i == steps then
-					this.Steps[i].Image = NON_SELECTED_RIGHT_IMAGE
-				end
+			if i == 1 or i == steps then
+				this.Steps[i].Filler.BackgroundColor3 = NON_SELECTED_COLOR
 			end
 		end
 	end
@@ -2254,28 +2018,8 @@ local function CreateNewSlider(numOfSteps, startStep, minStep, leftLabelText, ri
 				break
 			end
 			this.Steps[i].BackgroundColor3 = SELECTED_COLOR
-
-			if Theme.UIBloxThemeEnabled then
-				if i == 1 or i == steps then
-					this.Steps[i].Filler.BackgroundColor3 = SELECTED_COLOR
-				end
-			else
-				if i == 1 then
-					this.Steps[i].Image = SELECTED_LEFT_IMAGE
-				elseif i == steps then
-					this.Steps[i].Image = SELECTED_RIGHT_IMAGE
-				end
-			end
-		end
-	end
-	local function modifySelection(alpha)
-		if not Theme.UIBloxThemeEnabled then
-			for i = 1, steps do
-				if i == 1 or i == steps then
-					this.Steps[i].ImageTransparency = alpha
-				else
-					this.Steps[i].BackgroundTransparency = alpha
-				end
+			if i == 1 or i == steps then
+				this.Steps[i].Filler.BackgroundColor3 = SELECTED_COLOR
 			end
 		end
 	end
@@ -2644,14 +2388,12 @@ local function CreateNewSlider(numOfSteps, startStep, minStep, leftLabelText, ri
 		local selected = GuiService.SelectedCoreObject
 		local isThisSelected = selected and selected:IsDescendantOf(this.SliderFrame.Parent)
 		if isThisSelected then
-			modifySelection(0)
 			if not isBound then
 				isBound = true
 				timeAtLastInput = tick()
 				RunService:BindToRenderStep(renderStepBindName, Enum.RenderPriority.Input.Value + 1, stepSliderFunc)
 			end
 		else
-			modifySelection(0.36)
 			if isBound then
 				isBound = false
 				RunService:UnbindFromRenderStep(renderStepBindName)
@@ -2702,15 +2444,12 @@ local function AddNewRow(pageToAddTo, rowDisplayName, selectionType, rowValues, 
 		Parent = pageToAddTo.Page,
 	})
 
-	if Theme.UIBloxThemeEnabled then
-		RowFrame.BackgroundColor3 = Theme.color("RowFrameBackground")
-		Create("UICorner")({
-			CornerRadius = Theme.DefaultCornerRadius,
-			Parent = RowFrame,
-		})
-	end
-
+	RowFrame.BackgroundColor3 = Theme.color("RowFrameBackground")
 	RowFrame.ImageColor3 = RowFrame.BackgroundColor3
+	Create("UICorner")({
+		CornerRadius = Theme.DefaultCornerRadius,
+		Parent = RowFrame,
+	})
 
 	if RowFrame and extraSpacing then
 		RowFrame.Position = UDim2.new(
@@ -3178,14 +2917,7 @@ local function AddNewRowObject(pageToAddTo, rowDisplayName, rowObject, extraSpac
 		Parent = pageToAddTo.Page,
 	})
 
-	if Theme.UIBloxThemeEnabled then
-		RowFrame.BackgroundColor3 = Theme.color("RowFrameBackground")
-		Create("UICorner")({
-			CornerRadius = Theme.DefaultCornerRadius,
-			Parent = RowFrame,
-		})
-	end
-
+	RowFrame.BackgroundColor3 = Theme.color("RowFrameBackground")
 	RowFrame.ImageColor3 = RowFrame.BackgroundColor3
 	RowFrame.SelectionGained:Connect(function()
 		RowFrame.BackgroundTransparency = Theme.transparency("RowFrameBackground", 0.5)
@@ -3193,6 +2925,11 @@ local function AddNewRowObject(pageToAddTo, rowDisplayName, rowObject, extraSpac
 	RowFrame.SelectionLost:Connect(function()
 		RowFrame.BackgroundTransparency = 1
 	end)
+
+	Create("UICorner")({
+		CornerRadius = Theme.DefaultCornerRadius,
+		Parent = RowFrame,
+	})
 
 	local RowLabel = Create("TextLabel")({
 		Name = rowDisplayName .. "Label",
@@ -3327,10 +3064,6 @@ if FFlagRefactorMenuConfirmationButtons then
 	function moduleApiTable:IsUsingGamepad()
 		return isUsingGamepad()
 	end
-end
-
-function moduleApiTable:MakeIconButton(name, icon, text, size, clickFunc, pageRef, hubRef)
-	return MakeIconButton(name, icon, text, size, clickFunc, pageRef, hubRef)
 end
 
 function moduleApiTable:MakeStyledButton(name, text, size, clickFunc, pageRef, hubRef)

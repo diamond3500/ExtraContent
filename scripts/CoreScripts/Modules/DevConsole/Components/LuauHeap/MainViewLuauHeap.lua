@@ -190,7 +190,6 @@ function MainViewLuauHeap:init()
 			local data = HttpService:JSONDecode(message)
 			local snapshot = data.Report :: LuauHeapTypes.HeapReport
 			local refs = data.Refs :: LuauHeapTypes.UniqueRefReport
-
 			snapshot.Refs = refs
 
 			local newState: LuauHeapTypes.SessionState = table.clone(state)

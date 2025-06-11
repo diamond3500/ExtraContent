@@ -20,11 +20,8 @@ local FIntRelocateMobileMenuButtonsVariant = require(RobloxGui.Modules.Settings.
 
 local AppFontBaseSize = 16 * 1.2
 
-local ThemeEnabled = true
-
 local UseBiggerText = false
 local UseStickyBarEnabled = false
-local UseIconButtons = false
 local UseBottomButtonBarOnMobile = false
 
 -- Roblox -> Nominal scaling factor depending on font
@@ -292,20 +289,6 @@ local HubPaddingMobile = {
 	PaddingBottom = if FFlagRelocateMobileMenuButtons and (FIntRelocateMobileMenuButtonsVariant == 1 or FIntRelocateMobileMenuButtonsVariant == 3) then UDim.new(0, 12 + extraHubBottomPaddingMobile) else UDim.new(0, 12),
 }
 
-local MenuContainerPositionOld = {
-	AnchorPoint = Vector2.new(0.5, 0.5),
-	Position = UDim2.new(0.5, 0, 0.5, 0),
-	Size = UDim2.new(0.95, 0, 0.95, 0),
-	AutomaticSize = Enum.AutomaticSize.None,
-}
-
-local MenuContainerPositionOldMobile = {
-	AnchorPoint = Vector2.new(0.5, 0.5),
-	Position = UDim2.new(0.5, 0, 0.5, 0),
-	Size = UDim2.new(1, 0, 0.99, 0),
-	AutomaticSize = Enum.AutomaticSize.None,
-}
-
 local MenuContainerPosition = {
 	AnchorPoint = Vector2.new(0.5, 0.5),
 	Position = UDim2.new(0.5, 0, 0.5, 10),
@@ -327,214 +310,143 @@ local MenuContainerPositionMobileWithStickyBar = {
 	AutomaticSize = Enum.AutomaticSize.Y,
 }
 
-if ThemeEnabled then
-	return {
-		DefaultScrollBarThickness = 1,
-		DefaultCornerRadius = UDim.new(0, 8),
-		MenuContainerCornerRadius = UDim.new(0, 10),
-		DefaultStokeThickness = 1,
-		AlwaysShowBottomBar = function()
-			if UseStickyBar() then
-				return true
-			end
-			if IsSmallTouchScreen then
-				if not UseBottomButtonBarOnMobile then
-					return false
-				elseif isPortrait() then
-					return UseBottomButtonBarOnMobile
-				else
-					return not UseBottomButtonBarOnMobile
-				end
+return {
+	DefaultScrollBarThickness = 1,
+	DefaultCornerRadius = UDim.new(0, 8),
+	MenuContainerCornerRadius = UDim.new(0, 10),
+	DefaultStokeThickness = 1,
+	AlwaysShowBottomBar = function()
+		if UseStickyBar() then
+			return true
+		end
+		if IsSmallTouchScreen then
+			if not UseBottomButtonBarOnMobile then
+				return false
+			elseif isPortrait() then
+				return UseBottomButtonBarOnMobile
 			else
-				return true
+				return not UseBottomButtonBarOnMobile
 			end
-		end,
-		UIBloxThemeEnabled = true,
-		UseIconButtons = UseIconButtons,
-		ShowHomeButton = false,
-		EnableVerticalBottomBar = UseBottomButtonBarOnMobile,
-		UseBiggerText = UseBiggerText,
-		UseStickyBar = UseStickyBar,
-		EnableDarkenBackground = true,
-		TabHeaderIconPadding = 5,
-		UseInspectAndBuyPanel = function()
-			return IsSmallTouchScreen
-		end,
-		ExtraHubBottomPaddingMobile = extraHubBottomPaddingMobile,
-		HubPadding = function()
-			if FFlagRelocateMobileMenuButtons and FIntRelocateMobileMenuButtonsVariant ~= 0 then
-				-- IsSmallTouchScreen does not return the correct value on initial render, call a function to get the value instead
-				local isSmallTouchScreen = function()
-					local viewportSize = getViewportSize()
-					return viewportSize
-							and UserInputService.TouchEnabled
-							and (viewportSize.Y < 500 or viewportSize.X < 700)
-				end
-
-				if isSmallTouchScreen() then
-					return HubPaddingMobile
-				else
-					return HubPadding
-				end
-			else
-				if IsSmallTouchScreen then
-					return HubPaddingMobile
-				else
-					return HubPadding
-				end
-			end
-		end,
-		MenuContainerPosition = function(settingsUIDelegate: any?)
-			if isInExperienceUIVREnabled and settingsUIDelegate then
-				local positionOverride = settingsUIDelegate:getMenuContainerPositionOverride()
-				if positionOverride then
-					return positionOverride
-				end
-			end
-			if IsSmallTouchScreen then
-				if UseStickyBar() then
-					return MenuContainerPositionMobileWithStickyBar
-				else
-					return MenuContainerPositionMobile
-				end
-			else
-				return MenuContainerPosition
-			end
-		end,
-		ButtonHeight = 36,
-		LargeButtonHeight = 48,
-		SelectorArrowButtonWidth = 32,
-		VerticalMenuWidth = 92,
-		Images = UIBloxImages,
-		getIconSize = getIconSize,
-		IconSize = IconSize,
-		SHIELD_INACTIVE_POSITION = UDim2.new(0, 0, 1, 36),
-		viewportResized = function()
-			viewportSize = getViewportSize()
-			IsSmallTouchScreen = viewportSize
-				and UserInputService.TouchEnabled
-				and (viewportSize.Y < 500 or viewportSize.X < 700)
-		end,
-		color = function(key: string, nonThemeColor: Color3?)
-			key = ComponentThemeKeys[key] or key
-			return if AppTheme[key] then AppTheme[key].Color else nonThemeColor or nullColor
-		end,
-		transparency = function(key: string, nonThemeTransparency: number?)
-			key = ComponentThemeKeys[key] or key
-			return if AppTheme[key] then AppTheme[key].Transparency else nonThemeTransparency or 0
-		end,
-		font = function(nonThemeFont: any?, key: string?)
-			if not key then
-				return nullFont
-			end
-			key = ComponentThemeKeys[key] or key
-			return if AppFont[key] then AppFont[key].Font else nonThemeFont or nullFont
-		end,
-		fontSize = function(nonThemeFontSize: Enum.FontSize, key: string?)
-			if not key then
-				return fontSizeMap[nonThemeFontSize]
-			end
-			key = ComponentThemeKeys[key] or key
-			return if AppFont[key] then AppFont[key].RelativeSize else nonThemeFontSize or nullFontSize
-		end,
-		textSize = function(nonThemeTextSize: number, key: string?)
-			if not key then
-				return nonThemeTextSize * nominalSizeFactor or nullTextSize
-			end
-			if IsSmallTouchScreen and key == "UtilityRow" then
-				key = "UtilityRowSmall"
-			elseif IsSmallTouchScreen and key == "UtilityText" then
-				key = "UtilityTextSmall"
-			end
-			key = ComponentThemeKeys[key] or key
-			return if AppFont[key] and AppFont[key].TextSize
-				then AppFont[key].TextSize
-				else nonThemeTextSize * nominalSizeFactor or nullTextSize
-		end,
-		hydrateLabel = function(instance: any, colorStyle: string, fontStyle: string)
-			colorStyle = ComponentThemeKeys[colorStyle] or colorStyle
-			if AppTheme[colorStyle] then
-				local color = AppTheme[colorStyle]
-				instance.TextColor3 = color.Color
-				instance.TextTransparency = color.Transparency
+		else
+			return true
+		end
+	end,
+	UIBloxThemeEnabled = true,
+	ShowHomeButton = false,
+	EnableVerticalBottomBar = UseBottomButtonBarOnMobile,
+	UseBiggerText = UseBiggerText,
+	UseStickyBar = UseStickyBar,
+	EnableDarkenBackground = true,
+	TabHeaderIconPadding = 5,
+	UseInspectAndBuyPanel = function()
+		return IsSmallTouchScreen
+	end,
+	ExtraHubBottomPaddingMobile = extraHubBottomPaddingMobile,
+	HubPadding = function()
+		if FFlagRelocateMobileMenuButtons and FIntRelocateMobileMenuButtonsVariant ~= 0 then
+			-- IsSmallTouchScreen does not return the correct value on initial render, call a function to get the value instead
+			local isSmallTouchScreen = function()
+				local viewportSize = getViewportSize()
+				return viewportSize
+						and UserInputService.TouchEnabled
+						and (viewportSize.Y < 500 or viewportSize.X < 700)
 			end
 
-			if AppFont[fontStyle] then
-				local font = AppFont[colorStyle]
-				instance.Font = font.RelativeSize * AppFontBaseSize
-				instance.TextSize = font.TextSize
+			if isSmallTouchScreen() then
+				return HubPaddingMobile
+			else
+				return HubPadding
 			end
-		end,
-		platformNameTextSize = 18,
-		platformNameIconSize = UDim2.fromOffset(36, 36),
-		selectionCursor = AppTheme.SelectionCursor,
-	}
-else
-	return {
-		DefaultScrollBarThickness = 12,
-		DefaultCornerRadius = UDim.new(0, 8),
-		MenuContainerCornerRadius = UDim.new(0, 10),
-		AlwaysShowBottomBar = function()
-			return false
-		end,
-		UseIconButtons = false,
-		UIBloxThemeEnabled = false,
-		EnableVerticalBottomBar = false,
-		DefaultStokeThickness = 1,
-		ShowHomeButton = true,
-		UseBiggerText = false,
-		UseStickyBar = function()
-			return false
-		end,
-		EnableDarkenBackground = false,
-		TabHeaderIconPadding = 0,
-		UseInspectAndBuyPanel = function()
-			return false
-		end,
-		ExtraHubBottomPaddingMobile = extraHubBottomPaddingMobile,
-		HubPadding = function()
+		else
 			if IsSmallTouchScreen then
 				return HubPaddingMobile
 			else
 				return HubPadding
 			end
-		end,
-		MenuContainerPosition = function(_: any?)
-			if IsSmallTouchScreen then
-				return MenuContainerPositionOldMobile
-			else
-				return MenuContainerPositionOld
+		end
+	end,
+	MenuContainerPosition = function(settingsUIDelegate: any?)
+		if isInExperienceUIVREnabled and settingsUIDelegate then
+			local positionOverride = settingsUIDelegate:getMenuContainerPositionOverride()
+			if positionOverride then
+				return positionOverride
 			end
-		end,
-		ButtonHeight = 46,
-		LargeButtonHeight = 70,
-		SelectorArrowButtonWidth = 50,
-		VerticalMenuWidth = 92,
-		Images = UIBloxImages,
-		getIconSize = getIconSize,
-		IconSize = IconSize,
-		SHIELD_INACTIVE_POSITION = UDim2.new(0, 0, -1, -36),
-		viewportResized = function() end,
-		color = function(_: string, nonThemeColor: Color3?)
-			return nonThemeColor or nullColor
-		end,
-		transparency = function(_: string, nonThemeTransparency: number?)
-			return nonThemeTransparency or 0
-		end,
-		font = function(nonThemeFont: any?, _: string?)
-			return nonThemeFont
-		end,
-		fontSize = function(nonThemeFontSize: Enum.FontSize, _: string?)
-			return nonThemeFontSize
-		end,
-		textSize = function(nonThemeTextSize: number, _: string?)
-			return nonThemeTextSize
-		end,
-		hydrateLabel = function(instance: any, colorStyle: string, fontStyle: string)
-			-- noop
-		end,
-		platformNameTextSize = 18,
-		platformNameIconSize = UDim2.fromOffset(36, 36),
-		selectionCursor = nil,
-	}
-end
+		end
+		if IsSmallTouchScreen then
+			if UseStickyBar() then
+				return MenuContainerPositionMobileWithStickyBar
+			else
+				return MenuContainerPositionMobile
+			end
+		else
+			return MenuContainerPosition
+		end
+	end,
+	ButtonHeight = 36,
+	LargeButtonHeight = 48,
+	SelectorArrowButtonWidth = 32,
+	VerticalMenuWidth = 92,
+	Images = UIBloxImages,
+	getIconSize = getIconSize,
+	IconSize = IconSize,
+	SHIELD_INACTIVE_POSITION = UDim2.new(0, 0, 1, 36),
+	viewportResized = function()
+		viewportSize = getViewportSize()
+		IsSmallTouchScreen = viewportSize
+			and UserInputService.TouchEnabled
+			and (viewportSize.Y < 500 or viewportSize.X < 700)
+	end,
+	color = function(key: string, nonThemeColor: Color3?)
+		key = ComponentThemeKeys[key] or key
+		return if AppTheme[key] then AppTheme[key].Color else nonThemeColor or nullColor
+	end,
+	transparency = function(key: string, nonThemeTransparency: number?)
+		key = ComponentThemeKeys[key] or key
+		return if AppTheme[key] then AppTheme[key].Transparency else nonThemeTransparency or 0
+	end,
+	font = function(nonThemeFont: any?, key: string?)
+		if not key then
+			return nullFont
+		end
+		key = ComponentThemeKeys[key] or key
+		return if AppFont[key] then AppFont[key].Font else nonThemeFont or nullFont
+	end,
+	fontSize = function(nonThemeFontSize: Enum.FontSize, key: string?)
+		if not key then
+			return fontSizeMap[nonThemeFontSize]
+		end
+		key = ComponentThemeKeys[key] or key
+		return if AppFont[key] then AppFont[key].RelativeSize else nonThemeFontSize or nullFontSize
+	end,
+	textSize = function(nonThemeTextSize: number, key: string?)
+		if not key then
+			return nonThemeTextSize * nominalSizeFactor or nullTextSize
+		end
+		if IsSmallTouchScreen and key == "UtilityRow" then
+			key = "UtilityRowSmall"
+		elseif IsSmallTouchScreen and key == "UtilityText" then
+			key = "UtilityTextSmall"
+		end
+		key = ComponentThemeKeys[key] or key
+		return if AppFont[key] and AppFont[key].TextSize
+			then AppFont[key].TextSize
+			else nonThemeTextSize * nominalSizeFactor or nullTextSize
+	end,
+	hydrateLabel = function(instance: any, colorStyle: string, fontStyle: string)
+		colorStyle = ComponentThemeKeys[colorStyle] or colorStyle
+		if AppTheme[colorStyle] then
+			local color = AppTheme[colorStyle]
+			instance.TextColor3 = color.Color
+			instance.TextTransparency = color.Transparency
+		end
+
+		if AppFont[fontStyle] then
+			local font = AppFont[colorStyle]
+			instance.Font = font.RelativeSize * AppFontBaseSize
+			instance.TextSize = font.TextSize
+		end
+	end,
+	platformNameTextSize = 18,
+	platformNameIconSize = UDim2.fromOffset(36, 36),
+	selectionCursor = AppTheme.SelectionCursor,
+}

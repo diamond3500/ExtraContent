@@ -123,6 +123,7 @@ local function mountAnnotationPage(
 		end,
 		initialAnnotationPoints = {},
 		initialPageNumber = 1,
+		viewportInfo = reportAnythingState.identificationResults.avatarIDStats.viewportInfo,
 		reportAnythingAnalytics = reportAnythingAnalytics,
 	})
 	reportAnythingDispatch({

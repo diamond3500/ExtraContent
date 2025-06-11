@@ -1,3 +1,4 @@
+--!nolint DeprecatedApi
 local CorePackages = game:GetService("CorePackages")
 local CoreGui = game:GetService("CoreGui")
 local ContextActionService = game:GetService("ContextActionService")
@@ -16,8 +17,6 @@ local FocusHandler = require(script.Parent.Connection.FocusHandler)
 local RootedConnection = require(script.Parent.Connection.RootedConnection)
 
 local Flags = InGameMenu.Flags
-local GetFFlagIGMRefactorPlayerContextualMenuGamepadSupport =
-	require(Flags.GetFFlagIGMRefactorPlayerContextualMenuGamepadSupport)
 local GetFFlagIGMGamepadSelectionHistory = require(Flags.GetFFlagIGMGamepadSelectionHistory)
 
 local PLAYER_CONTEXTUAL_MENU_CLOSE_ACTION = "player_contextual_menu_close_action"
@@ -35,50 +34,12 @@ PlayerContextualMenu.validateProps = t.strictInterface({
 })
 
 function PlayerContextualMenu:init()
-	if GetFFlagIGMRefactorPlayerContextualMenuGamepadSupport() then
-		self.firstOptionRef = Roact.createRef()
-		self.containerRef = Roact.createRef()
-	else
-		self.firstOptionRef = nil
-		self.containerRef = nil
-		self.state = {
-			isRooted = false,
-			firstOptionRef = nil,
-			containerRef = nil,
-		}
-
-		self.setFirstOptionRef = function(ref)
-			self:setState({
-				firstOptionRef = ref,
-			})
-		end
-
-		self.setContainerRef = function(ref)
-			self:setState({
-				containerRef = ref,
-			})
-		end
-
-		self.onAncestryChanged = function(instance)
-			if instance:IsDescendantOf(game) then
-				self:setState({
-					isRooted = true,
-				})
-			end
-		end
-	end
+	self.firstOptionRef = Roact.createRef()
+	self.containerRef = Roact.createRef()
 end
 
 function PlayerContextualMenu:renderContextualMenuFocusHandler(isRooted, children)
-	local isFocused = nil
-	if GetFFlagIGMRefactorPlayerContextualMenuGamepadSupport() then
-		isFocused = self.props.canCaptureFocus and isRooted
-	else
-		isFocused = self.props.canCaptureFocus
-			and self.state.isRooted
-			and self.state.firstOptionRef
-			and self.state.containerRef
-	end
+	local isFocused = self.props.canCaptureFocus and isRooted
 
 	return Roact.createElement(FocusHandler, {
 		isFocused = isFocused,
@@ -90,34 +51,24 @@ function PlayerContextualMenu:renderContextualMenuFocusHandler(isRooted, childre
 					return Enum.ContextActionResult.Sink
 				end
 				return Enum.ContextActionResult.Pass
-			end, false, Enum.KeyCode.ButtonB)			-- RemoveSelectionGroup is deprecated
-;
-			(GuiService :: any):RemoveSelectionGroup(SELECTION_PARENT_NAME)
-			if GetFFlagIGMRefactorPlayerContextualMenuGamepadSupport() then
-				-- AddSelectionParent is deprecated
-				(GuiService :: any):AddSelectionParent(SELECTION_PARENT_NAME, self.containerRef:getValue())
+			end, false, Enum.KeyCode.ButtonB)
 
-				if GetFFlagIGMGamepadSelectionHistory() then
-					GuiService.SelectedCoreObject = previousSelection or self.firstOptionRef:getValue()
-				else
-					GuiService.SelectedCoreObject = self.firstOptionRef:getValue()
-				end
+			-- RemoveSelectionGroup is deprecated
+			GuiService:RemoveSelectionGroup(SELECTION_PARENT_NAME)
+			-- AddSelectionParent is deprecated
+			GuiService:AddSelectionParent(SELECTION_PARENT_NAME, self.containerRef:getValue())
+
+			if GetFFlagIGMGamepadSelectionHistory() then
+				GuiService.SelectedCoreObject = previousSelection or self.firstOptionRef:getValue()
 			else
-				-- AddSelectionParent is deprecated
-				(GuiService :: any):AddSelectionParent(SELECTION_PARENT_NAME, self.state.containerRef)
-
-				if GetFFlagIGMGamepadSelectionHistory() then
-					GuiService.SelectedCoreObject = previousSelection or self.state.firstOptionRef
-				else
-					GuiService.SelectedCoreObject = self.state.firstOptionRef
-				end
+				GuiService.SelectedCoreObject = self.firstOptionRef:getValue()
 			end
 		end,
 
 		didBlur = function()
 			ContextActionService:UnbindCoreAction(PLAYER_CONTEXTUAL_MENU_CLOSE_ACTION)
 		end,
-	}, GetFFlagIGMRefactorPlayerContextualMenuGamepadSupport() and children or nil)
+	}, children)
 end
 
 function PlayerContextualMenu:render()
@@ -129,45 +80,24 @@ function PlayerContextualMenu:render()
 			DisplayOrder = 2,
 			ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
 		}, {
-			FocusHandler = not GetFFlagIGMRefactorPlayerContextualMenuGamepadSupport()
-					and self:renderContextualMenuFocusHandler()
-				or nil,
-			MoreActionsMenu = not GetFFlagIGMRefactorPlayerContextualMenuGamepadSupport()
-					and Roact.createElement("Frame", {
-						[Roact.Event.AncestryChanged] = self.onAncestryChanged,
-						Size = UDim2.fromScale(1, 1),
-						BackgroundTransparency = 1,
-						[Roact.Ref] = self.setContainerRef,
-					}, {
-						BaseMenu = Roact.createElement(BaseMenu, {
-							buttonProps = self.props.moreActions,
-							setFirstItemRef = self.setFirstOptionRef,
-							width = UDim.new(0, self.props.actionWidth),
-							position = UDim2.fromOffset(self.props.xOffset, self.props.yOffset),
+			RootedConnection = Roact.createElement(RootedConnection, {
+				render = function(isRooted)
+					return self:renderContextualMenuFocusHandler(isRooted, {
+						MoreActionsMenu = Roact.createElement("Frame", {
+							Size = UDim2.fromScale(1, 1),
+							BackgroundTransparency = 1,
+							[Roact.Ref] = self.containerRef,
+						}, {
+							BaseMenu = Roact.createElement(BaseMenu, {
+								buttonProps = self.props.moreActions,
+								setFirstItemRef = self.firstOptionRef,
+								width = UDim.new(0, self.props.actionWidth),
+								position = UDim2.fromOffset(self.props.xOffset, self.props.yOffset),
+							}),
 						}),
 					})
-				or nil,
-
-			RootedConnection = GetFFlagIGMRefactorPlayerContextualMenuGamepadSupport()
-					and Roact.createElement(RootedConnection, {
-						render = function(isRooted)
-							return self:renderContextualMenuFocusHandler(isRooted, {
-								MoreActionsMenu = Roact.createElement("Frame", {
-									Size = UDim2.fromScale(1, 1),
-									BackgroundTransparency = 1,
-									[Roact.Ref] = self.containerRef,
-								}, {
-									BaseMenu = Roact.createElement(BaseMenu, {
-										buttonProps = self.props.moreActions,
-										setFirstItemRef = self.firstOptionRef,
-										width = UDim.new(0, self.props.actionWidth),
-										position = UDim2.fromOffset(self.props.xOffset, self.props.yOffset),
-									}),
-								}),
-							})
-						end,
-					})
-				or nil,
+				end,
+			})
 		}),
 	})
 end

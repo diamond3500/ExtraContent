@@ -21,10 +21,6 @@ local InviteButton = require(ShareGame.Components.InviteButton)
 local Constants = require(ShareGame.Constants)
 local InviteStatus = Constants.InviteStatus
 
-local ENTRY_BG_IMAGE = "rbxasset://textures/ui/dialog_white.png"
-local ENTRY_BG_SLICE = Rect.new(10, 10, 10, 10)
-local ENTRY_BG_TRANSPARENCY = 0.85
-
 local THUMBNAIL_SIZE = 32
 local INVITE_BUTTON_WIDTH = 69
 local CONTENTS_PADDING = 12
@@ -81,23 +77,21 @@ function ConversationEntry:render()
 	local presence = self.props.presence
 
 	local isSelectable = true
-	local UIBloxTheme = Theme.UIBloxThemeEnabled
 
 	return Roact.createElement("ImageButton", {
 		Visible = visible,
 		Selectable = isSelectable,
 		BackgroundColor3 = Theme.color("PlayerRowFrame"),
 		BackgroundTransparency = Theme.transparency("PlayerRowFrame", 1),
-		Image = not UIBloxTheme and ENTRY_BG_IMAGE or nil,
-		ImageTransparency = not UIBloxTheme and ENTRY_BG_TRANSPARENCY or 0,
-		ScaleType = not UIBloxTheme and Enum.ScaleType.Slice or Enum.ScaleType.Stretch,
-		SliceCenter = not UIBloxTheme and ENTRY_BG_SLICE or Rect.new(),
+		ImageTransparency = 0,
+		ScaleType = Enum.ScaleType.Stretch,
+		SliceCenter = Rect.new(),
 		Size = size,
 		LayoutOrder = layoutOrder,
 		ZIndex = zIndex,
 		[Roact.Event.Activated] = self.onInvite,
 	}, {
-		UICorner = UIBloxTheme and Roact.createElement("UICorner", {
+		UICorner = Roact.createElement("UICorner", {
 			CornerRadius = Theme.MenuContainerCornerRadius,
 		}) or nil,
 		UIPadding = Roact.createElement("UIPadding", {

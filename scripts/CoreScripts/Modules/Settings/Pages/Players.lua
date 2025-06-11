@@ -20,7 +20,6 @@ local VoiceChatServiceManager = require(RobloxGui.Modules.VoiceChat.VoiceChatSer
 ----------- UTILITIES --------------
 local CoreGuiModules = RobloxGui:WaitForChild("Modules")
 CoreGuiModules:WaitForChild("TenFootInterface")
-local ShareGameDirectory = CoreGui.RobloxGui.Modules.Settings.Pages.ShareGame
 local ApolloClient = require(CoreGui.RobloxGui.Modules.ApolloClient)
 local UserProfiles = require(CorePackages.Workspace.Packages.UserProfiles)
 local formatUsername = UserProfiles.Formatters.formatUsername
@@ -42,8 +41,6 @@ local reportAbuseMenu = require(RobloxGui.Modules.Settings.Pages.ReportAbuseMenu
 local SocialUtil = require(RobloxGui.Modules:WaitForChild("SocialUtil"))
 local Diag = require(CorePackages.Workspace.Packages.Analytics).AnalyticsReporters.Diag
 local EventStream = require(CorePackages.Workspace.Packages.Analytics).AnalyticsReporters.EventStream
-local ShareGameIcons = require(ShareGameDirectory.Spritesheets.ShareGameIcons)
-local isTenFootInterface = require(RobloxGui.Modules.TenFootInterface):IsEnabled()
 local RobloxTranslator = require(CorePackages.Workspace.Packages.RobloxTranslator)
 local InviteToGameAnalytics = require(CorePackages.Workspace.Packages.GameInvite).GameInviteAnalytics
 local onBlockButtonActivated = require(script:FindFirstAncestor("Settings").onBlockButtonActivated)
@@ -68,6 +65,7 @@ end
 local SharedFlags = require(CorePackages.Workspace.Packages.SharedFlags)
 local GetFFlagLuaAppEnableOpenTypeSupport = SharedFlags.GetFFlagLuaAppEnableOpenTypeSupport
 local FFlagUpdateSquadInDefaultAppChatContainer = SharedFlags.FFlagUpdateSquadInDefaultAppChatContainer
+local FFlagIEMFocusNavToButtons = SharedFlags.FFlagIEMFocusNavToButtons
 local FFlagRenameFriendsToConnectionsCoreUI = SharedFlags.FFlagRenameFriendsToConnectionsCoreUI
 local FFlagRelocateMobileMenuButtons = require(RobloxGui.Modules.Settings.Flags.FFlagRelocateMobileMenuButtons)
 local FIntRelocateMobileMenuButtonsVariant = require(RobloxGui.Modules.Settings.Flags.FIntRelocateMobileMenuButtonsVariant)
@@ -84,39 +82,22 @@ local Constants =
 
 local FRAME_DEFAULT_TRANSPARENCY = 0.85
 local FRAME_SELECTED_TRANSPARENCY = 0.65
-local REPORT_PLAYER_IMAGE = isTenFootInterface and "rbxasset://textures/ui/Settings/Players/ReportFlagIcon@2x.png"
-	or "rbxasset://textures/ui/Settings/Players/ReportFlagIcon.png"
-local ADD_FRIEND_IMAGE = isTenFootInterface and "rbxasset://textures/ui/Settings/Players/AddFriendIcon@2x.png"
-	or "rbxasset://textures/ui/Settings/Players/AddFriendIcon.png"
-local FRIEND_IMAGE = isTenFootInterface and "rbxasset://textures/ui/Settings/Players/FriendIcon@2x.png"
-	or "rbxasset://textures/ui/Settings/Players/FriendIcon.png"
-local INSPECT_IMAGE = "rbxasset://textures/ui/InspectMenu/ico_inspect.png"
-local BLOCK_IMAGE = isTenFootInterface and "rbxasset://textures/ui/Settings/Players/BlockIcon@2x.png"
-	or "rbxasset://textures/ui/Settings/Players/BlockIcon.png"
-
-if Theme.UIBloxThemeEnabled then
-	REPORT_PLAYER_IMAGE = Theme.Images["icons/actions/feedback"]
-	INSPECT_IMAGE = Theme.Images["icons/actions/zoomIn"]
-	BLOCK_IMAGE = Theme.Images["icons/actions/block"]
-	ADD_FRIEND_IMAGE = Theme.Images["icons/actions/friends/friendAdd"]
-	FRIEND_IMAGE = Theme.Images["icons/menu/friends"]
-end
+local REPORT_PLAYER_IMAGE = Theme.Images["icons/actions/feedback"]
+local INSPECT_IMAGE = Theme.Images["icons/actions/zoomIn"]
+local BLOCK_IMAGE = Theme.Images["icons/actions/block"]
+local ADD_FRIEND_IMAGE = Theme.Images["icons/actions/friends/friendAdd"]
+local FRIEND_IMAGE = Theme.Images["icons/menu/friends"]
 
 local PLAYER_ROW_HEIGHT = 62
 local PLAYER_ROW_HEIGHT_PORTRAIT = 105
 local PLAYER_ROW_SPACING = 80
 local PLAYER_ROW_SPACING_PORTRAIT = PLAYER_ROW_HEIGHT_PORTRAIT + PLAYER_ROW_SPACING - PLAYER_ROW_HEIGHT
 local PLAYER_NAME_RIGHT_PADDING = 20
-local BUTTON_ROW_HEIGHT = PLAYER_ROW_HEIGHT
+local BUTTON_ROW_HEIGHT = 52
 local USERNAME_POSITION = 0.5
 local USERNAME_POSITION_PORTRAIT = 0.275
-local RIGHT_SIDE_BUTTON_PAD = -4
+local RIGHT_SIDE_BUTTON_PAD = -12
 local LABEL_POSX = 60
-
-if Theme.UIBloxThemeEnabled then
-	RIGHT_SIDE_BUTTON_PAD = -12
-	BUTTON_ROW_HEIGHT = 52
-end
 
 local FULL_SIZE_SHARE_GAME_BUTTON_SIZE = UDim2.new(1, -10, 0, BUTTON_ROW_HEIGHT)
 local HALF_SIZE_SHARE_GAME_BUTTON_SIZE = UDim2.new(0.5, -10, 0, BUTTON_ROW_HEIGHT)
@@ -144,7 +125,6 @@ local FFlagAvatarChatCoreScriptSupport =
 	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagAvatarChatCoreScriptSupport()
 local GetFFlagVoiceRecordingIndicatorsEnabled = require(RobloxGui.Modules.Flags.GetFFlagVoiceRecordingIndicatorsEnabled)
 local GetFFlagShowMuteToggles = require(RobloxGui.Modules.Settings.Flags.GetFFlagShowMuteToggles)
-local GetFFlagWrapBlockModalScreenInProvider = require(RobloxGui.Modules.Flags.GetFFlagWrapBlockModalScreenInProvider)
 local GetFFlagMuteTogglesEnableIXP = require(RobloxGui.Modules.Settings.Flags.GetFFlagMuteTogglesEnableIXP)
 local GetFStringMuteTogglesIXPLayerName = require(RobloxGui.Modules.Settings.Flags.GetFStringMuteTogglesIXPLayerName)
 local GetFFlagUseFriendsPropsInMuteToggles =
@@ -156,6 +136,8 @@ local GetFFlagEnableLeaveGameUpsellEntrypoint =
 local GetFFlagEnableShowVoiceUI = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagEnableShowVoiceUI
 local GetFFlagDisableMuteAllCheckForIsMuted =
 	require(RobloxGui.Modules.Settings.Flags.GetFFlagDisableMuteAllCheckForIsMuted)
+local GetFFlagDestroyPlayerCardOnLeave =
+	require(RobloxGui.Modules.Settings.Flags.GetFFlagDestroyPlayerCardOnLeave)
 
 local isEngineTruncationEnabledForIngameSettings =
 	require(RobloxGui.Modules.Flags.isEngineTruncationEnabledForIngameSettings)
@@ -188,11 +170,7 @@ local function Initialize()
 	local settingsPageFactory = require(RobloxGui.Modules.Settings.SettingsPageFactory)
 	local this = settingsPageFactory:CreateNewPage()
 
-	if Theme.UIBloxThemeEnabled then
-		this.PageListLayout.Padding = UDim.new(0, 16)
-	else
-		this.PageListLayout.Padding = UDim.new(0, PLAYER_ROW_SPACING - PLAYER_ROW_HEIGHT)
-	end
+	this.PageListLayout.Padding = UDim.new(0, 16)
 
 	--[[ Localization Package Initialization ]]
 	local LocalizationStrings = {}
@@ -203,28 +181,12 @@ local function Initialize()
 
 	------ TAB CUSTOMIZATION -------
 	this.TabHeader.Name = "PlayersTab"
-	if Theme.UIBloxThemeEnabled then
-		this.TabHeader.TabLabel.Icon.Image = isTenFootInterface
-				and "rbxasset://textures/ui/Settings/MenuBarIcons/PlayersTabIcon@2x.png"
-			or "rbxasset://textures/ui/Settings/MenuBarIcons/PlayersTabIcon.png"
 
-		local icon = Theme.Images["icons/menu/friends"]
-		this.TabHeader.TabLabel.Icon.ImageRectOffset = icon.ImageRectOffset
-		this.TabHeader.TabLabel.Icon.ImageRectSize = icon.ImageRectSize
-		this.TabHeader.TabLabel.Icon.Image = icon.Image
-
-		this.TabHeader.TabLabel.Title.Text = "People"
-	else
-		this.TabHeader.Icon.Image = isTenFootInterface
-				and "rbxasset://textures/ui/Settings/MenuBarIcons/PlayersTabIcon@2x.png"
-			or "rbxasset://textures/ui/Settings/MenuBarIcons/PlayersTabIcon.png"
-
-		if FFlagUseNotificationsLocalization then
-			this.TabHeader.Title.Text = "People"
-		else
-			this.TabHeader.Icon.Title.Text = "People"
-		end
-	end
+	local icon = Theme.Images["icons/menu/friends"]
+	this.TabHeader.TabLabel.Icon.ImageRectOffset = icon.ImageRectOffset
+	this.TabHeader.TabLabel.Icon.ImageRectSize = icon.ImageRectSize
+	this.TabHeader.TabLabel.Icon.Image = icon.Image
+	this.TabHeader.TabLabel.Title.Text = "People"
 
 	----- FRIENDSHIP FUNCTIONS ------
 	local function getFriendStatus(selectedPlayer)
@@ -328,15 +290,10 @@ local function Initialize()
 		if friendLabel then
 			friendLabel.Name = "FriendStatus"
 			friendLabel.ZIndex = 3
-			if Theme.UIBloxThemeEnabled then
-				friendLabel.Size = UDim2.new(0, 150, 0, Theme.ButtonHeight)
-				friendLabel.Position = UDim2.new(1, -198, 0, 7)
-				if friendLabelText then
-					friendLabelText.Position = UDim2.new(0, 0, 0, 0)
-				end
-			else
-				friendLabel.Size = UDim2.new(0, 150, 0, 46)
-				friendLabel.Position = UDim2.new(1, -198, 0, 7)
+			friendLabel.Size = UDim2.new(0, 150, 0, Theme.ButtonHeight)
+			friendLabel.Position = UDim2.new(1, -198, 0, 7)
+			if friendLabelText then
+				friendLabelText.Position = UDim2.new(0, 0, 0, 0)
 			end
 		end
 		return friendLabel
@@ -344,52 +301,25 @@ local function Initialize()
 
 	local function createFriendStatusImageLabel(status, player)
 		if status == Enum.FriendStatus.Friend or status == Enum.FriendStatus.FriendRequestSent then
-			if Theme.UIBloxThemeEnabled then
-				local image = FRIEND_IMAGE
-				local imgTrans = 0
-				if status ~= Enum.FriendStatus.Friend then
-					image = ADD_FRIEND_IMAGE
-					imgTrans = 0.5
-				end
-
-				local addFriendButton, _addFriendImage = utility:MakeStyledImageButton(
-					"FriendStatus",
-					image,
-					UDim2.new(0, Theme.ButtonHeight, 0, Theme.ButtonHeight),
-					UDim2.new(0, 28, 0, 28)
-				)
-				addFriendButton.Name = "FriendStatus"
-				addFriendButton.Selectable = false
-
-				addFriendButton.FriendStatusImageLabel.ImageTransparency = imgTrans
-
-				return addFriendButton
-			else
-				local friendLabel = Instance.new("ImageButton")
-				friendLabel.Name = "FriendStatus"
-				friendLabel.Size = UDim2.new(0, Theme.ButtonHeight, 0, Theme.ButtonHeight)
-				friendLabel.Image = "rbxasset://textures/ui/Settings/MenuBarAssets/MenuButton.png"
-				friendLabel.ScaleType = Enum.ScaleType.Slice
-				friendLabel.SliceCenter = Rect.new(8, 6, 46, 44)
-				friendLabel.AutoButtonColor = false
-				friendLabel.BackgroundTransparency = 1
-				friendLabel.ZIndex = 2
-				local friendImage = Instance.new("ImageLabel")
-				friendImage.BackgroundTransparency = 1
-				friendImage.Position = UDim2.new(0.5, 0, 0.5, 0)
-				friendImage.Size = UDim2.new(0, 28, 0, 28)
-				friendImage.AnchorPoint = Vector2.new(0.5, 0.5)
-				friendImage.ZIndex = 3
-				friendImage.Image = FRIEND_IMAGE
-				if status == Enum.FriendStatus.Friend then
-					friendImage.ImageTransparency = 0
-				else
-					friendImage.Image = ADD_FRIEND_IMAGE
-					friendImage.ImageTransparency = 0.5
-				end
-				friendImage.Parent = friendLabel
-				return friendLabel
+			local image = FRIEND_IMAGE
+			local imgTrans = 0
+			if status ~= Enum.FriendStatus.Friend then
+				image = ADD_FRIEND_IMAGE
+				imgTrans = 0.5
 			end
+
+			local addFriendButton, _addFriendImage = utility:MakeStyledImageButton(
+				"FriendStatus",
+				image,
+				UDim2.new(0, Theme.ButtonHeight, 0, Theme.ButtonHeight),
+				UDim2.new(0, 28, 0, 28)
+			)
+			addFriendButton.Name = "FriendStatus"
+			addFriendButton.Selectable = false
+
+			addFriendButton.FriendStatusImageLabel.ImageTransparency = imgTrans
+
+			return addFriendButton
 		elseif
 			status == Enum.FriendStatus.Unknown
 			or status == Enum.FriendStatus.NotFriend
@@ -545,10 +475,8 @@ local function Initialize()
 			friendLabel.Name = "FriendStatus"
 			friendLabel.LayoutOrder = 5
 			friendLabel.Selectable = true
-			if Theme.UIBloxThemeEnabled then
-				local renderName = RENDER_NAME_PREFIX .. "-friendstatuslabel-" .. player.Name
-				utility:MakeFocusState(friendLabel, renderName)
-			end
+			local renderName = RENDER_NAME_PREFIX .. "-friendstatuslabel-" .. player.Name
+			utility:MakeFocusState(friendLabel, renderName)
 			friendLabel.Parent = parent
 		end
 	end
@@ -597,7 +525,7 @@ local function Initialize()
 		local function updateBlockButton(resumeSelection)
 			local blockbutton = resizeBlockButton(parent, player, isPortrait, not isPortrait)
 			resizeFriendButton(parent, player, isPortrait, not isPortrait)
-			if GetFFlagWrapBlockModalScreenInProvider() and resumeSelection then
+			if resumeSelection then
 				trySelection(blockbutton)
 			end
 		end
@@ -665,10 +593,8 @@ local function Initialize()
 			blockButton.Name = "BlockButton"
 			blockButton.LayoutOrder = 4
 			blockButton.Selectable = true
-			if Theme.UIBloxThemeEnabled then
-				local renderName = RENDER_NAME_PREFIX .. "-blockbutton-" .. player.Name
-				utility:MakeFocusState(blockButton, renderName)
-			end
+			local renderName = RENDER_NAME_PREFIX .. "-blockbutton-" .. player.Name
+			utility:MakeFocusState(blockButton, renderName)
 			blockButton.Parent = parent
 		end
 		return blockButton
@@ -771,10 +697,8 @@ local function Initialize()
 				muteLabelText.ZIndex = 3
 				muteLabelText.Position = muteLabelText.Position + imageOffset
 				muteLabelText.ImageTransparency = imageTransparency
-				if Theme.UIBloxThemeEnabled then
-					local renderName = RENDER_NAME_PREFIX .. "-mutestatusbutton-" .. playerStatus.userId
-					utility:MakeFocusState(muteLabel, renderName)
-				end
+				local renderName = RENDER_NAME_PREFIX .. "-mutestatusbutton-" .. playerStatus.userId
+				utility:MakeFocusState(muteLabel, renderName)
 				muteLabel.Parent = buttonParent
 			end
 		end
@@ -782,7 +706,7 @@ local function Initialize()
 
 	local buttonsContainer = Create("Frame")({
 		Name = "ButtonsContainer",
-		Size = UDim2.new(1, 0, 0, 62),
+		Size = UDim2.new(1, 0, 0, Theme.ButtonHeight),
 		BackgroundTransparency = 1,
 		Parent = this.Page,
 
@@ -793,18 +717,14 @@ local function Initialize()
 		buttonsContainer.Parent = nil
 	end
 
-	local buttonPadding = 5
-	if Theme.UIBloxThemeEnabled then
-		Create("UIPadding")({
-			PaddingBottom = UDim.new(0, 1),
-			PaddingTop = UDim.new(0, 1),
-			PaddingLeft = UDim.new(0, 1),
-			PaddingRight = UDim.new(0, 1),
-			Parent = buttonsContainer,
-		})
-		buttonPadding = 12
-		buttonsContainer.Size = UDim2.new(1, 0, 0, Theme.ButtonHeight)
-	end
+	local buttonPadding = 12
+	Create("UIPadding")({
+		PaddingBottom = UDim.new(0, 1),
+		PaddingTop = UDim.new(0, 1),
+		PaddingLeft = UDim.new(0, 1),
+		PaddingRight = UDim.new(0, 1),
+		Parent = buttonsContainer,
+	})
 
 	local leaveGameFunc = function()
 		if
@@ -823,12 +743,8 @@ local function Initialize()
 		utility:MakeStyledButton("LeaveButton", leaveGameText, UDim2.new(1 / 3, -buttonPadding, 1, 0), leaveGameFunc)
 	leaveButton.AnchorPoint = Vector2.new(0, 0)
 	leaveButton.Position = UDim2.new(0, 0, 0, 0)
-	if Theme.UIBloxThemeEnabled then
-		leaveLabel.Size = UDim2.new(1, -4, 1, 0)
-		leaveLabel.Position = UDim2.new(0, 2, 0, 0)
-	else
-		leaveLabel.Size = UDim2.new(1, 0, 1, -6)
-	end
+	leaveLabel.Size = UDim2.new(1, -4, 1, 0)
+	leaveLabel.Position = UDim2.new(0, 2, 0, 0)
 
 	if not FFlagRelocateMobileMenuButtons or FIntRelocateMobileMenuButtonsVariant == 0 then
 		leaveButton.Parent = buttonsContainer
@@ -844,13 +760,9 @@ local function Initialize()
 		utility:MakeStyledButton("ResetButton", RESET_TEXT, UDim2.new(1 / 3, -buttonPadding, 1, 0), resetFunc)
 	resetButton.AnchorPoint = Vector2.new(0.5, 0)
 	resetButton.Position = UDim2.new(0.5, 0, 0, 0)
+	resetLabel.Size = UDim2.new(1, -4, 1, 0)
+	resetLabel.Position = UDim2.new(0, 2, 0, 0)
 
-	if Theme.UIBloxThemeEnabled then
-		resetLabel.Size = UDim2.new(1, -4, 1, 0)
-		resetLabel.Position = UDim2.new(0, 2, 0, 0)
-	else
-		resetLabel.Size = UDim2.new(1, 0, 1, -6)
-	end
 	if not FFlagRelocateMobileMenuButtons or FIntRelocateMobileMenuButtonsVariant == 0 then
 		resetButton.Parent = buttonsContainer
 	end
@@ -871,13 +783,8 @@ local function Initialize()
 		utility:MakeStyledButton("ResumeButton", resumeGameText, UDim2.new(1 / 3, -buttonPadding, 1, 0), resumeGameFunc)
 	resumeButton.AnchorPoint = Vector2.new(1, 0)
 	resumeButton.Position = UDim2.new(1, 0, 0, 0)
-
-	if Theme.UIBloxThemeEnabled then
-		resumeLabel.Size = UDim2.new(1, -4, 1, 0)
-		resumeLabel.Position = UDim2.new(0, 2, 0, 0)
-	else
-		resumeLabel.Size = UDim2.new(1, 0, 1, -6)
-	end
+	resumeLabel.Size = UDim2.new(1, -4, 1, 0)
+	resumeLabel.Position = UDim2.new(0, 2, 0, 0)
 
 	if not FFlagRelocateMobileMenuButtons or FIntRelocateMobileMenuButtonsVariant == 0 then
 		resumeButton.Parent = buttonsContainer
@@ -914,14 +821,9 @@ local function Initialize()
 
 	local function updateButtonRow()
 		if not FFlagRelocateMobileMenuButtons or FIntRelocateMobileMenuButtonsVariant == 0 then
-			local buttonPaddingY = 6
-			local buttonPaddingX = 0
-
+			local buttonPaddingY = 0
+			local buttonPaddingX = 12
 			local newButtonSize = 2 / 7
-			if Theme.UIBloxThemeEnabled then
-				buttonPaddingY = 0
-				buttonPaddingX = 12
-			end
 			local oldButtonContainerSize = 6 / 7
 			updateButtonPosition(
 				"ResumeButton",
@@ -1000,18 +902,13 @@ local function Initialize()
 			"DefaultButton"
 		)
 
-		if Theme.UIBloxThemeEnabled then
-			muteButton.Position = UDim2.new(1, 0, 0, 0)
-			muteButton.Size = UDim2.new(1 / 7, -12, 1, 0)
-			imageLabel.Size = UDim2.new(1, -6, 1, -4)
-			Create("UIAspectRatioConstraint")({
-				AspectRatio = 1,
-				Parent = imageLabel,
-			})
-		else
-			muteButton.Position = UDim2.new(1, 0, 0, 0)
-			muteButton.Size = UDim2.new(1 / 7, 0, 1, -6)
-		end
+		muteButton.Position = UDim2.new(1, 0, 0, 0)
+		muteButton.Size = UDim2.new(1 / 7, -12, 1, 0)
+		imageLabel.Size = UDim2.new(1, -6, 1, -4)
+		Create("UIAspectRatioConstraint")({
+			AspectRatio = 1,
+			Parent = imageLabel,
+		})
 
 		muteButton.AnchorPoint = Vector2.new(1, 0)
 
@@ -1036,15 +933,11 @@ local function Initialize()
 	utility:OnResized(buttonsContainer, function(newSize, isPortrait)
 		if (isPortrait or utility:IsSmallTouchScreen()) and (not Theme.AlwaysShowBottomBar()) then
 			local buttonsFontSize = isPortrait and Theme.textSize(18) or Theme.textSize(24)
-			if Theme.UIBloxThemeEnabled and Theme.UseBiggerText then
+			if Theme.UseBiggerText then
 				buttonsFontSize = Theme.textSize(20)
 			end
-			buttonsContainer.Visible = not Theme.UIBloxThemeEnabled or not Theme.EnableVerticalBottomBar
-			if Theme.UIBloxThemeEnabled then
-				buttonsContainer.Size = UDim2.new(1, 0, 0, Theme.ButtonHeight)
-			else
-				buttonsContainer.Size = UDim2.new(1, 0, 0, isPortrait and 50 or 62)
-			end
+			buttonsContainer.Visible = not Theme.EnableVerticalBottomBar
+			buttonsContainer.Size = UDim2.new(1, 0, 0, Theme.ButtonHeight)
 			if not FFlagRelocateMobileMenuButtons or FIntRelocateMobileMenuButtonsVariant == 0 then
 				resetLabel.TextSize = buttonsFontSize
 				leaveLabel.TextSize = buttonsFontSize
@@ -1093,10 +986,8 @@ local function Initialize()
 				reportButton.Position = UDim2.new(1, -260, 0, 7)
 				reportButton.LayoutOrder = 3
 				reportButton.Selectable = true
-				if Theme.UIBloxThemeEnabled then
-					local renderName = RENDER_NAME_PREFIX .. "-reportplayer-" .. player.Name
-					utility:MakeFocusState(reportButton, renderName)
-				end
+				local renderName = RENDER_NAME_PREFIX .. "-reportplayer-" .. player.Name
+				utility:MakeFocusState(reportButton, renderName)
 				reportButton.Parent = rightSideButtons
 			end
 		end
@@ -1137,21 +1028,12 @@ local function Initialize()
 		frame.Size = UDim2.new(1, 0, 0, PLAYER_ROW_HEIGHT)
 		frame.Position = UDim2.new(0, 0, 0, 0)
 		frame.ZIndex = 2
-
-		if Theme.UIBloxThemeEnabled then
-			frame.BackgroundColor3 = Theme.color("PlayerRowFrame")
-			frame.BackgroundTransparency = Theme.transparency("PlayerRowFrame")
-			Create("UICorner")({
-				CornerRadius = Theme.DefaultCornerRadius,
-				Parent = frame,
-			})
-		else
-			frame.Image = "rbxasset://textures/ui/dialog_white.png"
-			frame.ScaleType = "Slice"
-			frame.SliceCenter = Rect.new(10, 10, 10, 10)
-			frame.BackgroundTransparency = 1
-			frame.ImageTransparency = FRAME_DEFAULT_TRANSPARENCY
-		end
+		frame.BackgroundColor3 = Theme.color("PlayerRowFrame")
+		frame.BackgroundTransparency = Theme.transparency("PlayerRowFrame")
+		Create("UICorner")({
+			CornerRadius = Theme.DefaultCornerRadius,
+			Parent = frame,
+		})
 
 		local icon = Instance.new("ImageLabel")
 		icon.Name = "Icon"
@@ -1195,9 +1077,7 @@ local function Initialize()
 	local TAP_ACCURACY_THREASHOLD = 20
 	createShareGameButton = function()
 		local frame = createRow("ImageButton")
-		if Theme.UIBloxThemeEnabled then
-			frame.Size = UDim2.new(1, 0, 0, BUTTON_ROW_HEIGHT)
-		end
+		frame.Size = UDim2.new(1, 0, 0, BUTTON_ROW_HEIGHT)
 		local textLabel = frame.TextLabel
 		local icon = frame.Icon
 		if voiceChatServiceConnected then
@@ -1213,19 +1093,13 @@ local function Initialize()
 		textLabel.AutoLocalize = false
 		textLabel.Text = if getShouldRenameFriends() then LocalizationStrings[localeId]:Format(Constants.InviteConnectionsLocalizedKey) else RobloxTranslator:FormatByKey("Feature.SettingsHub.Action.InviteFriendsToPlay")
 
-		if Theme.UIBloxThemeEnabled then
-			icon.AnchorPoint = Vector2.new(0, 0.5)
-			icon.Position = UDim2.new(0, 18, 0.5, 0)
-			local iconImg = Theme.Images["icons/actions/friends/friendInvite"]
-			if iconImg then
-				icon.Image = iconImg.Image
-				icon.ImageRectOffset = iconImg.ImageRectOffset
-				icon.ImageRectSize = iconImg.ImageRectSize
-			end
-		else
-			icon.Size = UDim2.new(0, 24, 0, 24)
-			icon.Position = UDim2.new(0, 18, 0, 18)
-			ShareGameIcons:ApplyImage(icon, "invite")
+		icon.AnchorPoint = Vector2.new(0, 0.5)
+		icon.Position = UDim2.new(0, 18, 0.5, 0)
+		local iconImg = Theme.Images["icons/actions/friends/friendInvite"]
+		if iconImg then
+			icon.Image = iconImg.Image
+			icon.ImageRectOffset = iconImg.ImageRectOffset
+			icon.ImageRectSize = iconImg.ImageRectSize
 		end
 
 		local function setIsHighlighted(isHighlighted)
@@ -1259,10 +1133,8 @@ local function Initialize()
 		end)
 		frame.SelectionImageObject = frame:Clone()
 
-		if Theme.UIBloxThemeEnabled then
-			local renderName = RENDER_NAME_PREFIX .. "-sharegame"
-			utility:MakeFocusState(frame, renderName)
-		end
+		local renderName = RENDER_NAME_PREFIX .. "-sharegame"
+		utility:MakeFocusState(frame, renderName)
 
 		return frame
 	end
@@ -1284,11 +1156,8 @@ local function Initialize()
 		icon.Size = UDim2.new(0, 32, 0, 32)
 		icon.Position = UDim2.new(0, 18, 0, 16)
 		icon.Image = VoiceChatServiceManager:GetIcon("UnmuteAll", "Misc")
-
-		if Theme.UIBloxThemeEnabled then
-			icon.AnchorPoint = Vector2.new(0, 0.5)
-			icon.Position = UDim2.new(0, 18, 0.5, 0)
-		end
+		icon.AnchorPoint = Vector2.new(0, 0.5)
+		icon.Position = UDim2.new(0, 18, 0.5, 0)
 
 		local function setIsHighlighted(isHighlighted)
 			if isHighlighted then
@@ -1321,10 +1190,8 @@ local function Initialize()
 		end)
 		frame.SelectionImageObject = frame:Clone()
 
-		if Theme.UIBloxThemeEnabled then
-			local renderName = RENDER_NAME_PREFIX .. "-muteall"
-			utility:MakeFocusState(frame, renderName)
-		end
+		local renderName = RENDER_NAME_PREFIX .. "-muteall"
+		utility:MakeFocusState(frame, renderName)
 
 		return frame
 	end
@@ -1360,24 +1227,21 @@ local function Initialize()
 
 			icon.Size = UDim2.new(0, 32, 0, 32)
 			icon.Position = UDim2.new(0, 18, 0, 16)
+			icon.AnchorPoint = Vector2.new(0, 0.5)
+			icon.Position = UDim2.new(0, 18, 0.5, 0)
 
-			if Theme.UIBloxThemeEnabled then
-				icon.AnchorPoint = Vector2.new(0, 0.5)
-				icon.Position = UDim2.new(0, 18, 0.5, 0)
-
-				local iconImg
-				if FFlagAppChatRebrandInNonChrome then
-					iconImg = Theme.Images["icons/menu/2-person-with-bubble"]
-				elseif FFlagAppChatTiltMenuConnectIcon then
-					iconImg = Theme.Images["icons/menu/platformChatOff"]
-				else
-					iconImg = Theme.Images["icons/menu/chat_off"]
-				end
-
-				icon.Image = iconImg.Image
-				icon.ImageRectOffset = iconImg.ImageRectOffset
-				icon.ImageRectSize = iconImg.ImageRectSize
+			local iconImg
+			if FFlagAppChatRebrandInNonChrome then
+				iconImg = Theme.Images["icons/menu/2-person-with-bubble"]
+			elseif FFlagAppChatTiltMenuConnectIcon then
+				iconImg = Theme.Images["icons/menu/platformChatOff"]
+			else
+				iconImg = Theme.Images["icons/menu/chat_off"]
 			end
+
+			icon.Image = iconImg.Image
+			icon.ImageRectOffset = iconImg.ImageRectOffset
+			icon.ImageRectSize = iconImg.ImageRectSize
 
 			local setHighlighted = function(isHighlighted)
 				frame.ImageTransparency = FRAME_SELECTED_TRANSPARENCY
@@ -1400,10 +1264,8 @@ local function Initialize()
 			frame.SelectionLost:connect(setNotHighlighted)
 			frame.SelectionImageObject = frame:Clone()
 
-			if Theme.UIBloxThemeEnabled then
-				local renderName = RENDER_NAME_PREFIX .. "-chat"
-				utility:MakeFocusState(frame, renderName)
-			end
+			local renderName = RENDER_NAME_PREFIX .. "-chat"
+			utility:MakeFocusState(frame, renderName)
 
 			unreadIndicator = Create("Frame")({
 				Name = "UnreadIndicator",
@@ -1477,10 +1339,8 @@ local function Initialize()
 		inspectButton.LayoutOrder = 2
 		inspectButton.Selectable = true
 		inspectButton.Parent = parent
-		if Theme.UIBloxThemeEnabled then
-			local renderName = RENDER_NAME_PREFIX .. "-inspect-" .. player.Name
-			utility:MakeFocusState(inspectButton, renderName)
-		end
+		local renderName = RENDER_NAME_PREFIX .. "-inspect-" .. player.Name
+		utility:MakeFocusState(inspectButton, renderName)
 	end
 
 	local function resizePlatformName(parent, consoleName, consoleUserId)
@@ -1583,6 +1443,10 @@ local function Initialize()
 		local frame = createRow("ImageLabel", showDisplayName)
 		frame.TextLabel.Name = "DisplayNameLabel"
 		frame.SecondRow.Name = "NameLabel"
+		if FFlagIEMFocusNavToButtons then
+			frame.Selectable = false
+			frame.SelectionGroup = true
+		end
 		if GetFFlagLuaAppEnableOpenTypeSupport() then
 			frame.NameLabel.OpenTypeFeatures = OpenTypeSupport:getUserNameStylisticAlternative()
 		end
@@ -1923,6 +1787,9 @@ local function Initialize()
 	end
 
 	local rebuildPlayerList = function(switchedFromGamepadInput)
+		if FFlagIEMFocusNavToButtons then
+			this.LastSelectableObjects = {}
+		end
 		sortedPlayers = PlayersService:GetPlayers()
 
 		if ChromeEnabled then
@@ -2148,11 +2015,7 @@ local function Initialize()
 
 							if parent then
 								parent.Position = UDim2.new(0, LABEL_POSX - 3, 0, -2)
-								if Theme.UIBloxThemeEnabled then
-									parent.Size = UDim2.new(1, RIGHT_SIDE_BUTTON_PAD, 0.99, -8)
-								else
-									parent.Size = UDim2.new(1, RIGHT_SIDE_BUTTON_PAD, 0.99, 0)
-								end
+								parent.Size = UDim2.new(1, RIGHT_SIDE_BUTTON_PAD, 0.99, -8)
 							end
 
 							if rightSideListLayout then
@@ -2194,6 +2057,19 @@ local function Initialize()
 				end)
 
 				reportAbuseButtonCreate(frame, player)
+
+
+				if FFlagIEMFocusNavToButtons and index == #sortedPlayers  then
+					local rightSideButtons = frame:FindFirstChild("RightSideButtons")
+					if rightSideButtons then
+						for _, button in rightSideButtons:GetChildren() do
+							if button:IsA("ImageButton") then
+								table.insert(this.LastSelectableObjects, button)
+							end
+						end
+						this.LastSelectableObjectsUpdated:fire()
+					end
+				end
 			end
 		end
 
@@ -2513,6 +2389,12 @@ local function Initialize()
 			end
 			inspectButton:Destroy()
 		end
+
+		if GetFFlagDestroyPlayerCardOnLeave() then 
+			existingPlayerLabels[player.Name] = nil
+			playerLabel:Destroy()
+		end
+		
 	end)
 
 	local function removeInspectButtons()

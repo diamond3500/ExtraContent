@@ -24,3 +24,4 @@ To run tests, you can try any of the following:
 2. Go to the [actions tab](https://github.com/Roblox/url-builder)
 3. Go to `Publish Rotriever Package` on the left hand side
 4. Click `run workflow`
+5. In `lua-apps` update the `UrlBuilder` version in `content/LuaPackages/rotriever.lock` (2 locations) and `content/LuaPackages/rotriever.toml` (1 location).

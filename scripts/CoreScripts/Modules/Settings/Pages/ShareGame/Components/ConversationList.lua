@@ -48,7 +48,7 @@ local getTranslator = require(ShareGame.getTranslator)
 local RobloxTranslator = getTranslator()
 
 local ENTRY_HEIGHT = 62
-local ENTRY_PADDING = if Theme.UIBloxThemeEnabled then 16 else 18
+local ENTRY_PADDING = 16
 
 local NO_RESULTS_FONT = Theme.font(Enum.Font.SourceSans)
 local NO_RESULTS_TEXTCOLOR = Constants.Color.GRAY3

@@ -17,4 +17,5 @@ return {
 	FoundationAdjustButtonIconSizes = SafeFlags.createGetFFlag("FoundationAdjustButtonIconSizes2")(),
 	FoundationFixBackgroundForStylingV2 = SafeFlags.createGetFFlag("FoundationFixBackgroundForStylingV2")(),
 	FoundationRefactorInputs = SafeFlags.createGetFFlag("FoundationRefactorInputs")(),
+	FoundationChipDesignUpdate = SafeFlags.createGetFFlag("FoundationChipDesignUpdate")(),
 }

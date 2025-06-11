@@ -15,6 +15,7 @@ local Presentation = script.Parent
 local PlayerList = Presentation.Parent.Parent
 
 local FFlagPlayerListClosedNoRender = require(PlayerList.Flags.FFlagPlayerListClosedNoRender)
+local FFlagPlayerListClosedNoRenderWithTenFoot = require(PlayerList.Flags.FFlagPlayerListClosedNoRenderWithTenFoot)
 
 local PlayerListSorter = require(Presentation.PlayerListSorter)
 local PlayerEntry = require(Presentation.PlayerEntry)
@@ -86,7 +87,7 @@ function PlayerListApp:init()
 end
 
 function PlayerListApp:render()
-	if FFlagPlayerListClosedNoRender and not self.state.visible then
+	if (FFlagPlayerListClosedNoRender or FFlagPlayerListClosedNoRenderWithTenFoot) and not self.state.visible then
 		return Roact.createElement(ContextActionsBinder)
 	end
 	return WithLayoutValues(function(layoutValues)

@@ -3,8 +3,6 @@ local React = require(CorePackages.Packages.React)
 local UIBlox = require(CorePackages.Packages.UIBlox)
 local useStyle = UIBlox.Core.Style.useStyle
 
-local FFlagReportTextEntryBackgroundColor = game:DefineFastFlag("ReportTextEntryBackgroundColor", false)
-
 type Props = { text: string, placeholderText: string, onUpdate: (newValue: string) -> () }
 
 local TEXT_ENTRY_HEIGHT = 40
@@ -18,9 +16,7 @@ local function ReportTextEntry(props: Props)
 	return React.createElement("Frame", {
 		Size = UDim2.new(1, 0, 0, TEXT_ENTRY_HEIGHT + style.Tokens.Global.Space_300 + 20),
 		BackgroundTransparency = style.Theme.BackgroundDefault.Transparency,
-		BackgroundColor3 = if FFlagReportTextEntryBackgroundColor
-			then style.Theme.BackgroundUIDefault.Color
-			else style.Theme.BackgroundDefault.Color,
+		BackgroundColor3 = style.Theme.BackgroundUIDefault.Color,
 		AutomaticSize = Enum.AutomaticSize.Y,
 	}, {
 		UIPadding = React.createElement("UIPadding", {
@@ -37,9 +33,7 @@ local function ReportTextEntry(props: Props)
 			AutomaticSize = Enum.AutomaticSize.Y,
 			Position = UDim2.new(0, 0, 0, 0),
 			AnchorPoint = Vector2.new(0, 0),
-			BackgroundColor3 = if FFlagReportTextEntryBackgroundColor
-				then theme.BackgroundUIDefault.Color
-				else theme.BackgroundDefault.Color,
+			BackgroundColor3 = theme.BackgroundUIDefault.Color,
 			PlaceholderText = props.placeholderText,
 			Font = font,
 			Text = props.text,

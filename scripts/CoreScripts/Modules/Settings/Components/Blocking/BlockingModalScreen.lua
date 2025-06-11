@@ -13,8 +13,8 @@ local FocusNavigationCoreScriptsWrapper = FocusNavigationUtils.FocusNavigationCo
 local FocusRoot = FocusNavigationUtils.FocusRoot
 local FocusNavigableSurfaceIdentifierEnum = FocusNavigationUtils.FocusNavigableSurfaceIdentifierEnum
 
-local GetFFlagWrapBlockModalScreenInProvider = require(RobloxGui.Modules.Flags.GetFFlagWrapBlockModalScreenInProvider)
 local FFlagCSFocusWrapperRefactor = require(CorePackages.Workspace.Packages.SharedFlags).FFlagCSFocusWrapperRefactor
+local FFlagEnableNewBlockingModal = require(RobloxGui.Modules.Common.Flags.FFlagEnableNewBlockingModal)
 
 local BlockingModalScreen = Roact.PureComponent:extend("BlockingModalScreen")
 
@@ -29,28 +29,26 @@ BlockingModalScreen.validateProps = t.interface({
 	}),
 	translator = t.optional(t.table),
 	source = t.optional(t.string),
+	onBlockingSuccess = if FFlagEnableNewBlockingModal then t.optional(t.callback) else nil,
 })
 
 function BlockingModalScreen:render()
-	local blockingModalContainer = Roact.createElement(BlockingModalContainer, self.props)
-	if GetFFlagWrapBlockModalScreenInProvider() then
-		blockingModalContainer = Roact.createElement(
-			if FFlagCSFocusWrapperRefactor then FocusRoot else FocusNavigationCoreScriptsWrapper,
-			if FFlagCSFocusWrapperRefactor
-				then {
-					surfaceIdentifier = FocusNavigableSurfaceIdentifierEnum.CentralOverlay,
-					isIsolated = true,
-					isAutoFocusRoot = true,
-				}
-				else {
-					selectionGroupName = SELECTION_GROUP_NAME .. tostring(self.props.player.UserId),
-					focusNavigableSurfaceIdentifier = FocusNavigableSurfaceIdentifierEnum.CentralOverlay,
-				},
-			{
-				BlockingModalContainerWrapper = blockingModalContainer,
+	local blockingModalContainer = Roact.createElement(
+		if FFlagCSFocusWrapperRefactor then FocusRoot else FocusNavigationCoreScriptsWrapper,
+		if FFlagCSFocusWrapperRefactor
+			then {
+				surfaceIdentifier = FocusNavigableSurfaceIdentifierEnum.CentralOverlay,
+				isIsolated = true,
+				isAutoFocusRoot = true,
 			}
-		)
-	end
+			else {
+				selectionGroupName = SELECTION_GROUP_NAME .. tostring(self.props.player.UserId),
+				focusNavigableSurfaceIdentifier = FocusNavigableSurfaceIdentifierEnum.CentralOverlay,
+			},
+		{
+			BlockingModalContainerWrapper = Roact.createElement(BlockingModalContainer, self.props),
+		}
+	)
 	local children = {
 		Roact.createElement(Roact.Portal, {
 			target = CoreGui,

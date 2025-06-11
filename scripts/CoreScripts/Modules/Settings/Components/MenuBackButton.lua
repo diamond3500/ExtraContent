@@ -70,13 +70,8 @@ function MenuBackButton:updateViewport()
 	local isPortrait = utility:IsPortrait()
 	local buttonHeight = isTenFootInterface and 120 or Theme.LargeButtonHeight
 	if isPortrait or utility:IsSmallTouchScreen() then
-		if Theme.UIBloxThemeEnabled then
-			buttonHeight = Theme.ButtonHeight
-			textSize = isPortrait and Theme.textSize(16) or Theme.textSize(24)
-		else
-			textSize = isPortrait and Theme.textSize(18) or Theme.textSize(24)
-			buttonHeight = isPortrait and 50 or 62
-		end
+		buttonHeight = Theme.ButtonHeight
+		textSize = isPortrait and Theme.textSize(16) or Theme.textSize(24)
 	end
 	self.updateTextSizeBinding(textSize)
 	self.updateButtonHeightBinding(buttonHeight)
@@ -136,12 +131,10 @@ function MenuBackButton:render()
 		}),
 		UIPadding = Roact.createElement("UIPadding", {
 			PaddingBottom = UDim.new(0, yPadding),
-			PaddingTop = if Theme.UIBloxThemeEnabled then UDim.new(0, 10) else UDim.new(0, 0),
+			PaddingTop = UDim.new(0, 10),
 		}),
 		ImageButton = Roact.createElement("ImageButton", {
-			Image = if Theme.UIBloxThemeEnabled
-				then ""
-				else "rbxasset://textures/ui/Settings/MenuBarAssets/MenuButton.png",
+			Image = "",
 			BorderSizePixel = 0,
 			BackgroundColor3 = Theme.color(backgroundColor),
 			BackgroundTransparency = Theme.transparency(backgroundColor, 1),
@@ -154,39 +147,31 @@ function MenuBackButton:render()
 				end
 			end),
 			AutomaticSize = Enum.AutomaticSize.X,
-			ScaleType = if Theme.UIBloxThemeEnabled then Enum.ScaleType.Stretch else Enum.ScaleType.Slice,
+			ScaleType = Enum.ScaleType.Stretch,
 			SliceCenter = Rect.new(8, 6, 46, 44),
 			[Roact.Event.MouseEnter] = function(rbx)
-				if Theme.UIBloxThemeEnabled then
-					rbx.BackgroundColor3 = Theme.color("DefaultButtonHover")
-					rbx.BackgroundTransparency = Theme.transparency("DefaultButtonHover")
-				else
-					rbx.Image = "rbxasset://textures/ui/Settings/MenuBarAssets/MenuButtonSelected.png"
-				end
+				rbx.BackgroundColor3 = Theme.color("DefaultButtonHover")
+				rbx.BackgroundTransparency = Theme.transparency("DefaultButtonHover")
 			end,
 			[Roact.Event.MouseLeave] = function(rbx)
-				if Theme.UIBloxThemeEnabled then
-					rbx.BackgroundColor3 = Theme.color("DefaultButton")
-					rbx.BackgroundTransparency = Theme.transparency("DefaultButton")
-				else
-					rbx.Image = "rbxasset://textures/ui/Settings/MenuBarAssets/MenuButton.png"
-				end
+				rbx.BackgroundColor3 = Theme.color("DefaultButton")
+				rbx.BackgroundTransparency = Theme.transparency("DefaultButton")
 			end,
 			[Roact.Event.Activated] = function(rbx)
 				BackButtonController.initiateBackButtonTeleport((Enum :: any).AdTeleportMethod.InGameMenuBackButton)
 			end,
 		}, {
-			UICorner = Theme.UIBloxThemeEnabled and Roact.createElement("UICorner", {
+			UICorner = Roact.createElement("UICorner", {
 				CornerRadius = Theme.DefaultCornerRadius,
-			}) or nil,
-			UIStroke = Theme.UIBloxThemeEnabled and Roact.createElement("UIStroke", {
+			}),
+			UIStroke = Roact.createElement("UIStroke", {
 				Color = Theme.color(borderColor),
 				Transparency = Theme.transparency(borderColor),
 				Thickness = Theme.DefaultStokeThickness,
-			}) or nil,
+			}),
 			Frame = Roact.createElement("Frame", {
-				Size = if Theme.UIBloxThemeEnabled then UDim2.new(1, 0, 1, 0) else UDim2.new(1, 0, 1, -8),
-				Position = if Theme.UIBloxThemeEnabled then UDim2.new(0, 4, 0, 0) else UDim2.new(0, 4, 0, 2),
+				Size = UDim2.new(1, 0, 1, 0),
+				Position = UDim2.new(0, 4, 0, 0),
 				BorderSizePixel = 0,
 				BackgroundTransparency = 1,
 			}, {

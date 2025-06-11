@@ -9,6 +9,11 @@ local RAFolder = script.Parent.Parent
 local ScreenshotDialog = require(RAFolder.Components.ScreenshotDialog)
 local ScreenshotReviewDialog = require(RAFolder.Components.ScreenshotReviewDialog)
 
+local Types = require(script.Parent.Parent.Parent.Components.Types)
+
+local SharedFlags = require(CorePackages.Workspace.Packages.SharedFlags)
+local GetFFlagAvatarIdentificationSafeAreaFix = SharedFlags.GetFFlagAvatarIdentificationSafeAreaFix
+
 export type Props = ScreenshotDialog.Props & {
 	titleText: never,
 	skipAnnotationAction: () -> (),
@@ -17,14 +22,15 @@ export type Props = ScreenshotDialog.Props & {
 	-- provide optional capability for mounting menu flow to specify which page to start with
 	initialPageNumber: number?,
 	dismissAction: () -> (),
+	viewportInfo: Types.ViewportInfo?,
 }
 
 local function ScreenshotFlowStepHandler(props: Props)
 	local currentPageIndex, setCurrentPageIndex =
 		React.useState(props.initialPageNumber == nil and 1 or props.initialPageNumber)
 	local imageAspectRatio, setImageAspectRatio = React.useState(16 / 9)
-	local viewportHeight, setviewportHeight = React.useState(800)
-	local viewportWidth, setviewportWidth = React.useState(800)
+	local viewportUISafeAreaHeight, setviewportUISafeAreaHeight = React.useState(800)
+	local viewportUISafeAreaWidth, setviewportUISafeAreaWidth = React.useState(800)
 	local isSmallPortraitMode, setIsSmallPortraitMode = React.useState(true)
 	local onNextPage = React.useCallback(function()
 		setCurrentPageIndex(2)
@@ -40,11 +46,19 @@ local function ScreenshotFlowStepHandler(props: Props)
 		-- so to not distort the screenshot image
 		local camera = game.Workspace.CurrentCamera
 		if camera ~= nil then
-			local viewportSize = camera.ViewportSize
-			setImageAspectRatio(viewportSize.X / viewportSize.Y)
-			setviewportHeight(viewportSize.Y)
-			setviewportWidth(viewportSize.X)
-			setIsSmallPortraitMode(viewportSize.X < viewportSize.Y and viewportSize.X < 800)
+			local uiSafeAreaViewportSize = camera.viewportSize
+			if GetFFlagAvatarIdentificationSafeAreaFix() and props.viewportInfo then
+				-- size of the rendered viewport (which can be larger than the `camera.uiSafeAreaViewportSize` on displays with cutouts or notches)
+				-- this is necessary to ensure the screenshot aspect ratio when annotating matches the screenshot itself
+				setImageAspectRatio(props.viewportInfo.width / props.viewportInfo.height)
+			else
+				setImageAspectRatio(uiSafeAreaViewportSize.X / uiSafeAreaViewportSize.Y)
+			end
+			setviewportUISafeAreaHeight(uiSafeAreaViewportSize.Y)
+			setviewportUISafeAreaWidth(uiSafeAreaViewportSize.X)
+			setIsSmallPortraitMode(
+				uiSafeAreaViewportSize.X < uiSafeAreaViewportSize.Y and uiSafeAreaViewportSize.X < 800
+			)
 		end
 	end, {})
 
@@ -53,8 +67,8 @@ local function ScreenshotFlowStepHandler(props: Props)
 		currentPageDialog = React.createElement(ScreenshotReviewDialog, {
 			imageAspectRatio = imageAspectRatio,
 			isSmallPortraitMode = isSmallPortraitMode,
-			viewportHeight = viewportHeight,
-			viewportWidth = viewportWidth,
+			viewportUISafeAreaHeight = viewportUISafeAreaHeight,
+			viewportUISafeAreaWidth = viewportUISafeAreaWidth,
 			onNextPage = onNextPage,
 			onBack = props.dismissAction,
 			onSkip = props.skipAnnotationAction,

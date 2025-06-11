@@ -12,6 +12,7 @@ export type UniqueRefEntry = {
 export type UniqueRefReport = {
 	Version: number,
 	Roots: { UniqueRefEntry },
+	UnparentedReferences: { UniqueRefEntry }
 }
 
 export type HeapReportStatsEntry = {

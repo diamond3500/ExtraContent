@@ -10,7 +10,6 @@ local withStyle = UIBlox.Style.withStyle
 local ButtonType = UIBlox.App.Button.Enum.ButtonType
 local InteractiveAlert = UIBlox.App.Dialog.Alert.InteractiveAlert
 
-local GetFFlagWrapBlockModalScreenInProvider = require(RobloxGui.Modules.Flags.GetFFlagWrapBlockModalScreenInProvider)
 local FFlagEnableNewBlockingModal = require(RobloxGui.Modules.Common.Flags.FFlagEnableNewBlockingModal)
 
 local ActionModal = Roact.PureComponent:extend("ActionModal")
@@ -45,7 +44,7 @@ function ActionModal:render()
 			BackgroundColor3 = style.Theme.Overlay.Color,
 			Active = true,
 			AutoButtonColor = false,
-			Selectable = if GetFFlagWrapBlockModalScreenInProvider() then false else nil,
+			Selectable = false,
 			Visible = self.props.Visible,
 			[Roact.Event.Activated] = self.props.cancel,
 		}, {

@@ -292,6 +292,10 @@ if FFlagAddPublishAssetPrompt then
 	coroutine.wrap(safeRequire)(CoreGuiModules.PublishAssetPrompt)
 end
 
+if game:GetEngineFeature("ExperienceEventsEngineAPIEnabled") then
+	coroutine.wrap(safeRequire)(CoreGuiModules.ExperienceEvents.ExperienceEventsApp)
+end
+
 -- Prompt Block Player Script
 ScriptContext:AddCoreScriptLocal("CoreScripts/BlockPlayerPrompt", RobloxGui)
 ScriptContext:AddCoreScriptLocal("CoreScripts/FriendPlayerPrompt", RobloxGui)

@@ -20,6 +20,9 @@ local log = require(CorePackages.Workspace.Packages.CoreScriptsInitializer).Core
 local IXPServiceWrapper = require(CorePackages.Workspace.Packages.IxpServiceWrapper).IXPServiceWrapper
 
 local VoiceChatCore = require(CorePackages.Workspace.Packages.VoiceChatCore)
+local VoiceChat = require(CorePackages.Workspace.Packages.VoiceChat)
+
+local GlobalVoiceManager = VoiceChat.GlobalVoiceManager.default
 
 local GetFFlagDisableConsentModalForExistingUsers =
 	require(script.Parent.Flags.GetFFlagDisableConsentModalForExistingUsers)
@@ -59,6 +62,8 @@ local GetFFlagSeamlessVoiceConsentToastPolicy =
 local GetFFlagEnableFtuxExitOnMuteToggle = require(VoiceChatCore.Flags.GetFFlagEnableFtuxExitOnMuteToggle)
 local GetFFlagEnableVoiceChatMuteForVideoCaptures =
 	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagEnableVoiceChatMuteForVideoCaptures
+local GetFFlagEnableCrossExperienceVoiceCaptureMute =
+	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagEnableCrossExperienceVoiceCaptureMute
 
 local FFlagFixNudgeDeniedEvents = game:DefineFastFlag("FixNudgeDeniedEvents", false)
 local DebugShowAudioDeviceInputDebugger = game:DefineFastFlag("DebugShowAudioDeviceInputDebugger", false)
@@ -610,8 +615,13 @@ function VoiceChatServiceManager.new(
 		end
 
 		if GetFFlagEnableVoiceChatMuteForVideoCaptures() and self.CaptureService:IsCapturingVideo() then
-			self:MuteAll(true, "Capture")
-			self:HideVoiceUI()
+			if GetFFlagEnableCrossExperienceVoiceCaptureMute() then
+				GlobalVoiceManager:MuteAll("Capture")
+        self:HideVoiceUI()
+			else
+				self:MuteAll(true, "Capture")
+        self:HideVoiceUI()
+			end
 		end
 
 		if GetFFlagEnableConnectDisconnectAnalytics() and shouldSendConnectDisconnectAnalytics then
