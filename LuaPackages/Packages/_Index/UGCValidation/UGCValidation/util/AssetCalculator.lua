@@ -1,4 +1,3 @@
---!strict
 --[[
 calculatePartCFrameFromRigAttachments
 	calculates a cframe where the y axis is from the parts rig attachment to parent to the parts rig attachment to child

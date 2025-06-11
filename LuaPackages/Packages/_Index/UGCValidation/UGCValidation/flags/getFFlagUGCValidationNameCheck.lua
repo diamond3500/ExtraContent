@@ -1,5 +1,3 @@
---!strict
-
 game:DefineFastFlag("UGCValidationNameCheck", false)
 
 return function()

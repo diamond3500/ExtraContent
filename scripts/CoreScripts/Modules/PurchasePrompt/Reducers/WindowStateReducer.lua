@@ -10,6 +10,7 @@ local CompleteRequest = require(Root.Actions.CompleteRequest)
 local ErrorOccurred = require(Root.Actions.ErrorOccurred)
 local StartPurchase = require(Root.Actions.StartPurchase)
 local PromptNativeUpsell = require(Root.Actions.PromptNativeUpsell)
+local PromptNativeUpsellSuggestions = require(Root.Actions.PromptNativeUpsellSuggestions)
 local SetWindowState = require(Root.Actions.SetWindowState)
 local WindowState = require(Root.Enums.WindowState)
 local PromptState = require(Root.Enums.PromptState)
@@ -32,6 +33,9 @@ return Rodux.createReducer(WindowState.Hidden, {
 		return WindowState.Shown
 	end,
 	[PromptNativeUpsell.name] = function(state, action)
+		return WindowState.Shown
+	end,
+	[PromptNativeUpsellSuggestions.name] = function(state, action)
 		return WindowState.Shown
 	end,
 	[CompleteRequest.name] = function(state, action)

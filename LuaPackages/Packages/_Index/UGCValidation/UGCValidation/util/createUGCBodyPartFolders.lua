@@ -1,4 +1,3 @@
---!strict
 local root = script.Parent.Parent
 
 local BundlesMetadata = require(root.util.BundlesMetadata)

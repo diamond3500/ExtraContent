@@ -333,127 +333,123 @@ function Tile:render()
 						or nil
 				end
 
-				return React.createElement(
-					if UIBloxConfig.useInteractableWithTileAndCell then Interactable else "TextButton",
-					{
-						Text = if UIBloxConfig.useInteractableWithTileAndCell then nil else "",
-						Size = UDim2.new(1, 0, 1, 0),
+				return React.createElement(Interactable, {
+					Size = UDim2.new(1, 0, 1, 0),
+					BackgroundTransparency = 1,
+					Selectable = self.props.Selectable,
+					onStateChanged = if UIBloxConfig.refactorInteractable then nil else function() end,
+					[React.Event.Activated] = if isDisabled then nil else onActivated,
+					[React.Change.AbsoluteSize] = self.onAbsoluteSizeChange,
+					ref = self.props.textButtonRef,
+					SelectionImageObject = if self.props.cursor
+						then self.props.cursor
+						else getSelectionCursor(CursorKind.RoundedRect),
+				}, {
+					UIListLayout = React.createElement("UIListLayout", {
+						FillDirection = Enum.FillDirection.Vertical,
+						SortOrder = Enum.SortOrder.LayoutOrder,
+						Padding = UDim.new(0, innerPadding),
+						HorizontalAlignment = if not self.props.nameOverThumbnail then horizontalAlignment else nil,
+					}),
+					Thumbnail = React.createElement(RoactGamepad.Focusable.Frame, {
+						Size = thumbnailFrameSize,
+						SizeConstraint = Enum.SizeConstraint.RelativeXX,
 						BackgroundTransparency = 1,
-						Selectable = self.props.Selectable,
-						[React.Event.Activated] = if isDisabled then nil else onActivated,
-						[React.Change.AbsoluteSize] = self.onAbsoluteSizeChange,
-						ref = self.props.textButtonRef,
+						LayoutOrder = 1,
+
+						NextSelectionLeft = self.props.NextSelectionLeft,
+						NextSelectionRight = self.props.NextSelectionRight,
+						NextSelectionUp = self.props.NextSelectionUp,
+						NextSelectionDown = self.props.NextSelectionDown,
+						ref = self.props.thumbnailRef,
+						[React.Tag] = self.props[React.Tag],
 						SelectionImageObject = if self.props.cursor
 							then self.props.cursor
-							else getSelectionCursor(CursorKind.RoundedRect),
-					},
-					{
+							else getSelectionCursor(CursorKind.RoundedRectNoInset),
+						inputBindings = inputBindings,
+					}, {
+						Image = React.createElement(TileThumbnail, {
+							Image = thumbnail,
+							hasRoundedCorners = hasRoundedCorners,
+							cornerRadius = if self.props.isCircular
+								then UDim.new(0.5, 0)
+								elseif UIBloxConfig.useNewSelectionCursor then THUMBNAIL_CORNER_RADIUS
+								else nil,
+							isSelected = isSelected,
+							multiSelect = multiSelect,
+							overlayComponents = thumbnailOverlayComponents,
+							imageSize = thumbnailSize,
+							imageColor = thumbnailColor,
+							imageTransparency = thumbnailTransparency,
+							backgroundImage = backgroundImage,
+							scaleType = self.props.thumbnailScaleType,
+							onThumbnailLoaded = self.props.onThumbnailLoaded,
+						}),
+						TileInset = renderTileInset and renderTileInset() or nil,
+						UIAspectRatioConstraint = if self.props.thumbnailAspectRatio ~= nil
+							then React.createElement("UIAspectRatioConstraint", {
+								AspectRatio = self.props.thumbnailAspectRatio,
+								AspectType = Enum.AspectType.ScaleWithParentSize,
+							})
+							else nil,
+					}),
+					TitleArea = React.createElement("Frame", {
+						Size = titleAreaSize,
+						BackgroundTransparency = 1,
+						LayoutOrder = 2,
+					}, {
+						TitleTopPadding = React.createElement("UIPadding", {
+							PaddingTop = UDim.new(0, titleTopPadding),
+						}),
 						UIListLayout = React.createElement("UIListLayout", {
 							FillDirection = Enum.FillDirection.Vertical,
 							SortOrder = Enum.SortOrder.LayoutOrder,
-							Padding = UDim.new(0, innerPadding),
-							HorizontalAlignment = if not self.props.nameOverThumbnail then horizontalAlignment else nil,
+							Padding = UDim.new(0, subtitleTopPadding),
+							HorizontalAlignment = horizontalAlignment,
 						}),
-						Thumbnail = React.createElement(RoactGamepad.Focusable.Frame, {
-							Size = thumbnailFrameSize,
-							SizeConstraint = Enum.SizeConstraint.RelativeXX,
-							BackgroundTransparency = 1,
+						NameOverThumbnailPadding = titleTextPadding,
+						Name = (titleTextLineCount > 0 and tileWidth > 0) and React.createElement(TileName, {
+							titleIcon = titleIcon,
+							name = name,
+							nameTextColor = self.props.nameTextColor,
+							nameTextTransparency = self.props.nameTextTransparency,
+							hasVerifiedBadge = hasVerifiedBadge,
+							maxHeight = maxTitleTextHeight,
+							maxWidth = tileWidth,
 							LayoutOrder = 1,
-
-							NextSelectionLeft = self.props.NextSelectionLeft,
-							NextSelectionRight = self.props.NextSelectionRight,
-							NextSelectionUp = self.props.NextSelectionUp,
-							NextSelectionDown = self.props.NextSelectionDown,
-							ref = self.props.thumbnailRef,
-							[React.Tag] = self.props[React.Tag],
-							SelectionImageObject = if self.props.cursor
-								then self.props.cursor
-								else getSelectionCursor(CursorKind.RoundedRectNoInset),
-							inputBindings = inputBindings,
-						}, {
-							Image = React.createElement(TileThumbnail, {
-								Image = thumbnail,
-								hasRoundedCorners = hasRoundedCorners,
-								cornerRadius = if self.props.isCircular
-									then UDim.new(0.5, 0)
-									elseif UIBloxConfig.useNewSelectionCursor then THUMBNAIL_CORNER_RADIUS
-									else nil,
-								isSelected = isSelected,
-								multiSelect = multiSelect,
-								overlayComponents = thumbnailOverlayComponents,
-								imageSize = thumbnailSize,
-								imageColor = thumbnailColor,
-								imageTransparency = thumbnailTransparency,
-								backgroundImage = backgroundImage,
-								scaleType = self.props.thumbnailScaleType,
-								onThumbnailLoaded = self.props.onThumbnailLoaded,
-							}),
-							TileInset = renderTileInset and renderTileInset() or nil,
-							UIAspectRatioConstraint = if self.props.thumbnailAspectRatio ~= nil
-								then React.createElement("UIAspectRatioConstraint", {
-									AspectRatio = self.props.thumbnailAspectRatio,
-									AspectType = Enum.AspectType.ScaleWithParentSize,
-								})
-								else nil,
+							useMaxHeight = useMaxTitleHeight,
+							titleFontStyle = titleFontStyle,
+							richText = titleRichText,
+							horizontalAlignment = horizontalAlignment,
 						}),
-						TitleArea = React.createElement("Frame", {
-							Size = titleAreaSize,
-							BackgroundTransparency = 1,
-							LayoutOrder = 2,
-						}, {
-							TitleTopPadding = React.createElement("UIPadding", {
-								PaddingTop = UDim.new(0, titleTopPadding),
-							}),
-							UIListLayout = React.createElement("UIListLayout", {
-								FillDirection = Enum.FillDirection.Vertical,
-								SortOrder = Enum.SortOrder.LayoutOrder,
-								Padding = UDim.new(0, subtitleTopPadding),
-								HorizontalAlignment = horizontalAlignment,
-							}),
-							NameOverThumbnailPadding = titleTextPadding,
-							Name = (titleTextLineCount > 0 and tileWidth > 0) and React.createElement(TileName, {
-								titleIcon = titleIcon,
-								name = name,
-								nameTextColor = self.props.nameTextColor,
-								nameTextTransparency = self.props.nameTextTransparency,
-								hasVerifiedBadge = hasVerifiedBadge,
-								maxHeight = maxTitleTextHeight,
-								maxWidth = tileWidth,
-								LayoutOrder = 1,
-								useMaxHeight = useMaxTitleHeight,
-								titleFontStyle = titleFontStyle,
-								richText = titleRichText,
-								horizontalAlignment = horizontalAlignment,
-							}),
-							Subtitle = (subtitle ~= "" and subtitle ~= nil) and React.createElement(StyledTextLabel, {
-								size = UDim2.new(0, 0, 0, subtitleTextHeight),
-								automaticSize = Enum.AutomaticSize.X,
-								text = subtitle,
-								colorStyle = theme.TextDefault,
-								fontStyle = subtitleFontStyle,
-								openTypeFeatures = self.props.openTypeFeatures,
-								layoutOrder = 2,
-								fluidSizing = false,
-								textTruncate = Enum.TextTruncate.AtEnd,
-								richText = false,
-								lineHeight = 1,
-							}),
+						Subtitle = (subtitle ~= "" and subtitle ~= nil) and React.createElement(StyledTextLabel, {
+							size = UDim2.new(0, 0, 0, subtitleTextHeight),
+							automaticSize = Enum.AutomaticSize.X,
+							text = subtitle,
+							colorStyle = theme.TextDefault,
+							fontStyle = subtitleFontStyle,
+							openTypeFeatures = self.props.openTypeFeatures,
+							layoutOrder = 2,
+							fluidSizing = false,
+							textTruncate = Enum.TextTruncate.AtEnd,
+							richText = false,
+							lineHeight = 1,
 						}),
-						FooterContainer = hasFooter and React.createElement("Frame", {
-							Size = UDim2.new(1, 0, 0, footerHeight),
-							BackgroundTransparency = 1,
-							LayoutOrder = 3,
-						}, {
-							FooterTopPadding = React.createElement("UIPadding", {
-								PaddingTop = UDim.new(0, footerTopPadding),
-							}),
-							Banner = bannerText and React.createElement(TileBanner, {
-								bannerText = bannerText,
-							}),
-							Footer = not bannerText and footer,
+					}),
+					FooterContainer = hasFooter and React.createElement("Frame", {
+						Size = UDim2.new(1, 0, 0, footerHeight),
+						BackgroundTransparency = 1,
+						LayoutOrder = 3,
+					}, {
+						FooterTopPadding = React.createElement("UIPadding", {
+							PaddingTop = UDim.new(0, footerTopPadding),
 						}),
-					}
-				)
+						Banner = bannerText and React.createElement(TileBanner, {
+							bannerText = bannerText,
+						}),
+						Footer = not bannerText and footer,
+					}),
+				})
 			end)
 		end)
 	end)

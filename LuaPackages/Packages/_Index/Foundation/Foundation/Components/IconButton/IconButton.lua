@@ -2,6 +2,7 @@ local Foundation = script:FindFirstAncestor("Foundation")
 local Packages = Foundation.Parent
 
 local React = require(Packages.React)
+local BuilderIcons = require(Packages.BuilderIcons)
 
 local IconSize = require(Foundation.Enums.IconSize)
 type IconSize = IconSize.IconSize
@@ -18,6 +19,7 @@ local withCommonProps = require(Foundation.Utility.withCommonProps)
 local withDefaults = require(Foundation.Utility.withDefaults)
 local useIconSize = require(Foundation.Utility.useIconSize)
 local useIconButtonPadding = require(script.Parent.useIconButtonPadding)
+local isBuilderIcon = require(Foundation.Components.Icon.isBuilderIcon)
 
 local Icon = require(Foundation.Components.Icon)
 local View = require(Foundation.Components.View)
@@ -25,7 +27,7 @@ local Types = require(Foundation.Components.Types)
 
 local Flags = require(Foundation.Utility.Flags)
 
-local ICON_SIZE_TO_RADIUS: { [IconSize]: Radius } = {
+local ICON_SIZE_TO_RADIUS_DEPRECATED: { [IconSize]: Radius } = {
 	[IconSize.XSmall] = Radius.Small,
 	[IconSize.Small] = Radius.Small,
 	[IconSize.Medium] = Radius.Medium,
@@ -36,17 +38,26 @@ local ICON_SIZE_TO_RADIUS: { [IconSize]: Radius } = {
 	[IconSize.XXLarge] = Radius.Large,
 }
 
+local ICON_SIZE_TO_RADIUS: { [IconSize]: Radius } = {
+	[IconSize.XSmall] = Radius.Small,
+	[IconSize.Small] = Radius.Medium,
+	[IconSize.Medium] = Radius.Medium,
+	[IconSize.Large] = Radius.Medium,
+}
+
 type IconButtonProps = {
 	onActivated: () -> (),
 	isDisabled: boolean?,
 	isCircular: boolean?,
 	size: IconSize?,
-	icon: string,
+	icon: string | {
+		name: BuilderIcons.Icon,
+		variant: BuilderIcons.IconVariant?,
+	},
 } & Types.SelectionProps & Types.CommonProps
 
 local defaultProps = {
 	isDisabled = false,
-	isCircular = if Flags.FoundationIconButtonCanBeCircular then false else nil,
 	size = IconSize.Medium,
 }
 
@@ -54,15 +65,20 @@ local function IconButton(iconButtonProps: IconButtonProps, ref: React.Ref<GuiOb
 	local props = withDefaults(iconButtonProps, defaultProps)
 	local tokens = useTokens()
 
-	local radiusEnum = if Flags.FoundationIconButtonCanBeCircular and props.isCircular
-		then Radius.Circle
-		else ICON_SIZE_TO_RADIUS[props.size]
+	local iconName = if typeof(props.icon) == "table" then props.icon.name else props.icon
+	local iconVariant: BuilderIcons.IconVariant? = if typeof(props.icon) == "table" then props.icon.variant else nil
+
+	local isBuilderIcon = isBuilderIcon(iconName)
+
+	local radiusEnum = if isBuilderIcon
+		then ICON_SIZE_TO_RADIUS[props.size]
+		else ICON_SIZE_TO_RADIUS_DEPRECATED[props.size]
 	local radius = tokens.Radius[radiusEnum]
 
-	local paddingOffset = useIconButtonPadding(props.size)
+	local paddingOffset = useIconButtonPadding(props.size, isBuilderIcon)
 	local padding = UDim.new(0, paddingOffset)
 
-	local size = useIconSize(props.size)
+	local size = useIconSize(props.size, isBuilderIcon)
 
 	local cursor = useCursor({
 		radius = UDim.new(0, radius),
@@ -91,7 +107,8 @@ local function IconButton(iconButtonProps: IconButtonProps, ref: React.Ref<GuiOb
 		}),
 		{
 			Icon = React.createElement(Icon, {
-				name = props.icon,
+				name = iconName,
+				variant = iconVariant,
 				size = props.size,
 				style = tokens.Color.Content.Emphasis,
 			}),

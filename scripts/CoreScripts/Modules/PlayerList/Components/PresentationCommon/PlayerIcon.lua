@@ -5,6 +5,7 @@ local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 local FFlagPlayerIconAvatarFix = require(RobloxGui.Modules.Flags.FFlagPlayerIconAvatarFix)
 
 local Roact = require(CorePackages.Packages.Roact)
+local React = require(CorePackages.Packages.React)
 local RoactRodux = require(CorePackages.Packages.RoactRodux)
 local UIBlox = require(CorePackages.Packages.UIBlox)
 local t = require(CorePackages.Packages.t)
@@ -15,6 +16,9 @@ local Components = script.Parent.Parent
 local Connection = Components.Connection
 local LayoutValues = require(Connection.LayoutValues)
 local WithLayoutValues = LayoutValues.WithLayoutValues
+
+local PlayerList = Components.Parent
+local FFlagPlayerListReduceRerenders = require(PlayerList.Flags.FFlagPlayerListReduceRerenders)
 
 local ImageSetLabel = UIBlox.Core.ImageSet.ImageSetLabel
 
@@ -134,6 +138,10 @@ local function mapStateToProps(state)
 	return {
 		isSmallTouchDevice = state.displayOptions.isSmallTouchDevice,
 	}
+end
+
+if FFlagPlayerListReduceRerenders then
+	return React.memo(RoactRodux.connect(mapStateToProps, nil)(PlayerIcon))
 end
 
 return RoactRodux.connect(mapStateToProps, nil)(PlayerIcon)

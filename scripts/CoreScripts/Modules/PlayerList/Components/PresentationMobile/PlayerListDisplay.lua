@@ -29,6 +29,7 @@ local TitleBar = require(script.Parent.TitleBar)
 local Presentation = script.Parent
 local PlayerList = Presentation.Parent.Parent
 
+local FFlagPlayerListReduceRerenders = require(PlayerList.Flags.FFlagPlayerListReduceRerenders)
 local FFlagPlayerListFixMobileScrolling = require(PlayerList.Flags.FFlagPlayerListFixMobileScrolling)
 local FAKE_NEUTRAL_TEAM = require(PlayerList.GetFakeNeutralTeam)
 
@@ -157,6 +158,14 @@ function PlayerListDisplay:render()
 
 			local penPositionY = 0
 
+			local gameStatNames = nil
+			if FFlagPlayerListReduceRerenders then
+				gameStatNames = {}
+				for _, gameStat in self.props.gameStats do
+					table.insert(gameStatNames, gameStat.name)
+				end
+			end
+
 			if self:getShowTitlePlayer() then
 				childElements.TitlePlayer = Roact.createElement(PlayerEntry, {
 					player = LocalPlayer,
@@ -169,7 +178,8 @@ function PlayerListDisplay:render()
 						isFollower = false,
 					},
 					titlePlayerEntry = true,
-					gameStats = self.props.gameStats,
+					gameStats = if FFlagPlayerListReduceRerenders then nil else self.props.gameStats,
+					gameStatNames = gameStatNames,
 					entrySize = self.props.entrySize,
 					topDiv = false,
 					bottomDiv = true,
@@ -213,7 +223,8 @@ function PlayerListDisplay:render()
 							teamName = self.props.teamNames[sortedTeam.team],
 							teamColor = self.props.teamColors[sortedTeam.team],
 							leaderstats = self.props.teamScores[sortedTeam.team],
-							gameStats = self.props.gameStats,
+							gameStats = if FFlagPlayerListReduceRerenders then nil else self.props.gameStats,
+							gameStatNames = gameStatNames,
 							entrySize = self.props.entrySize,
 							layoutOrder = getLayoutOrder(),
 							Position = UDim2.fromOffset(0, penPositionY),
@@ -233,7 +244,8 @@ function PlayerListDisplay:render()
 								playerIconInfo = self.props.playerIconInfo[userId],
 								playerRelationship = self.props.playerRelationship[userId],
 								titlePlayerEntry = false,
-								gameStats = self.props.gameStats,
+								gameStats = if FFlagPlayerListReduceRerenders then nil else self.props.gameStats,
+								gameStatNames = gameStatNames,
 								topDiv = true,
 								bottomDiv = j == #teamPlayers,
 								entrySize = self.props.entrySize,
@@ -261,7 +273,8 @@ function PlayerListDisplay:render()
 							playerIconInfo = self.props.playerIconInfo[userId],
 							playerRelationship = self.props.playerRelationship[userId],
 							titlePlayerEntry = false,
-							gameStats = self.props.gameStats,
+							gameStats = if FFlagPlayerListReduceRerenders then nil else self.props.gameStats,
+							gameStatNames = gameStatNames,
 							entrySize = self.props.entrySize,
 							layoutOrder = getLayoutOrder(),
 							topDiv = true,

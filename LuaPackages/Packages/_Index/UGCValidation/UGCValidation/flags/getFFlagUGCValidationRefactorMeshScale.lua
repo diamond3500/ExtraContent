@@ -1,5 +1,3 @@
---!strict
-
 game:DefineFastFlag("UGCValidationRefactorMeshScale", false)
 
 return function()

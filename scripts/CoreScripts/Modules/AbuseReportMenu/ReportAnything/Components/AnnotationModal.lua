@@ -1,10 +1,14 @@
 local CoreGui = game:GetService("CoreGui")
 local GuiService = game:GetService("GuiService")
+local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 
 local root = script:FindFirstAncestor("AbuseReportMenu")
 local CorePackages = game:GetService("CorePackages")
 
 local Roact = require(CorePackages.Packages.Roact)
+local Chrome = RobloxGui.Modules.Chrome
+local ChromeEnabled = require(Chrome.Enabled)
+local ChromeService = if ChromeEnabled() then require(Chrome.Service) else nil :: never
 
 local Types = require(root.Components.Types)
 local Constants = require(root.Components.Constants)
@@ -12,8 +16,9 @@ local Constants = require(root.Components.Constants)
 local ScreenshotFlowStepHandlerContainer = require(root.ReportAnything.Components.ScreenshotFlowStepHandlerContainer)
 local ReportAnythingAnalytics = require(root.ReportAnything.Utility.ReportAnythingAnalytics)
 
-local GetFFlagAbuseReportMenuConsoleSupportRefactor =
-	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagAbuseReportMenuConsoleSupportRefactor
+local SharedFlags = require(CorePackages.Workspace.Packages.SharedFlags)
+local FFlagChromeHideShortcutBarOnAnnotationModal = SharedFlags.FFlagChromeHideShortcutBarOnAnnotationModal
+local GetFFlagAbuseReportMenuConsoleSupportRefactor = SharedFlags.GetFFlagAbuseReportMenuConsoleSupportRefactor
 
 local elements: any = {
 	annotationPageHandle = nil,
@@ -22,6 +27,9 @@ local elements: any = {
 }
 
 local function unmountAnnotationPage()
+	if FFlagChromeHideShortcutBarOnAnnotationModal and ChromeEnabled then
+		ChromeService:setHideShortcutBar("AnnotationModal", false)
+	end
 	if elements.annotationPageHandle ~= nil then
 		Roact.unmount(elements.annotationPageHandle)
 		elements.annotationPageHandle = nil
@@ -40,6 +48,9 @@ local function mountAnnotationPage(
 	reportAnythingState: Types.ReportAnythingState,
 	reportAnythingDispatch: (action: { type: string }) -> ()
 )
+	if FFlagChromeHideShortcutBarOnAnnotationModal and ChromeEnabled then
+		ChromeService:setHideShortcutBar("AnnotationModal", true)
+	end
 	local topCornerInset, _ = GuiService:GetGuiInset()
 	if not elements.annotationPageScreenGui then
 		local screenGui = Instance.new("ScreenGui")

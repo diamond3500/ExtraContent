@@ -1,5 +1,3 @@
---!strict
-
 game:DefineFastFlag("UGCValidateWrapLayersEnabled", false)
 
 return function()

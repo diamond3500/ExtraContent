@@ -1,5 +1,3 @@
---!strict
-
 local root = script.Parent.Parent
 
 local Analytics = require(root.Analytics)

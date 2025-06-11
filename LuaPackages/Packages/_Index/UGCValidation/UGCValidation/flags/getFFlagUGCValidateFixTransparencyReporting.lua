@@ -1,5 +1,3 @@
---!strict
-
 game:DefineFastFlag("UGCValidateFixTransparencyReporting2", false)
 
 return function()

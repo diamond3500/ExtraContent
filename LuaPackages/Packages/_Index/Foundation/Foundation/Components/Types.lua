@@ -7,8 +7,9 @@ type StateLayerAffordance = StateLayerAffordance.StateLayerAffordance
 local StateLayerMode = require(Foundation.Enums.StateLayerMode)
 type StateLayerMode = StateLayerMode.StateLayerMode
 
-local createGuiControlStateTable = require(Foundation.Utility.Control.createGuiControlStateTable)
-export type StateChangedCallback = createGuiControlStateTable.onGuiControlStateChange
+local ControlState = require(Foundation.Enums.ControlState)
+type ControlState = ControlState.ControlState
+export type StateChangedCallback = (newState: ControlState) -> ()
 
 local React = require(Packages.React)
 export type Bindable<T> = T | React.Binding<T>
@@ -21,11 +22,14 @@ export type NativeCommonProps = {
 	ZIndex: Bindable<number>?,
 }
 
-export type CommonProps = {
+export type NativeCallbackProps = {
 	onAbsoluteSizeChanged: (instance: GuiObject) -> ()?,
 	onAbsolutePositionChanged: (instance: GuiObject) -> ()?,
+}
+
+export type CommonProps = NativeCallbackProps & NativeCommonProps & {
 	testId: string?,
-} & NativeCommonProps
+}
 
 export type FlexItem = {
 	FlexMode: Bindable<Enum.UIFlexMode>?,
@@ -37,6 +41,11 @@ export type FlexItem = {
 export type SizeConstraint = {
 	MinSize: Bindable<Vector2>?,
 	MaxSize: Bindable<Vector2>?,
+}
+
+export type Slice = {
+	center: Rect?,
+	scale: number?,
 }
 
 export type Stroke = {
@@ -54,6 +63,8 @@ export type ColorStyleValue = {
 }
 
 export type ColorStyle = Bindable<ColorStyleValue>
+
+export type ItemId = string | number
 
 export type StateLayer = {
 	inset: boolean?,
@@ -111,9 +122,10 @@ export type GuiObjectProps = {
 	ClipsDescendants: Bindable<boolean>?,
 	Rotation: Bindable<number>?,
 	Size: Bindable<UDim2>?,
+	SizeConstraint: Bindable<Enum.SizeConstraint>?,
 
 	stateLayer: StateLayer?, -- Can this be bindable?
-	onActivated: () -> ()?,
+	onActivated: ((self: GuiObject, inputObject: InputObject, clickCount: number) -> ())?,
 	onStateChanged: StateChangedCallback?,
 	isDisabled: boolean?, -- This can't be a bindable due to handling state updates
 

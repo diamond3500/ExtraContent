@@ -1,5 +1,3 @@
---!strict
-
 game:DefineFastInt("UGCValidateAccessoryMaxCageOrigin", 150)
 
 return function()

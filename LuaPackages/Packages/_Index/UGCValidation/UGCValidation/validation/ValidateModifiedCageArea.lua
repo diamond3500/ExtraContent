@@ -1,5 +1,3 @@
---!strict
-
 --[[
 	check that the modified area of the outer cage is within the expected region according to the asset type being validated e.g a left shoe should be on the left leg/foot
 ]]

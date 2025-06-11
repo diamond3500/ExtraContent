@@ -1,5 +1,3 @@
---!strict
-
 --[[
 	validateBodyPartExtentsRelativeToParent.lua checks that the relative parts do not extend beyond each other
 	This is done by checking that the order of bounding boxes is correct.

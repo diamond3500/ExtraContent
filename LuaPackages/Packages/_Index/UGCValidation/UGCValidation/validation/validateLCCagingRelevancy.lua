@@ -7,6 +7,7 @@ local Analytics = require(root.Analytics)
 local Types = require(root.util.Types)
 local pcallDeferred = require(root.util.pcallDeferred)
 local getFIntUGCLCCagingRelevancyMinimum = require(root.flags.getFIntUGCLCCagingRelevancyMinimum)
+local getFFlagUGCValidationHyperlinksInCageQuality = require(root.flags.getFFlagUGCValidationHyperlinksInCageQuality)
 
 local function validateLCCagingRelevancy(
 	innerCageMeshInfo: Types.MeshInfo,
@@ -46,13 +47,16 @@ local function validateLCCagingRelevancy(
 
 	if score < getFIntUGCLCCagingRelevancyMinimum() then
 		Analytics.reportFailure(Analytics.ErrorType.validateCagingRelevancy_IrrelevantCaging, nil, validationContext)
-		return false,
-			{
-				string.format(
-					"Validation detected %d%% of the outer cage edits do not cover the accessory. Make sure you are moving the outer cage only where needed.",
-					100 - score
-				),
-			}
+		local errorString =
+			"Validation detected %d%% of the outer cage edits do not cover the accessory. Make sure you are moving the outer cage only where needed."
+		if getFFlagUGCValidationHyperlinksInCageQuality() then
+			errorString = errorString
+				.. "[Read more](https://create.roblox.com/docs/art/validation-errors#cageRelevancy)"
+		end
+
+		return false, {
+			string.format(errorString, 100 - score),
+		}
 	end
 	return true
 end

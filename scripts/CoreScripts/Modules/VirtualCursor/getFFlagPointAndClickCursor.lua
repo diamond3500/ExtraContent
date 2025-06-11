@@ -1,3 +1,7 @@
+local CorePackages = game:GetService("CorePackages")
+local IXPServiceWrapper = require(CorePackages.Workspace.Packages.IxpServiceWrapper).IXPServiceWrapper
+local AppUserLayers = require(CorePackages.Workspace.Packages.ExperimentLayers).AppUserLayers
+
 local HTTPService = game:GetService("HttpService")
 
 game:DefineFastFlag("PointAndClickCursor", false)
@@ -5,12 +9,22 @@ game:DefineFastFlag("GamepadPointAndClick", false)
 game:DefineFastFlag("GamepadDirectionalOverrideByUniverseIDEnabled", false)
 game:DefineFastString("GamepadDirectionalOverrideByUniverseID", "{\"allowlist\":[]}")
 
+local layerEnabled = false
+local layerFetchSuccess, layerData = pcall(function()
+    return IXPServiceWrapper:GetLayerData(AppUserLayers.PointAndClick)
+end)
+if layerFetchSuccess and layerData then
+    layerEnabled = layerData["generatedExperimentVariantDistributionVariable"] == 1
+end
+
+local flagEnabled = game:GetFastFlag("PointAndClickCursor") and game:GetFastFlag("GamepadPointAndClick")
+
 local Overrides = HTTPService:JSONDecode(game:GetFastString("GamepadDirectionalOverrideByUniverseID"))
 
-local allowed = table.find(Overrides.allowlist or {}, game.GameId) ~= nil
+local allowed = (not game:GetFastFlag("GamepadDirectionalOverrideByUniverseIDEnabled")) or table.find(Overrides.allowlist or {}, game.GameId) ~= nil
 
 local function getFFlagPointAndClickCursor()
-    return game:GetFastFlag("PointAndClickCursor") and game:GetFastFlag("GamepadPointAndClick") and (not game:GetFastFlag("GamepadDirectionalOverrideByUniverseIDEnabled") or allowed)
+    return allowed and (layerEnabled or flagEnabled)
 end
 
 return getFFlagPointAndClickCursor

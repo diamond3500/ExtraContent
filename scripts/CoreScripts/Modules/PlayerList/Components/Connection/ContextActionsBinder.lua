@@ -3,6 +3,7 @@ local ContextActionService = game:GetService("ContextActionService")
 local GuiService = game:GetService("GuiService")
 
 local Roact = require(CorePackages.Packages.Roact)
+local React = require(CorePackages.Packages.React)
 local RoactRodux = require(CorePackages.Packages.RoactRodux)
 
 local Components = script.Parent.Parent
@@ -13,6 +14,7 @@ local GAMEPAD_CLOSE_CONTEXT_ACTION_NAME = "RbxPlayerListGamepadClose"
 local GAMEPAD_STOP_MOVEMENT_ACTION_NAME = "RbxPlayerListStopMovement"
 
 local SetPlayerListVisibility = require(PlayerList.Actions.SetPlayerListVisibility)
+local FFlagPlayerListReduceRerenders = require(PlayerList.Flags.FFlagPlayerListReduceRerenders)
 
 local ContextActionsBinder = Roact.PureComponent:extend("ContextActionsBinder")
 
@@ -95,6 +97,10 @@ local function mapDispatchToProps(dispatch)
 			return dispatch(SetPlayerListVisibility(value))
 		end,
 	}
+end
+
+if FFlagPlayerListReduceRerenders then
+	return React.memo(RoactRodux.connect(mapStateToProps, mapDispatchToProps)(ContextActionsBinder))
 end
 
 return RoactRodux.connect(mapStateToProps, mapDispatchToProps)(ContextActionsBinder)

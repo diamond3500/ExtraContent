@@ -1,4 +1,3 @@
---!strict
 --[[
 rasterMesh:
 	orthographically projects input mesh data and then rasterizes it to an EditableImage for output

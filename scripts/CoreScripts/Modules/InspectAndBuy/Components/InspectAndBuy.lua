@@ -16,6 +16,13 @@ local renderWithCoreScriptsStyleProvider = require(CoreGui.RobloxGui.Modules.Com
 local UIBlox = require(CorePackages.Packages.UIBlox)
 local SelectionCursorProvider = UIBlox.App.SelectionImage.SelectionCursorProvider
 
+local RobloxGui = CoreGui:WaitForChild("RobloxGui")
+local Chrome = RobloxGui.Modules.Chrome
+local ChromeEnabled = require(Chrome.Enabled)
+local ChromeService = if ChromeEnabled() then require(Chrome.Service) else nil :: never
+
+local FFlagChromeHideShortcutBarOnInspectAndBuy = require(CorePackages.Workspace.Packages.SharedFlags).FFlagChromeHideShortcutBarOnInspectAndBuy
+
 local InspectAndBuyFolder = script.Parent.Parent
 local SetDetailsInformation = require(InspectAndBuyFolder.Actions.SetDetailsInformation)
 local SetTryingOnInfo = require(InspectAndBuyFolder.Actions.SetTryingOnInfo)
@@ -48,6 +55,7 @@ local CachedPolicyService = require(CorePackages.Workspace.Packages.CachedPolicy
 local COMPACT_VIEW_MAX_WIDTH = 600
 local CURSOR_OVERRIDE_KEY = Symbol.named("OverrideCursorInspectMenu")
 local BACK_BUTTON_KEY = "BackButtonInspectMenu"
+local MODULE_NAME = "InspectAndBuy"
 
 local InspectAndBuy = Roact.PureComponent:extend("InspectAndBuy")
 
@@ -156,6 +164,10 @@ function InspectAndBuy:didMount()
 	self:configureInputType()
 	self:pushMouseIconOverride()
 
+	if FFlagChromeHideShortcutBarOnInspectAndBuy and ChromeEnabled then
+		ChromeService:setHideShortcutBar(MODULE_NAME, true)
+	end
+
 	local inputTypeChangedListener = UserInputService.LastInputTypeChanged:Connect(function(lastInputType)
 		self:configureInputType(lastInputType)
 	end)
@@ -257,6 +269,10 @@ function InspectAndBuy:willUnmount()
 
 	ContextActionService:UnbindCoreAction(BACK_BUTTON_KEY)
 	self:popMouseIconOverride()
+
+	if FFlagChromeHideShortcutBarOnInspectAndBuy and ChromeEnabled then
+		ChromeService:setHideShortcutBar(MODULE_NAME, false)
+	end
 end
 
 function InspectAndBuy:render()

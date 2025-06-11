@@ -11,6 +11,19 @@ local ModalBaseSelectorDialog = require(root.Components.ModalBaseSelectorDialog)
 
 local GetFFlagAbuseReportMenuConsoleSupportRefactor =
 	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagAbuseReportMenuConsoleSupportRefactor
+local isInExperienceUIVREnabled =
+	require(CorePackages.Workspace.Packages.SharedExperimentDefinition).isInExperienceUIVREnabled
+
+local isSpatial
+local UIManager
+local PanelType
+if isInExperienceUIVREnabled then
+	isSpatial = require(CorePackages.Workspace.Packages.AppCommonLib).isSpatial
+
+	local VrSpatialUi = require(CorePackages.Workspace.Packages.VrSpatialUi)
+	UIManager = VrSpatialUi.UIManager
+	PanelType = VrSpatialUi.Constants.PanelType
+end
 
 local elements: any = {
 	modalSelectorHandle = nil,
@@ -23,16 +36,37 @@ local function unmountModalSelector()
 		Roact.unmount(elements.modalSelectorHandle)
 		elements.modalSelectorHandle = nil
 	end
-	if elements.modalSelectorScreenGui ~= nil then
-		elements.modalSelectorFrame.Parent = nil
-		elements.modalSelectorFrame = nil
-		elements.modalSelectorScreenGui = nil
+
+	if isInExperienceUIVREnabled then
+		if elements.modalSelectorFrame ~= nil then
+			elements.modalSelectorFrame.Parent = nil
+			elements.modalSelectorFrame = nil
+		end
+
+		if elements.modalSelectorScreenGui ~= nil then
+			elements.modalSelectorScreenGui = nil
+		end
+	else
+		if elements.modalSelectorScreenGui ~= nil then
+			elements.modalSelectorFrame.Parent = nil
+			elements.modalSelectorFrame = nil
+			elements.modalSelectorScreenGui = nil
+		end
 	end
 end
 
 local function mountModalSelector(viewportHeight, viewportWidth, selections, onSelect, onClose)
 	local topCornerInset, _ = GuiService:GetGuiInset()
-	if not elements.modalSelectorScreenGui then
+	if isInExperienceUIVREnabled and isSpatial() then
+		local panelObject = UIManager.getInstance():getPanelObject(PanelType.MoreMenu)
+		local frame = Instance.new("Frame")
+		frame.BackgroundTransparency = 1
+		frame.Position = UDim2.new(0, 0, 0, 0)
+		frame.Size = UDim2.new(1, 0, 1, 0)
+		frame.ZIndex = 10
+		frame.Parent = panelObject
+		elements.modalSelectorFrame = frame
+	elseif not elements.modalSelectorScreenGui then
 		local screenGui = Instance.new("ScreenGui")
 		screenGui.Name = "ModalSelectorDialogGui"
 		screenGui.DisplayOrder = 7

@@ -1,5 +1,3 @@
---!strict
-
 --[[
 	validateDynamicHeadMood.lua checks that when all max values (1) is applied to FACS for DynamicHeads, the animated head is within a certain bounding box expected -i.e. the mesh does not explode. On Studio, this utilizes taking a screen capture of the viewport, while in RCC servers it utilizes the thumbnail generator.
 ]]

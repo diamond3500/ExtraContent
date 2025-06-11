@@ -6,14 +6,14 @@ local Foundation = require(CorePackages.Packages.Foundation)
 local React = require(CorePackages.Packages.React)
 local Songbird = require(CorePackages.Workspace.Packages.Songbird)
 local ChromeService = require(Chrome.Service)
-local PeekConstants = require(Chrome.Integrations.MusicUtility.Constants)
+local MusicConstants = require(Chrome.Integrations.MusicUtility.Constants)
 local CommonIcon = require(Chrome.Integrations.CommonIcon)
 local WindowSizeSignal = require(Chrome.ChromeShared.Service.WindowSizeSignal)
 
 local ChromeUtils = require(Chrome.ChromeShared.Service.ChromeUtils)
 local MappedSignal = ChromeUtils.MappedSignal
 
-local MUSIC_WINDOW_MAX_SIZE = PeekConstants.MUSIC_WINDOW_MAX_SIZE
+local MUSIC_WINDOW_MAX_SIZE = MusicConstants.MUSIC_WINDOW_MAX_SIZE
 
 local windowSize = WindowSizeSignal.new(MUSIC_WINDOW_MAX_SIZE.X, MUSIC_WINDOW_MAX_SIZE.Y)
 

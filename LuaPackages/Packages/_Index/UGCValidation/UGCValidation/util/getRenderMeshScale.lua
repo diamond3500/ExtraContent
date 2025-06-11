@@ -1,5 +1,3 @@
---!strict
-
 --[[
 	returns the in-game scale of the MeshPart's MeshId based on the value of the MeshPart's Size property
 ]]

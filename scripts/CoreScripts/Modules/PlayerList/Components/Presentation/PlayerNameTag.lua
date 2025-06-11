@@ -14,6 +14,8 @@ local Connection = PlayerList.Components.Connection
 local LayoutValues = require(Connection.LayoutValues)
 local WithLayoutValues = LayoutValues.WithLayoutValues
 local usePlayerCombinedName = require(PlayerList.Hooks.usePlayerCombinedName)
+local createShallowEqualAndTables = require(PlayerList.createShallowEqualAndTables)
+local FFlagPlayerListReduceRerenders = require(PlayerList.Flags.FFlagPlayerListReduceRerenders)
 
 local playerInterface = require(RobloxGui.Modules.Interfaces.playerInterface)
 
@@ -181,6 +183,10 @@ local function PlayerNameTagContainer(props: Props)
 	return React.createElement(PlayerNameTag, Cryo.Dictionary.join(props, {
 		name = name
 	}))
+end
+
+if FFlagPlayerListReduceRerenders then
+	return (React.memo(PlayerNameTagContainer, createShallowEqualAndTables({ "textFont" })) :: unknown) :: typeof(PlayerNameTagContainer)
 end
 
 return PlayerNameTagContainer

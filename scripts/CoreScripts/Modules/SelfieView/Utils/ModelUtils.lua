@@ -1,8 +1,8 @@
 --!strict
 local CorePackages = game:GetService("CorePackages")
 local CollectionService = game:GetService("CollectionService")
-local EngineFeatureAvatarJointUpgrade = game:GetEngineFeature("AvatarJointUpgradeFeature")
 local FFlagSelfViewLookUpHumanoidByType = game:DefineFastFlag("SelfViewLookUpHumanoidByType", false)
+local FFlagSelfViewAvatarJointUpgrade = game:DefineFastFlag("SelfViewAvatarJointUpgrade", false)
 local GetFFlagSelfieViewFixMigration = require(script.Parent.Parent.Flags.GetFFlagSelfieViewFixMigration)
 local GetFFlagSelfieViewMoreFixMigration =
 	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagSelfieViewMoreFixMigration
@@ -290,8 +290,8 @@ local ALLOWLISTED_INSTANCE_TYPES = {
 	Accessory = "Accessory",
 	Animator = "Animator",
 	Attachment = "Attachment",
-	AnimationConstraint = EngineFeatureAvatarJointUpgrade and "AnimationConstraint" or nil,
-	BallSocketConstraint = EngineFeatureAvatarJointUpgrade and "BallSocketConstraint" or nil,
+	AnimationConstraint = FFlagSelfViewAvatarJointUpgrade and "AnimationConstraint" or nil,
+	BallSocketConstraint = FFlagSelfViewAvatarJointUpgrade and "BallSocketConstraint" or nil,
 	BodyColors = "BodyColors",
 	CharacterMesh = "CharacterMesh",
 	Decal = "Decal",

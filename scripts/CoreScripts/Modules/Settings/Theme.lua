@@ -13,6 +13,10 @@ local getIconSize = UIBlox.App.ImageSet.getIconSize
 local IconSize = UIBlox.App.ImageSet.Enum.IconSize
 
 local FFlagIncreaseUtilityRowTextSizeConsole = game:DefineFastFlag("IncreaseUtilityRowTextSizeConsole", false)
+local isInExperienceUIVREnabled =
+	require(CorePackages.Workspace.Packages.SharedExperimentDefinition).isInExperienceUIVREnabled
+local FFlagRelocateMobileMenuButtons = require(RobloxGui.Modules.Settings.Flags.FFlagRelocateMobileMenuButtons)
+local FIntRelocateMobileMenuButtonsVariant = require(RobloxGui.Modules.Settings.Flags.FIntRelocateMobileMenuButtonsVariant)
 
 local AppFontBaseSize = 16 * 1.2
 
@@ -280,11 +284,12 @@ local HubPadding = {
 	PaddingRight = UDim.new(0, 20),
 	PaddingBottom = UDim.new(0, 14),
 }
+local extraHubBottomPaddingMobile = 12
 local HubPaddingMobile = {
 	PaddingTop = UDim.new(0, 0),
 	PaddingLeft = UDim.new(0, 12),
 	PaddingRight = UDim.new(0, 12),
-	PaddingBottom = UDim.new(0, 12),
+	PaddingBottom = if FFlagRelocateMobileMenuButtons and (FIntRelocateMobileMenuButtonsVariant == 1 or FIntRelocateMobileMenuButtonsVariant == 3) then UDim.new(0, 12 + extraHubBottomPaddingMobile) else UDim.new(0, 12),
 }
 
 local MenuContainerPositionOld = {
@@ -355,14 +360,37 @@ if ThemeEnabled then
 		UseInspectAndBuyPanel = function()
 			return IsSmallTouchScreen
 		end,
+		ExtraHubBottomPaddingMobile = extraHubBottomPaddingMobile,
 		HubPadding = function()
-			if IsSmallTouchScreen then
-				return HubPaddingMobile
+			if FFlagRelocateMobileMenuButtons and FIntRelocateMobileMenuButtonsVariant ~= 0 then
+				-- IsSmallTouchScreen does not return the correct value on initial render, call a function to get the value instead
+				local isSmallTouchScreen = function()
+					local viewportSize = getViewportSize()
+					return viewportSize
+							and UserInputService.TouchEnabled
+							and (viewportSize.Y < 500 or viewportSize.X < 700)
+				end
+
+				if isSmallTouchScreen() then
+					return HubPaddingMobile
+				else
+					return HubPadding
+				end
 			else
-				return HubPadding
+				if IsSmallTouchScreen then
+					return HubPaddingMobile
+				else
+					return HubPadding
+				end
 			end
 		end,
-		MenuContainerPosition = function()
+		MenuContainerPosition = function(settingsUIDelegate: any?)
+			if isInExperienceUIVREnabled and settingsUIDelegate then
+				local positionOverride = settingsUIDelegate:getMenuContainerPositionOverride()
+				if positionOverride then
+					return positionOverride
+				end
+			end
 			if IsSmallTouchScreen then
 				if UseStickyBar() then
 					return MenuContainerPositionMobileWithStickyBar
@@ -463,6 +491,7 @@ else
 		UseInspectAndBuyPanel = function()
 			return false
 		end,
+		ExtraHubBottomPaddingMobile = extraHubBottomPaddingMobile,
 		HubPadding = function()
 			if IsSmallTouchScreen then
 				return HubPaddingMobile
@@ -470,7 +499,7 @@ else
 				return HubPadding
 			end
 		end,
-		MenuContainerPosition = function()
+		MenuContainerPosition = function(_: any?)
 			if IsSmallTouchScreen then
 				return MenuContainerPositionOldMobile
 			else

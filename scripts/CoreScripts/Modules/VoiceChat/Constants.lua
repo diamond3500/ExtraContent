@@ -46,6 +46,7 @@ local IN_EXP_UPSELL_VARIANT = {
 local MODAL_IDS = {
 	IN_EXP_UPSELL = "in-experience-voice-upsell",
 	DATA_CONSENT_TOAST = "data-consent-toast",
+	IN_EXP_JOIN_VOICE_UPSELL = "join-voice-upsell-tooltip",
 }
 
 local IN_EXP_UPSELL_ENTRYPOINTS = {

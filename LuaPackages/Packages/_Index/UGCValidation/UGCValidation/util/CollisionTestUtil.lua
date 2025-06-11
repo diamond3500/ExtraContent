@@ -1,5 +1,3 @@
---!strict
-
 --[[
 	CollisionTestUtil.lua exposes utility functions to test if shapes are intersecting
 ]]

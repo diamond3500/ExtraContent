@@ -48,8 +48,6 @@ local FocusRoot = FocusNavigationUtils.FocusRoot
 local FocusNavigableSurfaceIdentifierEnum = FocusNavigationUtils.FocusNavigableSurfaceIdentifierEnum
 
 local GetFFlagEnableToastLiteRender = require(Root.Flags.GetFFlagEnableToastLiteRender)
-local FFlagUIBloxFoundationProvider =
-	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagUIBloxFoundationProvider()
 local FFlagAddCursorProviderToPurchasePromptApp = require(Root.Flags.FFlagAddCursorProviderToPurchasePromptApp)
 local FFlagCSFocusWrapperRefactor = require(CorePackages.Workspace.Packages.SharedFlags).FFlagCSFocusWrapperRefactor
 
@@ -121,27 +119,11 @@ function PurchasePromptApp:render()
 			} :: any
 		end
 
-		if FFlagUIBloxFoundationProvider then
-			return Roact.createElement("ScreenGui", {
-				AutoLocalize = false,
-				IgnoreGuiInset = true,
-			}, {
-				StoreProvider = Roact.createElement(RoactRodux.StoreProvider, {
-					store = self.props.store,
-				}, {
-					StyleProvider = self:renderWithStyle({
-						LayoutValuesProvider = Roact.createElement(LayoutValuesProvider, {
-							isTenFootInterface = self.state.isTenFootInterface,
-						}, {
-							PolicyProvider = Roact.createElement(PurchasePromptPolicy.Provider, {
-								policy = { PurchasePromptPolicy.Mapper },
-							}, children),
-						}),
-					}),
-				}),
-			})
-		else
-			return Roact.createElement(RoactRodux.StoreProvider, {
+		return Roact.createElement("ScreenGui", {
+			AutoLocalize = false,
+			IgnoreGuiInset = true,
+		}, {
+			StoreProvider = Roact.createElement(RoactRodux.StoreProvider, {
 				store = self.props.store,
 			}, {
 				StyleProvider = self:renderWithStyle({
@@ -150,16 +132,11 @@ function PurchasePromptApp:render()
 					}, {
 						PolicyProvider = Roact.createElement(PurchasePromptPolicy.Provider, {
 							policy = { PurchasePromptPolicy.Mapper },
-						}, {
-							PurchasePrompt = Roact.createElement("ScreenGui", {
-								AutoLocalize = false,
-								IgnoreGuiInset = true,
-							}, children),
-						}),
+						}, children),
 					}),
 				}),
-			})
-		end
+			}),
+		})
 	end)
 end
 

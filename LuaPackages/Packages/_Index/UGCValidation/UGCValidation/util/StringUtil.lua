@@ -1,5 +1,3 @@
---!strict
-
 --[[
 	StringUtil.lua exposes utility functions for string manipulation
 ]]

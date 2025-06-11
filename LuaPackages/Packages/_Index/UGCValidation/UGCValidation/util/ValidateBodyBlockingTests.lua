@@ -1,5 +1,3 @@
---!strict
-
 --[[
 validate:
 	check anything that may cause a crash in later validation code

@@ -1,5 +1,3 @@
---!strict
-
 game:DefineFastInt("UGCValidationPartMaxMass", 10)
 
 return function()

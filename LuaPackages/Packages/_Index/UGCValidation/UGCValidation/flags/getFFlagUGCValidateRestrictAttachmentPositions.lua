@@ -1,5 +1,3 @@
---!strict
-
 game:DefineFastFlag("UGCValidateRestrictAttachmentPositions", false)
 
 return function()

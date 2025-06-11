@@ -1,5 +1,3 @@
---!strict
-
 game:DefineFastFlag("RefactorValidateAssetTransparency3", false)
 
 return function()

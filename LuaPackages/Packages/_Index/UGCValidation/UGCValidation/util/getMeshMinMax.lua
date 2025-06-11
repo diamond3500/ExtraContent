@@ -1,5 +1,3 @@
---!strict
-
 --[[
 	get the min and max bounds of the mesh
 ]]

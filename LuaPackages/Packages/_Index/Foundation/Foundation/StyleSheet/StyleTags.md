@@ -84,7 +84,7 @@ You can conditionally apply tags by passing a table of tags to the `tag` propert
 ```lua
 React.createElement(View, {
   tag = {
-    ["bg-surface-100"] = true,
+    ["bg-surface-100"] = not props.isDisabled,
     ["bg-surface-200"] = props.isDisabled,
   },
 })

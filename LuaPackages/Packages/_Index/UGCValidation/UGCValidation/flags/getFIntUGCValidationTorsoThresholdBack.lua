@@ -1,5 +1,3 @@
---!strict
-
 game:DefineFastInt("UGCValidationTorsoThresholdBack", 48)
 
 return function()

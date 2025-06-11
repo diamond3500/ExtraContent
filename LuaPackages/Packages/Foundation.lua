@@ -8,6 +8,7 @@ local Package = require(PackageIndex["Foundation"]["Foundation"])
 export type Bindable<T> = Package.Bindable<T> 
 export type CommonProps = Package.CommonProps
 export type StateChangedCallback = Package.StateChangedCallback
+export type ControlState = Package.ControlState
 export type StateLayer = Package.StateLayer
 export type Tags = Package.Tags
 export type ColorStyle = Package.ColorStyle

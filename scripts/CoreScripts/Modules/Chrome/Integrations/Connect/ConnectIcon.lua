@@ -24,6 +24,7 @@ local InExperienceAppChatModal = AppChat.App.InExperienceAppChatModal
 local InExperienceAppChatExperimentation = AppChat.App.InExperienceAppChatExperimentation
 
 local FFlagEnableUnibarFtuxTooltips = require(CorePackages.Workspace.Packages.SharedFlags).FFlagEnableUnibarFtuxTooltips
+local FFlagEnableUnibarTooltipQueue = require(Chrome.Flags.FFlagEnableUnibarTooltipQueue)()
 local GetFStringConnectTooltipLocalStorageKey = require(Chrome.Flags.GetFStringConnectTooltipLocalStorageKey)
 local GetFIntRobloxConnectFtuxShowDelayMs = require(Chrome.Flags.GetFIntRobloxConnectFtuxShowDelayMs)
 local GetFIntRobloxConnectFtuxDismissDelayMs = require(Chrome.Flags.GetFIntRobloxConnectFtuxDismissDelayMs)
@@ -32,6 +33,7 @@ local getAppChatNavbarItemConfig = AppChat.Utils.getAppChatNavbarItemConfig
 local SharedFlags = require(CorePackages.Workspace.Packages.SharedFlags)
 local GetFFlagAppChatRebrandStringUpdates = SharedFlags.GetFFlagAppChatRebrandStringUpdates
 local FFlagConnectIconUsesAppChatConfig = game:DefineFastFlag("ConnectIconUsesAppChatConfig", false)
+local FIntUnibarConnectIconTooltipPriority = game:DefineFastInt("UnibarConnectIconTooltipPriority", 1500)
 
 local SquadExperimentation = require(CorePackages.Workspace.Packages.SocialExperiments).SquadExperimentation
 
@@ -116,6 +118,8 @@ local function ConnectIcon(_props: Props): React.ReactElement
 	local tooltip = if FFlagEnableUnibarFtuxTooltips
 			and InExperienceAppChatExperimentation.default.variant.ShowPlatformChatChromeUnibarEntryPoint
 		then CommonFtuxTooltip({
+			id = if FFlagEnableUnibarTooltipQueue then "CONNECT_ICON_TOOLTIP" else nil,
+			priority = if FFlagEnableUnibarTooltipQueue then FIntUnibarConnectIconTooltipPriority else nil,
 			isIconVisible = props.isIconVisible,
 
 			headerKey = if GetFFlagAppChatRebrandStringUpdates()

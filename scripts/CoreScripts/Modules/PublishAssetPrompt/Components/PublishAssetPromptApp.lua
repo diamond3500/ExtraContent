@@ -4,10 +4,7 @@
 	on the AssetType. In addition to PromptPublishAssetSingleStep, eventually we may add multi-step prompts.
 ]]
 local CorePackages = game:GetService("CorePackages")
-local GuiService = game:GetService("GuiService")
 local UserInputService = game:GetService("UserInputService")
-local CoreGui = game:GetService("CoreGui")
-local Players = game:GetService("Players")
 
 local Roact = require(CorePackages.Packages.Roact)
 local RoactRodux = require(CorePackages.Packages.RoactRodux)
@@ -16,8 +13,6 @@ local t = require(CorePackages.Packages.t)
 local ExternalEventConnection = require(CorePackages.Workspace.Packages.RoactUtils).ExternalEventConnection
 local InputType = require(CorePackages.Workspace.Packages.InputType)
 local getInputGroup = require(CorePackages.Workspace.Packages.InputType).getInputGroup
-
-local LocalPlayer = Players.LocalPlayer
 
 local Components = script.Parent
 local PromptType = require(Components.Parent.PromptType)
@@ -38,7 +33,6 @@ local FocusRoot = FocusNavigationUtils.FocusRoot
 local FocusNavigableSurfaceIdentifierEnum = FocusNavigationUtils.FocusNavigableSurfaceIdentifierEnum
 
 -- flagging roact gamepad for removal due to deprecation - focusNavigation will be used instead for engine navigation
-local FFlagMigratePublishPromptFromRoactGamepad = game:DefineFastFlag("MigratePublishPromptFromRoactGamepad", false)
 local FFlagCSFocusWrapperRefactor = require(CorePackages.Workspace.Packages.SharedFlags).FFlagCSFocusWrapperRefactor
 
 --Displays behind the in-game menu so that developers can't block interaction with the InGameMenu by constantly prompting.
@@ -46,7 +40,6 @@ local FFlagCSFocusWrapperRefactor = require(CorePackages.Workspace.Packages.Shar
 local DISPLAY_ORDER = -1
 
 local PublishAssetPromptApp = Roact.PureComponent:extend("PublishAssetPromptApp")
-local FFlagFixFocusOnResultModal = game:DefineFastFlag("FixFocusOnResultModal", false)
 
 local SELECTION_GROUP_NAME = "PublishAssetPromptApp"
 
@@ -63,9 +56,6 @@ end
 
 function PublishAssetPromptApp:init()
 	self:setState({
-		isGamepad = if FFlagMigratePublishPromptFromRoactGamepad
-			then nil
-			else isGamepadInput(UserInputService:GetLastInputType()),
 		screenSize = Vector2.new(0, 0),
 	})
 
@@ -76,10 +66,6 @@ function PublishAssetPromptApp:init()
 			})
 		end
 	end
-
-	self.focusController = if FFlagMigratePublishPromptFromRoactGamepad
-		then nil
-		else RoactGamepad.createFocusController()
 
 	self.selectedCoreGuiObject = nil
 	self.selectedGuiObject = nil
@@ -122,109 +108,38 @@ function PublishAssetPromptApp:render()
 					isGamepad = isGamepadInput(lastInputType),
 				})
 			end,
-		}) or nil,
+		}),
 
 		PromptFrame = Roact.createElement(RoactGamepad.Focusable.Frame, {
-			focusController = if FFlagMigratePublishPromptFromRoactGamepad then nil else self.focusController,
-
 			BackgroundTransparency = 1,
 			Size = UDim2.fromScale(1, 1),
 		}, {
-			Prompt = if FFlagMigratePublishPromptFromRoactGamepad then nil else promptElement,
-			CursorProvider = if FFlagMigratePublishPromptFromRoactGamepad
-				then Roact.createElement(SelectionCursorProvider, {}, {
-					FocusNavigationProvider = Roact.createElement(
-						ReactFocusNavigation.FocusNavigationContext.Provider,
-						{
-							value = focusNavigationService,
-						},
-						{
-							FocusNavigationRegistryProvider = Roact.createElement(
-								FocusNavigationRegistryProvider,
-								nil,
-								{
-									FocusNavigationCoreScriptsWrapper = Roact.createElement(
-										if FFlagCSFocusWrapperRefactor
-											then FocusRoot
-											else FocusNavigationCoreScriptsWrapper,
-										if FFlagCSFocusWrapperRefactor
-											then {
-												surfaceIdentifier = FocusNavigableSurfaceIdentifierEnum.RouterView,
-												isIsolated = true,
-												isAutoFocusRoot = true,
-											}
-											else {
-												selectionGroupName = SELECTION_GROUP_NAME,
-												focusNavigableSurfaceIdentifier = FocusNavigableSurfaceIdentifierEnum.RouterView,
-											},
-										{
-											Prompt = promptElement,
-										}
-									),
+			CursorProvider = Roact.createElement(SelectionCursorProvider, {}, {
+				FocusNavigationProvider = Roact.createElement(ReactFocusNavigation.FocusNavigationContext.Provider, {
+					value = focusNavigationService,
+				}, {
+					FocusNavigationRegistryProvider = Roact.createElement(FocusNavigationRegistryProvider, nil, {
+						FocusNavigationCoreScriptsWrapper = Roact.createElement(
+							if FFlagCSFocusWrapperRefactor then FocusRoot else FocusNavigationCoreScriptsWrapper,
+							if FFlagCSFocusWrapperRefactor
+								then {
+									surfaceIdentifier = FocusNavigableSurfaceIdentifierEnum.RouterView,
+									isIsolated = true,
+									isAutoFocusRoot = true,
 								}
-							),
-						}
-					),
-				})
-				else nil,
-		}) or nil,
+								else {
+									selectionGroupName = SELECTION_GROUP_NAME,
+									focusNavigableSurfaceIdentifier = FocusNavigableSurfaceIdentifierEnum.RouterView,
+								},
+							{
+								Prompt = promptElement,
+							}
+						),
+					}),
+				}),
+			}),
+		}),
 	})
-end
-
-if not FFlagMigratePublishPromptFromRoactGamepad then
-	function PublishAssetPromptApp:revertSelectedGuiObject()
-		local PlayerGui = nil
-		if LocalPlayer then
-			PlayerGui = LocalPlayer:FindFirstChildWhichIsA("PlayerGui")
-		end
-
-		if self.selectedCoreGuiObject and self.selectedCoreGuiObject:IsDescendantOf(CoreGui) then
-			GuiService.SelectedCoreObject = self.selectedCoreGuiObject
-		elseif self.selectedGuiObject and self.selectedGuiObject:IsDescendantOf(PlayerGui) then
-			GuiService.SelectedObject = self.selectedGuiObject
-			GuiService.SelectedCoreObject = nil
-		else
-			GuiService.SelectedCoreObject = nil
-		end
-
-		self.selectedCoreGuiObject = nil
-		self.selectedGuiObject = nil
-	end
-
-	function PublishAssetPromptApp:didUpdate(prevProps, prevState)
-		local shouldCaptureFocus
-		local lastShouldCaptureFocus
-
-		if FFlagFixFocusOnResultModal then
-			shouldCaptureFocus = self.state.isGamepad
-				and (self.props.assetInstance ~= nil or self.props.resultModalType ~= nil)
-			lastShouldCaptureFocus = prevState.isGamepad
-				and (prevProps.assetInstance ~= nil or prevProps.resultModalType ~= nil)
-		else
-			shouldCaptureFocus = self.state.isGamepad and self.props.assetInstance ~= nil
-			lastShouldCaptureFocus = prevState.isGamepad and prevProps.assetInstance ~= nil
-		end
-
-		if shouldCaptureFocus ~= lastShouldCaptureFocus then
-			if shouldCaptureFocus then
-				self.selectedCoreGuiObject = GuiService.SelectedCoreObject
-				self.selectedGuiObject = GuiService.SelectedObject
-				GuiService.SelectedObject = nil
-				self.focusController.captureFocus()
-			else
-				self.focusController.releaseFocus()
-				if self.state.isGamepad then
-					self:revertSelectedGuiObject()
-				end
-			end
-		end
-	end
-
-	function PublishAssetPromptApp:willUnmount()
-		if self.state.isGamepad then
-			self:revertSelectedGuiObject()
-		end
-	end
 end
 
 local function mapStateToProps(state)

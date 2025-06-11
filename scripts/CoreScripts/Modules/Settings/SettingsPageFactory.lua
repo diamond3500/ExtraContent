@@ -29,7 +29,6 @@ local isTenFootInterface = require(RobloxGui.Modules.TenFootInterface):IsEnabled
 local success, result = pcall(function() return settings():GetFFlag('UseNotificationsLocalization') end)
 local FFlagUseNotificationsLocalization = success and result
 local FFlagFixIGMTabTransitions = require(script.Parent.Flags.GetFFlagFixIGMTabTransitions)
-local FFlagInExperienceMenuCanvasGroupsInvisible = require(RobloxGui.Modules.Settings.Flags.FFlagInExperienceMenuCanvasGroupsInvisible)
 
 ----------- CLASS DECLARATION --------------
 local function Initialize()
@@ -366,10 +365,8 @@ local function Initialize()
 
 		local endPos = UDim2.new(0,0,0,0)
 		local animationComplete = function()
-			if FFlagInExperienceMenuCanvasGroupsInvisible then
-				if UserGameSettings.ReducedMotion then
-					pageParent.InnerCanvasGroupShow.Visible = false
-				end
+			if UserGameSettings.ReducedMotion then
+				pageParent.InnerCanvasGroupShow.Visible = false
 			end
 			if FFlagFixIGMTabTransitions() then
 				if UserGameSettings.ReducedMotion then
@@ -387,9 +384,7 @@ local function Initialize()
 		elseif UserGameSettings.ReducedMotion then
 			this.Page.Position = endPos
 			pageParent.InnerCanvasGroupShow.GroupTransparency = 1
-			if FFlagInExperienceMenuCanvasGroupsInvisible then
-				pageParent.InnerCanvasGroupShow.Visible = true
-			end
+			pageParent.InnerCanvasGroupShow.Visible = true
 			this.Page.Parent = pageParent.InnerCanvasGroupShow
 			this.Page.Visible = true
 			
@@ -430,14 +425,8 @@ local function Initialize()
 		if this.Page.Parent then
 			local endPos = UDim2.new(1 * direction,0,0,0)
 			local animationComplete = function()
-				if FFlagInExperienceMenuCanvasGroupsInvisible then
-					if UserGameSettings.ReducedMotion and isPrevPage then
-						pageParent.InnerCanvasGroupHide.Visible = false
-					end
-				else
-					if FFlagFixIGMTabTransitions() and UserGameSettings.ReducedMotion then
-						pageParent.InnerCanvasGroupShow.GroupTransparency = 1
-					end
+				if UserGameSettings.ReducedMotion and isPrevPage then
+					pageParent.InnerCanvasGroupHide.Visible = false
 				end
 				this.Page.Visible = false
 				this.Page.Position = UDim2.new(this.TabPosition - newPagePos,0,0,0)
@@ -451,9 +440,7 @@ local function Initialize()
 					animationComplete()
 				elseif UserGameSettings.ReducedMotion and isPrevPage then
 					pageParent.InnerCanvasGroupHide.GroupTransparency = 0
-					if FFlagInExperienceMenuCanvasGroupsInvisible then
-						pageParent.InnerCanvasGroupHide.Visible = true
-					end
+					pageParent.InnerCanvasGroupHide.Visible = true
 					this.Page.Parent = pageParent.InnerCanvasGroupHide
 					
 					local tweenInfo = TweenInfo.new(0.25)

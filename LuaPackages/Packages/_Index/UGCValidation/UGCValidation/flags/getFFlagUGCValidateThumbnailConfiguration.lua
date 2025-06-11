@@ -1,5 +1,3 @@
---!strict
-
 game:DefineFastFlag("UGCValidateThumbnailConfiguration", false)
 
 return function()

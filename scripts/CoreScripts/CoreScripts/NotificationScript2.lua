@@ -27,21 +27,22 @@ local AnalyticsService = game:GetService("RbxAnalyticsService")
 local VRService = game:GetService("VRService")
 local GroupService = game:GetService("GroupService")
 local TeleportService = game:GetService("TeleportService")
+local LocalizationService = game:GetService("LocalizationService")
 local CorePackages = game:GetService("CorePackages")
+local UniversalAppPolicy = require(CorePackages.Workspace.Packages.UniversalAppPolicy)
+local Localization = require(CorePackages.Workspace.Packages.InExperienceLocales).Localization
+local Logging = require(CorePackages.Workspace.Packages.AppCommonLib).Logging
 local RobloxGui = CoreGui.RobloxGui
 local Settings = UserSettings()
 local GameSettings = Settings.GameSettings
 local FFlagCoreScriptShowTeleportPrompt = require(RobloxGui.Modules.Flags.FFlagCoreScriptShowTeleportPrompt)
 
-local FFlagLogBadgeAwardImpression = game:DefineFastFlag("LogBadgeAwardImpression", false)
-local FFlagLogBadgeAwardDismissed = game:DefineFastFlag("LogBadgeAwardDismissed", false)
-local FFlagLogFriendRequestImpression = game:DefineFastFlag("LogFriendRequestImpression", false)
-local FFlagLogFriendRequestDismissed = game:DefineFastFlag("LogFriendRequestDismissed", false)
-local FFlagLogAcceptFriendshipEvent = game:DefineFastFlag("LogAcceptFriendshipEvent", false)
 local FFlagClientToastNotificationsEnabled = game:GetEngineFeature("ClientToastNotificationsEnabled")
 local GetFFlagClientToastNotificationsRedirect =
 	require(RobloxGui.Modules.Flags.GetFFlagClientToastNotificationsRedirect)
 local GetFFlagFriendshipNotifsUseSendr = require(RobloxGui.Modules.Flags.GetFFlagFriendshipNotifsUseSendr)
+local FFlagNotificationsRenameFriendRequestToConnection =
+	game:DefineFastFlag("NotificationsRenameFriendRequestToConnection", false)
 
 local shouldSaveScreenshotToAlbum = require(RobloxGui.Modules.shouldSaveScreenshotToAlbum)
 local FFlagFixOnBadgeAwardedError = game:DefineFastFlag("FixOnBadgeAwardedError", false)
@@ -110,6 +111,29 @@ local TWEEN_TIME = 0.35
 local DEFAULT_NOTIFICATION_DURATION = 5
 local MAX_GET_FRIEND_IMAGE_YIELD_TIME = 5
 local FRIEND_REQUEST_NOTIFICATION_THROTTLE = 5
+
+local FRIEND_REQUEST_NOTIFICATION_LOCALIZATION_KEYS = {
+	ACCEPTED = "InGame.NotificationScript2.Message.ConnectionRequestEvent.Accepted",
+	SENT = "InGame.NotificationScript2.Message.ConnectionRequestEvent.Sent",
+}
+
+-- The new, supported way to translate strings in the client.
+-- This function should be used instead of coreScriptTableTranslator:FormatByKey.
+-- Errors will be caught and an empty string will be returned if the translation fails.
+local function translateString(key: string, arguments: { [string]: any }?): string
+	local localeId = LocalizationService.RobloxLocaleId
+	local localization = Localization.new(localeId)
+	localization:SetLocale(localeId)
+
+	local success, result = pcall(function()
+		return localization:Format(key, arguments)
+	end)
+	if success then
+		return result
+	end
+	Logging.warn("Failed to translate string with key: " .. key)
+	return ""
+end
 
 local friendRequestNotificationFIntSuccess, friendRequestNotificationFIntValue = pcall(function()
 	return tonumber(settings():GetFVariable("FriendRequestNotificationThrottle"))
@@ -808,10 +832,17 @@ local function sendFriendNotification(fromPlayer)
 
 	local acceptText = "Accept"
 	local declineText = "Decline"
+
+	local shouldRenameToConnection = FFlagNotificationsRenameFriendRequestToConnection
+		and UniversalAppPolicy.getAppFeaturePolicies().getRenameFriendsToConnections()
+	local text = if shouldRenameToConnection
+		then translateString(FRIEND_REQUEST_NOTIFICATION_LOCALIZATION_KEYS.SENT)
+		else "Sent you a friend request!"
+
 	sendNotificationInfo({
 		GroupName = "Friends",
 		Title = fromPlayer.DisplayName,
-		Text = "Sent you a friend request!",
+		Text = text,
 		DetailText = fromPlayer.DisplayName,
 		Image = getFriendImage(fromPlayer.UserId),
 		Duration = 8,
@@ -820,10 +851,8 @@ local function sendFriendNotification(fromPlayer)
 				AnalyticsService:ReportCounter("NotificationScript-RequestFriendship")
 				AnalyticsService:TrackEvent("Game", "RequestFriendship", "NotificationScript")
 
-				if FFlagLogAcceptFriendshipEvent then
-					AnalyticsService:ReportCounter("NotificationScript-AcceptFriendship")
-					AnalyticsService:TrackEvent("Game", "AcceptFriendship", "NotificationScript")
-				end
+				AnalyticsService:ReportCounter("NotificationScript-AcceptFriendship")
+				AnalyticsService:TrackEvent("Game", "AcceptFriendship", "NotificationScript")
 
 				LocalPlayer:RequestFriendship(fromPlayer)
 			else
@@ -836,18 +865,14 @@ local function sendFriendNotification(fromPlayer)
 		end,
 		Button1Text = acceptText,
 		Button2Text = declineText,
-		OnDisplay = if FFlagLogFriendRequestImpression
-			then function()
-				AnalyticsService:ReportCounter("NotificationScript-FriendshipNotificationDisplayed")
-				AnalyticsService:TrackEvent("Game", "FriendshipNotificationDisplayed", "NotificationScript")
-			end
-			else nil,
-		OnDismiss = if FFlagLogFriendRequestDismissed
-			then function()
-				AnalyticsService:ReportCounter("NotificationScript-FriendshipNotificationDismissed")
-				AnalyticsService:TrackEvent("Game", "FriendshipNotificationDismissed", "NotificationScript")
-			end
-			else nil,
+		OnDisplay = function()
+			AnalyticsService:ReportCounter("NotificationScript-FriendshipNotificationDisplayed")
+			AnalyticsService:TrackEvent("Game", "FriendshipNotificationDisplayed", "NotificationScript")
+		end,
+		OnDismiss = function()
+			AnalyticsService:ReportCounter("NotificationScript-FriendshipNotificationDismissed")
+			AnalyticsService:TrackEvent("Game", "FriendshipNotificationDismissed", "NotificationScript")
+		end,
 	})
 end
 
@@ -855,7 +880,13 @@ local function onFriendRequestEvent(fromPlayer, toPlayer, event)
 	if fromPlayer ~= LocalPlayer and toPlayer ~= LocalPlayer then
 		return
 	end
-	--
+
+	local shouldRenameToConnection = FFlagNotificationsRenameFriendRequestToConnection
+		and UniversalAppPolicy.getAppFeaturePolicies().getRenameFriendsToConnections()
+	local titleText = if shouldRenameToConnection
+		then translateString(FRIEND_REQUEST_NOTIFICATION_LOCALIZATION_KEYS.ACCEPTED)
+		else "New Friend"
+
 	if fromPlayer == LocalPlayer then
 		if event == Enum.FriendRequestEvent.Accept and (not GetFFlagFriendshipNotifsUseSendr()) then
 			local detailText = RobloxTranslator:FormatByKey(
@@ -865,7 +896,7 @@ local function onFriendRequestEvent(fromPlayer, toPlayer, event)
 
 			sendNotificationInfo({
 				GroupName = "Friends",
-				Title = "New Friend",
+				Title = titleText,
 				Text = toPlayer.Name,
 				DetailText = detailText,
 
@@ -887,7 +918,7 @@ local function onFriendRequestEvent(fromPlayer, toPlayer, event)
 
 			sendNotificationInfo({
 				GroupName = "Friends",
-				Title = "New Friend",
+				Title = titleText,
 				Text = fromPlayer.Name,
 				DetailText = detailText,
 
@@ -986,18 +1017,14 @@ local function onBadgeAwarded(userId, creatorId, badgeId)
 			DetailText = badgeAwardText,
 			Image = BADGE_IMG,
 			Duration = DEFAULT_NOTIFICATION_DURATION,
-			OnDisplay = if FFlagLogBadgeAwardImpression
-				then function()
-					AnalyticsService:ReportCounter("NotificationScript-BadgeAwardNotificationDisplayed")
-					AnalyticsService:TrackEvent("Game", "BadgeAwardNotificationDisplayed", "NotificationScript")
-				end
-				else nil,
-			OnDismiss = if FFlagLogBadgeAwardDismissed
-				then function()
-					AnalyticsService:ReportCounter("NotificationScript-BadgeAwardNotificationDismissed")
-					AnalyticsService:TrackEvent("Game", "BadgeAwardNotificationDismissed", "NotificationScript")
-				end
-				else nil,
+			OnDisplay = function()
+				AnalyticsService:ReportCounter("NotificationScript-BadgeAwardNotificationDisplayed")
+				AnalyticsService:TrackEvent("Game", "BadgeAwardNotificationDisplayed", "NotificationScript")
+			end,
+			OnDismiss = function()
+				AnalyticsService:ReportCounter("NotificationScript-BadgeAwardNotificationDismissed")
+				AnalyticsService:TrackEvent("Game", "BadgeAwardNotificationDismissed", "NotificationScript")
+			end,
 		})
 	end
 end

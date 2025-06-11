@@ -1,13 +1,9 @@
---!strict
-
 --[[
 	Thumbnailer.lua is a utility module for taking snapshots of instances. Seamlessly covers both the server case and the studio case.
 ]]
 
 local root = script.Parent.Parent
 local Analytics = require(root.Analytics)
-
-local getFFlagUGCValidateCoverViewportFrames = require(root.flags.getFFlagUGCValidateCoverViewportFrames)
 
 local Thumbnailer = {}
 Thumbnailer.__index = Thumbnailer
@@ -50,9 +46,7 @@ function Thumbnailer:setupViewportFrame()
 	vpf.BackgroundTransparency = 1
 	vpf.BorderSizePixel = 0
 	vpf.Size = UDim2.fromOffset(self.imgSize.X, self.imgSize.Y)
-	if getFFlagUGCValidateCoverViewportFrames() then
-		setUpViewportFrameCover(vpf)
-	end
+	setUpViewportFrameCover(vpf)
 
 	self.worldModel.Parent = vpf
 

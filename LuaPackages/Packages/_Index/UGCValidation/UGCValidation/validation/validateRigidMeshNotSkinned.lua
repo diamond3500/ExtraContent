@@ -1,5 +1,3 @@
---!strict
-
 --[[
 	check whether the underlying meshID would result in meshpart.HasSkinnedMesh to be true, which is not supported for rigid accessories
 ]]

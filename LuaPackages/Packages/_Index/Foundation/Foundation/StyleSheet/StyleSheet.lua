@@ -84,25 +84,17 @@ type StyleSheetProps = {
 	device: Device,
 	tags: { [string]: boolean },
 	derives: { StyleSheet }?,
-	-- drop when FoundationStyleSheetContext is removed
-	sheetRef: React.Ref<StyleSheet?>?,
 	setStyleSheetRef: { current: ((StyleSheet?) -> ()) | nil }?,
 }
 
 local function StyleSheet(props: StyleSheetProps)
 	local sheet = React.useRef(nil)
 
-	React.useImperativeHandle(props.sheetRef, function()
-		return sheet.current
-	end, {})
-
-	if Flags.FoundationStyleSheetContext then
-		React.useLayoutEffect(function()
-			if props.setStyleSheetRef and props.setStyleSheetRef.current then
-				props.setStyleSheetRef.current(sheet.current)
-			end
-		end)
-	end
+	React.useLayoutEffect(function()
+		if props.setStyleSheetRef and props.setStyleSheetRef.current then
+			props.setStyleSheetRef.current(sheet.current)
+		end
+	end)
 
 	local rules = useGeneratedRules(props.theme, props.device)
 

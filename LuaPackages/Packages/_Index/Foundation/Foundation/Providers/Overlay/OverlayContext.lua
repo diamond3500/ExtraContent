@@ -4,7 +4,7 @@ local Packages = Foundation.Parent
 local React = require(Packages.React)
 
 return React.createContext({
-	overlay = nil,
+	instance = nil :: GuiBase2d?,
 } :: {
-	overlay: ScreenGui?,
+	instance: GuiBase2d?,
 })

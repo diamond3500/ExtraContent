@@ -3,6 +3,7 @@ local CorePackages = game:GetService("CorePackages")
 local CoreGui = game:GetService("CoreGui")
 
 local Roact = require(CorePackages.Packages.Roact)
+local React = require(CorePackages.Packages.React)
 local RoactRodux = require(CorePackages.Packages.RoactRodux)
 local UIBlox = require(CorePackages.Packages.UIBlox)
 
@@ -19,6 +20,10 @@ local WithLayoutValues = LayoutValues.WithLayoutValues
 local EntryFrame = require(script.Parent.EntryFrame)
 local StatEntry = require(script.Parent.StatEntry)
 local CellExtender = require(script.Parent.CellExtender)
+
+local PlayerList = Components.Parent
+local createShallowEqualAndTables = require(PlayerList.createShallowEqualAndTables)
+local FFlagPlayerListReduceRerenders = require(PlayerList.Flags.FFlagPlayerListReduceRerenders)
 
 local TeamEntry = Roact.PureComponent:extend("TeamEntry")
 
@@ -133,22 +138,42 @@ function TeamEntry:render()
 				maxLeaderstats = layoutValues.MaxLeaderstatsSmallScreen
 			end
 
-			for i, gameStat in ipairs(self.props.gameStats) do
-				if i > maxLeaderstats then
-					break
-				end
-				teamEntryChildren["gameStat_" .. gameStat.name] = Roact.createElement(StatEntry, {
-					statName = gameStat.name,
-					statValue = self.props.leaderstats[gameStat.name],
-					isTitleEntry = false,
-					isTeamEntry = true,
-					layoutOrder = i,
+			if FFlagPlayerListReduceRerenders then
+				for i, gameStatName in self.props.gameStatNames do
+					if i > maxLeaderstats then
+						break
+					end
+					teamEntryChildren["gameStat_" .. gameStatName] = Roact.createElement(StatEntry, {
+						statName = gameStatName,
+						statValue = self.props.leaderstats[gameStatName],
+						isTitleEntry = false,
+						isTeamEntry = true,
+						layoutOrder = i,
 
-					backgroundStyle = backgroundStyle,
-					overlayStyle = overlayStyle,
-					doubleOverlay = false,
-					textStyle = textStyle,
-				})
+						backgroundStyle = backgroundStyle,
+						overlayStyle = overlayStyle,
+						doubleOverlay = false,
+						textStyle = textStyle,
+					})
+				end
+			else
+				for i, gameStat in ipairs(self.props.gameStats) do
+					if i > maxLeaderstats then
+						break
+					end
+					teamEntryChildren["gameStat_" .. gameStat.name] = Roact.createElement(StatEntry, {
+						statName = gameStat.name,
+						statValue = self.props.leaderstats[gameStat.name],
+						isTitleEntry = false,
+						isTeamEntry = true,
+						layoutOrder = i,
+
+						backgroundStyle = backgroundStyle,
+						overlayStyle = overlayStyle,
+						doubleOverlay = false,
+						textStyle = textStyle,
+					})
+				end
 			end
 
 			if not layoutValues.IsTenFoot then
@@ -170,6 +195,10 @@ local function mapStateToProps(state)
 	return {
 		isSmallTouchDevice = state.displayOptions.isSmallTouchDevice,
 	}
+end
+
+if FFlagPlayerListReduceRerenders then
+	return React.memo(RoactRodux.UNSTABLE_connect2(mapStateToProps, nil)(TeamEntry), createShallowEqualAndTables({ "gameStatNames", "leaderstats" }))
 end
 
 return RoactRodux.UNSTABLE_connect2(mapStateToProps, nil)(TeamEntry)

@@ -1,5 +1,3 @@
---!strict
-
 --[[
 	check whether a StringValue representing an AvatarPartScaleType has one of the permitted scale types
 ]]

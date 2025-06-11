@@ -1,5 +1,3 @@
---!strict
-
 game:DefineFastFlag("UGCValidatePreciseAttachmentErrorMessage", false)
 
 return function()

@@ -1,5 +1,3 @@
---!strict
-
 --[[
 	validateShoes.lua performs any checks that requires checking an asset against another asset in the shoes bundle
 ]]

@@ -4,6 +4,15 @@ local t = require(CorePackages.Packages.t)
 local BlockingUtility = require(CorePackages.Workspace.Packages.BlockingUtility)
 local ActionModal = require(script.Parent.ActionModal)
 
+local CoreGui = game:GetService("CoreGui")
+local RobloxGui = CoreGui:WaitForChild("RobloxGui")
+local FFlagEnableNewBlockingModal = require(RobloxGui.Modules.Common.Flags.FFlagEnableNewBlockingModal)
+local BlockingModalContainerFunc = require(script.Parent.BlockingModalContainerFunc)
+
+if FFlagEnableNewBlockingModal then
+	return BlockingModalContainerFunc
+end
+
 local BlockingModalContainer = Roact.PureComponent:extend("BlockingModalContainer")
 
 BlockingModalContainer.defaultProps = {

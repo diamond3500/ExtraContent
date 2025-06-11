@@ -2,6 +2,7 @@ local FoundationRoot = script:FindFirstAncestor("Foundation")
 local Foundation = require(FoundationRoot)
 local Components = FoundationRoot.Components:GetChildren()
 local Providers = FoundationRoot.Providers:GetChildren()
+local Utilities = FoundationRoot.Utility:GetChildren()
 
 local function GetStories(public: boolean)
 	local storyRoots = {}
@@ -20,6 +21,15 @@ local function GetStories(public: boolean)
 		end)
 
 		if ok == public then
+			table.insert(storyRoots, component)
+		end
+	end
+	for _, component in Utilities do
+		local ok, _ = pcall(function()
+			return Foundation.Utility[component.Name]
+		end)
+
+		if public and ok == public then
 			table.insert(storyRoots, component)
 		end
 	end

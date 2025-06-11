@@ -1,4 +1,3 @@
---!strict
 --[[
 	this file is a place where all the fast ints for bounds can be placed
 ]]

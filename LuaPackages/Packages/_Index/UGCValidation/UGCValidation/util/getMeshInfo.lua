@@ -1,5 +1,3 @@
---!strict
-
 --[[
 	returns a Types.MeshInfo for the passed in MeshPart
 ]]

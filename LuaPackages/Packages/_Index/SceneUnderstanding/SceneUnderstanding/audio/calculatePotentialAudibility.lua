@@ -4,6 +4,15 @@ local UserGameSettings = UserSettings():GetService("UserGameSettings")
 
 local safelyAccessProperty = require(Root.safelyAccessProperty)
 local getConnectedWires = require(Root.audio.getConnectedWires)
+local getOutputWires = require(Root.wiring.getOutputWires)
+local wiringTypes = require(Root.wiring.types)
+local toWirableInstance = require(Root.wiring.toWirableInstance)
+
+local getFFlagNormalizeAudibilityForAudioSources = require(Root.flags.getFFlagNormalizeAudibilityForAudioSources)
+local getFFlagSupportAudioChannelSplitters = require(Root.flags.getFFlagSupportAudioChannelSplitters)
+
+type Wirable = wiringTypes.Wirable
+type WirableInstance = wiringTypes.WirableInstance
 
 local AUDIO_GRAPH_CLASSES = {
 	"Wire",
@@ -69,55 +78,121 @@ local function calculateSoundPotentialAudibility(sound: Sound)
 
 	local groupVolume = if sound.SoundGroup then sound.SoundGroup.Volume else 1
 
+	-- This step normalizes the potential audibility of Sounds and the Audio
+	-- API. `AudioListener:GetAudibilityFor` returns equivalent values to
+	-- RollOffGain but is shifted by a factor of 10. So for example, a Sound
+	-- returning 0.5 would map to an AudioListener returning 0.05.
+	--
+	-- Since Sound instances are the legacy system we choose to shift them to be
+	-- in-line with the new Audio API.
+	if getFFlagNormalizeAudibilityForAudioSources() and rollOffGain < 1 then
+		rollOffGain /= 10
+	end
+
 	-- TODO MUS-1159: Add PlaybackLoudness as a factor for audibility. It looks
 	-- to considerably increase accuracy
 	return groupVolume * sound.Volume * rollOffGain
 end
 
-local function getOutputsOf(node: AudioGraphNode): { AudioGraphNode }
-	if node:IsA("AudioEmitter") then
-		return node:GetInteractingListeners() :: any
-	end
-
-	local outs: { AudioGraphNode } = {}
-	for _, wire in getConnectedWires(node, "Output") do
-		local target = toAudioGraphNode(wire.TargetInstance)
-		if target then
-			table.insert(outs, target)
+local getAudibilityOf
+if getFFlagSupportAudioChannelSplitters() then
+	local function getOutputsOf(node: WirableInstance): { WirableInstance }
+		if typeof(node) == "Instance" then
+			if node:IsA("AudioEmitter") then
+				return node:GetInteractingListeners() :: any
+			end
 		end
-	end
-	return outs
-end
 
-local function getAudibilityMultiplierFor(emitter: AudioEmitter): number
-	local total = 0
-	for _, listener in emitter:GetInteractingListeners() do
-		total += listener:GetAudibilityFor(emitter)
-	end
-	return total
-end
+		local outs: { WirableInstance } = {}
 
-local function getAudibilityOf(node: AudioGraphNode, seen: { [AudioGraphNode]: boolean }?): number
-	local seenHere = if seen then seen else {}
-	if seenHere[node] then
-		return 0
+		for _, wire in getOutputWires(node :: Wirable) do
+			local target = toWirableInstance(wire.TargetInstance)
+			if target then
+				table.insert(outs, target)
+			end
+		end
+
+		return outs
 	end
 
-	seenHere[node] = true
-	local multiplier = 1
-	if node:IsA("AudioPlayer") or node:IsA("AudioFader") then
-		multiplier = node.Volume
-	elseif node:IsA("AudioEmitter") then
-		multiplier = getAudibilityMultiplierFor(node)
-	elseif node:IsA("AudioDeviceOutput") then
-		return 1
+	local function getAudibilityMultiplierFor(emitter: AudioEmitter): number
+		local total = 0
+		for _, listener in emitter:GetInteractingListeners() do
+			total += listener:GetAudibilityFor(emitter)
+		end
+		return total
 	end
 
-	local total = 0
-	for _, output in getOutputsOf(node) do
-		total += multiplier * getAudibilityOf(output, seenHere)
+	function getAudibilityOf(node: WirableInstance, seen: { [WirableInstance]: boolean }?): number
+		local seenHere = if seen then seen else {}
+		if seenHere[node] then
+			return 0
+		end
+
+		seenHere[node] = true
+		local multiplier = 1
+		if typeof(node) == "Instance" then
+			if node:IsA("AudioPlayer") or node:IsA("AudioFader") then
+				multiplier = node.Volume
+			elseif node:IsA("AudioEmitter") then
+				multiplier = getAudibilityMultiplierFor(node)
+			elseif node:IsA("AudioDeviceOutput") then
+				return 1
+			end
+		end
+
+		local total = 0
+		for _, output in getOutputsOf(node) do
+			total += multiplier * getAudibilityOf(output, seenHere)
+		end
+		return total
 	end
-	return total
+else
+	local function getOutputsOf(node: AudioGraphNode): { AudioGraphNode }
+		if node:IsA("AudioEmitter") then
+			return node:GetInteractingListeners() :: any
+		end
+
+		local outs: { AudioGraphNode } = {}
+		for _, wire in getConnectedWires(node, "Output") do
+			local target = toAudioGraphNode(wire.TargetInstance)
+			if target then
+				table.insert(outs, target)
+			end
+		end
+		return outs
+	end
+
+	local function getAudibilityMultiplierFor(emitter: AudioEmitter): number
+		local total = 0
+		for _, listener in emitter:GetInteractingListeners() do
+			total += listener:GetAudibilityFor(emitter)
+		end
+		return total
+	end
+
+	function getAudibilityOf(node: AudioGraphNode, seen: { [AudioGraphNode]: boolean }?): number
+		local seenHere = if seen then seen else {}
+		if seenHere[node] then
+			return 0
+		end
+
+		seenHere[node] = true
+		local multiplier = 1
+		if node:IsA("AudioPlayer") or node:IsA("AudioFader") then
+			multiplier = node.Volume
+		elseif node:IsA("AudioEmitter") then
+			multiplier = getAudibilityMultiplierFor(node)
+		elseif node:IsA("AudioDeviceOutput") then
+			return 1
+		end
+
+		local total = 0
+		for _, output in getOutputsOf(node) do
+			total += multiplier * getAudibilityOf(output, seenHere)
+		end
+		return total
+	end
 end
 
 --[=[

@@ -1,5 +1,3 @@
---!strict
-
 --[[
 	validateSurfaceAppearances.lua checks that all MeshParts without a TextureID have a SurfaceAppearance child, and checks
 	if a MeshPart has a TextureID it does not have a child SurfaceAppearance

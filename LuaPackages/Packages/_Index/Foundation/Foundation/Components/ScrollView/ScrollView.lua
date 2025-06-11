@@ -30,6 +30,8 @@ export type Scroll = {
 	AutomaticCanvasSize: Bindable<Enum.AutomaticSize>?,
 	CanvasSize: Bindable<UDim2>?,
 	ScrollingDirection: Bindable<Enum.ScrollingDirection>?,
+	VerticalScrollBarInset: Bindable<Enum.ScrollBarInset>?,
+	HorizontalScrollBarInset: Bindable<Enum.ScrollBarInset>?,
 	scrollBarVisibility: Bindable<ScrollBarVisibility>?,
 }
 
@@ -106,6 +108,8 @@ local function ScrollView(scrollViewProps: ScrollViewProps, ref: React.Ref<GuiOb
 				AutomaticCanvasSize = props.scroll.AutomaticCanvasSize,
 				CanvasSize = props.scroll.CanvasSize,
 				ScrollingDirection = props.scroll.ScrollingDirection,
+				VerticalScrollBarInset = props.scroll.VerticalScrollBarInset,
+				HorizontalScrollBarInset = props.scroll.HorizontalScrollBarInset,
 				ref = props.scrollingFrameRef,
 			},
 			if props.children

@@ -50,7 +50,7 @@ local function Skeleton(skeletonProps: Props, ref: React.Ref<GuiObject>?)
 				then clockBinding:map(function(value: number)
 					local alpha = (1 + math.sin(value * ANIMATION_SPEED)) / 2
 					return {
-						Color3 = tokens.Color.Content.Emphasis.Color3,
+						Color3 = tokens.Semantic.Color.Common.Placeholder.Color3,
 						Transparency = lerp(
 							tokens.Color.Extended.White.White_10.Transparency,
 							tokens.Color.Extended.White.White_10.Transparency - TRANSPARENCY_DELTA,
@@ -58,7 +58,8 @@ local function Skeleton(skeletonProps: Props, ref: React.Ref<GuiObject>?)
 						),
 					}
 				end)
-				else tokens.Color.Extended.White.White_30,
+				-- Full opacity background lets the gradients transparency take accurate effect
+				else tokens.Color.Extended.White.White_100,
 			Size = props.Size,
 			ref = ref,
 		}),
@@ -66,11 +67,15 @@ local function Skeleton(skeletonProps: Props, ref: React.Ref<GuiObject>?)
 			Gradient = if not preferences.reducedMotion
 				then React.createElement("UIGradient", {
 					Color = ColorSequence.new({
-						ColorSequenceKeypoint.new(0, tokens.Color.Common.Shimmer.Color3),
+						ColorSequenceKeypoint.new(0, tokens.Semantic.Color.Common.Placeholder.Color3),
 						ColorSequenceKeypoint.new(0.5, tokens.Color.Extended.White.White_30.Color3),
-						ColorSequenceKeypoint.new(1, tokens.Color.Common.Shimmer.Color3),
+						ColorSequenceKeypoint.new(1, tokens.Semantic.Color.Common.Placeholder.Color3),
 					}),
-					Transparency = NumberSequence.new(tokens.Color.Common.Shimmer.Transparency),
+					Transparency = NumberSequence.new({
+						NumberSequenceKeypoint.new(0, tokens.Semantic.Color.Common.Placeholder.Transparency),
+						NumberSequenceKeypoint.new(0.5, tokens.Color.Extended.White.White_30.Transparency),
+						NumberSequenceKeypoint.new(1, tokens.Semantic.Color.Common.Placeholder.Transparency),
+					}),
 					Offset = clockBinding:map(function(value: number)
 						return Vector2.new(value * ANIMATION_SPEED % GRADIENT_OFFSET - (GRADIENT_OFFSET / 2), 0)
 					end),

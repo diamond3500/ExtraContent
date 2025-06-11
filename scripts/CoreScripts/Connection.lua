@@ -36,8 +36,6 @@ local DEFAULT_ERROR_PROMPT_KEY = "ErrorPrompt"
 
 local FFlagCoreScriptShowTeleportPrompt = require(RobloxGui.Modules.Flags.FFlagCoreScriptShowTeleportPrompt)
 
-local FFlagCreatorBanLocalization = require(RobloxGui.Modules.Flags.FFlagCreatorBanLocalization)
-
 local FFlagAllowDisconnectGuiForOkUnknown = require(RobloxGui.Modules.Flags.FFlagAllowDisconnectGuiForOkUnknown)
 
 local function safeGetFInt(name, defaultValue)
@@ -618,7 +616,7 @@ local function updateErrorPrompt(errorMsg, errorCode, errorType)
 		onEnter(newPromptState)
 	end
 
-	if FFlagCreatorBanLocalization() and errorCode == Enum.ConnectionError.PlacelaunchCreatorBan then
+	if errorCode == Enum.ConnectionError.PlacelaunchCreatorBan then
 		errorMsg = getCreatorBanString(errorMsg)
 	elseif errorType == Enum.ConnectionError.TeleportErrors
 		and connectionPromptState ~= ConnectionPromptState.TELEPORT_FAILED

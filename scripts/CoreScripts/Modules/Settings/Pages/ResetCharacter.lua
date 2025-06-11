@@ -17,11 +17,26 @@ local GuiService = game:GetService("GuiService")
 local PlayersService = game:GetService("Players")
 local AnalyticsService = game:GetService("RbxAnalyticsService")
 local CorePackages = game:GetService("CorePackages")
+local LocalizationService = game:GetService("LocalizationService")
 
 ----------- UTILITIES --------------
 local utility = require(RobloxGui.Modules.Settings.Utility)
 local Theme = require(RobloxGui.Modules.Settings.Theme)
 local Create = require(CorePackages.Workspace.Packages.AppCommonLib).Create
+local Cryo = require(CorePackages.Packages.Cryo)
+local React = require(CorePackages.Packages.React)
+local ReactRoblox = require(CorePackages.Packages.ReactRoblox)
+
+local ReactFocusNavigation = require(CorePackages.Packages.ReactFocusNavigation)
+local useFocusGuiObject = ReactFocusNavigation.useFocusGuiObject
+local FocusNavigationUtils = require(CorePackages.Workspace.Packages.FocusNavigationUtils)
+local useLastInputMode = FocusNavigationUtils.useLastInputMode
+
+local Localization = require(CorePackages.Workspace.Packages.InExperienceLocales).Localization
+local LocalizationProvider = require(CorePackages.Workspace.Packages.Localization).LocalizationProvider
+local useLocalization = require(CorePackages.Workspace.Packages.Localization).Hooks.useLocalization
+
+local Foundation = require(CorePackages.Packages.Foundation)
 
 local ChromeEnabled = require(RobloxGui.Modules.Chrome.Enabled)()
 local ChromeService = if ChromeEnabled then require(RobloxGui.Modules.Chrome.Service) else nil
@@ -32,11 +47,137 @@ local PageInstance = nil
 RobloxGui:WaitForChild("Modules"):WaitForChild("TenFootInterface")
 local isTenFootInterface = require(RobloxGui.Modules.TenFootInterface):IsEnabled()
 
-local FFlagEnableChromeShortcutBar = require(CorePackages.Workspace.Packages.SharedFlags).FFlagEnableChromeShortcutBar
+local SharedFlags = require(CorePackages.Workspace.Packages.SharedFlags)
+local FFlagEnableChromeShortcutBar = SharedFlags.FFlagEnableChromeShortcutBar
+local FFlagChromeShortcutRemoveLeaveOnRespawnPage = SharedFlags.FFlagChromeShortcutRemoveLeaveOnRespawnPage
+local FFlagRespawnActionChromeShortcutTelemetry = require(RobloxGui.Modules.Chrome.Flags.FFlagRespawnActionChromeShortcutTelemetry)
+local FFlagRefactorMenuConfirmationButtons = require(RobloxGui.Modules.Settings.Flags.FFlagRefactorMenuConfirmationButtons)
+
+local FFlagResetTelemetryTypeCheckFix = game:DefineFastFlag("ResetTelemetryTypeCheckFix", false)
 
 local Constants = require(RobloxGui.Modules:WaitForChild("InGameMenu"):WaitForChild("Resources"):WaitForChild("Constants"))
 
+local focusNavigationService = ReactFocusNavigation.FocusNavigationService.new(ReactFocusNavigation.EngineInterface.CoreGui)
+
+local FoundationProvider = Foundation.FoundationProvider
+local Button = Foundation.Button
+local ButtonVariant = Foundation.Enums.ButtonVariant
+local InputSize = Foundation.Enums.InputSize
+local Text = Foundation.Text
+local View = Foundation.View
+
+export type ResetProps = {
+	resetTelemetryFields: { [string] : any }?,
+}
+
 ----------- CLASS DECLARATION --------------
+
+type Props = {
+	dontResetCharFromButton: (isUsingGamepad: boolean) -> (),
+	onResetFunction: () -> (),
+	pageDisplayed: BindableEvent,
+	pageHidden: BindableEvent,
+}
+
+local function ResetCharacterButtonsContainer(props: Props)
+	local resetCharacterButtonRef = React.useRef(nil)
+
+	local pageVisible, setPageVisible = React.useState(false)
+
+	local useLastInputMode = useLastInputMode()
+	local focusGuiObject = useFocusGuiObject()
+
+	local localizedText = useLocalization({
+		ConfirmResetCharacter = Constants.ConfirmResetCharacterLocalizedKey,
+		ResetCharacter = Constants.ResetCharacterLocalizedKey,
+		DontResetCharacter = Constants.DontResetCharacterLocalizedKey,
+	}) 
+
+	React.useEffect(function()
+		local displayedConnection = props.pageDisplayed.Event:Connect(function()
+			setPageVisible(true)
+		end)
+		local hiddenConnection = props.pageHidden.Event:Connect(function()
+			setPageVisible(false)
+		end)
+	
+		return function()
+			displayedConnection:Disconnect()
+			hiddenConnection:Disconnect()
+		end
+	end, { props.pageDisplayed, props.pageHidden })
+
+	React.useEffect(function() 
+		if pageVisible then
+			if useLastInputMode == "Focus" then
+				focusGuiObject(resetCharacterButtonRef.current)
+			else
+				focusGuiObject(nil)
+			end
+		end
+	end, { pageVisible, useLastInputMode, resetCharacterButtonRef.current })
+
+	local onDontResetCharacter = React.useCallback(function()
+		props.dontResetCharFromButton(utility:IsUsingGamepad())
+	end, {})
+
+	return React.createElement(View, {
+		Position = UDim2.new(0, 0, 0, if isTenFootInterface then 100 else 0),
+		tag = "size-full-0 auto-y col",
+	}, {
+		ResetCharacterText = React.createElement(Text, {
+			Text = localizedText.ConfirmResetCharacter,
+			Size = UDim2.new(1, 0, 0, if utility:IsSmallTouchScreen() then 100 else 200),
+			LayoutOrder = 1,
+			tag = {
+				["text-wrap"] = true,
+				["text-heading-medium"] = not utility:IsSmallTouchScreen() and not isTenFootInterface,
+				["text-heading-small"] = utility:IsSmallTouchScreen(),
+				["text-heading-large"] = isTenFootInterface,
+			},
+		}),
+		ButtonsContainer = React.createElement(View, {
+			LayoutOrder = 2,
+			tag = "size-full-0 auto-y row align-x-center gap-xlarge wrap",
+		}, {
+			ResetCharacterButton = React.createElement(Button, {
+				text = localizedText.ResetCharacter,
+				size = InputSize.Large,
+				variant = ButtonVariant.SoftEmphasis,
+				width = UDim.new(0, if isTenFootInterface then 300 else 200),
+				LayoutOrder = 1,
+				ref = resetCharacterButtonRef,
+				onActivated = props.onResetFunction,
+			}),
+			DontResetCharacterButton = React.createElement(Button, {
+				text = localizedText.DontResetCharacter,
+				size = InputSize.Large,
+				variant = ButtonVariant.Subtle,
+				width = UDim.new(0, if isTenFootInterface then 300 else 200),
+				LayoutOrder = 2,
+				onActivated = onDontResetCharacter,
+			}),
+		})
+	})
+end
+
+local function ResetCharacterContainer(props: Props)
+	local localization = Localization.new(LocalizationService.RobloxLocaleId)
+
+	return React.createElement(LocalizationProvider, {
+		localization = localization,
+	}, {
+		FoundationProvider = React.createElement(FoundationProvider, {
+			theme = Foundation.Enums.Theme.Dark,
+		}, {
+			FocusNavigationProvider = React.createElement(ReactFocusNavigation.FocusNavigationContext.Provider, {
+				value = focusNavigationService,
+			}, {
+				ResetCharacterButtonsContainer = React.createElement(ResetCharacterButtonsContainer, props),
+			})
+		})
+	})
+end
 
 local function Initialize()
 	local settingsPageFactory = require(RobloxGui.Modules.Settings.SettingsPageFactory)
@@ -70,51 +211,54 @@ local function Initialize()
 	this.ShouldShowBottomBar = false
 	this.ShouldShowHubBar = false
 
-	local resetCharacterText =  Create'TextLabel'
-	{
-		Name = "ResetCharacterText",
-		Text = "Are you sure you want to reset your character?",
-		Font = Theme.font(Enum.Font.SourceSansBold, "Confirmation"),
-		FontSize = Theme.fontSize(Enum.FontSize.Size36, "Confirmation"),
-		TextColor3 = Color3.new(1,1,1),
-		BackgroundTransparency = 1,
-		Size = UDim2.new(1,0,0,200),
-		TextWrapped = true,
-		ZIndex = 2,
-		Parent = this.Page,
-		Position = isTenFootInterface and UDim2.new(0,0,0,100) or UDim2.new(0,0,0,0)
-	};
+	local resetButtonContainer
+	if not FFlagRefactorMenuConfirmationButtons then
+		local resetCharacterText =  Create'TextLabel'
+		{
+			Name = "ResetCharacterText",
+			Text = "Are you sure you want to reset your character?",
+			Font = Theme.font(Enum.Font.SourceSansBold, "Confirmation"),
+			FontSize = Theme.fontSize(Enum.FontSize.Size36, "Confirmation"),
+			TextColor3 = Color3.new(1,1,1),
+			BackgroundTransparency = 1,
+			Size = UDim2.new(1,0,0,200),
+			TextWrapped = true,
+			ZIndex = 2,
+			Parent = this.Page,
+			Position = isTenFootInterface and UDim2.new(0,0,0,100) or UDim2.new(0,0,0,0)
+		};
 
-	local resetButtonContainer = Create"Frame"
-	{
-		Name = "ResetButtonContainer",
-		Parent = resetCharacterText,
-		Size = UDim2.new(1,0,0,400),
-		BackgroundTransparency = 1,
-		Position = UDim2.new(0,0,1,0)
-	};
+		resetButtonContainer = Create"Frame"
+		{
+			Name = "ResetButtonContainer",
+			Parent = resetCharacterText,
+			Size = UDim2.new(1,0,0,400),
+			BackgroundTransparency = 1,
+			Position = UDim2.new(0,0,1,0)
+		};
 
-	local _resetButtonLayout = Create'UIGridLayout'
-	{
-		Name = "ResetButtonsLayout",
-		CellSize = isTenFootInterface and UDim2.new(0, 300, 0, 80) or UDim2.new(0, 200, 0, 50),
-		CellPadding = UDim2.new(0,20,0,20),
-		FillDirection = Enum.FillDirection.Horizontal,
-		HorizontalAlignment = Enum.HorizontalAlignment.Center,
-		SortOrder = Enum.SortOrder.LayoutOrder,
-		VerticalAlignment = Enum.VerticalAlignment.Top,
-		Parent = resetButtonContainer
-	};
+		local _resetButtonLayout = Create'UIGridLayout'
+		{
+			Name = "ResetButtonsLayout",
+			CellSize = isTenFootInterface and UDim2.new(0, 300, 0, 80) or UDim2.new(0, 200, 0, 50),
+			CellPadding = UDim2.new(0,20,0,20),
+			FillDirection = Enum.FillDirection.Horizontal,
+			HorizontalAlignment = Enum.HorizontalAlignment.Center,
+			SortOrder = Enum.SortOrder.LayoutOrder,
+			VerticalAlignment = Enum.VerticalAlignment.Top,
+			Parent = resetButtonContainer
+		};
 
-	if utility:IsSmallTouchScreen() then
-		resetCharacterText.FontSize = Enum.FontSize.Size24
-		resetCharacterText.Size = UDim2.new(1,0,0,100)
-	elseif isTenFootInterface then
-		resetCharacterText.FontSize = Enum.FontSize.Size48
+		if utility:IsSmallTouchScreen() then
+			resetCharacterText.FontSize = Enum.FontSize.Size24
+			resetCharacterText.Size = UDim2.new(1,0,0,100)
+		elseif isTenFootInterface then
+			resetCharacterText.FontSize = Enum.FontSize.Size48
+		end
 	end
 
 	------ Init -------
-	local resetCharFunc = function()
+	local resetCharFunc = function(props: ResetProps?)
 		local player = PlayersService.LocalPlayer
 		if player then
 			local character = player.Character
@@ -126,16 +270,26 @@ local function Initialize()
 			end
 		end
 
+		local respawnCustomFields = { confirmed = Constants.AnalyticsConfirmedName, universeid = tostring(game.GameId) }
+		if FFlagResetTelemetryTypeCheckFix then
+			if FFlagRespawnActionChromeShortcutTelemetry and props and type(props) == "table" and props.resetTelemetryFields then
+				respawnCustomFields = Cryo.Dictionary.join(respawnCustomFields, props.resetTelemetryFields)
+			end
+		else
+			if FFlagRespawnActionChromeShortcutTelemetry and props and props.resetTelemetryFields then
+				respawnCustomFields = Cryo.Dictionary.join(respawnCustomFields, props.resetTelemetryFields)
+			end
+		end
 		AnalyticsService:SetRBXEventStream(Constants.AnalyticsTargetName, Constants.AnalyticsInGameMenuName,
-											Constants.AnalyticsRespawnCharacterName, {confirmed = Constants.AnalyticsConfirmedName, universeid = tostring(game.GameId)})
+			Constants.AnalyticsRespawnCharacterName, respawnCustomFields)
 		AnalyticsService:ReportCounter("InGameMenu-ResetCharacter")
 	end
 
 	this.ResetBindable = true
 
-	local onResetFunction = function()
+	local onResetFunction = function(props: ResetProps?)
 		if this.ResetBindable == true then
-			resetCharFunc()
+			resetCharFunc(props)
 		elseif this.ResetBindable then
 			this.ResetBindable:Fire()
 		end
@@ -148,16 +302,27 @@ local function Initialize()
 		this.ResetFunction = onResetFunction
 	end
 
-	this.ResetCharacterButton = utility:MakeStyledButton("ResetCharacter", "Reset", nil, onResetFunction)
-	this.ResetCharacterButton.NextSelectionRight = nil
-	this.ResetCharacterButton.Parent = resetButtonContainer
+	if not FFlagRefactorMenuConfirmationButtons then
+		this.ResetCharacterButton = utility:MakeStyledButton("ResetCharacter", "Reset", nil, onResetFunction)
+		this.ResetCharacterButton.NextSelectionRight = nil
+		this.ResetCharacterButton.Parent = resetButtonContainer
 
+		local dontResetCharacterButton = utility:MakeStyledButton("DontResetCharacter", "Don't Reset", nil, this.DontResetCharFromButton)
+		dontResetCharacterButton.NextSelectionLeft = nil
+		dontResetCharacterButton.Parent = resetButtonContainer
 
-	local dontResetCharacterButton = utility:MakeStyledButton("DontResetCharacter", "Don't Reset", nil, this.DontResetCharFromButton)
-	dontResetCharacterButton.NextSelectionLeft = nil
-	dontResetCharacterButton.Parent = resetButtonContainer
+		this.Page.Size = UDim2.new(1,0,0,dontResetCharacterButton.AbsolutePosition.Y + dontResetCharacterButton.AbsoluteSize.Y)
+	end
 
-	this.Page.Size = UDim2.new(1,0,0,dontResetCharacterButton.AbsolutePosition.Y + dontResetCharacterButton.AbsoluteSize.Y)
+	if FFlagRefactorMenuConfirmationButtons then
+		this.PageRoot = ReactRoblox.createRoot(this.Page)
+		this.PageRoot:render(React.createElement(ResetCharacterContainer, {
+			onResetFunction = onResetFunction,
+			dontResetCharFromButton = this.DontResetCharFromButton,
+			pageDisplayed = this.Displayed,
+			pageHidden = this.Hidden,
+		}))
+	end
 
 	return this
 end
@@ -169,10 +334,16 @@ local isOpen = false
 
 PageInstance.Displayed.Event:connect(function()
 	isOpen = true
-	GuiService.SelectedCoreObject = PageInstance.ResetCharacterButton
+	if not FFlagRefactorMenuConfirmationButtons then
+		GuiService.SelectedCoreObject = PageInstance.ResetCharacterButton
+	end
 	if FFlagEnableChromeShortcutBar then 
 		if ChromeEnabled then 
-			ChromeService:setShortcutBar(ChromeConstants.TILTMENU_DIALOG_SHORTCUTBAR_ID)
+			if FFlagChromeShortcutRemoveLeaveOnRespawnPage then
+				ChromeService:setShortcutBar(ChromeConstants.TILTMENU_RESPAWN_DIALOG_SHORTCUTBAR_ID)
+			else
+				ChromeService:setShortcutBar(ChromeConstants.TILTMENU_DIALOG_SHORTCUTBAR_ID)
+			end
 		end
 	else
 		ContextActionService:BindCoreAction(RESET_CHARACTER_GAME_ACTION, PageInstance.DontResetCharFromHotkey, false, Enum.KeyCode.ButtonB)

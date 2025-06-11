@@ -12,7 +12,7 @@ local getFIntUGCValidationPartMaxMass = require(Root.flags.getFIntUGCValidationP
 -- validation logic uses MeshPart.Size in several places to check asset bounds
 -- however, MeshPart.Size is based on the bounding box of the physics data
 -- this can be tampered with by bad actors, so we should reset it ASAP
-local function resetPhysicsData(roots: { Instance }, validationContext: Types.ValidationContext)
+local function resetPhysicsData(roots: { Instance }, validationContext: Types.ValidationContext): (boolean, string?)
 	local startTime = tick()
 
 	if not game:GetEngineFeature("EngineResetCollisionFidelity") then

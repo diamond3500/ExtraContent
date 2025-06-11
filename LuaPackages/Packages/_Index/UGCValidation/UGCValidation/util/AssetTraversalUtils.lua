@@ -1,4 +1,3 @@
---!strict
 --[[
 calculateBounds:
 	Uses the given minMaxBounds to determine the minMaxBounds after adding a new part (including its attachments)

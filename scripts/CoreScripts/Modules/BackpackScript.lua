@@ -11,6 +11,8 @@ local Modules = RobloxGui.Modules
 local InExperienceAppChatModal = require(CorePackages.Workspace.Packages.AppChat).App.InExperienceAppChatModal
 local getFFlagAppChatCoreUIConflictFix = require(CorePackages.Workspace.Packages.SharedFlags).getFFlagAppChatCoreUIConflictFix
 local FFlagMountCoreGuiBackpack = require(Modules.Flags.FFlagMountCoreGuiBackpack)
+local isInExperienceUIVREnabled =
+	require(CorePackages.Workspace.Packages.SharedExperimentDefinition).isInExperienceUIVREnabled
 
 local BackpackScript = {}
 BackpackScript.OpenClose = nil -- Function to toggle open/close
@@ -1867,7 +1869,7 @@ OnCoreGuiChanged(backpackType, StarterGui:GetCoreGuiEnabled(backpackType))
 OnCoreGuiChanged(healthType, StarterGui:GetCoreGuiEnabled(healthType))
 
 GuiService.MenuOpened:Connect(function()
-	if BackpackScript.IsOpen then
+	if BackpackScript.IsOpen and (if isInExperienceUIVREnabled then not VRService.VREnabled else true) then
 		BackpackScript.OpenClose()
 	end
 end)

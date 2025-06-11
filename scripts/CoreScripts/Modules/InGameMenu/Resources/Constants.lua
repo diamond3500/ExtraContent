@@ -54,10 +54,14 @@ local Constants = {
 		ScreenshotUnhide = "ScreenshotUnhide",
 	},
 	AnalyticsMenuCloseName = "menu_close",
+	AnalyticsMenuLeaveName = "menu_leave",
 	AnalyticsLeaveGameName = "leave_game",
 	AnalyticsLeaveToHomeName = "leave_to_home",
 	AnalyticsLeaveToHomeSource = "home",
 	AnalyticsLeaveGameSource = "leave",
+	AnalyticsMenuButtonSource = "menu_button",
+	AnalyticsMenuHotkeySource = "gamepad_or_hotkey",
+	AnalyticsMenuResetCharacterName = "menu_reset_character",
 	AnalyticsResumeGameName = "resume",
 	AnalyticsResumeShieldSource = "shield",
 	AnalyticsResumeButtonSource = "button",
@@ -142,6 +146,16 @@ local Constants = {
 	--[[ Localization Keys ]]
 	PartyLocalizedKey = "Feature.Squads.Label.Party",
 	RespawnLocalizedKey = "CoreScripts.InGameMenu.QuickActions.Respawn",
+	LeaveGameLocalizedKey = "CoreScripts.InGameMenu.LeaveGame",
+	ResumeLocalizedKey = "CoreScripts.InGameMenu.Prompt.ResumeGame",
+	ResetCharacterLocalizedKey = "CoreScripts.InGameMenu.Action.ResetCharacter",
+	ConfirmLeaveGameLocalizedKey = "CoreScripts.InGameMenu.Prompt.ConfirmLeaveGame",
+	ConfirmResetCharacterLocalizedKey = "CoreScripts.InGameMenu.Prompt.ConfirmResetCharacter",
+	DontLeaveGameLocalizedKey = "CoreScripts.InGameMenu.Action.DontLeaveGame",
+	DontResetCharacterLocalizedKey = "CoreScripts.InGameMenu.Action.DontResetCharacter",
+	ConnectionLocalizedKey = "CommonUI.Features.Label.Connection",
+	AddConnectionLocalizedKey = "CommonUI.Features.Label.AddConnection",
+	InviteConnectionsLocalizedKey = "CommonUI.Features.Label.InviteConnections",
 }
 
 return Constants

@@ -1,4 +1,3 @@
---!strict
 local root = script.Parent.Parent
 
 local Types = require(root.util.Types)
@@ -20,6 +19,8 @@ local validateSingleInstance = require(root.validation.validateSingleInstance)
 local validateThumbnailConfiguration = require(root.validation.validateThumbnailConfiguration)
 local validateAccessoryName = require(root.validation.validateAccessoryName)
 local validateSurfaceAppearances = require(root.validation.validateSurfaceAppearances)
+local validateSurfaceAppearanceTextureSize = require(root.validation.validateSurfaceAppearanceTextureSize)
+local validateSurfaceAppearanceTransparency = require(root.validation.validateSurfaceAppearanceTransparency)
 local validateScaleType = require(root.validation.validateScaleType)
 local validateTotalSurfaceArea = require(root.validation.validateTotalSurfaceArea)
 local validateRigidMeshNotSkinned = require(root.validation.validateRigidMeshNotSkinned)
@@ -34,12 +35,9 @@ local getExpectedPartSize = require(root.util.getExpectedPartSize)
 local pcallDeferred = require(root.util.pcallDeferred)
 
 local getFFlagMeshPartAccessoryPBRSupport = require(root.flags.getFFlagMeshPartAccessoryPBRSupport)
-local getFFlagUGCValidateCoplanarTriTestAccessory = require(root.flags.getFFlagUGCValidateCoplanarTriTestAccessory)
 local getFFlagUGCValidateMeshVertColors = require(root.flags.getFFlagUGCValidateMeshVertColors)
 local getFFlagUGCValidateThumbnailConfiguration = require(root.flags.getFFlagUGCValidateThumbnailConfiguration)
 local getFFlagUGCValidationNameCheck = require(root.flags.getFFlagUGCValidationNameCheck)
-local getFFlagUGCValidateTotalSurfaceAreaTestAccessory =
-	require(root.flags.getFFlagUGCValidateTotalSurfaceAreaTestAccessory)
 
 local getEngineFeatureEngineUGCValidateRigidNonSkinned =
 	require(root.flags.getEngineFeatureEngineUGCValidateRigidNonSkinned)
@@ -189,9 +187,7 @@ local function validateMeshPartAccessory(validationContext: Types.ValidationCont
 	end
 
 	if hasMeshContent then
-		if getFFlagUGCValidateTotalSurfaceAreaTestAccessory() then
-			reasonsAccumulator:updateReasons(validateTotalSurfaceArea(meshInfo, meshScale, validationContext))
-		end
+		reasonsAccumulator:updateReasons(validateTotalSurfaceArea(meshInfo, meshScale, validationContext))
 
 		reasonsAccumulator:updateReasons(
 			validateMeshBounds(
@@ -211,13 +207,13 @@ local function validateMeshPartAccessory(validationContext: Types.ValidationCont
 			reasonsAccumulator:updateReasons(validateMeshVertColors(meshInfo, false, validationContext))
 		end
 
-		if getFFlagUGCValidateCoplanarTriTestAccessory() then
-			reasonsAccumulator:updateReasons(validateCoplanarIntersection(meshInfo, meshScale, validationContext))
-		end
+		reasonsAccumulator:updateReasons(validateCoplanarIntersection(meshInfo, meshScale, validationContext))
 	end
 
 	if getFFlagMeshPartAccessoryPBRSupport() then
 		reasonsAccumulator:updateReasons(validateSurfaceAppearances(instance, validationContext))
+		reasonsAccumulator:updateReasons(validateSurfaceAppearanceTextureSize(instance, validationContext))
+		reasonsAccumulator:updateReasons(validateSurfaceAppearanceTransparency(instance, validationContext))
 	end
 
 	if getEngineFeatureEngineUGCValidateRigidNonSkinned() and not validationContext.allowEditableInstances then

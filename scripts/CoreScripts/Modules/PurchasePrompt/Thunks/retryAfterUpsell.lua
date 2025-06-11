@@ -1,11 +1,13 @@
 --!nonstrict
 local Root = script.Parent.Parent
+local CorePackages = game:GetService("CorePackages")
 
 local SetPromptState = require(Root.Actions.SetPromptState)
 local BalanceInfoRecieved = require(Root.Actions.BalanceInfoRecieved)
 local PurchaseCompleteRecieved = require(Root.Actions.PurchaseCompleteRecieved)
 local ErrorOccurred = require(Root.Actions.ErrorOccurred)
 local PromptNativeUpsell = require(Root.Actions.PromptNativeUpsell)
+local PromptNativeUpsellSuggestions = require(Root.Actions.PromptNativeUpsellSuggestions)
 
 local PurchaseFlow = require(Root.Enums.PurchaseFlow)
 local UpsellFlow = require(Root.Enums.UpsellFlow)
@@ -18,6 +20,7 @@ local sendCounter = require(Root.Thunks.sendCounter)
 
 local RobuxUpsell = require(Root.Models.RobuxUpsell)
 local getRobuxUpsellProduct = require(Root.Network.getRobuxUpsellProduct)
+local getRobuxUpsellSuggestions = require(Root.Network.getRobuxUpsellSuggestions)
 local getBalanceInfo = require(Root.Network.getBalanceInfo)
 local Network = require(Root.Services.Network)
 local Analytics = require(Root.Services.Analytics)
@@ -30,6 +33,8 @@ local getUpsellFlow = require(Root.NativeUpsell.getUpsellFlow)
 local Thunk = require(Root.Thunk)
 
 local purchaseItem = require(script.Parent.purchaseItem)
+
+local FFlagEnableUpsellSuggestionsAPI = require(CorePackages.Workspace.Packages.SharedFlags).FFlagEnableUpsellSuggestionsAPI
 
 local MAX_RETRIES = game:DefineFastInt("UpsellAccountBalanceRetryAttemps", 3)
 local RETRY_RATE = game:DefineFastInt("UpsellAccountBalanceRetryIntervalSec", 1)
@@ -92,6 +97,28 @@ local function retryAfterUpsell(retriesRemaining)
 							if purchaseFlow == PurchaseFlow.LargeRobuxUpsell then
 								local platform = externalSettings.getPlatform()
 								local paymentPlatform = getPaymentPlatform(platform)
+
+								if FFlagEnableUpsellSuggestionsAPI then
+									return getRobuxUpsellSuggestions(price, newBalance, paymentPlatform):andThen(
+										-- success handler
+										function(upsellSuggestions)
+											if not hasPendingRequest(store:getState()) then
+												return
+											end
+											store:dispatch(PromptNativeUpsellSuggestions(upsellSuggestions.products, 1, upsellSuggestions.virtualItemBadgeType))
+											store:dispatch(sendCounter(Counter.UpsellModalShownAgain))
+										end,
+										-- failure handler
+										function()
+											if not hasPendingRequest(store:getState()) then
+												return
+											end
+	
+											store:dispatch(SetPromptState(PromptState.LargeRobuxUpsell))
+											store:dispatch(sendCounter(Counter.UpsellGenericModalShownAgain))
+										end
+									)
+								end
 
 								return getRobuxUpsellProduct(network, price, newBalance, paymentPlatform):andThen(
 									function(product: RobuxUpsell.Product)

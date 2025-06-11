@@ -9,6 +9,7 @@ local ExternalSettings = require(Root.Services.ExternalSettings)
 
 local getPaymentPlatform = require(Root.Utils.getPaymentPlatform)
 local getCounterCombinations = require(Root.Utils.getCounterCombinations)
+local SelectedRobuxPackage = require(Root.Utils.SelectedRobuxPackage)
 
 local Thunk = require(Root.Thunk)
 
@@ -31,8 +32,8 @@ local function sendCounter(counter: any)
 		local purchaseFlow = state.purchaseFlow
 		local purchaseFlowStr = if purchaseFlow ~= nil then PurchaseFlow.toRawValue(purchaseFlow) else nil
 
-		-- state.nativeUpsell.robuxPurchaseAmount will be nil depending on the flow + state
-		local robuxAmount = state.nativeUpsell.robuxPurchaseAmount
+		-- robuxPurchaseAmount will be nil depending on the flow + state
+		local robuxAmount = SelectedRobuxPackage.getRobuxPurchaseAmount(state)
 
 		local platform = externalSettings.getPlatform()
 		local paymentPlatform = getPaymentPlatform(platform)

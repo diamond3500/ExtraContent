@@ -1,4 +1,3 @@
---!strict
 -- If an asset was created in In-Experience Creation, then if it has a WrapTarget, it will have a child called ProxyMeshPart. This
 -- proxy part holds the cage mesh data representing the user's edits from IEC. This is the cage data we want to validate, rather
 -- then the data associated with CageMeshId

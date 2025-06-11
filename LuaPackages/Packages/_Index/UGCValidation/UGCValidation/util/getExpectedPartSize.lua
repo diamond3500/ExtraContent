@@ -40,7 +40,7 @@ return function(part: MeshPart, validationContext: Types.ValidationContext, mesh
 		end
 	end
 
-	meshInfo.editableMesh = editableMesh
+	meshInfo.editableMesh = editableMesh :: EditableMesh
 
 	-- EditableMesh was created by UGC Validation and not via in-experience creation
 	if (validationContext.editableMeshes :: Types.EditableMeshes)[part]["MeshId"].created then

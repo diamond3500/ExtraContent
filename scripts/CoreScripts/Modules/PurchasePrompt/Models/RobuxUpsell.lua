@@ -1,6 +1,6 @@
 local Root = script.Parent.Parent
 
-type Json = {
+export type Json = {
 	roblox_product_id: number, -- The database ID of the product.
 	provider_product_id: string, -- The id of the product defined by the provider.
 	roblox_product_name: string, -- The name of the product defined by Roblox.

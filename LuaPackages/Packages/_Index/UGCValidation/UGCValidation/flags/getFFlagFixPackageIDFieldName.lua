@@ -1,5 +1,3 @@
---!strict
-
 game:DefineFastFlag("FixPackageIDFieldName2", false)
 
 return function()

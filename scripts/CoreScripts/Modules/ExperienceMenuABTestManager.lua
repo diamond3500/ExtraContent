@@ -19,12 +19,6 @@ local IsExperienceMenuABTestEnabled = require(script.Parent.IsExperienceMenuABTe
 local GetFStringLuaAppExperienceMenuLayer = SharedFlags.GetFStringLuaAppExperienceMenuLayer
 local GetFStringLuaAppConsoleExperienceMenuLayer = require(script.Parent.Flags.GetFStringLuaAppConsoleExperienceMenuLayer)
 
-local GetFFlagDisableChromeV3Baseline = require(script.Parent.Flags.GetFFlagDisableChromeV3Baseline)()
-local GetFFlagDisableChromeV3Captures = require(script.Parent.Flags.GetFFlagDisableChromeV3Captures)()
-local GetFFlagDisableChromeV3StaticSelfView = require(script.Parent.Flags.GetFFlagDisableChromeV3StaticSelfView)()
-local GetFFlagDisableChromeV3Icon = require(script.Parent.Flags.GetFFlagDisableChromeV3Icon)()
-local GetFFlagDisableChromeV3DockedMic = require(script.Parent.Flags.GetFFlagDisableChromeV3DockedMic)()
-
 local GetFFlagDisableChromeV4Baseline = require(script.Parent.Flags.GetFFlagDisableChromeV4Baseline)()
 local GetFFlagDisableChromeV4ClosedSelfView = require(script.Parent.Flags.GetFFlagDisableChromeV4ClosedSelfView)()
 
@@ -42,14 +36,6 @@ local DEFAULT_MENU_VERSION = "v1"..TEST_VERSION
 local MENU_VERSION_V2 = "v2"..TEST_VERSION
 local MENU_VERSION_V3 = "v3"..TEST_VERSION
 local REPORT_ABUSE_MENU_VERSION_V2 = "ARv2"..REPORT_ABUSE_MENU_TEST_VERSION
-
-local MENU_VERSION_CHROME_V3_ENUM = {
-	BASELINE = "v8.1"..TEST_VERSION,
-	CAPTURES = "v8.2"..TEST_VERSION,
-	STATIC_SELF_VIEW = "v8.3"..TEST_VERSION,
-	ICON = "v8.4"..TEST_VERSION,
-	DOCKED_MIC = "v8.5"..TEST_VERSION,
-}
 
 local MENU_VERSION_SONGBIRD_ENUM = {
 	SONGBIRD = "v9.1" .. SONGBIRD_TEST_VERSION,
@@ -81,14 +67,9 @@ local validVersion = {
 	[MENU_VERSION_SONGBIRD_ENUM.SONGBIRD_PEEK] = true,
 	[ENUM_UNIBAR_MENU_OPEN_FOCUS.HAMBURGER] = FFlagUnibarMenuOpenSelectionIXP,
 	[ENUM_UNIBAR_MENU_OPEN_FOCUS.SUBMENU] = FFlagUnibarMenuOpenSelectionIXP,
-	[ENUM_UNIBAR_MENU_OPEN_FOCUS.NOT_AVAILABLE] = FFlagUnibarMenuOpenSelectionIXP,
+	[ENUM_UNIBAR_MENU_OPEN_FOCUS.NOT_AVAILABLE] = true,
 
 	-- Invalidate Unibar test variants if the respective disable flag is turned on
-	[MENU_VERSION_CHROME_V3_ENUM.BASELINE] = not GetFFlagDisableChromeV3Baseline,
-	[MENU_VERSION_CHROME_V3_ENUM.CAPTURES] = not GetFFlagDisableChromeV3Captures,
-	[MENU_VERSION_CHROME_V3_ENUM.STATIC_SELF_VIEW] = not GetFFlagDisableChromeV3StaticSelfView,
-	[MENU_VERSION_CHROME_V3_ENUM.ICON] = not GetFFlagDisableChromeV3Icon,
-	[MENU_VERSION_CHROME_V3_ENUM.DOCKED_MIC] = not GetFFlagDisableChromeV3DockedMic,
 	[MENU_VERSION_LEGACY_CONTROLS] = true,
 	[MENU_VERSION_CHROME_V4_ENUM.BASELINE] = not GetFFlagDisableChromeV4Baseline,
 	[MENU_VERSION_CHROME_V4_ENUM.CLOSED_SELF_VIEW] = not GetFFlagDisableChromeV4ClosedSelfView,
@@ -130,26 +111,6 @@ end
 
 function ExperienceMenuABTestManager.reportAbuseMenuV2VersionId()
 	return REPORT_ABUSE_MENU_VERSION_V2
-end
-
-function ExperienceMenuABTestManager.chromeV3BaselineVersionId()
-	return MENU_VERSION_CHROME_V3_ENUM.BASELINE
-end
-
-function ExperienceMenuABTestManager.chromeCapturesVersionId()
-	return MENU_VERSION_CHROME_V3_ENUM.CAPTURES
-end
-
-function ExperienceMenuABTestManager.chromeStaticSelfViewVersionId()
-	return MENU_VERSION_CHROME_V3_ENUM.STATIC_SELF_VIEW
-end
-
-function ExperienceMenuABTestManager.chromeIconVersionId()
-	return MENU_VERSION_CHROME_V3_ENUM.ICON
-end
-
-function ExperienceMenuABTestManager.chromeDockedMicVersionId()
-	return MENU_VERSION_CHROME_V3_ENUM.DOCKED_MIC
 end
 
 function ExperienceMenuABTestManager.chromeV4ControlVersionId()
@@ -239,12 +200,6 @@ function ExperienceMenuABTestManager:isChromeEnabled()
 		end
 	end
 
-	for _, version in MENU_VERSION_CHROME_V3_ENUM do
-		if self:getVersion() == version then
-			return true
-		end
-	end
-
 	for _, version in MENU_VERSION_SONGBIRD_ENUM do
 		if self:getVersion() == version then
 			return true
@@ -260,21 +215,6 @@ function ExperienceMenuABTestManager:isChromeEnabled()
 	return false
 end
 
-function ExperienceMenuABTestManager:shouldShowCaptures()
-	return self:getVersion() == MENU_VERSION_CHROME_V3_ENUM.CAPTURES
-end
-
-function ExperienceMenuABTestManager:shouldShowStaticSelfView()
-	return self:getVersion() == MENU_VERSION_CHROME_V3_ENUM.STATIC_SELF_VIEW
-end
-
-function ExperienceMenuABTestManager:shouldShowNewIcon()
-	return self:getVersion() == MENU_VERSION_CHROME_V3_ENUM.ICON
-end
-
-function ExperienceMenuABTestManager:shouldDockMic()
-	return self:getVersion() == MENU_VERSION_CHROME_V3_ENUM.DOCKED_MIC
-end
 function ExperienceMenuABTestManager:shouldCloseSelfViewAtStartup()
 	return self:getVersion() == MENU_VERSION_CHROME_V4_ENUM.CLOSED_SELF_VIEW
 end
@@ -295,6 +235,10 @@ end
 
 function ExperienceMenuABTestManager:showConsoleExpControlsMenuOpenSubmenu()
 	return self:getVersion() == ENUM_UNIBAR_MENU_OPEN_FOCUS.SUBMENU
+end
+
+function ExperienceMenuABTestManager:showConsoleExpControlsMenuNotAvailable()
+	return self:getVersion() == ENUM_UNIBAR_MENU_OPEN_FOCUS.NOT_AVAILABLE
 end
 
 -- this is called on the assumption that IXP layers are initialized

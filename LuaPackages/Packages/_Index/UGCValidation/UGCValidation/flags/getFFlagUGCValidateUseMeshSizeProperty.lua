@@ -1,5 +1,3 @@
---!strict
-
 game:DefineFastFlag("UGCValidateUseMeshSizeProperty", false)
 
 return function()

@@ -4,6 +4,8 @@ local Analytics = require(root.Analytics)
 
 local Types = require(root.util.Types)
 
+local getFFlagMeshPartAccessoryPBRSupport = require(root.flags.getFFlagMeshPartAccessoryPBRSupport)
+
 local function validateLegacyAccessoryMeshPartAssetFormatMatch(
 	meshPartAccessory: Instance,
 	specialMeshAccessory: Instance,
@@ -32,7 +34,15 @@ local function validateLegacyAccessoryMeshPartAssetFormatMatch(
 			}
 	end
 
-	if meshPartHandle.TextureID ~= specialMesh.TextureId then
+	local meshPartTextureId = meshPartHandle.TextureID
+	if getFFlagMeshPartAccessoryPBRSupport() and meshPartTextureId == "" then
+		local surfaceAppearance = meshPartHandle:FindFirstChildOfClass("SurfaceAppearance")
+		if surfaceAppearance then
+			meshPartTextureId = surfaceAppearance.ColorMap
+		end
+	end
+
+	if meshPartTextureId ~= specialMesh.TextureId then
 		Analytics.reportFailure(
 			Analytics.ErrorType.validateLegacyAccessoryMeshPartAssetFormatMatch_TextureIdMismatch,
 			nil,

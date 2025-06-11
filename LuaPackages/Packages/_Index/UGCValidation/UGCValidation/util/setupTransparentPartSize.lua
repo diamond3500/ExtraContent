@@ -1,4 +1,3 @@
---!strict
 --[[
 	setupTransparentPartSize.lua sets the size of the transparent part for validating asset transparency
 ]]
@@ -8,7 +7,6 @@ local Types = require(root.util.Types)
 local AssetTraversalUtils = require(root.util.AssetTraversalUtils)
 local ConstantsInterface = require(root.ConstantsInterface)
 
-local getFFlagUGCValidationRemoveRotationCheck = require(root.flags.getFFlagUGCValidationRemoveRotationCheck)
 local getFFlagUGCValidateFixDeprecatedTransparency = require(root.flags.getFFlagUGCValidateFixDeprecatedTransparency)
 
 return function(
@@ -27,12 +25,9 @@ return function(
 			minMaxBounds,
 			if getFFlagUGCValidateFixDeprecatedTransparency() then validationContext else nil
 		)
-		if getFFlagUGCValidationRemoveRotationCheck() then
-			transparentPart.CFrame = CFrame.new();
-			(inst :: MeshPart).CFrame = CFrame.new()
-		else
-			transparentPart.Position = (inst :: MeshPart).Position
-		end
+		transparentPart.CFrame = CFrame.new();
+		(inst :: MeshPart).CFrame = CFrame.new()
+
 		transparentPart.Size = (inst :: MeshPart).Size
 	else
 		local hierarchy = AssetTraversalUtils.assetHierarchy[assetTypeEnum :: Enum.AssetType]

@@ -15,8 +15,8 @@ local TABBING_START_VISIBLE = "StartVisible"
 local TABBING_END_VISIBLE = "EndVisible"
 local TABBING_MINIMIZED = "Minimized"
 
-local FIntReportDevConsoleTabEventsThrottleHundredthsPercent = game:DefineFastInt("ReportDevConsoleTabEventsThrottleHundredthsPercent", 0)
-local FFlagDevConsoleThrottleTabMetrics = game:DefineFastFlag("DevConsoleUseThrottledMetrics", false)
+local FIntReportDevConsoleTabEventsThrottleHundredthsPercent =
+	game:DefineFastInt("ReportDevConsoleTabEventsThrottleHundredthsPercent", 0)
 
 local DEV_CONSOLE_INFLUX_EVENT_NAME = "devConsoleMetric"
 
@@ -45,18 +45,15 @@ function getTabAnalyticsKeyName(tabIndex, isClientView)
 end
 
 function dispatchTabAnalytics(additionArgs)
-	if FFlagDevConsoleThrottleTabMetrics then
-		local args = Dash.join({
-			placeId = game.PlaceId,
-			calledFrom = "devConsoleTabChange",
-		}, additionArgs)
-		AnalyticsService:ReportInfluxSeries(
-			DEV_CONSOLE_INFLUX_EVENT_NAME,
-			args,
-			FIntReportDevConsoleTabEventsThrottleHundredthsPercent)
-	else
-		AnalyticsService:SendEventImmediately("client", "devConsoleMetric", "devConsoleTabChange", additionArgs)
-	end
+	local args = Dash.join({
+		placeId = game.PlaceId,
+		calledFrom = "devConsoleTabChange",
+	}, additionArgs)
+	AnalyticsService:ReportInfluxSeries(
+		DEV_CONSOLE_INFLUX_EVENT_NAME,
+		args,
+		FIntReportDevConsoleTabEventsThrottleHundredthsPercent
+	)
 end
 
 function ReportTabChange(store, action)
@@ -66,10 +63,9 @@ function ReportTabChange(store, action)
 		local updateIndex = action.newTabIndex
 		local updateIsClient = action.isClientView
 
-		if updateIndex ~= mainView.currTabIndex or
-			(updateIsClient ~= nil and
-			updateIsClient ~= mainView.isClientView) then
-
+		if
+			updateIndex ~= mainView.currTabIndex or (updateIsClient ~= nil and updateIsClient ~= mainView.isClientView)
+		then
 			local additionArgs = {
 				initTab = getTabAnalyticsKeyName(mainView.currTabIndex, mainView.isClientView),
 				endTab = getTabAnalyticsKeyName(updateIndex, updateIsClient),
@@ -77,7 +73,6 @@ function ReportTabChange(store, action)
 
 			dispatchTabAnalytics(additionArgs)
 		end
-
 	elseif action.type == SetDevConsoleVisibility.name then
 		local mainView = store:getState().MainView
 		local displayOptions = store:getState().DisplayOptions
@@ -100,7 +95,6 @@ function ReportTabChange(store, action)
 			}
 		end
 		dispatchTabAnalytics(additionArgs)
-
 	elseif action.type == SetDevConsoleMinimized.name then
 		local mainView = store:getState().MainView
 
@@ -117,7 +111,6 @@ function ReportTabChange(store, action)
 			}
 		end
 		dispatchTabAnalytics(additionArgs)
-
 	end
 end
 

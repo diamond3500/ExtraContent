@@ -1,8 +1,12 @@
 local Foundation = script:FindFirstAncestor("Foundation")
 local Packages = Foundation.Parent
 local React = require(Packages.React)
+
 local ButtonVariant = require(Foundation.Enums.ButtonVariant)
 type ButtonVariant = ButtonVariant.ButtonVariant
+
+local getRbxThumb = require(Foundation.Utility.getRbxThumb)
+local ThumbnailType = require(Foundation.Enums.ThumbnailType)
 
 local Toast = require(Foundation.Components.Toast)
 
@@ -47,7 +51,7 @@ return {
 	},
 	controls = {
 		icon = {
-			"rbxthumb://type=AvatarHeadShot&id=6181525679&w=420&h=420",
+			getRbxThumb(ThumbnailType.AvatarHeadShot, 6181525679),
 			"icons/common/play",
 			"",
 		},

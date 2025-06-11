@@ -1,5 +1,3 @@
---!strict
-
 game:DefineFastFlag("UGCValidateAllowFlexibleTriangleLimit", false)
 
 return function()

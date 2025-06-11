@@ -5,6 +5,7 @@ local CoreGui = game:GetService("CoreGui")
 
 local Cryo = require(CorePackages.Packages.Cryo)
 local Roact = require(CorePackages.Packages.Roact)
+local React = require(CorePackages.Packages.React)
 local RoactRodux = require(CorePackages.Packages.RoactRodux)
 local t = require(CorePackages.Packages.t)
 local UIBlox = require(CorePackages.Packages.UIBlox)
@@ -28,6 +29,8 @@ local CellExtender = require(script.Parent.CellExtender)
 local PlayerList = Components.Parent
 local ClosePlayerDropDown = require(PlayerList.Actions.ClosePlayerDropDown)
 local OpenPlayerDropDown = require(PlayerList.Actions.OpenPlayerDropDown)
+local createShallowEqualAndTables = require(PlayerList.createShallowEqualAndTables)
+local FFlagPlayerListReduceRerenders = require(PlayerList.Flags.FFlagPlayerListReduceRerenders)
 
 local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 local playerInterface = require(RobloxGui.Modules.Interfaces.playerInterface)
@@ -60,13 +63,17 @@ PlayerEntry.validateProps = t.strictInterface(validatePropsWithForwardRef({
 		isFollower = t.boolean,
 	}),
 
-	gameStats = t.array(t.strictInterface({
-		name = t.string,
-		text = t.string,
-		addId = t.integer,
-		isPrimary = t.boolean,
-		priority = t.number,
-	})),
+	gameStats = if FFlagPlayerListReduceRerenders
+		then nil
+		else t.array(t.strictInterface({
+			name = t.string,
+			text = t.string,
+			addId = t.integer,
+			isPrimary = t.boolean,
+			priority = t.number,
+		})),
+
+	gameStatNames = if FFlagPlayerListReduceRerenders then t.array(t.string) else nil,
 
 	[Roact.Ref] = t.optional(t.table),
 
@@ -171,6 +178,11 @@ function PlayerEntry:getBackgroundStyle(layoutValues, style)
 	return layoutValues.BackgroundStyle.Default
 end
 
+local defaultOverlayStyle = if FFlagPlayerListReduceRerenders then {
+	Transparency = 1,
+	Color = Color3.new(1, 1, 1),
+} else nil
+
 function PlayerEntry:getOverlayStyle(layoutValues, style)
 	if not layoutValues.IsTenFoot then
 		local isSelected = self.props.dropDownOpen and self.props.selectedPlayer == self.props.player
@@ -183,7 +195,7 @@ function PlayerEntry:getOverlayStyle(layoutValues, style)
 		end
 	end
 
-	return {
+	return if FFlagPlayerListReduceRerenders then defaultOverlayStyle else{
 		Transparency = 1,
 		Color = Color3.new(1, 1, 1),
 	}
@@ -334,32 +346,62 @@ function PlayerEntry:render()
 				maxLeaderstats = layoutValues.MaxLeaderstatsSmallScreen
 			end
 
-			for i, gameStat in ipairs(self.props.gameStats) do
-				if i > maxLeaderstats then
-					break
+			if FFlagPlayerListReduceRerenders then
+				for i, gameStatName in self.props.gameStatNames do
+					if i > maxLeaderstats then
+						break
+					end
+					playerEntryChildren["GameStat_" .. gameStatName] = Roact.createElement(StatEntry, {
+						statName = gameStatName,
+						statValue = self.props.playerStats[gameStatName],
+						isTitleEntry = self.props.titlePlayerEntry,
+						isTeamEntry = false,
+						layoutOrder = i,
+
+						backgroundStyle = backgroundStyle,
+						overlayStyle = overlayStyle,
+						doubleOverlay = doubleOverlay,
+						textStyle = textStyle,
+
+						onActivated = self.onActivated,
+						onSelectionGained = self.onSelectionGained,
+						onSelectionLost = self.onSelectionLost,
+
+						onMouseEnter = self.onMouseEnter,
+						onMouseLeave = self.onMouseLeave,
+
+						onMouseDown = self.onMouseDown,
+						onInputEnded = self.onInputEnded,
+					})
 				end
-				playerEntryChildren["GameStat_" .. gameStat.name] = Roact.createElement(StatEntry, {
-					statName = gameStat.name,
-					statValue = self.props.playerStats[gameStat.name],
-					isTitleEntry = self.props.titlePlayerEntry,
-					isTeamEntry = false,
-					layoutOrder = i,
+			else
+				for i, gameStat in ipairs(self.props.gameStats) do
+					if i > maxLeaderstats then
+						break
+					end
+					playerEntryChildren["GameStat_" .. gameStat.name] = Roact.createElement(StatEntry, {
+						statName = gameStat.name,
+						statValue = self.props.playerStats[gameStat.name],
+						isTitleEntry = self.props.titlePlayerEntry,
+						isTeamEntry = false,
+						layoutOrder = i,
 
-					backgroundStyle = backgroundStyle,
-					overlayStyle = overlayStyle,
-					doubleOverlay = doubleOverlay,
-					textStyle = textStyle,
+						backgroundStyle = backgroundStyle,
+						overlayStyle = overlayStyle,
+						doubleOverlay = doubleOverlay,
+						textStyle = textStyle,
 
-					onActivated = self.onActivated,
-					onSelectionGained = self.onSelectionGained,
-					onSelectionLost = self.onSelectionLost,
+						onActivated = self.onActivated,
+						onSelectionGained = self.onSelectionGained,
+						onSelectionLost = self.onSelectionLost,
 
-					onMouseEnter = self.onMouseEnter,
-					onMouseLeave = self.onMouseLeave,
+						onMouseEnter = self.onMouseEnter,
+						onMouseLeave = self.onMouseLeave,
 
-					onMouseDown = self.onMouseDown,
-					onInputEnded = self.onInputEnded,
-				})
+						onMouseDown = self.onMouseDown,
+						onInputEnded = self.onInputEnded,
+					})
+				end
 			end
 
 			if not layoutValues.IsTenFoot then
@@ -413,7 +455,7 @@ end
 
 PlayerEntry = RoactRodux.UNSTABLE_connect2(mapStateToProps, mapDispatchToProps)(PlayerEntry)
 
-return Roact.forwardRef(function(props, ref)
+local ForwardRefPlayerEntry = Roact.forwardRef(function(props, ref)
 	return Roact.createElement(
 		PlayerEntry,
 		Cryo.Dictionary.join(props, {
@@ -421,3 +463,9 @@ return Roact.forwardRef(function(props, ref)
 		})
 	)
 end)
+
+if FFlagPlayerListReduceRerenders then
+	return React.memo(ForwardRefPlayerEntry, createShallowEqualAndTables({ "gameStatNames" }))
+end
+
+return ForwardRefPlayerEntry

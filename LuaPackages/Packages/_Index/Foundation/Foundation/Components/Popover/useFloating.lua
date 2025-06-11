@@ -6,6 +6,8 @@ local PopoverSide = require(Foundation.Enums.PopoverSide)
 local PopoverAlign = require(Foundation.Enums.PopoverAlign)
 local positioning = require(script.Parent.positioning)
 
+local Flags = require(Foundation.Utility.Flags)
+
 type PopoverSide = PopoverSide.PopoverSide
 type PopoverAlign = PopoverAlign.PopoverAlign
 
@@ -20,13 +22,22 @@ export type AlignConfig = {
 } | PopoverAlign
 
 -- Conditionally connects signals, which useEventConnection does not support
-local function useConnectSignals(guiObject: GuiObject? | ScreenGui?, signals: { string }, callback: () -> ())
+local function useConnectSignals(
+	guiObject: GuiBase2d? | ScreenGui?,
+	signals: { string },
+	callbackRef: (() -> ()) | { current: () -> () }
+)
 	local connections = React.useRef({})
 
 	React.useEffect(function()
 		if guiObject ~= nil then
 			for _, signal in signals do
-				connections.current[signal] = guiObject:GetPropertyChangedSignal(signal):Connect(callback)
+				connections.current[signal] =
+					guiObject:GetPropertyChangedSignal(signal):Connect(if type(callbackRef) == "table"
+						then function()
+							callbackRef.current()
+						end
+						else callbackRef)
 			end
 		end
 
@@ -35,14 +46,14 @@ local function useConnectSignals(guiObject: GuiObject? | ScreenGui?, signals: { 
 				connection:Disconnect()
 			end
 		end
-	end, { guiObject :: any, callback })
+	end, { guiObject :: any, callbackRef })
 end
 
 local function useFloating(
 	isOpen: boolean,
 	anchor: GuiObject?,
 	content: GuiObject?,
-	overlay: ScreenGui?,
+	overlay: GuiBase2d?,
 	sideConfig: SideConfig,
 	alignConfig: AlignConfig,
 	arrowSize: number?
@@ -52,6 +63,7 @@ local function useFloating(
 	local contentSize, setContentSize = React.useBinding(UDim2.new())
 	local screenSize, setScreenSize = React.useBinding(Vector2.new())
 	local arrowPosition, setArrowPosition = React.useBinding(Vector2.new())
+	local recalculatePositionRef = React.useRef(function() end)
 
 	local recalculatePosition = React.useCallback(function()
 		if not isOpen or not anchor or not content or not overlay then
@@ -103,14 +115,16 @@ local function useFloating(
 		-- https://roblox.atlassian.net/wiki/spaces/UIC/pages/1588593391/Quantum+Gui
 		local _ = content.AbsolutePosition
 	end, { isOpen :: unknown, anchor, content, overlay, sideConfig, alignConfig, arrowSize })
+	recalculatePositionRef.current = recalculatePosition
 
 	React.useLayoutEffect(function()
 		recalculatePosition()
 	end, { recalculatePosition })
 
-	useConnectSignals(anchor, { "AbsolutePosition", "AbsoluteSize" }, recalculatePosition)
-	useConnectSignals(content, { "AbsoluteSize" }, recalculatePosition)
-	useConnectSignals(overlay, { "AbsoluteSize" }, recalculatePosition)
+	local callback = if Flags.FoundationFixUseFloatingContentSize then recalculatePositionRef else recalculatePosition
+	useConnectSignals(anchor, { "AbsolutePosition", "AbsoluteSize" }, callback)
+	useConnectSignals(content, { "AbsoluteSize" }, callback)
+	useConnectSignals(overlay, { "AbsoluteSize" }, callback)
 
 	return position, isVisible, contentSize, arrowPosition, screenSize
 end

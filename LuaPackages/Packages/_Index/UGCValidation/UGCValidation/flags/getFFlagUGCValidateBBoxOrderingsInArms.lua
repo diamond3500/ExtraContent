@@ -1,5 +1,3 @@
---!strict
-
 game:DefineFastFlag("UGCValidateBBoxOrderingsInArms", false)
 
 return function()

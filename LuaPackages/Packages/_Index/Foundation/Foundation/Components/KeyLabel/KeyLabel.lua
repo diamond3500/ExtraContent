@@ -1,7 +1,7 @@
-local UserInputService = game:GetService("UserInputService")
-
 local Foundation = script:FindFirstAncestor("Foundation")
 local Packages = Foundation.Parent
+
+local UserInputService = require(Foundation.Utility.Wrappers).Services.UserInputService
 
 local React = require(Packages.React)
 local ReactUtils = require(Packages.ReactUtils)

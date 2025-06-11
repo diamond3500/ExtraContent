@@ -1,6 +1,12 @@
 local FIntReactSchedulingTrackerEnableHunderedthsPercent: number = game:DefineFastInt("ReactSchedulingTracker", 0)
 local FIntReactSchedulingTrackerPeriodMs: number = game:DefineFastInt("ReactSchedulingTrackerPeriodMs", 30000)
 local EngineFeatureTelemetryServiceMemoryCPUInfoEnabled = game:GetEngineFeature("TelemetryServiceMemoryCPUInfoEnabled")
+local FFlagEnableReactDeviceTierCardinality = game:DefineFastFlag("EnableReactDeviceTierCardinality", false)
+local FIntReactLowEndMemoryCutoff: number = game:DefineFastInt("ReactLowEndMemoryCutoff", 3500)
+local FIntReactHighEndMemoryCutoff: number = game:DefineFastInt("ReactHighEndMemoryCutoff", 7500)
+local FFlagDisableReactSchedulingTimePctStats = game:DefineFastFlag("DisableReactSchedulingTimePctStats", false)
+local FFlagDisableReactSchedulingAvgMaxMsStats = game:DefineFastFlag("DisableReactSchedulingAvgMaxMsStats", false)
+local FFlagAddFrameCountParams = game:DefineFastFlag("AddFrameCountParams", false)
 
 local MAX_SAMPLE_RATE = 10000
 local SAMPLE_ID_BIAS = 1409
@@ -58,6 +64,7 @@ local CorePackages = game:GetService("CorePackages")
 local mutedError = require(CorePackages.Workspace.Packages.Loggers).mutedError
 local ReactRoblox = require(CorePackages.Packages.ReactRoblox)
 local ReactReconciler = require(CorePackages.Packages.ReactReconciler)
+local SystemInfoProtocol = require(CorePackages.Workspace.Packages.SystemInfoProtocol).SystemInfoProtocol
 type FiberRoot = ReactReconciler.FiberRoot
 
 local schedulingProfiler = ReactRoblox.schedulingProfiler
@@ -72,8 +79,48 @@ local SchedulerStates = {
 	PassiveEffects = "PassiveEffects" :: "PassiveEffects",
 }
 
+type DeviceTier = "LowEnd" | "MidTier" | "HighEnd"
+
+local DeviceTier = {
+	LowEnd = "LowEnd" :: "LowEnd",
+	MidTier = "MidTier" :: "MidTier",
+	HighEnd = "HighEnd" :: "HighEnd",
+}
+
 local function getCurrentTimeMs(): number
 	return os.clock() * 1000
+end
+
+-- return the "memory tier" of current device based on available memory
+function deviceMemoryTier(): DeviceTier?
+	if not FFlagEnableReactDeviceTierCardinality then
+		return nil
+	end
+
+	local success, systemInfo = pcall(function()
+		return SystemInfoProtocol.default:getSystemInfo({SystemInfoProtocol.InfoNames.MAX_MEMORY})
+	end)
+	if success and typeof(systemInfo) == "table" then
+		local maxMemory = tonumber(systemInfo[SystemInfoProtocol.InfoNames.MAX_MEMORY])
+		if not maxMemory then
+			return nil
+		end
+
+		if maxMemory <= FIntReactLowEndMemoryCutoff then
+			return DeviceTier.LowEnd
+		elseif maxMemory >= FIntReactHighEndMemoryCutoff then
+			return DeviceTier.HighEnd
+		else
+			return DeviceTier.MidTier
+		end
+	end
+
+	return nil
+end
+
+local deviceTier
+if FFlagEnableReactDeviceTierCardinality then 
+	deviceTier = deviceMemoryTier()
 end
 
 local SchedulerStateMachine = {}
@@ -275,14 +322,17 @@ local RootSummaryEvent = {
 	links = DOCS_LINK,
 }
 
-local RootPeriodStatConfig = {
-	eventName = "ReactRootPeriod",
-	backends = { "RobloxTelemetryStat" },
-	lastUpdated = { 2025, 2, 18 },
-	throttlingPercentage = game:DefineFastInt("ReactRootPeriodStatThrottleHunderedthsPercent2", 0),
-	description = "Stats for React performance for a root over a period",
-	links = DOCS_LINK,
-}
+local RootPeriodStatConfig
+if not FFlagDisableReactSchedulingTimePctStats then
+	RootPeriodStatConfig = {
+		eventName = "ReactRootPeriod",
+		backends = { "RobloxTelemetryStat" },
+		lastUpdated = { 2025, 2, 18 },
+		throttlingPercentage = game:DefineFastInt("ReactRootPeriodStatThrottleHunderedthsPercent2", 0),
+		description = "Stats for React performance for a root over a period",
+		links = DOCS_LINK,
+	}
+end
 
 local RootTaskCountConfig = {
 	eventName = "ReactRootTaskCount",
@@ -293,14 +343,17 @@ local RootTaskCountConfig = {
 	links = DOCS_LINK,
 }
 
-local RootPeriodTaskStatConfig = {
-	eventName = "ReactRootPeriodTask",
-	backends = { "RobloxTelemetryStat" },
-	lastUpdated = { 2025, 2, 18 },
-	throttlingPercentage = game:DefineFastInt("ReactRootPeriodTaskStatThrottleHunderedthsPercent2", 0),
-	description = "Task stats for React performance for a root over a period",
-	links = DOCS_LINK,
-}
+local RootPeriodTaskStatConfig
+if not FFlagDisableReactSchedulingAvgMaxMsStats then
+	RootPeriodTaskStatConfig = {
+		eventName = "ReactRootPeriodTask",
+		backends = { "RobloxTelemetryStat" },
+		lastUpdated = { 2025, 2, 18 },
+		throttlingPercentage = game:DefineFastInt("ReactRootPeriodTaskStatThrottleHunderedthsPercent2", 0),
+		description = "Task stats for React performance for a root over a period",
+		links = DOCS_LINK,
+	}
+end
 
 -- This is for stats on individual root updates, not period summary stats
 local RootUpdateStatConfig = {
@@ -457,6 +510,7 @@ function ReactSchedulingTracker:reportRoot(rootTime: RootTaskTime, root: FiberRo
 			RootUpdateStatConfig,
 			{ customFields = {
 				rootName = name,
+				deviceTier = deviceTier,
 				updateType = "PassiveEffects",
 				context = self.context,
 			} },
@@ -474,6 +528,7 @@ function ReactSchedulingTracker:reportRoot(rootTime: RootTaskTime, root: FiberRo
 
 			{ customFields = {
 				rootName = name,
+				deviceTier = deviceTier,
 				updateType = "TimeToComplete",
 				context = self.context,
 			} },
@@ -488,6 +543,7 @@ function ReactSchedulingTracker:reportRoot(rootTime: RootTaskTime, root: FiberRo
 			RootUpdateStatConfig,
 			{ customFields = {
 				rootName = name,
+				deviceTier = deviceTier,
 				updateType = "RenderAndCommit",
 				context = self.context,
 			} },
@@ -497,6 +553,7 @@ function ReactSchedulingTracker:reportRoot(rootTime: RootTaskTime, root: FiberRo
 			RootUpdateStatConfig,
 			{ customFields = {
 				rootName = name,
+				deviceTier = deviceTier,
 				updateType = "Commit",
 				context = self.context,
 			} },
@@ -560,6 +617,8 @@ function ReactSchedulingTracker:reportPeriod()
 		period_length_ms = periodLengthMs,
 		react_total_time_ms = frameMetrics.totalReactTimeMs,
 		react_total_time_pct = frameMetrics.totalReactTimeMs / periodLengthMs,
+		react_frame_count = if FFlagAddFrameCountParams then frameMetrics.reactFrameCount else nil,
+                total_frame_count = if FFlagAddFrameCountParams then frameMetrics.totalFrameCount else nil,
 		average_react_all_frame_ms = frameMetrics.totalReactTimeMs / frameMetrics.totalFrameCount,
 		average_react_only_frame_ms = if frameMetrics.reactFrameCount > 0
 			then frameMetrics.totalReactTimeMs / frameMetrics.reactFrameCount
@@ -589,16 +648,16 @@ function ReactSchedulingTracker:reportPeriod()
 	})
 
 	TelemetryService:LogStat(PeriodStatConfig, {
-		customFields = { stat = "ReactTotalTimePct", context = self.context },
+		customFields = { stat = "ReactTotalTimePct", context = self.context, deviceTier = deviceTier },
 	}, periodSummary.react_total_time_pct)
 	TelemetryService:LogStat(PeriodStatConfig, {
-		customFields = { stat = "AverageReactAllFrameMs", context = self.context },
+		customFields = { stat = "AverageReactAllFrameMs", context = self.context, deviceTier = deviceTier },
 	}, periodSummary.average_react_all_frame_ms)
 	TelemetryService:LogStat(PeriodStatConfig, {
-		customFields = { stat = "AverageReactOnlyFrameMs", context = self.context },
+		customFields = { stat = "AverageReactOnlyFrameMs", context = self.context, deviceTier = deviceTier },
 	}, periodSummary.average_react_only_frame_ms)
 	TelemetryService:LogStat(PeriodStatConfig, {
-		customFields = { stat = "MaxReactFrameMs", context = self.context },
+		customFields = { stat = "MaxReactFrameMs", context = self.context, deviceTier = deviceTier },
 	}, periodSummary.max_react_frame_ms)
 
 	for i = 1, MAX_BUCKETS do
@@ -609,6 +668,7 @@ function ReactSchedulingTracker:reportPeriod()
 				category = "AllFrame",
 				bucket = bucket,
 				context = self.context,
+				deviceTier = deviceTier,
 			} },
 			frameMetrics.allFrameHistogram[i]
 		)
@@ -618,6 +678,7 @@ function ReactSchedulingTracker:reportPeriod()
 				category = "ReactFrame",
 				bucket = bucket,
 				context = self.context,
+				deviceTier = deviceTier,
 			} },
 			frameMetrics.reactFrameHistogram[i]
 		)
@@ -627,6 +688,7 @@ function ReactSchedulingTracker:reportPeriod()
 				category = "ReactDropChange",
 				bucket = bucket,
 				context = self.context,
+				deviceTier = deviceTier,
 			} },
 			frameMetrics.reactDropChangeHistogram[i]
 		)
@@ -636,33 +698,37 @@ function ReactSchedulingTracker:reportPeriod()
 		root.root_name = name
 		root.update_total_time_ms = root.render_total_time_ms + root.commit_total_time_ms
 		root.total_time_ms = root.update_total_time_ms + root.passive_effects_total_time_ms
+		root.avg_render_time_ms = root.render_total_time_ms / root.update_count
+		root.context = self.context
 		root.total_time_pct = (root.update_total_time_ms + root.passive_effects_total_time_ms) / periodSummary.react_total_time_ms
 		root.avg_update_time_ms = root.update_total_time_ms / root.update_count
-		root.avg_render_time_ms = root.render_total_time_ms / root.update_count
 		root.avg_commit_time_ms = root.commit_total_time_ms / root.update_count
 		root.avg_passive_effects_time_ms = root.passive_effects_total_time_ms / root.passive_effects_count
 		root.avg_time_to_update_ms = root.total_time_to_update_ms / root.update_count
-		root.context = self.context
 
 		TelemetryService:LogEvent(RootSummaryEvent, {
 			standardizedFields = summaryStandardizedFields,
 			customFields = root
 		})
 
-		TelemetryService:LogStat(
-			RootPeriodStatConfig,
-			{ customFields = {
-				rootName = root.root_name,
-				stat = "TotalTimePct",
-				context = self.context,
-			} },
-			root.total_time_pct
-		)
+		if not FFlagDisableReactSchedulingTimePctStats then
+			TelemetryService:LogStat(
+				RootPeriodStatConfig,
+				{ customFields = {
+					rootName = root.root_name,
+					deviceTier = deviceTier,
+					stat = "TotalTimePct",
+					context = self.context,
+				} },
+				root.total_time_pct
+			)
+		end
 
 		TelemetryService:LogCounter(
 			RootTaskCountConfig,
 			{ customFields = {
 				rootName = root.root_name,
+				deviceTier = deviceTier,
 				task = "RenderAndCommit",
 				context = self.context,
 			} },
@@ -672,93 +738,104 @@ function ReactSchedulingTracker:reportPeriod()
 			RootTaskCountConfig,
 			{ customFields = {
 				rootName = root.root_name,
+				deviceTier = deviceTier,
 				task = "PassiveEffects",
 				context = self.context,
 			} },
 			root.passive_effects_count
 		)
 
-		TelemetryService:LogStat(
-			RootPeriodTaskStatConfig,
-			{ customFields = {
-				rootName = root.root_name,
-				task = "RenderAndCommit",
-				stat = "AvgMs",
-				context = self.context,
-			} },
-			root.avg_update_time_ms
-		)
-		TelemetryService:LogStat(
-			RootPeriodTaskStatConfig,
-			{ customFields = {
-				rootName = root.root_name,
-				task = "Commit",
-				stat = "AvgMs",
-				context = self.context,
-			} },
-			root.avg_commit_time_ms
-		)
-		TelemetryService:LogStat(
-			RootPeriodTaskStatConfig,
-			{ customFields = {
-				rootName = root.root_name,
-				task = "TimeToUpdateMs",
-				stat = "AvgMs",
-				context = self.context,
-			} },
-			root.avg_time_to_update_ms
-		)
-		TelemetryService:LogStat(
-			RootPeriodTaskStatConfig,
-			{ customFields = {
-				rootName = root.root_name,
-				task = "PassiveEffects",
-				stat = "AvgMs",
-				context = self.context,
-			} },
-			root.avg_passive_effects_time_ms
-		)
+		if not FFlagDisableReactSchedulingAvgMaxMsStats then
+			TelemetryService:LogStat(
+				RootPeriodTaskStatConfig,
+				{ customFields = {
+					rootName = root.root_name,
+					deviceTier = deviceTier,
+					task = "RenderAndCommit",
+					stat = "AvgMs",
+					context = self.context,
+				} },
+				root.avg_update_time_ms
+			)
+			TelemetryService:LogStat(
+				RootPeriodTaskStatConfig,
+				{ customFields = {
+					rootName = root.root_name,
+					deviceTier = deviceTier,
+					task = "Commit",
+					stat = "AvgMs",
+					context = self.context,
+				} },
+				root.avg_commit_time_ms
+			)
+			TelemetryService:LogStat(
+				RootPeriodTaskStatConfig,
+				{ customFields = {
+					rootName = root.root_name,
+					deviceTier = deviceTier,
+					task = "TimeToUpdateMs",
+					stat = "AvgMs",
+					context = self.context,
+				} },
+				root.avg_time_to_update_ms
+			)
+			TelemetryService:LogStat(
+				RootPeriodTaskStatConfig,
+				{ customFields = {
+					rootName = root.root_name,
+					deviceTier = deviceTier,
+					task = "PassiveEffects",
+					stat = "AvgMs",
+					context = self.context,
+				} },
+				root.avg_passive_effects_time_ms
+			)
 
-		TelemetryService:LogStat(
-			RootPeriodTaskStatConfig,
-			{ customFields = {
-				rootName = root.root_name,
-				task = "RenderAndCommit",
-				stat = "MaxMs",
-				context = self.context,
-			} },
-			root.max_update_time_ms
-		)
-		TelemetryService:LogStat(
-			RootPeriodTaskStatConfig,
-			{ customFields = {
-				rootName = root.root_name,
-				task = "Commit",
-				stat = "MaxMs",
-				context = self.context,
-			} },
-			root.max_commit_time_ms
-		)
-		TelemetryService:LogStat(
-			RootPeriodTaskStatConfig,
-			{ customFields = {
-				rootName = root.root_name,
-				task = "TimeToUpdateMs",
-				stat = "MaxMs",
-				context = self.context,
-			} },
-			root.max_time_to_update_ms
-		)
-		TelemetryService:LogStat(
-			RootPeriodTaskStatConfig,
-			{ customFields = {
-				rootName = root.root_name,
-				task = "PassiveEffects",
-				stat = "MaxMs",
-				context = self.context,
-			} },
-			root.max_passive_effects_time_ms
-		)
+			TelemetryService:LogStat(
+				RootPeriodTaskStatConfig,
+				{ customFields = {
+					rootName = root.root_name,
+					deviceTier = deviceTier,
+					task = "RenderAndCommit",
+					stat = "MaxMs",
+					context = self.context,
+				} },
+				root.max_update_time_ms
+			)
+			TelemetryService:LogStat(
+				RootPeriodTaskStatConfig,
+				{ customFields = {
+					rootName = root.root_name,
+					deviceTier = deviceTier,
+					task = "Commit",
+					stat = "MaxMs",
+					context = self.context,
+				} },
+				root.max_commit_time_ms
+			)
+			TelemetryService:LogStat(
+				RootPeriodTaskStatConfig,
+				{ customFields = {
+					rootName = root.root_name,
+					deviceTier = deviceTier,
+					task = "TimeToUpdateMs",
+					stat = "MaxMs",
+					context = self.context,
+				} },
+				root.max_time_to_update_ms
+			)
+			TelemetryService:LogStat(
+				RootPeriodTaskStatConfig,
+				{ customFields = {
+					rootName = root.root_name,
+					deviceTier = deviceTier,
+					task = "PassiveEffects",
+					stat = "MaxMs",
+					context = self.context,
+				} },
+				root.max_passive_effects_time_ms
+			)
+		end
 	end
 end
 

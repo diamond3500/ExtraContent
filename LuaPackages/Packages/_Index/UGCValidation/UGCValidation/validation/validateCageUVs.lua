@@ -1,5 +1,3 @@
---!strict
-
 --[[
 	validateCageUVs.lua checks that WrapTarget cage meshes have the correct number of unique UVs
 ]]

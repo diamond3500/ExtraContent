@@ -1,5 +1,3 @@
---!strict
-
 game:DefineFastFlag("UGCValidatePartMass", false)
 
 return function()

@@ -14,10 +14,7 @@ local FFlagFixNewPlayerCheck = game:DefineFastFlag("FixNewPlayerCheck", false)
 local FFlagOnlyMakeInputsForVoiceUsers = game:DefineFastFlag("OnlyMakeInputsForVoiceUsers", false)
 local FFlagSendLikelySpeakingUsers = game:DefineFastFlag("SendLikelySpeakingUsers", false)
 local FFlagReceiveLikelySpeakingUsersEvent = game:DefineFastFlag("ReceiveLikelySpeakingUsersEventV3", false)
-local FFlagUseAudioInstanceAdded = game:DefineFastFlag("VoiceDefaultUseAudioInstanceAdded", false)
-	and game:GetEngineFeature("AudioInstanceAddedApiEnabled")
-local FFlagUseGetAudioInstances = game:DefineFastFlag("VoiceDefaultUseGetAudioInstances", false)
-local FFlagUseAudioDeviceRemoving = game:DefineFastFlag("VoiceDefaultUseAudioDeviceRemoving", false)
+local FFlagUseAudioInstanceAdded = game:GetEngineFeature("AudioInstanceAddedApiEnabled")
 
 local FFlagUseOldVoiceCurves = game:DefineFastFlag("UseOldVoiceCurvesLua", false)
 
@@ -153,16 +150,14 @@ local function trackDevice(device: AudioDeviceInput)
 	end)
 
 	audioDevices[device] = connections :: AudioDeviceConnections
-	if FFlagUseAudioDeviceRemoving then
-		if FFlagFixNewPlayerCheck then
-			device.Destroying:Connect(function()
-				untrackDeviceForPlayer(device, device.Player)
-			end)
-		else
-			device.Destroying:Connect(function()
-				untrackDevice(device)
-			end)
-		end
+	if FFlagFixNewPlayerCheck then
+		device.Destroying:Connect(function()
+			untrackDeviceForPlayer(device, device.Player)
+		end)
+	else
+		device.Destroying:Connect(function()
+			untrackDevice(device)
+		end)
 	end
 end
 
@@ -242,39 +237,14 @@ if (VoiceChatService :: any).UseNewAudioApi then
 		end)
 	end
 
-	if FFlagUseGetAudioInstances then
-		for _, inst in SoundService:GetAudioInstances() do
-			if inst:IsA("AudioDeviceInput") then
-				local device = inst :: AudioDeviceInput
-				if FFlagSetNewDeviceToFalse then
-					device.Active = false
-				end
-				trackDevice(device)
+	for _, inst in SoundService:GetAudioInstances() do
+		if inst:IsA("AudioDeviceInput") then
+			local device = inst :: AudioDeviceInput
+			if FFlagSetNewDeviceToFalse then
+				device.Active = false
 			end
+			trackDevice(device)
 		end
-	else
-		for _, inst in game:GetDescendants() do
-			if inst:IsA("AudioDeviceInput") then
-				local device = inst :: AudioDeviceInput
-				if FFlagSetNewDeviceToFalse then
-					device.Active = false
-				end
-				trackDevice(device)
-			end
-		end
-	end
-
-	if not FFlagUseAudioDeviceRemoving then
-		game.DescendantRemoving:Connect(function(inst)
-			if inst:IsA("AudioDeviceInput") then
-				local device = inst :: AudioDeviceInput
-				if FFlagFixNewPlayerCheck then
-					untrackDeviceForPlayer(device, device.Player)
-				else
-					untrackDevice(device)
-				end
-			end
-		end)
 	end
 
 	SetUserActive.OnServerEvent:Connect(function(player, active)

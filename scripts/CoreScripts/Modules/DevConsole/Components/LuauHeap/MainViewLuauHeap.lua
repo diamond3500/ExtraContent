@@ -331,7 +331,7 @@ function MainViewLuauHeap:render()
 			onSearchTermChanged = if FFlagHeapProfilerSearch then self.onSearchTermChanged else nil,
 		}, {
 			Roact.createElement(BoxButton, {
-				text = "Create Snaphot",
+				text = "Create Snapshot",
 				onClicked = self.onCreateSnapshot,
 			}),
 

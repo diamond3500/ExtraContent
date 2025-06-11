@@ -87,7 +87,7 @@ local function AppStyleProvider(props: Props)
 	local tokens: Tokens = getTokens(style.deviceType, themeName) :: Tokens
 	local textSizeOffset, setTextSizeOffset = React.useState(0)
 	local theme = getThemeFromName(themeName)
-	local foundationProviderPresent = if UIBloxConfig.useFoundationProvider then useTokens().Config ~= nil else false
+	local foundationProviderPresent = useTokens().Config ~= nil
 	local disableColorMapping = false
 
 	if UIBloxConfig.allowDisableColorMapping then
@@ -170,7 +170,7 @@ local function AppStyleProvider(props: Props)
 		},
 	}, Roact.oneChild(props.children :: any))
 
-	if not foundationProviderPresent and UIBloxConfig.useFoundationProvider then
+	if not foundationProviderPresent then
 		if not isJest and _G.__DEV__ then
 			Logger:warning(
 				debug.traceback(

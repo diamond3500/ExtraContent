@@ -1,5 +1,3 @@
---!strict
-
 game:DefineFastFlag("UGCValidateCageUVTriangleArea", false)
 
 return function()

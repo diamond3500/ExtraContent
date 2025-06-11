@@ -3,8 +3,6 @@ local UGCValidationService = game:GetService("UGCValidationService")
 local root = script.Parent.Parent
 
 local Types = require(root.util.Types)
-local pcallDeferred = require(root.util.pcallDeferred)
-local getFFlagUGCLCQualityReplaceLua = require(root.flags.getFFlagUGCLCQualityReplaceLua)
 
 local getFFlagUGCValidatePartSizeWithinRenderSizeLimits =
 	require(root.flags.getFFlagUGCValidatePartSizeWithinRenderSizeLimits)
@@ -25,11 +23,11 @@ local function pointInBounds(worldPos, boundsCF, boundsSize)
 		and objectPos.Z <= boundsSize.Z / 2
 end
 
-local function isSizeWithinBounds(part, boundsSize)
+local function isSizeWithinBounds(part: BasePart, boundsSize)
 	return part.Size.X <= boundsSize.X and part.Size.Y <= boundsSize.Y and part.Size.Z <= boundsSize.Z
 end
 
-local function truncate(number)
+local function truncate(number: number): number
 	return math.floor(number * 100) / 100
 end
 
@@ -91,64 +89,36 @@ local function validateMeshBounds(
 		end
 	end
 
-	if getFFlagUGCLCQualityReplaceLua() then
-		local success, result = pcallDeferred(function()
-			return UGCValidationService:ValidateEditableMeshBounds(
-				meshInfo.editableMesh,
-				meshScale,
-				boundsOffset,
-				attachment.CFrame,
-				handle.CFrame
+	local success, verts = pcall(function()
+		return UGCValidationService:GetEditableMeshVerts(meshInfo.editableMesh)
+	end)
+	if not success then
+		Analytics.reportFailure(Analytics.ErrorType.validateMeshBounds_FailedToLoadMesh, nil, validationContext)
+		if nil ~= isServer and isServer then
+			-- there could be many reasons that an error occurred, the asset is not necessarilly incorrect, we just didn't get as
+			-- far as testing it, so we throw an error which means the RCC will try testing the asset again, rather than returning false
+			-- which would mean the asset failed validation
+			error(
+				string.format(
+					"Failed to load body part mesh %s. Make sure body part exists and try again.",
+					meshInfo.fullName
+				)
 			)
-		end, validationContext)
-
-		if not success then
-			if nil ~= isServer and isServer then
-				-- there could be many reasons that an error occurred, the asset is not necessarilly incorrect, we just didn't get as
-				-- far as testing it, so we throw an error which means the RCC will try testing the asset again, rather than returning false
-				-- which would mean the asset failed validation
-				error("Failed to execute validateMeshBounds check")
-			end
-			Analytics.reportFailure(Analytics.ErrorType.validateMeshBounds_FailedToExecute, nil, validationContext)
-			return false, { "Failed to execute validateMeshBounds check" }
 		end
+		return false,
+			{
+				string.format(
+					"Failed to load body part mesh %s. Make sure body part exists and try again.",
+					meshInfo.fullName
+				),
+			}
+	end
 
-		if not result then
+	for _, vertPos in pairs(verts) do
+		local worldPos = handle.CFrame:PointToWorldSpace(vertPos * meshScale)
+		if not pointInBounds(worldPos, boundsCF, boundsSize) then
 			Analytics.reportFailure(Analytics.ErrorType.validateMeshBounds_TooLarge, nil, validationContext)
 			return false, getErrors(meshInfo.context :: string, assetTypeName, boundsSize)
-		end
-	else
-		local success, verts = pcall(function()
-			return UGCValidationService:GetEditableMeshVerts(meshInfo.editableMesh)
-		end)
-		if not success then
-			Analytics.reportFailure(Analytics.ErrorType.validateMeshBounds_FailedToLoadMesh, nil, validationContext)
-			if nil ~= isServer and isServer then
-				-- there could be many reasons that an error occurred, the asset is not necessarilly incorrect, we just didn't get as
-				-- far as testing it, so we throw an error which means the RCC will try testing the asset again, rather than returning false
-				-- which would mean the asset failed validation
-				error(
-					string.format(
-						"Failed to load body part mesh %s. Make sure body part exists and try again.",
-						meshInfo.fullName
-					)
-				)
-			end
-			return false,
-				{
-					string.format(
-						"Failed to load body part mesh %s. Make sure body part exists and try again.",
-						meshInfo.fullName
-					),
-				}
-		end
-
-		for _, vertPos in pairs(verts) do
-			local worldPos = handle.CFrame:PointToWorldSpace(vertPos * meshScale)
-			if not pointInBounds(worldPos, boundsCF, boundsSize) then
-				Analytics.reportFailure(Analytics.ErrorType.validateMeshBounds_TooLarge, nil, validationContext)
-				return false, getErrors(meshInfo.context :: string, assetTypeName, boundsSize)
-			end
 		end
 	end
 

@@ -137,7 +137,13 @@ function Cell:renderWithProviders(style, getSelectionCursor)
 	local userInteractionEnabled = self.props.userInteractionEnabled
 	local interactionEnabled = (tail and userInteractionEnabled) and true or false
 	local isDisabled = self.props.isDisabled
-	local onActivated = self.props.onActivated
+	local onActivated = if UIBloxConfig.useFoundationInteractable and self.props.onActivated
+		then function(...)
+			if interactionEnabled then
+				self.props.onActivated(...)
+			end
+		end
+		else self.props.onActivated
 	local onTouchTapped = self.props.onTouchTapped
 
 	local currentState = self.props[Cell.debugProps.controlState] or self.state.controlState
@@ -158,7 +164,7 @@ function Cell:renderWithProviders(style, getSelectionCursor)
 
 		isDisabled = isDisabled,
 		onStateChanged = self.onStateChanged,
-		userInteractionEnabled = interactionEnabled,
+		userInteractionEnabled = if not UIBloxConfig.useFoundationInteractable then interactionEnabled else nil,
 		[Roact.Event.Activated] = onActivated,
 		[Roact.Event.TouchTap] = onTouchTapped,
 

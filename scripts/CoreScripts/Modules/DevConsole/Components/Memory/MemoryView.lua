@@ -22,7 +22,6 @@ local GRAPH_HEIGHT = Constants.GeneralFormatting.LineGraphHeight
 
 local NO_RESULT_SEARCH_STR = Constants.GeneralFormatting.NoResultSearchStr
 
-local FFlagDevConsoleMemorySort = game:DefineFastFlag("DevConsoleMemorySort", false)
 
 local tweenInfo = TweenInfo.new(
 	0.3, -- Time
@@ -72,10 +71,8 @@ function MemoryView:init(props)
 	self.onSortChanged = function(sortType)
 		local currSortType = props.targetMemoryData:getSortType()
 		if sortType == currSortType then
-			if FFlagDevConsoleMemorySort then
-				-- The memory values change so resorting the same category is always appropriate behavior
-				props.targetMemoryData:setSortType(sortType)
-			end
+			-- The memory values change so resorting the same category is always appropriate behavior
+			props.targetMemoryData:setSortType(sortType)
 			self:setState({
 				reverseSort = not self.state.reverseSort,
 			})

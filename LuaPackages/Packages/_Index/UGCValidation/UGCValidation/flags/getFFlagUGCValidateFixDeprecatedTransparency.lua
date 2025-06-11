@@ -1,5 +1,3 @@
---!strict
-
 game:DefineFastFlag("UGCValidateFixDeprecatedTransparency", false)
 
 return function()

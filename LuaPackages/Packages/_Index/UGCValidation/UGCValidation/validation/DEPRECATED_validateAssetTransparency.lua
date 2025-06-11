@@ -10,7 +10,6 @@ local getEngineFeatureEngineUGCValidationGetImageTransparency =
 	require(root.flags.getEngineFeatureEngineUGCValidationGetImageTransparency)
 local getEngineFeatureViewportFrameSnapshotEngineFeature =
 	require(root.flags.getEngineFeatureViewportFrameSnapshotEngineFeature)
-local getFFlagUGCValidationRemoveRotationCheck = require(root.flags.getFFlagUGCValidationRemoveRotationCheck)
 
 local FIntUGCValidationHeadThreshold = game:DefineFastInt("UGCValidationHeadThreshold", 30)
 local FIntUGCValidationTorsoThresholdFront = game:DefineFastInt("UGCValidationTorsoThresholdFront", 50)
@@ -34,7 +33,6 @@ local UGCValidationService = game:GetService("UGCValidationService")
 local Constants = require(root.Constants)
 local Thumbnailer = require(root.util.Thumbnailer)
 local setupTransparentPartSize = require(root.util.setupTransparentPartSize)
-local floatEquals = require(root.util.floatEquals)
 local Types = require(root.util.Types)
 
 local CAMERA_FOV: number = 70
@@ -89,32 +87,6 @@ local VALIDATION_FAILED_ERROR_STRING_NEW = nil
 if getEngineFeatureEngineUGCValidationGetImageTransparency() then
 	VALIDATION_FAILED_ERROR_STRING_NEW =
 		"%s is difficult to see from the %s. %d%% of the bounding box is visible, but over %d%% is required. Please expand the body part to fill in more room."
-end
-
-local function arePartsRotated(inst: Instance, assetTypeEnum: Enum.AssetType): boolean
-	local function isCFrameRotated(cframe: CFrame): boolean
-		local x, y, z = cframe:ToOrientation()
-		return not floatEquals(x, 0) or not floatEquals(y, 0) or not floatEquals(z, 0)
-	end
-
-	local assetInfo = Constants.ASSET_TYPE_INFO[assetTypeEnum]
-	assert(assetInfo)
-
-	if Enum.AssetType.DynamicHead == assetTypeEnum then
-		if isCFrameRotated((inst :: MeshPart).CFrame) then
-			return true
-		end
-	else
-		for subPartName in pairs(assetInfo.subParts) do
-			local meshHandle: MeshPart? = inst:FindFirstChild(subPartName) :: MeshPart
-			assert(meshHandle)
-
-			if isCFrameRotated((meshHandle :: MeshPart).CFrame) then
-				return true
-			end
-		end
-	end
-	return false
 end
 
 local function flattenParts(
@@ -205,15 +177,6 @@ return function(
 		return true
 	end
 
-	if not getFFlagUGCValidationRemoveRotationCheck() then
-		if arePartsRotated(inst :: Instance, assetTypeEnum) then
-			return false,
-				{
-					"Transparency validation failed as some parts are rotated. You must reset all rotation values to zero.",
-				}
-		end
-	end
-
 	local instClone: Instance = (inst :: Instance):Clone()
 	local transparentPart: MeshPart = Instance.new("MeshPart") :: MeshPart
 
@@ -272,11 +235,11 @@ return function(
 		if getEngineFeatureEngineUGCValidationGetImageTransparency() then
 			if isServer then
 				success, opacityValue = pcall(function()
-					return UGCValidationService:getImageTransparencyWithByteString(img :: string)
+					return UGCValidationService:GetImageTransparencyWithByteString(img :: string)
 				end)
 			else
 				success, opacityValue = pcall(function()
-					return UGCValidationService:getImageTransparencyWithTextureID(img :: string)
+					return UGCValidationService:GetImageTransparencyWithTextureID(img :: string)
 				end)
 			end
 

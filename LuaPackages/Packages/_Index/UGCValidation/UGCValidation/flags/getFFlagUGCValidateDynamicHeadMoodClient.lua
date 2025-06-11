@@ -1,5 +1,3 @@
---!strict
-
 game:DefineFastFlag("UGCValidateDynamicHeadMoodClient", false)
 
 return function()

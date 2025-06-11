@@ -41,7 +41,7 @@ local Chrome = script.Parent.Parent.Parent.Chrome
 
 local ChromeEnabled = require(Chrome.Enabled)
 local GetShouldShowPlatformChatBasedOnPolicy = require(Chrome.Flags.GetShouldShowPlatformChatBasedOnPolicy)
-local PeekConstants = require(Chrome.Integrations.MusicUtility.Constants)
+local MusicConstants = require(Chrome.Integrations.MusicUtility.Constants)
 
 local FFlagEnableChromeAnalytics = SharedFlags.GetFFlagEnableChromeAnalytics()
 
@@ -51,6 +51,9 @@ local FFlagHideTopBarConsole = SharedFlags.FFlagHideTopBarConsole
 
 local SocialExperiments = require(CorePackages.Workspace.Packages.SocialExperiments)
 local TenFootInterfaceExpChatExperimentation = SocialExperiments.TenFootInterfaceExpChatExperimentation
+local isInExperienceUIVREnabled =
+	require(CorePackages.Workspace.Packages.SharedExperimentDefinition).isInExperienceUIVREnabled
+local isSpatial = require(CorePackages.Workspace.Packages.AppCommonLib).isSpatial
 
 local Unibar
 local KeepOutAreasHandler
@@ -124,7 +127,9 @@ local TopBarAppPolicy = require(script.Parent.Parent.TopBarAppPolicy)
 local UseUpdatedHealthBar = ChromeEnabled()
 
 -- vr bottom bar
-local VRBottomBar = require(RobloxGui.Modules.VR.VRBottomBar.VRBottomBar)
+local VRBottomBar = if isInExperienceUIVREnabled and ChromeEnabled()
+	then require(script.Parent.VRBottomUnibar)
+	else require(RobloxGui.Modules.VR.VRBottomBar.VRBottomBar)
 
 local function selectMenuOpen(state)
 	return state.displayOptions.menuOpen or state.displayOptions.inspectMenuOpen
@@ -263,10 +268,13 @@ function TopBarApp:renderWithStyle(style)
 					voiceChatServiceManager = VoiceChatServiceManager,
 					voiceEnabled = voiceContext.voiceEnabled,
 					voiceState = voiceContext.voiceState,
+					showBadgeOver12 = if isInExperienceUIVREnabled then self.props.showBadgeOver12 else nil,
 				})
 			end),
 		})
-		else Roact.createElement(VRBottomBar)
+		else Roact.createElement(VRBottomBar, {
+			showBadgeOver12 = if isInExperienceUIVREnabled then self.props.showBadgeOver12 else nil,
+		})
 
 	local newMenuIcon = Roact.createElement(MenuIcon, {
 		iconScale = if self.props.menuOpen then 1.25 else 1,
@@ -279,6 +287,11 @@ function TopBarApp:renderWithStyle(style)
 		Icon = newMenuIcon,
 	})
 
+	local showMenuIconAtTopLeft = true
+	if isInExperienceUIVREnabled then
+		-- Menu icon and Unibar are inside VRBottomUnibar in VR platform
+		showMenuIconAtTopLeft = not isSpatial()
+	end
 	return Roact.createElement("ScreenGui", {
 		IgnoreGuiInset = true,
 		ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
@@ -321,25 +334,25 @@ function TopBarApp:renderWithStyle(style)
 		}, {
 			HurtOverlay = Roact.createElement(HurtOverlay),
 		}),
-
-		MenuIconHolder = isNewTiltIconEnabled() and Roact.createElement("Frame", {
-			BackgroundTransparency = 1,
-			Position = UDim2.new(
-				0,
-				screenSideOffset,
-				0,
-				if GetFFlagChangeTopbarHeightCalculation() then Constants.TopBarTopMargin else 0
-			),
-			Size = UDim2.new(
-				1,
-				0,
-				0,
-				if GetFFlagChangeTopbarHeightCalculation() then topBarFrameHeight else topBarHeight
-			),
-		}, {
-			MenuIcon = newMenuIcon,
-		}),
-
+		MenuIconHolder = if showMenuIconAtTopLeft and isNewTiltIconEnabled() 
+			then Roact.createElement("Frame", {
+				BackgroundTransparency = 1,
+				Position = UDim2.new(
+					0,
+					screenSideOffset,
+					0,
+					if GetFFlagChangeTopbarHeightCalculation() then Constants.TopBarTopMargin else 0
+				),
+				Size = UDim2.new(
+					1,
+					0,
+					0,
+					if GetFFlagChangeTopbarHeightCalculation() then topBarFrameHeight else topBarHeight
+				),
+			}, {
+				MenuIcon = newMenuIcon,
+			}) 
+			else nil,
 		--Remove with isNewInGameMenuEnabled
 		LegacyCloseMenu = not Unibar and not isNewInGameMenuEnabled() and Roact.createElement("Frame", {
 			BackgroundTransparency = 1,
@@ -434,7 +447,7 @@ function TopBarApp:renderWithStyle(style)
 			AnchorPoint = Vector2.new(0.5, 0.5),
 			BackgroundTransparency = 1,
 			Position = UDim2.fromScale(0.5, 0.5),
-			Size = UDim2.new(1, 0, 0, PeekConstants.AUDIO_REPORTING_WINDOW_MIN_HEIGHT),
+			Size = UDim2.new(1, 0, 0, MusicConstants.AUDIO_REPORTING_WINDOW_MIN_HEIGHT),
 		}, {
 			ReportAudioPopup = Roact.createElement(Songbird.ReportAudioPopup),
 		}),
@@ -469,8 +482,9 @@ function TopBarApp:renderWithStyle(style)
 						PaddingBottom = UDim.new(0, Constants.UnibarFrame.PaddingBottom),
 						PaddingLeft = UDim.new(0, Constants.UnibarFrame.PaddingLeft),
 					}),
-
-					Unibar = if FFlagTiltIconUnibarFocusNav
+					Unibar = if isInExperienceUIVREnabled and isSpatial() 
+						then nil 
+						elseif FFlagTiltIconUnibarFocusNav
 						then React.createElement(MenuIconContext.Provider, {
 							value = {
 								menuIconRef = self.menuIconRef,

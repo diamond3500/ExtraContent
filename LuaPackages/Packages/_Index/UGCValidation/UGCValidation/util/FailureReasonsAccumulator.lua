@@ -1,5 +1,3 @@
---!strict
-
 local FailureReasonsAccumulator = {}
 FailureReasonsAccumulator.__index = FailureReasonsAccumulator
 

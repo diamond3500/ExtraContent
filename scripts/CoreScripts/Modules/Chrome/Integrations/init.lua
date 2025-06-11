@@ -1,3 +1,8 @@
+local CorePackages = game:GetService("CorePackages")
+local isInExperienceUIVREnabled =
+	require(CorePackages.Workspace.Packages.SharedExperimentDefinition).isInExperienceUIVREnabled
+local isSpatial = require(CorePackages.Workspace.Packages.AppCommonLib).isSpatial
+
 return {
 	OverflowMenu = require(script.OverflowMenu),
 	Chat = require(script.Chat),
@@ -12,13 +17,8 @@ return {
 	JoinVoice = require(script.JoinVoice),
 	SelfieView = require(script.SelfieView),
 	CapturesEntrypoint = require(script.Captures.CapturesEntrypoint),
-	LikeButton = require(script.MusicUtility.LikeButton),
 	MusicEntrypoint = require(script.MusicUtility.MusicEntrypoint),
-	Songbird = require(script.MusicUtility.Songbird),
-	MusicIcon = require(script.MusicUtility.MusicIcon),
-	MusicPlayingIcon = require(script.MusicUtility.MusicPlayingIcon),
-	PeekTrackDetails = require(script.MusicUtility.PeekTrackDetails),
 	PartyMic = require(script.Party.PartyMic),
-	PeekCloseButton = require(script.PeekCloseButton),
-	OverflowButton = require(script.MusicUtility.OverflowButton),
+	VRToggleButton = if isInExperienceUIVREnabled and isSpatial() then require(script.VRToggleButton) else nil :: never,
+	VRSafeBubble = if isInExperienceUIVREnabled and isSpatial() then require(script.VRSafeBubble) else nil :: never,
 }

@@ -26,7 +26,6 @@ local TITLE_ICON_SIZE = 48
 local DEFAULT_BODY_HEIGHT = 200
 local DEFAULT_FOOTER_HEIGHT = 100
 
-local UIBloxConfig = require(UIBlox.UIBloxConfig)
 local GenericTextLabel = require(UIBlox.Core.Text.GenericTextLabel.GenericTextLabel)
 local ImageSetComponent = require(UIBlox.Core.ImageSet.ImageSetComponent)
 local GetTextHeight = require(UIBlox.Core.Text.GetTextHeight)
@@ -122,7 +121,7 @@ function InteractiveAlert:render()
 						font.Footer.Font,
 						font.BaseSize * font.Footer.RelativeSize,
 						innerWidth,
-						if UIBloxConfig.getTextHeightOptionalMaxHeight then DEFAULT_FOOTER_HEIGHT else nil
+						DEFAULT_FOOTER_HEIGHT
 					)
 				or 0
 
@@ -141,13 +140,7 @@ function InteractiveAlert:render()
 		end
 
 		local fullTextHeight = self.props.bodyText
-				and GetTextHeight(
-					self.props.bodyText,
-					textFont,
-					fontSize,
-					innerWidth,
-					if UIBloxConfig.getTextHeightOptionalMaxHeight then DEFAULT_BODY_HEIGHT else nil
-				)
+				and GetTextHeight(self.props.bodyText, textFont, fontSize, innerWidth, DEFAULT_BODY_HEIGHT)
 			or 0
 
 		local middleContent = self.props.middleContent

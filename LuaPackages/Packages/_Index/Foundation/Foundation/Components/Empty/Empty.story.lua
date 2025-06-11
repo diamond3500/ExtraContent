@@ -27,7 +27,29 @@ end
 
 return {
 	summary = "Empty component for displaying emptys",
-	story = Story,
+	stories = {
+		{
+			name = "Default",
+			story = Story :: any,
+		},
+		{
+			name = "With Button",
+			story = function()
+				return React.createElement(Empty, {
+					icon = {
+						name = "rbxasset://textures/ui/LuaChat/icons/ic-friends.png",
+						size = IconSize.XLarge,
+					},
+					text = "To Party with friends, turn on Party in your privacy settings.",
+					button = {
+						text = "Privacy Settings",
+						icon = "icons/navigation/externallink_medium",
+						onActivated = function() end,
+					},
+				})
+			end,
+		},
+	},
 	controls = {
 		showButton = false,
 		iconName = {

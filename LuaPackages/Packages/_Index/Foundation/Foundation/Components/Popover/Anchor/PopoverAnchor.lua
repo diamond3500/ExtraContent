@@ -8,7 +8,7 @@ local PopoverContext = require(script.Parent.Parent.PopoverContext)
 
 local React = require(Packages.React)
 
-type PopoverAnchorProps = {
+export type PopoverAnchorProps = {
 	-- The target ref to anchor the popover to. If provided, children will not be rendered.
 	anchorRef: React.Ref<GuiObject>?,
 	children: React.ReactNode?,

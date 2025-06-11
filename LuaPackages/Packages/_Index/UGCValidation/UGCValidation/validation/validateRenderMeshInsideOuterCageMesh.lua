@@ -1,4 +1,3 @@
---!strict
 --[[
 	test to make sure that the render mesh is predominantly inside the cage mesh
 ]]
@@ -11,6 +10,7 @@ local Analytics = require(root.Analytics)
 
 local getFIntUGCValidateRenderMeshInsideOuterCageMeshThreshold =
 	require(root.flags.getFIntUGCValidateRenderMeshInsideOuterCageMeshThreshold)
+local getFFlagUGCValidationHyperlinksInCageQuality = require(root.flags.getFFlagUGCValidationHyperlinksInCageQuality)
 
 local Types = require(root.util.Types)
 local pcallDeferred = require(root.util.pcallDeferred)
@@ -62,13 +62,18 @@ local function validateRenderMeshInsideOuterCageMesh(
 			nil,
 			validationContext
 		)
-		return false,
-			{
-				string.format(
-					"Validation detected %d%% of the accessory is outside its outer cage. Make adjustments to have more of the accessory placed between the cages",
-					100 - math.floor(percentageInside)
-				),
-			}
+
+		local errorString = string.format(
+			"Validation detected %d%% of the accessory is outside its outer cage. Make adjustments to have more of the accessory placed between the cages",
+			100 - math.floor(percentageInside)
+		)
+
+		if getFFlagUGCValidationHyperlinksInCageQuality() then
+			errorString = errorString
+				.. "[Read more](https://create.roblox.com/docs/art/validation-errors#cageInsideMesh)"
+		end
+
+		return false, { errorString }
 	end
 
 	Analytics.recordScriptTime(script.Name, startTime, validationContext)

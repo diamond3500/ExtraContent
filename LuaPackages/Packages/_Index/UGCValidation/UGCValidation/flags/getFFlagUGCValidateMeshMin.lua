@@ -1,5 +1,3 @@
---!strict
-
 game:DefineFastFlag("UGCValidateMeshMin2", false)
 
 return function()

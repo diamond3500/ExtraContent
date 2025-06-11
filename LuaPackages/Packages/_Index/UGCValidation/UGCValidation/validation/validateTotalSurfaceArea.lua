@@ -1,5 +1,3 @@
---!strict
-
 --[[
 	validateTotalSurfaceArea.lua calculates the total surface area of a mesh and compares it to the maximum allowed surface area.
 ]]
@@ -8,13 +6,7 @@ local UGCValidationService = game:GetService("UGCValidationService")
 
 local root = script.Parent.Parent
 
-local getEngineFeatureEngineUGCValidateTotalSurfaceAreaTest =
-	require(root.flags.getEngineFeatureEngineUGCValidateTotalSurfaceAreaTest)
-
 local getFIntMaxTotalSurfaceArea = require(root.flags.getFIntMaxTotalSurfaceArea)
-
-local getFFlagUGCValidateFixTotalSurfaceAreaTestErrorString =
-	require(root.flags.getFFlagUGCValidateFixTotalSurfaceAreaTestErrorString)
 
 local Types = require(root.util.Types)
 local pcallDeferred = require(root.util.pcallDeferred)
@@ -26,10 +18,6 @@ local function validateTotalSurfaceArea(
 	meshScale: Vector3,
 	validationContext: Types.ValidationContext
 ): (boolean, { string }?)
-	if not getEngineFeatureEngineUGCValidateTotalSurfaceAreaTest() then
-		return true
-	end
-
 	local startTime = tick()
 
 	local isServer = validationContext.isServer
@@ -61,18 +49,12 @@ local function validateTotalSurfaceArea(
 		)
 		return false,
 			{
-				if getFFlagUGCValidateFixTotalSurfaceAreaTestErrorString()
-					then string.format(
-						"The total surface area of model mesh '%s' is %.2f, it cannot be greater than %d. You must reduce the number and/or size of all triangles.",
-						meshInfo.fullName,
-						result,
-						getFIntMaxTotalSurfaceArea()
-					)
-					else string.format(
-						"The total surface area of model mesh '%s' is greater than %d. You must reduce the number and/or size of all triangles.",
-						meshInfo.fullName,
-						getFIntMaxTotalSurfaceArea()
-					),
+				string.format(
+					"The total surface area of model mesh '%s' is %.2f, it cannot be greater than %d. You must reduce the number and/or size of all triangles.",
+					meshInfo.fullName,
+					result,
+					getFIntMaxTotalSurfaceArea()
+				),
 			}
 	end
 

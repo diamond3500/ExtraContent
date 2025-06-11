@@ -32,11 +32,13 @@ If buttonVariant is not provided, it will default to [[ButtonVariant]].Standard
 local Foundation = require(Packages.Foundation)
 local Toast = Foundation.Toast
 local ButtonVariant = Foundation.Enums.ButtonVariant
+local ThumbnailType = Foundation.Enums.ThumbnailType
+local getRbxThumb = Foundation.Utility.getRbxThumb
 ...
 return React.createElement(Toast, {
     title = "Toast Notification",
     text = "This is a toast.",
-    icon = "rbxthumb://type=AvatarHeadShot&id=6181525679&w=420&h=420",
+    icon = getRbxThumb(ThumbnailType.AvatarHeadShot, 6181525679),
     actions = {
         {
             onActivated = function() print("action 1") end,

@@ -1,8 +1,9 @@
-local LocalizationService = game:GetService("LocalizationService")
-local GuiService = game:GetService("GuiService")
-
 local Localization = script.Parent
 local Foundation = script:FindFirstAncestor("Foundation")
+
+local Wrappers = require(Foundation.Utility.Wrappers)
+local LocalizationService = Wrappers.Services.LocalizationService
+local GuiService = Wrappers.Services.GuiService
 
 local Constants = require(Localization.Constants)
 local GeneratedTranslations = require(Foundation.Generated.Translations.GeneratedTranslations)

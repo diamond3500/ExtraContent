@@ -2,10 +2,12 @@ local strict = require(script.Utility.strict)
 
 local Types = require(script.Components.Types)
 local Tokens = require(script.Providers.Style.Tokens)
+local ControlState = require(script.Enums.ControlState)
 
 export type Bindable<T> = Types.Bindable<T>
 export type CommonProps = Types.CommonProps
 export type StateChangedCallback = Types.StateChangedCallback
+export type ControlState = ControlState.ControlState
 export type StateLayer = Types.StateLayer
 export type Tags = Types.Tags
 
@@ -20,6 +22,7 @@ local Foundation = strict({
 	Badge = require(script.Components.Badge),
 	Button = require(script.Components.Button),
 	Checkbox = require(script.Components.Checkbox),
+	Divider = require(script.Components.Divider),
 	Empty = require(script.Components.Empty),
 	Icon = require(script.Components.Icon),
 	IconButton = require(script.Components.IconButton),
@@ -33,6 +36,7 @@ local Foundation = strict({
 	ScrollView = require(script.Components.ScrollView),
 	Skeleton = require(script.Components.Skeleton),
 	Toggle = require(script.Components.Toggle),
+	Tooltip = require(script.Components.Tooltip),
 	Text = require(script.Components.Text),
 	TextInput = require(script.Components.TextInput),
 	NumberInput = require(script.Components.NumberInput),
@@ -67,9 +71,10 @@ local Foundation = strict({
 		ButtonVariant = require(script.Enums.ButtonVariant),
 		-- CheckboxSize is deprecated. Use InputSize instead.
 		CheckboxSize = require(script.Enums.InputSize),
-		ControlState = require(script.Enums.ControlState),
+		ControlState = ControlState,
 		CursorType = require(script.Enums.CursorType),
 		Device = require(script.Enums.Device),
+		DividerVariant = require(script.Enums.DividerVariant),
 		FillBehavior = require(script.Enums.FillBehavior),
 		IconPosition = require(script.Enums.IconPosition),
 		IconSize = require(script.Enums.IconSize),
@@ -82,6 +87,8 @@ local Foundation = strict({
 		StateLayerAffordance = require(script.Enums.StateLayerAffordance),
 		StateLayerMode = require(script.Enums.StateLayerMode),
 		Theme = require(script.Enums.Theme),
+		ThumbnailType = require(script.Enums.ThumbnailType),
+		ThumbnailSize = require(script.Enums.ThumbnailSize),
 		-- ToggleSize is deprecated. Use InputSize instead.
 		ToggleSize = require(script.Enums.InputSize),
 	},
@@ -89,10 +96,17 @@ local Foundation = strict({
 	-- Utility
 	Utility = {
 		composeStyleVariant = require(script.Utility.composeStyleVariant),
+		getRbxThumb = require(script.Utility.getRbxThumb),
 		indexBindable = require(script.Utility.indexBindable),
 		mockComponent = require(script.Utility.mockComponent),
 		withCommonProps = require(script.Utility.withCommonProps),
 		withDefaults = require(script.Utility.withDefaults),
+	},
+
+	-- Unstable APIs, do not use
+	UNSTABLE = {
+		-- Use View/Text/Image instead
+		Interactable = require(script.Components.Interactable),
 	},
 })
 

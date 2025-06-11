@@ -1,5 +1,3 @@
---!strict
-
 --[[
 	validateDescendantMeshMetrics.lua checks the meshes in all descendant Instance properties to ensur they do conform to triangle/vertex count specifications
 ]]
@@ -36,7 +34,6 @@ local getFFlagUGCValidateBodyPartsExtendedMeshTests = require(root.flags.getFFla
 local getEngineFeatureEngineUGCValidateBodyParts = require(root.flags.getEngineFeatureEngineUGCValidateBodyParts)
 local getFFlagUGCValidateCageUVTriangleArea = require(root.flags.getFFlagUGCValidateCageUVTriangleArea)
 local getFFlagUGCValidateUVValuesInReference = require(root.flags.getFFlagUGCValidateUVValuesInReference)
-local getFFlagUGCValidateTotalSurfaceAreaTestBody = require(root.flags.getFFlagUGCValidateTotalSurfaceAreaTestBody)
 local getFFlagUGCValidateAllowFlexibleTriangleLimit = require(root.flags.getFFlagUGCValidateAllowFlexibleTriangleLimit)
 local getFIntUGCValidateTriangleLimitTolerance = require(root.flags.getFIntUGCValidateTriangleLimitTolerance)
 local getFFlagUGCValidateImportOrigin = require(root.flags.getFFlagUGCValidateImportOrigin)
@@ -209,20 +206,8 @@ local function validateMeshIsAtOrigin(
 	meshMaxIn: Vector3?,
 	validationContext: Types.ValidationContext
 ): (boolean, { string }?)
-	local meshMin = nil
-	local meshMax = nil
-
-	if getFFlagUGCValidateTotalSurfaceAreaTestBody() or getFFlagUGCValidateCoplanarTriTestBody() then
-		meshMin = meshMinIn :: Vector3
-		meshMax = meshMaxIn :: Vector3
-	else
-		local success, failureReasons, meshMinOpt, meshMaxOpt = getMeshMinMax(meshInfo, validationContext)
-		if not success then
-			return success, failureReasons
-		end
-		meshMin = meshMinOpt :: Vector3
-		meshMax = meshMaxOpt :: Vector3
-	end
+	local meshMin = meshMinIn :: Vector3
+	local meshMax = meshMaxIn :: Vector3
 
 	local meshHalfSize = (meshMax - meshMin) / 2
 	local meshCenter = meshMin + meshHalfSize
@@ -292,17 +277,13 @@ local function validateDescendantMeshMetrics(
 		if data.instance.ClassName == "MeshPart" then
 			assert(data.fieldName == "MeshId")
 
-			local FFlagsForSurfaceAreaOrCoplanarTestsEnabled = getFFlagUGCValidateTotalSurfaceAreaTestBody()
-				or getFFlagUGCValidateCoplanarTriTestBody()
-
-			local successMinMax, failureReasonsMinMax, meshMinOpt, meshMaxOpt
-			if FFlagsForSurfaceAreaOrCoplanarTestsEnabled then
-				successMinMax, failureReasonsMinMax, meshMinOpt, meshMaxOpt = getMeshMinMax(meshInfo, validationContext)
-				if not successMinMax then
-					reasonsAccumulator:updateReasons(false, failureReasonsMinMax)
-				end
+			local successMinMax, failureReasonsMinMax, meshMinOpt, meshMaxOpt =
+				getMeshMinMax(meshInfo, validationContext)
+			if not successMinMax then
+				reasonsAccumulator:updateReasons(false, failureReasonsMinMax)
 			end
-			if not FFlagsForSurfaceAreaOrCoplanarTestsEnabled or successMinMax then
+
+			if successMinMax then
 				startTime = tick()
 				reasonsAccumulator:updateReasons(
 					validateMeshIsAtOrigin(meshInfo, meshMinOpt, meshMaxOpt, validationContext)
@@ -310,7 +291,7 @@ local function validateDescendantMeshMetrics(
 				Analytics.recordScriptTime("validateMeshIsAtOrigin", startTime, validationContext)
 			end
 
-			if FFlagsForSurfaceAreaOrCoplanarTestsEnabled and meshMinOpt and meshMaxOpt then
+			if meshMinOpt and meshMaxOpt then
 				local meshSize = (meshMaxOpt :: Vector3 - meshMinOpt :: Vector3)
 				if floatEquals(meshSize.X, 0) or floatEquals(meshSize.Y, 0) or floatEquals(meshSize.Z, 0) then
 					reasonsAccumulator:updateReasons(false, {
@@ -318,11 +299,9 @@ local function validateDescendantMeshMetrics(
 					})
 				else
 					local meshScale = getExpectedPartSize(data.instance, validationContext) / meshSize
-					if getFFlagUGCValidateTotalSurfaceAreaTestBody() then
-						reasonsAccumulator:updateReasons(
-							validateTotalSurfaceArea(meshInfo, meshScale, validationContext)
-						)
-					end
+
+					reasonsAccumulator:updateReasons(validateTotalSurfaceArea(meshInfo, meshScale, validationContext))
+
 					if getFFlagUGCValidateCoplanarTriTestBody() then
 						reasonsAccumulator:updateReasons(
 							validateCoplanarIntersection(meshInfo, meshScale, validationContext)

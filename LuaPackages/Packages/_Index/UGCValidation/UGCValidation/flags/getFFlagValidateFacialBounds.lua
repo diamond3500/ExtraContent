@@ -1,5 +1,3 @@
---!strict
-
 local root = script.Parent.Parent
 
 local getEngineFeatureEngineUGCNewFACSChecks = require(root.flags.getEngineFeatureEngineUGCNewFACSChecks)

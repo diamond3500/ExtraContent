@@ -3,6 +3,7 @@ local CorePackages = game:GetService("CorePackages")
 local CoreGui = game:GetService("CoreGui")
 
 local Roact = require(CorePackages.Packages.Roact)
+local React = require(CorePackages.Packages.React)
 local RoactRodux = require(CorePackages.Packages.RoactRodux)
 local UIBlox = require(CorePackages.Packages.UIBlox)
 
@@ -17,6 +18,10 @@ local LayoutValues = require(Connection.LayoutValues)
 local WithLayoutValues = LayoutValues.WithLayoutValues
 
 local StatEntry = require(script.Parent.StatEntry)
+
+local PlayerList = Components.Parent
+local createShallowEqualAndTables = require(PlayerList.createShallowEqualAndTables)
+local FFlagPlayerListReduceRerenders = require(PlayerList.Flags.FFlagPlayerListReduceRerenders)
 
 local TeamEntry = Roact.PureComponent:extend("TeamEntry")
 
@@ -64,17 +69,32 @@ function TeamEntry:render()
 				}),
 			})
 
-			for i, gameStat in ipairs(self.props.gameStats) do
-				if i > layoutValues.MaxLeaderstats then
-					break
+			if FFlagPlayerListReduceRerenders then
+				for i, gameStatName in self.props.gameStatNames do
+					if i > layoutValues.MaxLeaderstats then
+						break
+					end
+					children["GameStat_" .. gameStatName] = Roact.createElement(StatEntry, {
+						statValue = self.props.leaderstats[gameStatName],
+						isTitleEntry = false,
+						isTeamEntry = true,
+						textStyle = textStyle,
+						layoutOrder = i,
+					})
 				end
-				children["GameStat_" .. gameStat.name] = Roact.createElement(StatEntry, {
-					statValue = self.props.leaderstats[gameStat.name],
-					isTitleEntry = false,
-					isTeamEntry = true,
-					textStyle = textStyle,
-					layoutOrder = i,
-				})
+			else
+				for i, gameStat in ipairs(self.props.gameStats) do
+					if i > layoutValues.MaxLeaderstats then
+						break
+					end
+					children["GameStat_" .. gameStat.name] = Roact.createElement(StatEntry, {
+						statValue = self.props.leaderstats[gameStat.name],
+						isTitleEntry = false,
+						isTeamEntry = true,
+						textStyle = textStyle,
+						layoutOrder = i,
+					})
+				end
 			end
 
 			return Roact.createElement("Frame", {
@@ -94,6 +114,10 @@ local function mapStateToProps(state)
 	return {
 		isSmallTouchDevice = state.displayOptions.isSmallTouchDevice,
 	}
+end
+
+if FFlagPlayerListReduceRerenders then
+	return React.memo(RoactRodux.connect(mapStateToProps, nil)(TeamEntry), createShallowEqualAndTables({ "gameStatNames", "leaderstats" }))
 end
 
 return RoactRodux.connect(mapStateToProps, nil)(TeamEntry)

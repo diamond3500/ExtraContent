@@ -1,4 +1,3 @@
---!strict
 game:DefineFastFlag("AddUGCValidationForPackage2", false)
 
 return function()

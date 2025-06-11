@@ -5,6 +5,8 @@ local FFlagAdaptUnibarAndTiltSizing = SharedFlags.GetFFlagAdaptUnibarAndTiltSizi
 local FFlagTiltIconUnibarFocusNav = SharedFlags.FFlagTiltIconUnibarFocusNav
 local FFlagReplaceChromeNotificationBadge = SharedFlags.FFlagReplaceChromeNotificationBadge
 local FFlagConsoleChatOnExpControls = SharedFlags.FFlagConsoleChatOnExpControls
+local FFlagChromeShortcutRemoveLeaveOnRespawnPage = SharedFlags.FFlagChromeShortcutRemoveLeaveOnRespawnPage
+local FFlagChromeShortcutRemoveRespawnOnLeavePage = SharedFlags.FFlagChromeShortcutRemoveRespawnOnLeavePage
 
 local ReactOtter = require(CorePackages.Packages.ReactOtter)
 local TenFootInterface = require(script.Parent.Parent.Parent.Parent.TenFootInterface)
@@ -99,6 +101,12 @@ return {
 	UNIBAR_SHORTCUTBAR_ID = "unibarShortcuts",
 	TILTMENU_SHORTCUTBAR_ID = "tiltMenuShortcuts",
 	TILTMENU_DIALOG_SHORTCUTBAR_ID = "tiltMenuDialogShortcuts",
+	TILTMENU_RESPAWN_DIALOG_SHORTCUTBAR_ID = if FFlagChromeShortcutRemoveLeaveOnRespawnPage
+		then "tiltMenuRespawnDialogShortcuts"
+		else nil :: never,
+	TILTMENU_LEAVE_DIALOG_SHORTCUTBAR_ID = if FFlagChromeShortcutRemoveRespawnOnLeavePage
+		then "tiltMenuLeaveDialogShortcuts"
+		else nil :: never,
 
 	SHORTCUTBAR_DISPLAYORDER = 100,
 

@@ -49,6 +49,35 @@ local useTokens = Foundation.Hooks.useTokens
 
 local shouldRejectMultiTouch = require(Root.Utility.shouldRejectMultiTouch)
 
+local isInExperienceUIVREnabled =
+	require(CorePackages.Workspace.Packages.SharedExperimentDefinition).isInExperienceUIVREnabled
+local isSpatial
+local Panel3DInSpatialUI
+local PanelType
+local TooltipOrientation
+local TooltipCallout
+local SPATIAL_TOOLTIP_SPACING
+local UIManager
+local MappedSignal
+local BottomBarVisibilitySignal
+if isInExperienceUIVREnabled then
+	isSpatial = require(CorePackages.Workspace.Packages.AppCommonLib).isSpatial
+	local VrSpatialUi = require(CorePackages.Workspace.Packages.VrSpatialUi)
+	Panel3DInSpatialUI = VrSpatialUi.Panel3DInSpatialUI
+	PanelType = VrSpatialUi.Constants.PanelType
+	TooltipOrientation = UIBlox.App.Dialog.Enum.TooltipOrientation
+	TooltipCallout = UIBlox.App.Dialog.TooltipCallout
+	SPATIAL_TOOLTIP_SPACING = VrSpatialUi.Constants.SPATIAL_TOOLTIP_SPACING
+	UIManager = VrSpatialUi.UIManager
+	MappedSignal = require(Root.Service.ChromeUtils).MappedSignal
+	local BottomBarVisibility = (UIManager.getInstance() :: any):getBottomBarVisibility()
+	if BottomBarVisibility and isSpatial() then
+		BottomBarVisibilitySignal = MappedSignal.new(BottomBarVisibility, function()
+			return (BottomBarVisibility :: any):get()
+		end) :: any
+	end
+end
+
 local MenuIconContext = if FFlagTiltIconUnibarFocusNav
 	then require(Root.Parent.Parent.TopBar.Components.MenuIconContext)
 	else nil :: never
@@ -258,27 +287,56 @@ function TooltipButton(props: TooltipButtonProps)
 	-- clickLatched inhibits the display of the tooltip if you've clicked on the icon
 	-- this is reset on the next hover
 	local clickLatched, setClicked = useTimeHysteresis(0, 1.0)
-	local hoverHandler = React.useCallback(function(oldState, newState)
-		if
-			newState == ControlState.Selected
-			and (oldState == ControlState.Default or oldState == ControlState.Hover)
-		then
-			ChromeService:setSelected(props.integration.id)
-		elseif newState == ControlState.Selected and oldState == ControlState.Default then
-			ChromeService:setSelected(props.integration.id)
+	local isSpatial = if isInExperienceUIVREnabled then isSpatial() else nil
+	local showTopBar = if isInExperienceUIVREnabled
+		then useObservableValue((ChromeService :: any):getTopBarVisibiity())
+		else nil
+	local isBottomBarInteractionOnAnimationSupported = if isInExperienceUIVREnabled and BottomBarVisibilitySignal
+		then useObservableValue(BottomBarVisibilitySignal :: any)
+		else nil
+	local shouldDisableInteraction = false
+	if isInExperienceUIVREnabled then
+		if isSpatial and not showTopBar and not isBottomBarInteractionOnAnimationSupported then
+			shouldDisableInteraction = true
+			draggable = draggable and not shouldDisableInteraction
 		end
+	end
+	local hoverHandler = React.useCallback(
+		function(oldState, newState)
+			if isInExperienceUIVREnabled and shouldDisableInteraction then
+				return
+			end
+			if
+				newState == ControlState.Selected
+				and (oldState == ControlState.Default or oldState == ControlState.Hover)
+			then
+				ChromeService:setSelected(props.integration.id)
+			elseif newState == ControlState.Selected and oldState == ControlState.Default then
+				ChromeService:setSelected(props.integration.id)
+			end
 
-		local active = newState ~= ControlState.Default
-		props.setHovered(active)
-		local hovered = newState == ControlState.Hover
-		setHovered(hovered, (hovered and isTooltipHovered) or areTooltipsDisplaying())
-		if FFlagEnableUnibarFtuxTooltips and hovered then
-			ChromeService:onIntegrationHovered():fire(props.integration.id)
-		end
-		if not active then
-			setClicked(false)
-		end
-	end, { props.setHovered :: any, setHovered, setClicked, isTooltipHovered })
+			local active = newState ~= ControlState.Default
+			props.setHovered(active)
+			local hovered = newState == ControlState.Hover
+			setHovered(hovered, (hovered and isTooltipHovered) or areTooltipsDisplaying())
+			if FFlagEnableUnibarFtuxTooltips and hovered then
+				ChromeService:onIntegrationHovered():fire(props.integration.id)
+			end
+			if not active then
+				setClicked(false)
+			end
+		end,
+		if isInExperienceUIVREnabled
+			then {
+				props.setHovered :: any,
+				setHovered,
+				setClicked,
+				isTooltipHovered,
+				isSpatial,
+				shouldDisableInteraction,
+			}
+			else { props.setHovered :: any, setHovered, setClicked, isTooltipHovered }
+	)
 
 	local touchBegan = React.useCallback(function(_rbx: Frame, inputObj: InputObject)
 		if not draggable then
@@ -344,6 +402,12 @@ function TooltipButton(props: TooltipButtonProps)
 	end, { draggable })
 
 	local displayTooltip = (isHovered or isTooltipHovered or isTooltipButtonSelected) and not clickLatched
+	if isInExperienceUIVREnabled then
+		-- hide the tooltip if the TopBar(Unibar) is hidden in VR
+		if displayTooltip and shouldDisableInteraction then
+			displayTooltip = false
+		end
+	end
 	logTooltipState(props.integration.id, displayTooltip)
 
 	local menuIconContext = if FFlagTiltIconUnibarFocusNav then React.useContext(MenuIconContext) else nil :: never
@@ -393,6 +457,13 @@ function TooltipButton(props: TooltipButtonProps)
 				[React.Event.InputBegan] = touchBegan,
 				[React.Event.InputEnded] = touchEnded,
 				[React.Event.Activated] = function()
+					if isInExperienceUIVREnabled and isSpatial then
+						if shouldDisableInteraction then
+							return
+						else
+							ChromeService:onTriggerVRToggleButton():fire(true)
+						end
+					end
 					setClicked(true, true)
 					props.integration.activated()
 					if connection.current then
@@ -419,6 +490,7 @@ function TooltipButton(props: TooltipButtonProps)
 		props.isCurrentlyOpenSubMenu,
 		displayTooltip,
 		secondaryAction,
+		if isInExperienceUIVREnabled then shouldDisableInteraction else nil :: never,
 		if FFlagTiltIconUnibarFocusNav then menuIconContext.menuIconRef else nil :: never,
 	})
 
@@ -464,35 +536,77 @@ function TooltipButton(props: TooltipButtonProps)
 		end
 	end, { setTooltipHovered })
 
-	return withTooltip({
-		headerText = props.integration.integration.label,
-		hotkeyCodes = props.integration.integration.hotkeyCodes,
-		textAlignment = Enum.TextXAlignment.Left,
-		buttonProps = if secondaryAction
-			then {
-				text = secondaryAction.label,
-				onStateChanged = function(_, newState)
-					if newState == ControlState.Selected then
-						setTooltipButtonSelected(true)
-					else
-						setTooltipButtonSelected(false)
-					end
-				end,
-				onActivated = function()
-					secondaryAction.activated(props.integration)
-				end,
-				NextSelectionUp = localBtnRef,
-				NextSelectionLeft = localBtnRef,
-				NextSelectionRight = localBtnRef,
-				NextSelectionDown = localBtnRef,
-			}
-			else nil,
-		ref = if secondaryAction then tooltipRefHandler else nil,
-	}, {
-		active = displayTooltip,
-		guiTarget = CoreGui,
-		DisplayOrder = 10,
-	}, renderTooltipComponent)
+	local buttonProps = if secondaryAction
+		then {
+			text = secondaryAction.label,
+			onStateChanged = function(_, newState)
+				if newState == ControlState.Selected then
+					setTooltipButtonSelected(true)
+				else
+					setTooltipButtonSelected(false)
+				end
+			end,
+			onActivated = function()
+				secondaryAction.activated(props.integration)
+			end,
+			NextSelectionUp = localBtnRef,
+			NextSelectionLeft = localBtnRef,
+			NextSelectionRight = localBtnRef,
+			NextSelectionDown = localBtnRef,
+		}
+		else nil
+
+	if isInExperienceUIVREnabled and isSpatial then
+		local triggerPointPosition, setTriggerPointPosition = React.useBinding(Vector2.zero)
+		local triggerPointSize, setTriggerPointSize = React.useBinding(Vector2.zero)
+
+		local triggerPointChanged = React.useCallback(function(rbx: GuiObject)
+			setTriggerPointPosition(rbx.AbsolutePosition)
+			setTriggerPointSize(rbx.AbsoluteSize)
+		end, { setTriggerPointPosition, setTriggerPointSize } :: { any })
+
+		return React.createElement(
+			React.Fragment,
+			nil,
+			{
+				VRSpatialTooltip = if displayTooltip and Panel3DInSpatialUI
+					then React.createElement(Panel3DInSpatialUI, {
+						panelType = PanelType.ToolTipsContainer,
+						renderFunction = function(panelSize: Vector2)
+							local triggerPointCenter = Vector2.new(
+								triggerPointPosition:getValue().X + triggerPointSize:getValue().X / 2,
+								panelSize.Y - SPATIAL_TOOLTIP_SPACING
+							)
+							return React.createElement(TooltipCallout, {
+								textAlignment = Enum.TextXAlignment.Center,
+								headerText = props.integration.integration.label,
+								orientation = TooltipOrientation.Top,
+								distanceOffset = 0,
+								triggerPointCenter = triggerPointCenter,
+								contentOffsetVector = Vector2.zero,
+								triggerPointRadius = Vector2.zero,
+								buttonProps = buttonProps,
+								ref = if secondaryAction then tooltipRefHandler else nil,
+							})
+						end,
+					})
+					else nil,
+				renderTooltipComponent(triggerPointChanged),
+			} :: any
+		)
+	else
+		return withTooltip({
+			headerText = props.integration.integration.label,
+			hotkeyCodes = props.integration.integration.hotkeyCodes,
+			textAlignment = Enum.TextXAlignment.Left,
+			buttonProps = buttonProps,
+			ref = if secondaryAction then tooltipRefHandler else nil,
+		}, {
+			active = displayTooltip,
+			guiTarget = CoreGui,
+			DisplayOrder = 10,
+		}, renderTooltipComponent)
+	end
 end
 
 -- todo: Support an Integrations that can be from any UI framework

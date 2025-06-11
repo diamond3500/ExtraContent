@@ -1,5 +1,3 @@
---!strict
-
 local root = script.Parent
 
 local Types = require(root.util.Types)
@@ -9,16 +7,9 @@ local UGCValidationService = game:GetService("UGCValidationService")
 local StudioService = if RunService:IsStudio() then game:GetService("StudioService") else nil
 local RbxAnalyticsService = game:GetService("RbxAnalyticsService")
 
-local getFFlagUGCValidateCoplanarTriTestBody = require(root.flags.getFFlagUGCValidateCoplanarTriTestBody)
-local getFFlagUGCValidateCoplanarTriTestAccessory = require(root.flags.getFFlagUGCValidateCoplanarTriTestAccessory)
 local getFFlagUGCValidationAnalytics = require(root.flags.getFFlagUGCValidationAnalytics)
 local getEngineFeatureEngineUGCValidationReportScriptTime =
 	require(root.flags.getEngineFeatureEngineUGCValidationReportScriptTime)
-local getFFlagUGCValidateCageOrigin = require(root.flags.getFFlagUGCValidateCageOrigin)
-local getFFlagUGCValidateTotalSurfaceAreaTestBody = require(root.flags.getFFlagUGCValidateTotalSurfaceAreaTestBody)
-local getFFlagUGCValidateTotalSurfaceAreaTestAccessory =
-	require(root.flags.getFFlagUGCValidateTotalSurfaceAreaTestAccessory)
-local getEngineFeatureUGCValidateMeshInsideMesh = require(root.flags.getEngineFeatureUGCValidateMeshInsideMesh)
 local getEngineFeatureUGCValidateCageMeshDistance = require(root.flags.getEngineFeatureUGCValidateCageMeshDistance)
 local getEngineFeatureEngineUGCValidationIECTelemetry =
 	require(root.flags.getEngineFeatureEngineUGCValidationIECTelemetry)
@@ -43,7 +34,11 @@ local getFFlagUGCValidatePartMass = require(root.flags.getFFlagUGCValidatePartMa
 local getFFlagUGCValidateMeshMin = require(root.flags.getFFlagUGCValidateMeshMin)
 local getFFlagUGCValidateUseAnalyticsEntryPoint = require(root.flags.getFFlagUGCValidateUseAnalyticsEntryPoint)
 local getEngineFeatureUGCValidateExtraShoesTests = require(root.flags.getEngineFeatureUGCValidateExtraShoesTests)
+local getEngineFeatureUGCValidateBodyPartCageMeshDistance =
+	require(root.flags.getEngineFeatureUGCValidateBodyPartCageMeshDistance)
 local getFFlagUGCValidateIndividualPartBBoxes = require(root.flags.getFFlagUGCValidateIndividualPartBBoxes)
+local getFFlagRefactorBodyAttachmentOrientationsCheck =
+	require(root.flags.getFFlagRefactorBodyAttachmentOrientationsCheck)
 
 local function joinTables(...)
 	local result = {}
@@ -68,7 +63,9 @@ Analytics.ErrorType = {
 	validateAssetCreator_FailedToLoad = "validateAssetCreator_FailedToLoad",
 	validateAssetCreator_TooManyDependencies = "validateAssetCreator_TooManyDependencies",
 	validateAttributes = "validateAttributes",
-	validateBodyPartChildAttachmentBounds_AttachmentRotated = "validateBodyPartChildAttachmentBounds_AttachmentRotated",
+	validateBodyPartChildAttachmentBounds_AttachmentRotated = if getFFlagRefactorBodyAttachmentOrientationsCheck()
+		then nil
+		else "validateBodyPartChildAttachmentBounds_AttachmentRotated",
 	validateBodyPartChildAttachmentBounds_InvalidAttachmentPosition = "validateBodyPartChildAttachmentBounds_InvalidAttachmentPosition",
 	validateBodyPartCollisionFidelity = "validateBodyPartCollisionFidelity",
 	validateBodyPartMeshBounds_FailedToLoadMesh = "validateBodyPartMeshBounds_FailedToLoadMesh",
@@ -151,6 +148,7 @@ Analytics.ErrorType = {
 	validateProperties_PropertyMismatch = "validateProperties_PropertyMismatch",
 	validateSingleInstance_MultipleInstances = "validateSingleInstance_MultipleInstances",
 	validateSingleInstance_ZeroInstances = "validateSingleInstance_ZeroInstances",
+	validateSurfaceAppearances_InvalidAlphaMode = "validateSurfaceAppearances_InvalidAlphaMode",
 	validateSurfaceAppearances_MeshPartHasTexture = "validateSurfaceAppearances_MeshPartHasTexture",
 	validateSurfaceAppearances_MissingSurfaceAppearance = "validateSurfaceAppearances_MissingSurfaceAppearance",
 	validateTags = "validateTags",
@@ -158,6 +156,8 @@ Analytics.ErrorType = {
 	validateTextureSize_FailedToLoadTexture = "validateTextureSize_FailedToLoadTexture",
 	validateTextureSize_InvalidTextureId = "validateTextureSize_InvalidTextureId",
 	validateTextureSize_TextureTooBig = "validateTextureSize_TextureTooBig",
+	validateTextureTransparency_InvalidTextureId = "validateTextureTransparency_InvalidTextureId",
+	validateTextureTransparency_TransparentTexture = "validateTextureTransparency_TransparentTexture",
 	validateThumbnailConfiguration_InvalidTarget = "validateThumbnailConfiguration_InvalidTarget",
 	validateThumbnailConfiguration_OutsideView = "validateThumbnailConfiguration_OutsideView",
 	validateUVSpace_FailedToExecute = "validateUVSpace_FailedToExecute",
@@ -165,6 +165,14 @@ Analytics.ErrorType = {
 	validateVertexDensity_FailedToExecute = "validateVertexDensity_FailedToExecute",
 	validateVertexDensity_MaxDensityExceeded = "validateVertexDensity_MaxDensityExceeded",
 	validateDynamicHeadMeshPartFormat_ValidateDynamicHeadMeshControls = "validateDynamicHeadMeshPartFormat_ValidateDynamicHeadMeshControls",
+	validateRenderMeshInsideOuterCageMesh_FailedToExecute = "validateRenderMeshInsideOuterCageMesh_FailedToExecute",
+	validateRenderMeshInsideOuterCageMesh_MaxOutsideCageMeshExceeded = "validateRenderMeshInsideOuterCageMesh_MaxOutsideCageMeshExceeded",
+	validateLayeredClothingAccessory_CageOriginOutOfBounds = "validateLayeredClothingAccessory_CageOriginOutOfBounds",
+	validateBodyPart_CageOriginOutOfBounds = "validateBodyPart_CageOriginOutOfBounds",
+	validateTotalSurfaceArea_FailedToExecute = "validateTotalSurfaceArea_FailedToExecute",
+	validateTotalSurfaceArea_maxTotalSurfaceAreaExceeded = "validateTotalSurfaceArea_maxTotalSurfaceAreaExceeded",
+	validateCoplanarIntersection_FailedToExecute = "validateCoplanarIntersection_FailedToExecute",
+	validateCoplanarIntersection_CoplanarIntersection = "validateCoplanarIntersection_CoplanarIntersection",
 }
 
 if getEngineFeatureEngineUGCValidateLCCagesVerticesSimilarity() then
@@ -176,31 +184,6 @@ end
 if getEngineFeatureEngineUGCValidateLCCagingRelevancy() then
 	Analytics.ErrorType.validateCagingRelevancy_FailedToExecute = "validateCagingRelevancy_FailedToExecute"
 	Analytics.ErrorType.validateCagingRelevancy_IrrelevantCaging = "validateCagingRelevancy_IrrelevantCaging"
-end
-
-if getFFlagUGCValidateCoplanarTriTestBody() or getFFlagUGCValidateCoplanarTriTestAccessory() then
-	Analytics.ErrorType.validateCoplanarIntersection_FailedToExecute = "validateCoplanarIntersection_FailedToExecute"
-	Analytics.ErrorType.validateCoplanarIntersection_CoplanarIntersection =
-		"validateCoplanarIntersection_CoplanarIntersection"
-end
-
-if getFFlagUGCValidateCageOrigin() then
-	Analytics.ErrorType.validateLayeredClothingAccessory_CageOriginOutOfBounds =
-		"validateLayeredClothingAccessory_CageOriginOutOfBounds"
-	Analytics.ErrorType.validateBodyPart_CageOriginOutOfBounds = "validateBodyPart_CageOriginOutOfBounds"
-end
-
-if getFFlagUGCValidateTotalSurfaceAreaTestBody() or getFFlagUGCValidateTotalSurfaceAreaTestAccessory() then
-	Analytics.ErrorType.validateTotalSurfaceArea_FailedToExecute = "validateTotalSurfaceArea_FailedToExecute"
-	Analytics.ErrorType.validateTotalSurfaceArea_maxTotalSurfaceAreaExceeded =
-		"validateTotalSurfaceArea_maxTotalSurfaceAreaExceeded"
-end
-
-if getEngineFeatureUGCValidateMeshInsideMesh() then
-	Analytics.ErrorType.validateRenderMeshInsideOuterCageMesh_FailedToExecute =
-		"validateRenderMeshInsideOuterCageMesh_FailedToExecute"
-	Analytics.ErrorType.validateRenderMeshInsideOuterCageMesh_MaxOutsideCageMeshExceeded =
-		"validateRenderMeshInsideOuterCageMesh_MaxOutsideCageMeshExceeded"
 end
 
 if getEngineFeatureUGCValidateCageMeshDistance() then
@@ -228,6 +211,12 @@ if getEngineFeatureUGCValidateExtraShoesTests() then
 		"validateRenderMeshInsideModifiedOuterCageArea_FailedToExecute"
 	Analytics.ErrorType.validateRenderMeshInsideModifiedOuterCageArea_RenderMeshNotPositionedCorrectly =
 		"validateRenderMeshInsideModifiedOuterCageArea_RenderMeshNotPositionedCorrectly"
+end
+
+if getEngineFeatureUGCValidateBodyPartCageMeshDistance() then
+	Analytics.ErrorType.validateBodyPartCage_FailedToExecute = "validateBodyPartCage_FailedToExecute"
+	Analytics.ErrorType.validateBodyPartCage_VertsAreTooFarInFrontOfRenderMesh =
+		"validateBodyPartCage_VertsAreTooFarInFrontOfRenderMesh"
 end
 
 if getFFlagUGCValidatePartSizeWithinRenderSizeLimits() then
@@ -259,6 +248,13 @@ if getFFlagUGCValidateIndividualPartBBoxes() then
 		"validateBodyAttPosRelativeToParent_PartAboveParent"
 	Analytics.ErrorType.validateBodyAttPosRelativeToParent_ParentBelowPart =
 		"validateBodyAttPosRelativeToParent_ParentBelowPart"
+end
+
+if getFFlagRefactorBodyAttachmentOrientationsCheck() then
+	Analytics.ErrorType.validateBodyPartChildAttachmentOrientations_RotatedRig =
+		"validateBodyPartChildAttachmentOrientations_RotatedRig"
+	Analytics.ErrorType.validateBodyPartChildAttachmentOrientations_RotatedGrip =
+		"validateBodyPartChildAttachmentOrientations_RotatedGrip"
 end
 
 setmetatable(Analytics.ErrorType, {

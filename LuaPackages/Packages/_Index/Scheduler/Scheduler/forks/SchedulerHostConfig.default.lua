@@ -48,6 +48,10 @@ local FFlagReactSchedulerSetFrameMarkerOnHeartbeatEnd =
 	SafeFlags.createGetFFlag("ReactSchedulerSetFrameMarkerOnHeartbeatEnd")()
 local FFlagReactSchedulerSetTargetMsByHeartbeatDelta =
 	SafeFlags.createGetFFlag("ReactSchedulerSetTargetMsByHeartbeatDelta")()
+local FIntReactSchedulerNumberOfLookbackFrames =
+	SafeFlags.createGetFInt("ReactSchedulerNumberOfLookbackFrames", 1)()
+local FFlagReactSchedulerLookbackUseRingBuffer =
+	SafeFlags.createGetFFlag("ReactSchedulerLookbackUseRingBuffer")()
 
 -- ROBLOX deviation: support deferred re-entrants before yielding to the next frame
 local isDeferred = false
@@ -55,8 +59,13 @@ local frameStartTime = 0
 local desiredMillisecondsPerFrame = 1000 / FIntReactSchedulerDesiredFrameRate
 local maxMillisecondsPerFrame = 1000 / FIntReactSchedulerMinimumFrameRate
 local targetMillisecondsPerFrame = desiredMillisecondsPerFrame
+local averageMillisecondsPerFrame = targetMillisecondsPerFrame
 
 local heartbeatConection: RBXScriptConnection? = nil
+local lookbackBuffer = if FFlagReactSchedulerLookbackUseRingBuffer
+	then table.create(FIntReactSchedulerNumberOfLookbackFrames)
+	else nil :: never
+local lookbackIndex = 1
 
 local function createHeartbeatConnection()
 	if heartbeatConection then
@@ -64,11 +73,40 @@ local function createHeartbeatConnection()
 	end
 	heartbeatConection = game:GetService("RunService").Heartbeat
 		:Connect(function(step: number)
-			targetMillisecondsPerFrame = math.clamp(
-				step * 1000,
-				desiredMillisecondsPerFrame,
-				maxMillisecondsPerFrame
-			)
+			if FIntReactSchedulerNumberOfLookbackFrames > 1 then
+				if FFlagReactSchedulerLookbackUseRingBuffer then
+					lookbackBuffer[lookbackIndex] = step * 1000
+					lookbackIndex = (
+						lookbackIndex % FIntReactSchedulerNumberOfLookbackFrames
+					) + 1
+					local totalFrameTime = 0
+					local totalFrames = FIntReactSchedulerNumberOfLookbackFrames
+					for i = 1, totalFrames do
+						if lookbackBuffer[i] == nil then
+							totalFrames = i - 1
+							break
+						end
+						totalFrameTime += lookbackBuffer[i]
+					end
+					averageMillisecondsPerFrame = totalFrameTime / totalFrames
+				else
+					local nFrames = FIntReactSchedulerNumberOfLookbackFrames
+					averageMillisecondsPerFrame = (
+						averageMillisecondsPerFrame * (nFrames - 1) + step * 1000
+					) / nFrames
+				end
+				targetMillisecondsPerFrame = math.clamp(
+					averageMillisecondsPerFrame,
+					desiredMillisecondsPerFrame,
+					maxMillisecondsPerFrame
+				)
+			else
+				targetMillisecondsPerFrame = math.clamp(
+					step * 1000,
+					desiredMillisecondsPerFrame,
+					maxMillisecondsPerFrame
+				)
+			end
 		end)
 end
 
@@ -87,14 +125,16 @@ end
 local yieldInterval = GetFIntReactSchedulerYieldInterval()
 local deadline = 0
 
-type schedulerFlags = {
+type SchedulerFlags = {
 	yieldInterval: number?,
 	deferredWork: boolean?,
 	heartbeatFrameMarker: boolean?,
 	targetMsByHeartbeatDelta: boolean?,
+	numberOfLookbackFrames: number?,
+	lookbackUseRingBuffer: boolean?,
 }
 
-local function setSchedulerFlags(flags: schedulerFlags)
+local function setSchedulerFlags(flags: SchedulerFlags)
 	if flags.yieldInterval ~= nil then
 		yieldInterval = flags.yieldInterval
 	end
@@ -116,6 +156,23 @@ local function setSchedulerFlags(flags: schedulerFlags)
 			end
 		end
 	end
+	if flags.numberOfLookbackFrames ~= nil then
+		FIntReactSchedulerNumberOfLookbackFrames = flags.numberOfLookbackFrames
+	end
+	if flags.lookbackUseRingBuffer ~= nil then
+		FFlagReactSchedulerLookbackUseRingBuffer = flags.lookbackUseRingBuffer
+	end
+end
+
+local function getSchedulerFlags(): SchedulerFlags
+	return {
+		yieldInterval = yieldInterval,
+		deferredWork = FFlagReactSchedulerEnableDeferredWork,
+		heartbeatFrameMarker = FFlagReactSchedulerSetFrameMarkerOnHeartbeatEnd,
+		targetMsByHeartbeatDelta = FFlagReactSchedulerSetTargetMsByHeartbeatDelta,
+		numberOfLookbackFrames = FIntReactSchedulerNumberOfLookbackFrames,
+		lookbackUseRingBuffer = FFlagReactSchedulerLookbackUseRingBuffer,
+	}
 end
 
 local function doesBudgetRemain(): boolean
@@ -298,4 +355,5 @@ return {
 	getCurrentTime = getCurrentTime,
 	forceFrameRate = forceFrameRate,
 	setSchedulerFlags = setSchedulerFlags,
+	getSchedulerFlags = getSchedulerFlags,
 }

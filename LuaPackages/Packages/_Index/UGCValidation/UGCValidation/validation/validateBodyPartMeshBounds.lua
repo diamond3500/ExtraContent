@@ -1,5 +1,3 @@
---!strict
-
 --[[
 	validateBodyPartMeshBounds.lua iterates over all the render and wrap meshes for body parts in the asset and checks they are similar in size
 ]]
@@ -19,13 +17,10 @@ local getExpectedPartSize = require(root.util.getExpectedPartSize)
 
 local FailureReasonsAccumulator = require(root.util.FailureReasonsAccumulator)
 
-local getFFlagUGCValidateCageOrigin = require(root.flags.getFFlagUGCValidateCageOrigin)
 local getFIntUGCValidateBodyPartMaxCageOrigin = require(root.flags.getFIntUGCValidateBodyPartMaxCageOrigin)
 local getFFlagUGCValidatePropertiesRefactor = require(root.flags.getFFlagUGCValidatePropertiesRefactor)
 
-local maxBodyPartCageOrigin = if getFFlagUGCValidateCageOrigin()
-	then getFIntUGCValidateBodyPartMaxCageOrigin() / 100
-	else nil
+local maxBodyPartCageOrigin = getFIntUGCValidateBodyPartMaxCageOrigin() / 100
 
 local function getMeshInfoHelper(
 	inst: Instance,
@@ -146,8 +141,6 @@ local function validateCageOrigin(
 	meshHandle: MeshPart,
 	validationContext: Types.ValidationContext
 ): (boolean, { string }?)
-	assert(getFFlagUGCValidateCageOrigin())
-
 	local wrapTarget = meshHandle:FindFirstChildWhichIsA("WrapTarget")
 	-- the existance of all required Instances has been checked prior to calling this function where the asset is checked against the schema
 	assert(wrapTarget, "Missing WrapTarget child for " .. meshHandle.Name)
@@ -182,9 +175,7 @@ local function validateInternal(
 
 	local reasonsAccumulator = FailureReasonsAccumulator.new()
 	if not getFFlagUGCValidatePropertiesRefactor() then
-		if getFFlagUGCValidateCageOrigin() then
-			reasonsAccumulator:updateReasons(validateCageOrigin(meshHandle, validationContext))
-		end
+		reasonsAccumulator:updateReasons(validateCageOrigin(meshHandle, validationContext))
 	end
 
 	reasonsAccumulator:updateReasons(validateWrapTargetComparison(meshScale, meshHandle, validationContext))

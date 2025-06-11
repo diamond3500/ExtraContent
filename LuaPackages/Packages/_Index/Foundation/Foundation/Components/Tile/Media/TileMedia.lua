@@ -6,11 +6,17 @@ local React = require(Packages.React)
 local MediaType = require(Foundation.Enums.MediaType)
 type MediaType = MediaType.MediaType
 
+local ThumbnailType = require(Foundation.Enums.ThumbnailType)
+type ThumbnailType = ThumbnailType.ThumbnailType
+local ThumbnailSize = require(Foundation.Enums.ThumbnailSize)
+type ThumbnailSize = ThumbnailSize.ThumbnailSize
+
 local MediaShape = require(Foundation.Enums.MediaShape)
 type MediaShape = MediaShape.MediaShape
 
 local useTileLayout = require(Foundation.Components.Tile.useTileLayout)
 local withDefaults = require(Foundation.Utility.withDefaults)
+local getRbxThumb = require(Foundation.Utility.getRbxThumb)
 
 local Image = require(Foundation.Components.Image)
 local View = require(Foundation.Components.View)
@@ -72,7 +78,7 @@ local function TileMedia(tileMediaProps: TileMediaProps)
 			return nil :: string?
 		end
 
-		return `rbxthumb://type={props.type}&id={props.id}&w=150&h=150`
+		return getRbxThumb(props.type :: any, props.id)
 	end, { props.type, props.id } :: { any })
 
 	local cornerRadius = if props.shape :: MediaShape == MediaShape.Circle

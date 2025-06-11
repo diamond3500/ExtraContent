@@ -53,6 +53,7 @@ local GetFFlagSelectInSceneReportMenu = SharedFlags.GetFFlagSelectInSceneReportM
 local GetFFlagAbuseReportMenuConsoleSupportRefactor = SharedFlags.GetFFlagAbuseReportMenuConsoleSupportRefactor
 local GetFFlagAddAbuseReportMenuCoreScriptsProvider = require(root.Flags.GetFFlagAddAbuseReportMenuCoreScriptsProvider)
 local isAbuseReportMenuOpenCloseSignalEnabled = require(root.Flags.isAbuseReportMenuOpenCloseSignalEnabled)
+local GetFFlagWHAM1707ExperimentForceEnabled = require(root.Flags.GetFFlagWHAM1707ExperimentForceEnabled)
 
 local FStringReportMenuIXPLayer = SharedFlags.FStringReportMenuIXPLayer
 local FStringEARReportMenuIXPLayer = SharedFlags.FStringEARReportMenuIXPLayer
@@ -94,6 +95,10 @@ local function isInSelectInSceneExperiment(): boolean
 end
 
 local function isInWHAM1707Experiment(): boolean -- also need engine feature check
+	if GetFFlagWHAM1707ExperimentForceEnabled() then
+		return true
+	end
+
 	-- Getting IXP layer data
 	local success, IXPData = pcall(function()
 		return IXPService:GetUserLayerVariables(FStringEARReportMenuIXPLayer)

@@ -17,6 +17,7 @@ local Types = require(Root.Service.Types)
 local FFlagEnableChromeAnalytics = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagEnableChromeAnalytics()
 local FFlagEnabledChromeIntegrationIsActivated = game:DefineFastFlag("EnabledChromeIntegrationIsActivated", false)
 local GetFFlagChromeTrackWindowPosition = require(Root.Parent.Flags.GetFFlagChromeTrackWindowPosition)
+local FFlagIntegrationsChromeShortcutTelemetry = require(Root.Parent.Flags.FFlagIntegrationsChromeShortcutTelemetry)
 
 local Tracker = require(Root.Analytics.Tracker)
 
@@ -56,7 +57,7 @@ export type ChromeAnalytics = {
 		userPins: Types.IntegrationIdList
 	) -> nil,
 
-	onIconActivated: (ChromeAnalytics, integrationId: Types.IntegrationId) -> nil,
+	onIconActivated: (ChromeAnalytics, integrationId: Types.IntegrationId, props: Types.ActivateProps?) -> nil,
 	onIconTouchBegan: (ChromeAnalytics, integrationId: Types.IntegrationId) -> nil,
 	onIconDrag: (ChromeAnalytics, integrationId: Types.IntegrationId) -> nil,
 	onIconTouchEnded: (
@@ -230,9 +231,14 @@ function ChromeAnalytics.new(): ChromeAnalytics
 		self._observeIntegration(integrationId)
 	end)
 
-	ChromeService:onIntegrationActivated():connect(function(integrationId: Types.IntegrationId)
-		self:onIconActivated(integrationId)
-	end)
+	ChromeService:onIntegrationActivated()
+		:connect(function(integrationId: Types.IntegrationId, props: Types.ActivateProps?)
+			if FFlagIntegrationsChromeShortcutTelemetry then
+				self:onIconActivated(integrationId, props)
+			else
+				self:onIconActivated(integrationId)
+			end
+		end)
 
 	ChromeService:onIntegrationStatusChanged():connect(function(integrationId: Types.IntegrationId, status: number)
 		local integration = getIntegration(integrationId)
@@ -265,7 +271,7 @@ function ChromeAnalytics:setScreenSize(screenSize: Vector2)
 	return nil
 end
 
-function ChromeAnalytics:onIconActivated(integrationId: Types.IntegrationId)
+function ChromeAnalytics:onIconActivated(integrationId: Types.IntegrationId, props: Types.ActivateProps?)
 	local integration = getIntegration(integrationId)
 
 	if integration then
@@ -284,6 +290,9 @@ function ChromeAnalytics:onIconActivated(integrationId: Types.IntegrationId)
 			source = getInteractionSource(integrationId),
 			notification_count = notificationCount,
 			is_toggle_on = isToggleOn,
+			used_shortcut = if FFlagIntegrationsChromeShortcutTelemetry and props
+				then props.fromShortcut or false
+				else nil,
 		})
 	end
 	return nil

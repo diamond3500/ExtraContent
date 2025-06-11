@@ -9,6 +9,8 @@ local Skeleton = require(Foundation.Components.Skeleton)
 local Types = require(Foundation.Components.Types)
 local useTokens = require(Foundation.Providers.Style.useTokens)
 local withDefaults = require(Foundation.Utility.withDefaults)
+local useTextSizeOffset = require(Foundation.Providers.Style.useTextSizeOffset)
+
 type ColorStyle = Types.ColorStyle
 
 type FontStyle = {
@@ -63,6 +65,9 @@ local function getTypographyComponent(
 
 	-- Set LineHeight to 1 for now - LineHeight on this font doesn't look right.
 	font.LineHeight = 1
+	local textSizeOffset = useTextSizeOffset()
+
+	local scaledHeight = lines * (font.FontSize + (textSizeOffset or 0)) * font.LineHeight
 
 	return React.createElement(Text, {
 		fontStyle = font,
@@ -72,14 +77,8 @@ local function getTypographyComponent(
 		TextXAlignment = textXAlignment,
 		TextTruncate = Enum.TextTruncate.AtEnd,
 		TextWrapped = if lines > 1 then true else false,
-
-		AutomaticSize = Enum.AutomaticSize.Y,
-		Size = UDim2.fromScale(1, 0),
+		Size = UDim2.new(1, 0, 0, scaledHeight),
 		LayoutOrder = layoutOrder,
-	}, {
-		UISizeConstraint = React.createElement("UISizeConstraint", {
-			MaxSize = Vector2.new(1000, lines * font.FontSize * font.LineHeight),
-		}),
 	})
 end
 

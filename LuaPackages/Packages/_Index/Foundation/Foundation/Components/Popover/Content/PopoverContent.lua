@@ -4,7 +4,7 @@ local Packages = Foundation.Parent
 local View = require(Foundation.Components.View)
 local Image = require(Foundation.Components.Image)
 local PopoverContext = require(script.Parent.Parent.PopoverContext)
-local OverlayContext = require(Foundation.Providers.Overlay.OverlayContext)
+local useOverlay = require(Foundation.Providers.Overlay.useOverlay)
 local useFloating = require(script.Parent.Parent.useFloating)
 local useTokens = require(Foundation.Providers.Style.useTokens)
 local withDefaults = require(Foundation.Utility.withDefaults)
@@ -12,6 +12,7 @@ local withDefaults = require(Foundation.Utility.withDefaults)
 local StateLayerAffordance = require(Foundation.Enums.StateLayerAffordance)
 local PopoverSide = require(Foundation.Enums.PopoverSide)
 local PopoverAlign = require(Foundation.Enums.PopoverAlign)
+local Radius = require(Foundation.Enums.Radius)
 
 local React = require(Packages.React)
 local ReactRoblox = require(Packages.ReactRoblox)
@@ -21,6 +22,7 @@ type Selection = Types.Selection
 
 type PopoverSide = PopoverSide.PopoverSide
 type PopoverAlign = PopoverAlign.PopoverAlign
+type Radius = Radius.Radius
 
 type SideConfig = useFloating.SideConfig
 type AlignConfig = useFloating.AlignConfig
@@ -35,6 +37,8 @@ type PopoverContentProps = {
 	-- Callback for when the backdrop is pressed. Does not swallow the press event.
 	onPressedOutside: () -> ()?,
 	selection: Selection?,
+	backgroundStyle: Types.ColorStyle?,
+	radius: ("Small" | "Medium")?,
 	children: React.ReactNode,
 }
 
@@ -45,6 +49,12 @@ local defaultProps = {
 	selection = {
 		Selectable = false,
 	},
+	radius = Radius.Medium,
+}
+
+local radiusToTag: { [Radius]: string } = {
+	[Radius.Small] = "radius-small",
+	[Radius.Medium] = "radius-medium",
 }
 
 local SHADOW_IMAGE = "component_assets/dropshadow_17_8"
@@ -54,13 +64,14 @@ local SHADOW_VERTICAL_OFFSET = 2
 local function PopoverContent(contentProps: PopoverContentProps, forwardedRef: React.Ref<GuiObject>?)
 	local props = withDefaults(contentProps, defaultProps)
 	local popoverContext = React.useContext(PopoverContext)
-	local overlayContext = React.useContext(OverlayContext)
+	local overlay = useOverlay()
 
 	local tokens = useTokens()
 
 	local arrowSide = tokens.Size.Size_200
 	local arrowWidth = arrowSide * math.sqrt(2) -- The diagonal of a square is sqrt(2) times the side length
 	local arrowHeight = arrowWidth / 2
+	local backgroundStyle = props.backgroundStyle or tokens.Color.Surface.Surface_100
 
 	local ref = React.useRef(nil)
 
@@ -72,7 +83,7 @@ local function PopoverContent(contentProps: PopoverContentProps, forwardedRef: R
 		popoverContext.isOpen,
 		popoverContext.anchor,
 		ref.current,
-		overlayContext.overlay,
+		overlay,
 		props.side,
 		props.align,
 		if props.hasArrow then arrowHeight else 0
@@ -80,7 +91,7 @@ local function PopoverContent(contentProps: PopoverContentProps, forwardedRef: R
 
 	local backdropListener = React.useRef(nil :: RBXScriptConnection?)
 
-	local backdropCallback = React.useCallback(function(instance: GuiObject)
+	local backdropCallback = React.useCallback(function(instance: GuiObject?)
 		if backdropListener.current then
 			backdropListener.current:Disconnect()
 		end
@@ -137,7 +148,8 @@ local function PopoverContent(contentProps: PopoverContentProps, forwardedRef: R
 				Rotation = 45,
 				ZIndex = 3,
 				Visible = isVisible,
-				tag = "bg-surface-100 anchor-center-center",
+				backgroundStyle = backgroundStyle,
+				tag = "anchor-center-center",
 			})
 			else nil,
 		Content = React.createElement(View, {
@@ -155,16 +167,17 @@ local function PopoverContent(contentProps: PopoverContentProps, forwardedRef: R
 			ZIndex = 4,
 			-- If onPressedOutside is provided, we need to swallow the press event to prevent it from propagating to the backdrop
 			onActivated = if props.onPressedOutside then function() end else nil,
-			tag = "auto-xy bg-surface-100 radius-medium",
+			backgroundStyle = backgroundStyle,
+			tag = `auto-xy {radiusToTag[props.radius]}`,
 			ref = ref,
 		}, props.children),
 	})
 
-	if not overlayContext.overlay then
+	if overlay == nil then
 		return content
 	end
 
-	return ReactRoblox.createPortal(content, overlayContext.overlay)
+	return ReactRoblox.createPortal(content, overlay)
 end
 
 return React.forwardRef(PopoverContent)

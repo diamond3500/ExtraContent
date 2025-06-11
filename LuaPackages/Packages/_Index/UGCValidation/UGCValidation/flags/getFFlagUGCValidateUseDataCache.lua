@@ -1,5 +1,3 @@
---!strict
-
 game:DefineFastFlag("UGCValidateUseDataCache", false)
 
 return function()

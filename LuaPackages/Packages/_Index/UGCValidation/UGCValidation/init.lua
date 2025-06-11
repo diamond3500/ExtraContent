@@ -32,6 +32,12 @@ local UGCValidation = {}
 
 if getEngineFeatureUGCValidationWithContextEntrypoint() then
 	function UGCValidation.validateWithContext(validationContext: Types.ValidationContext)
+		assert(validationContext.instances ~= nil, "instances required in validationContext for validateWithContext")
+		assert(
+			validationContext.assetTypeEnum ~= nil,
+			"assetTypeEnum required in validationContext for validateWithContext"
+		)
+
 		local instances = validationContext.instances
 		local isServer = validationContext.isServer
 		local assetTypeEnum = validationContext.assetTypeEnum
@@ -57,6 +63,10 @@ if getEngineFeatureUGCValidationWithContextEntrypoint() then
 		validationContext.editableMeshes = result.editableMeshes :: Types.EditableMeshes
 		validationContext.editableImages = result.editableImages :: Types.EditableImages
 		validationContext.lastTickSeconds = tick()
+
+		if validationContext.requireAllFolders == nil then
+			validationContext.requireAllFolders = true
+		end
 
 		local validationSuccess, reasons = validateInternal(validationContext)
 
@@ -133,7 +143,10 @@ function UGCValidation.validate(
 
 	local validationSuccess, reasons = validateInternal(validationContext)
 
-	destroyEditableInstances(validationContext.editableMeshes, validationContext.editableImages)
+	destroyEditableInstances(
+		validationContext.editableMeshes :: Types.EditableMeshes,
+		validationContext.editableImages :: Types.EditableImages
+	)
 
 	if validationSuccess then
 		Analytics.recordScriptTime(script.Name, startTime, validationContext)
@@ -187,7 +200,10 @@ function UGCValidation.validateAsync(
 
 	coroutine.wrap(function()
 		callback(validateInternal(validationContext))
-		destroyEditableInstances(validationContext.editableMeshes, validationContext.editableImages)
+		destroyEditableInstances(
+			validationContext.editableMeshes :: Types.EditableMeshes,
+			validationContext.editableImages :: Types.EditableImages
+		)
 	end)()
 end
 
@@ -231,7 +247,10 @@ function UGCValidation.validateMeshPartFormat(
 
 	local validationSuccess, reasons = validateDynamicHeadMeshPartFormat(validationContext)
 
-	destroyEditableInstances(validationContext.editableMeshes, validationContext.editableImages)
+	destroyEditableInstances(
+		validationContext.editableMeshes :: Types.EditableMeshes,
+		validationContext.editableImages :: Types.EditableImages
+	)
 
 	return validationSuccess, reasons
 end
@@ -276,12 +295,23 @@ function UGCValidation.validateAsyncMeshPartFormat(
 
 	coroutine.wrap(function()
 		callback(validateDynamicHeadMeshPartFormat(validationContext))
-		destroyEditableInstances(validationContext.editableMeshes, validationContext.editableImages)
+		destroyEditableInstances(
+			validationContext.editableMeshes :: Types.EditableMeshes,
+			validationContext.editableImages :: Types.EditableImages
+		)
 	end)()
 end
 
 if getEngineFeatureUGCValidationWithContextEntrypoint() then
 	function UGCValidation.validateMeshPartAssetFormatWithContext(validationContext: Types.ValidationContext)
+		assert(
+			validationContext.assetTypeEnum ~= nil,
+			"assetTypeEnum required in validationContext for validateMeshPartAssetFormatWithContext"
+		)
+		assert(
+			validationContext.instances ~= nil,
+			"instances required in validationContext for validateMeshPartAssetFormatWithContext"
+		)
 		local instances = validationContext.instances
 		local assetTypeEnum = validationContext.assetTypeEnum
 		local isServer = validationContext.isServer
@@ -308,11 +338,13 @@ if getEngineFeatureUGCValidationWithContextEntrypoint() then
 
 		local validationSuccess, reasons
 		if isLayeredClothing(instances[1]) then
-			validationSuccess, reasons =
-				validateLayeredClothingAccessoryMeshPartAssetFormat(specialMeshAccessory, validationContext)
+			validationSuccess, reasons = validateLayeredClothingAccessoryMeshPartAssetFormat(
+				specialMeshAccessory :: Accessory,
+				validationContext
+			)
 		else
 			validationSuccess, reasons =
-				validateLegacyAccessoryMeshPartAssetFormat(specialMeshAccessory, validationContext)
+				validateLegacyAccessoryMeshPartAssetFormat(specialMeshAccessory :: Accessory, validationContext)
 		end
 
 		destroyEditableInstances(
@@ -366,7 +398,10 @@ function UGCValidation.validateMeshPartAssetFormat2(
 		validationSuccess, reasons = validateLegacyAccessoryMeshPartAssetFormat(specialMeshAccessory, validationContext)
 	end
 
-	destroyEditableInstances(validationContext.editableMeshes, validationContext.editableImages)
+	destroyEditableInstances(
+		validationContext.editableMeshes :: Types.EditableMeshes,
+		validationContext.editableImages :: Types.EditableImages
+	)
 
 	return validationSuccess, reasons
 end
@@ -429,6 +464,11 @@ if getEngineFeatureUGCValidationWithContextEntrypoint() then
 	function UGCValidation.validateFullBodyWithContext(
 		validationContext: Types.ValidationContext
 	): (boolean, { string }?)
+		assert(
+			validationContext.fullBodyData ~= nil,
+			"fullBodyData required in validationContext for validateFullBodyWithContext"
+		)
+
 		local isServer = validationContext.isServer
 		local fullBodyData = validationContext.fullBodyData
 		local allowEditableInstances = validationContext.allowEditableInstances
@@ -460,6 +500,10 @@ if getEngineFeatureUGCValidationWithContextEntrypoint() then
 		validationContext.editableMeshes = result.editableMeshes :: Types.EditableMeshes
 		validationContext.editableImages = result.editableImages :: Types.EditableImages
 		validationContext.lastTickSeconds = tick()
+
+		if validationContext.requireAllFolders == nil then
+			validationContext.requireAllFolders = true
+		end
 
 		local validationSuccess, reasons = validateFullBody(validationContext)
 
@@ -527,7 +571,10 @@ function UGCValidation.validateFullBody(
 
 	local validationSuccess, reasons = validateFullBody(validationContext)
 
-	destroyEditableInstances(validationContext.editableMeshes, validationContext.editableImages)
+	destroyEditableInstances(
+		validationContext.editableMeshes :: Types.EditableMeshes,
+		validationContext.editableImages :: Types.EditableImages
+	)
 
 	if validationSuccess then
 		Analytics.recordScriptTime(script.Name, startTime, validationContext)
@@ -540,6 +587,8 @@ function UGCValidation.validateFullBody(
 end
 
 function UGCValidation.validateShoesWithContext(validationContext: Types.ValidationContext): (boolean, { string }?)
+	assert(validationContext.fullBodyData ~= nil, "fullBodyData required in validationContext for validateShoes")
+
 	local isServer = validationContext.isServer
 	local fullBodyData = validationContext.fullBodyData
 	local allowEditableInstances = validationContext.allowEditableInstances
@@ -635,7 +684,10 @@ function UGCValidation.preprocessDataAsync(
 
 	local preprocessResults = ValidationHints.preprocessDataAsync(allBodyData, validationContext)
 
-	destroyEditableInstances(validationContext.editableMeshes, validationContext.editableImages)
+	destroyEditableInstances(
+		validationContext.editableMeshes :: Types.EditableMeshes,
+		validationContext.editableImages :: Types.EditableImages
+	)
 
 	if preprocessResults.ok then
 		Analytics.recordScriptTime("preprocessDataAsync", startTime, validationContext)
@@ -727,7 +779,10 @@ function UGCValidation.calculateScaleToValidateBoundsAsync(
 		ValidationHints.calculateScaleToValidateBoundsAsync(allBodyData, validationContext, dataCache)
 
 	if not getFFlagUGCValidateUseDataCache() or not dataCache then
-		destroyEditableInstances(validationContext.editableMeshes, validationContext.editableImages)
+		destroyEditableInstances(
+			validationContext.editableMeshes :: Types.EditableMeshes,
+			validationContext.editableImages :: Types.EditableImages
+		)
 	end
 
 	if validationResults.ok then

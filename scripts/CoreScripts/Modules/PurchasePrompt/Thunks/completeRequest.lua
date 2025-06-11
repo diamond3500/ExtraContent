@@ -11,6 +11,8 @@ local PromptState = require(Root.Enums.PromptState)
 local RequestType = require(Root.Enums.RequestType)
 local PurchaseError = require(Root.Enums.PurchaseError)
 
+local SelectedRobuxPackage = require(Root.Utils.SelectedRobuxPackage)
+
 local Counter = require(Root.Enums.Counter)
 local sendCounter = require(Root.Thunks.sendCounter)
 
@@ -32,7 +34,7 @@ local function completeRequest()
 		local id = state.promptRequest.id
 		local didPurchase = state.hasCompletedPurchase
 
-		local nativeProductId = state.nativeUpsell and state.nativeUpsell.robuxProductId
+		local nativeProductId = SelectedRobuxPackage.getRobuxProductId(state)
 		local productId = state.productInfo and state.productInfo.productId
 		-- Being in this state when the request is completed == Cancelled purchase
 		if state.promptState == PromptState.U13PaymentModal then

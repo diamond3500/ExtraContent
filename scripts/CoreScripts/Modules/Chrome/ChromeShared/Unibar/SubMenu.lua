@@ -19,6 +19,8 @@ local FFlagAdaptUnibarAndTiltSizing = SharedFlags.GetFFlagAdaptUnibarAndTiltSizi
 local FFlagConsoleChatOnExpControls = SharedFlags.FFlagConsoleChatOnExpControls
 local FFlagFocusNavOutOfSubmenu = SharedFlags.FFlagFocusNavOutOfSubmenu
 local FFlagSubmenuFocusNavFixes = SharedFlags.FFlagSubmenuFocusNavFixes
+local FFlagChromeFixStopFocusBeforeMenuRowActive = SharedFlags.FFlagChromeFixStopFocusBeforeMenuRowActive
+local FFlagEnableChromeShortcutBar = SharedFlags.FFlagEnableChromeShortcutBar
 
 local ChromeFlags = script.Parent.Parent.Parent.Flags
 local FFlagUnibarMenuOpenSubmenu = require(ChromeFlags.FFlagUnibarMenuOpenSubmenu)
@@ -61,10 +63,19 @@ local useChromeMenuItems = require(Root.Hooks.useChromeMenuItems)
 local useObservableValue = require(Root.Hooks.useObservableValue)
 local useTopbarInsetHeight = require(Root.Hooks.useTopbarInsetHeight)
 local useMappedObservableValue = require(Root.Hooks.useMappedObservableValue)
-local FFlagEnableChromeShortcutBar = SharedFlags.FFlagEnableChromeShortcutBar
 
 local FFlagFixChromeIntegrationLayoutBug = game:DefineFastFlag("FixChromeIntegrationLayoutBug", false)
 local FFlagSubmenuFixInvisibleButtons = game:DefineFastFlag("SubmenuFixInvisibleButtons", false)
+
+local isSpatial = require(CorePackages.Workspace.Packages.AppCommonLib).isSpatial
+local isInExperienceUIVREnabled =
+	require(CorePackages.Workspace.Packages.SharedExperimentDefinition).isInExperienceUIVREnabled
+
+local UIManager
+if isInExperienceUIVREnabled then
+	local VrSpatialUi = require(CorePackages.Workspace.Packages.VrSpatialUi)
+	UIManager = VrSpatialUi.UIManager
+end
 
 local IconHost = require(Root.Unibar.ComponentHosts.IconHost)
 local ROW_HEIGHT = Constants.SUB_MENU_ROW_HEIGHT
@@ -161,10 +172,19 @@ function MenuRow(props: ChromeTypes.IntegrationComponentProps)
 		if GetFFlagEnableCaptureBadge() then
 			ClearBadge(props.id)
 		end
-		props.activated()
-		if FFlagConsoleChatOnExpControls or FFlagEnableChromeShortcutBar then
-			ChromeService:disableFocusNav()
-			GuiService.SelectedCoreObject = nil
+		if FFlagChromeFixStopFocusBeforeMenuRowActive then
+			if FFlagConsoleChatOnExpControls or FFlagEnableChromeShortcutBar then
+				ChromeService:disableFocusNav()
+				GuiService.SelectedCoreObject = nil
+				ChromeService:setShortcutBar(nil)
+			end
+			props.activated()
+		else
+			props.activated()
+			if FFlagConsoleChatOnExpControls or FFlagEnableChromeShortcutBar then
+				ChromeService:disableFocusNav()
+				GuiService.SelectedCoreObject = nil
+			end
 		end
 	end, { props.id })
 
@@ -215,9 +235,11 @@ function MenuRow(props: ChromeTypes.IntegrationComponentProps)
 			richText = if GetFFlagEnableChromePinIntegrations() then false else true,
 		}),
 	})
-
+	local heightScale = if isInExperienceUIVREnabled
+		then UIManager.getInstance():getAdditionalCameraScaleIfNeeded()
+		else 1
 	return React.createElement(Interactable, {
-		Size = UDim2.new(1, 0, 0, ROW_HEIGHT),
+		Size = UDim2.new(1, 0, 0, ROW_HEIGHT * heightScale),
 		BorderSizePixel = 0,
 		BackgroundTransparency = highlightColor:map(function(v)
 			return v.Transparency
@@ -233,7 +255,6 @@ function MenuRow(props: ChromeTypes.IntegrationComponentProps)
 		LayoutOrder = props.order,
 		onStateChanged = if useTouchTargets then nil else stateChange,
 		NextSelectionLeft = if FFlagFocusNavOutOfSubmenu then menuIconContext.menuIconRef else nil,
-		SelectionBehaviorDown = if FFlagSubmenuFocusNavFixes then Enum.SelectionBehavior.Stop else nil,
 	}, {
 		UICorner = React.createElement("UICorner", {
 			CornerRadius = UDim.new(0, Constants.SUBMENU_ROW_CORNER_RADIUS),
@@ -506,20 +527,38 @@ function SubMenu(props: SubMenuProps)
 	local preferredTransparency = if GetFFlagChromeUsePreferredTransparency()
 		then style.Theme.BackgroundUIContrast.Transparency * style.Settings.PreferredTransparency
 		else style.Theme.BackgroundUIContrast.Transparency
-
+	local heightScale = if isInExperienceUIVREnabled
+		then UIManager.getInstance():getAdditionalCameraScaleIfNeeded()
+		else 1
+	local anchorPoint
+	if isInExperienceUIVREnabled and isSpatial() then
+		anchorPoint = Vector2.new(0, 1)
+	else
+		anchorPoint = if leftAlign then Vector2.zero else Vector2.new(1, 0)
+	end
 	return React.createElement("Frame", {
-		Size = UDim2.new(0, Constants.ICON_CELL_WIDTH * 4 + unibarLeftMargin + Constants.UNIBAR_END_PADDING * 2, 0, 0),
-		AnchorPoint = if leftAlign then Vector2.zero else Vector2.new(1, 0),
-		Position = UDim2.new(0, -topbarInsetHeight - 2 + unibarLeftMargin, 0, 0),
+		Size = if isInExperienceUIVREnabled and isSpatial()
+			then UDim2.new(1, 0, 0, canvasSize * heightScale)
+			else UDim2.new(
+				0,
+				Constants.ICON_CELL_WIDTH * 4 + unibarLeftMargin + Constants.UNIBAR_END_PADDING * 2,
+				0,
+				0
+			),
+		AnchorPoint = anchorPoint,
+		Position = if isInExperienceUIVREnabled and isSpatial()
+			then UDim2.new(0, 0, 1, 0)
+			else UDim2.new(0, -topbarInsetHeight - 2 + unibarLeftMargin, 0, 0),
 		BackgroundColor3 = theme.BackgroundUIContrast.Color,
 		BackgroundTransparency = if GetFFlagAnimateSubMenu() and props.menuTransition
 			then props.menuTransition:map(function(v)
 				return preferredTransparency + (1 - preferredTransparency) * (1 - v)
 			end)
 			else preferredTransparency,
-		AutomaticSize = Enum.AutomaticSize.Y,
+		AutomaticSize = if isInExperienceUIVREnabled and isSpatial() then nil else Enum.AutomaticSize.Y,
 		ref = menuRef,
 		SelectionGroup = if FFlagSubmenuFocusNavFixes then true else nil,
+		SelectionBehaviorDown = if FFlagSubmenuFocusNavFixes then Enum.SelectionBehavior.Stop else nil,
 	}, {
 		UICorner = React.createElement("UICorner", {
 			CornerRadius = UDim.new(0, Constants.SUBMENU_CORNER_RADIUS),
@@ -592,6 +631,10 @@ return function(props: SubMenuHostProps) -- SubMenuHost
 			end)
 
 			connection.current = UserInputService.InputEnded:Connect(function(inputChangedObj: InputObject, _)
+				if isInExperienceUIVREnabled and isSpatial() then
+					-- drag SubMenu in SpatialUI should not dismiss SubMenu
+					return
+				end
 				local pressed = inputChangedObj.UserInputType == Enum.UserInputType.MouseButton1
 
 				local subMenuId = ChromeService:currentSubMenu():get()
@@ -654,7 +697,7 @@ return function(props: SubMenuHostProps) -- SubMenuHost
 		"Frame",
 		{
 			Name = "SubMenuHost",
-			Size = UDim2.new(0, 0, 1, 0),
+			Size = if isInExperienceUIVREnabled and isSpatial() then UDim2.new(1, 0, 1, 0) else UDim2.new(0, 0, 1, 0),
 			BorderSizePixel = 0,
 			BackgroundTransparency = 1,
 			ref = if FFlagUnibarMenuOpenSubmenu then props.subMenuHostRef else nil,

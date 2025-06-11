@@ -26,6 +26,21 @@ function MockStore.getMockNativeUpsell(robuxProductId: string?, productId: strin
 	}
 end
 
+function MockStore.getMockRobuxUpsellSuggestions(products: any?)
+	return {
+		products = products or {
+			{
+				providerId = "testRobuxProductId",
+				productId = "testProductId",
+				robuxAmount = 500,
+				robuxAmountBeforeBonus = 450,
+				price = "4.99",
+			},
+		},
+		selection = 1,
+	}
+end
+
 function MockStore.getMockStore()
 	local abTest = ABTest.new()
 	local network = Network.new()

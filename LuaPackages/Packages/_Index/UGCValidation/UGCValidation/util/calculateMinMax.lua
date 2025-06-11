@@ -1,5 +1,3 @@
---!strict
-
 --[[
 	calculateMinMax() returns the minimum of currMin and candidateMin, and the maximum of currMax and candidateMax
 ]]

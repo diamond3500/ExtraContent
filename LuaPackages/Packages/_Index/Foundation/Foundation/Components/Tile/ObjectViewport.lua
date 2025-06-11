@@ -11,7 +11,7 @@ local EventConnection = ReactUtils.EventConnection
 local withDefaults = require(Foundation.Utility.withDefaults)
 local useTokens = require(Foundation.Providers.Style.useTokens)
 
-local RunService = game:GetService("RunService")
+local RunService = require(Foundation.Utility.Wrappers).Services.RunService
 
 local WORLD_Y_AXIS = Vector3.new(0, 1, 0)
 

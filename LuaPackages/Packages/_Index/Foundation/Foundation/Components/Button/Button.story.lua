@@ -20,8 +20,8 @@ return {
 			name = variant,
 			story = function(props)
 				local controls = props.controls
-				Flags.FoundationButtonEnableLoadingState = controls.enableLoadingState
-				Flags.FoundationEnableNewButtonSizes = controls.enableNewButtonSizes
+				Flags.FoundationAdjustButtonIconSizes = props.controls.adjustPaddingForIcon
+				Flags.FoundationFixBackgroundForStylingV2 = props.controls.fixBackgroundForStylingV2
 
 				return React.createElement(
 					View,
@@ -57,6 +57,16 @@ return {
 			"icons/placeholder/placeholderOn",
 			"icons/common/robux",
 			"icons/common/play",
+			"icons/controls/media-play-large",
+			"icons/controls/media-play-medium",
+			"icons/controls/media-play-small",
+			"icons/actions/pumpkin_medium",
+			"icons/actions/accept_small",
+			"icons/actions/friends/friendAdd",
+			"icons/actions/friends/friendAdd_small",
+			"icons/navigation/externallink_medium",
+			"icons/actions/info",
+			"icons/actions/info_small",
 			"",
 		},
 		text = "Lorem ipsum",
@@ -68,7 +78,7 @@ return {
 			FillBehavior.Fill,
 		} :: { FillBehavior },
 		inputDelay = 0,
-		enableLoadingState = Flags.FoundationButtonEnableLoadingState,
-		enableNewButtonSizes = Flags.FoundationEnableNewButtonSizes,
+		adjustPaddingForIcon = Flags.FoundationAdjustButtonIconSizes,
+		fixBackgroundForStylingV2 = Flags.FoundationFixBackgroundForStylingV2,
 	},
 }

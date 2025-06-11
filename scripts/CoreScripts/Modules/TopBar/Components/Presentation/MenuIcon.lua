@@ -12,19 +12,22 @@ local FFlagHideTopBarConsole = SharedFlags.FFlagHideTopBarConsole
 local FFlagEnableChromeShortcutBar = SharedFlags.FFlagEnableChromeShortcutBar
 local FFlagReduceTopBarInsetsWhileHidden = SharedFlags.FFlagReduceTopBarInsetsWhileHidden
 local FFlagShowUnibarOnVirtualCursor = SharedFlags.FFlagShowUnibarOnVirtualCursor
+local FFlagMenuIconRemoveBinding = SharedFlags.FFlagMenuIconRemoveBinding
 
 local Roact = require(CorePackages.Packages.Roact)
+local React = require(CorePackages.Packages.React)
 local RoactRodux = require(CorePackages.Packages.RoactRodux)
 local t = require(CorePackages.Packages.t)
 local UIBlox = require(CorePackages.Packages.UIBlox)
 local UIBloxImages = UIBlox.App.ImageSet.Images
 local withTooltip = UIBlox.App.Dialog.TooltipV2.withTooltip
 local TooltipOrientation = UIBlox.App.Dialog.Enum.TooltipOrientation
-
 local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 local Chrome = RobloxGui.Modules.Chrome
 local ChromeEnabled = require(Chrome.Enabled)
-local ChromeService = if ChromeEnabled() and (FFlagTiltIconUnibarFocusNav or FFlagEnableChromeShortcutBar) then require(Chrome.Service) else nil :: never
+local isInExperienceUIVREnabled =
+	require(CorePackages.Workspace.Packages.SharedExperimentDefinition).isInExperienceUIVREnabled
+local ChromeService = if ChromeEnabled() and (FFlagTiltIconUnibarFocusNav or FFlagEnableChromeShortcutBar or isInExperienceUIVREnabled) then require(Chrome.Service) else nil :: never
 local UnibarConstants = if ChromeEnabled() and FFlagTiltIconUnibarFocusNav then require(Chrome.ChromeShared.Unibar.Constants) else nil :: never
 local TenFootInterface = require(RobloxGui.Modules.TenFootInterface)
 local isNewInGameMenuEnabled = require(RobloxGui.Modules.isNewInGameMenuEnabled)
@@ -44,7 +47,7 @@ local GetFFlagChangeTopbarHeightCalculation =
 local FFlagEnableChromeBackwardsSignalAPI =
 	require(script.Parent.Parent.Parent.Flags.GetFFlagEnableChromeBackwardsSignalAPI)()
 local FFlagFixMenuIconBackground = game:DefineFastFlag("FixMenuIconBackground", false)
-
+local FFlagEnableReferralRewardTooltip = game:DefineFastFlag("EnableReferralRewardTooltip", false)
 
 local Components = script.Parent.Parent
 local Actions = Components.Parent.Actions
@@ -61,7 +64,36 @@ end
 
 local isNewTiltIconEnabled = require(RobloxGui.Modules.isNewTiltIconEnabled)
 
+local TooltipCallout
+local isSpatial
+local Panel3DInSpatialUI
+local PanelType
+local SPATIAL_TOOLTIP_SPACING
+local UIManager
+local shouldDisableBottomBarInteraction
+if isInExperienceUIVREnabled then
+	isSpatial = require(CorePackages.Workspace.Packages.AppCommonLib).isSpatial
+	TooltipCallout = UIBlox.App.Dialog.TooltipCallout
+	local VrSpatialUi = require(CorePackages.Workspace.Packages.VrSpatialUi)
+	UIManager = VrSpatialUi.UIManager
+	Panel3DInSpatialUI = VrSpatialUi.Panel3DInSpatialUI
+	PanelType = VrSpatialUi.Constants.PanelType
+	SPATIAL_TOOLTIP_SPACING = VrSpatialUi.Constants.SPATIAL_TOOLTIP_SPACING
+	shouldDisableBottomBarInteraction = function()
+		if isInExperienceUIVREnabled and isSpatial() then
+			-- hide the tooltip if the top bar is not showing in VR
+			local showTopBar = ChromeService:showTopBar()
+			local isBottomBarInteractionOnAnimationSupported = UIManager.getInstance():isBottomBarInteractionOnAnimationSupported()
+			return not showTopBar and not isBottomBarInteractionOnAnimationSupported
+		else
+			return false
+		end
+	end
+end
+
 local IconButton = require(script.Parent.IconButton)
+
+local withReferralRewardTooltipInfo = require(script.Parent.withReferralRewardTooltipInfo)
 
 local MenuIcon = Roact.PureComponent:extend("MenuIcon")
 
@@ -88,6 +120,7 @@ MenuIcon.validateProps = t.strictInterface({
 	showBadgeOver12 = t.optional(t.boolean),
 	menuIconRef = if ChromeEnabled() and FFlagTiltIconUnibarFocusNav then t.optional(t.any) else nil :: never,
 	unibarMenuRef = if ChromeEnabled() and FFlagTiltIconUnibarFocusNav then t.optional(t.any) else nil :: never,
+	referralRewardTooltipText = t.optional(t.string),
 })
 
 function MenuIcon:init()
@@ -115,15 +148,23 @@ function MenuIcon:init()
 			clickLatched = if tooltipEnabled then true else nil,
 		})
 
-		if VRService.VREnabled and (VRHub.ShowTopBar or GamepadService.GamepadCursorEnabled) then
-			-- in the new VR System, the menu icon opens the gamepad menu instead
-			InGameMenu.openInGameMenu(InGameMenuConstants.MainPagePageKey)
+		if isInExperienceUIVREnabled then
+			if shouldDisableBottomBarInteraction() then
+				return
+			end
+			local SettingsHub = require(RobloxGui.Modules.Settings.SettingsHub)
+			SettingsHub:ToggleVisibility(InGameMenuConstants.AnalyticsMenuOpenTypes.TopbarButton)
 		else
-			if isNewInGameMenuEnabled() then
+			if VRService.VREnabled and (VRHub.ShowTopBar or GamepadService.GamepadCursorEnabled) then
+				-- in the new VR System, the menu icon opens the gamepad menu instead
 				InGameMenu.openInGameMenu(InGameMenuConstants.MainPagePageKey)
 			else
-				local SettingsHub = require(RobloxGui.Modules.Settings.SettingsHub)
-				SettingsHub:ToggleVisibility(InGameMenuConstants.AnalyticsMenuOpenTypes.TopbarButton)
+				if isNewInGameMenuEnabled() then
+					InGameMenu.openInGameMenu(InGameMenuConstants.MainPagePageKey)
+				else
+					local SettingsHub = require(RobloxGui.Modules.Settings.SettingsHub)
+					SettingsHub:ToggleVisibility(InGameMenuConstants.AnalyticsMenuOpenTypes.TopbarButton)
+				end
 			end
 		end
 	end
@@ -131,6 +172,9 @@ function MenuIcon:init()
 		menuIconHoveredSignal:fire(tooltipEnabled)
 	end
 	self.menuIconOnHover = function()
+		if isInExperienceUIVREnabled and shouldDisableBottomBarInteraction() then
+			return
+		end
 		if tooltipEnabled then
 			self:setState({
 				isHovering = true,
@@ -141,6 +185,9 @@ function MenuIcon:init()
 
 			delay(DEFAULT_DELAY_TIME, function()
 				if self.state.isHovering and not self.state.clickLatched then
+					if isInExperienceUIVREnabled and shouldDisableBottomBarInteraction() then
+						return
+					end
 					self:setState({
 						showTooltip = true,
 					})
@@ -180,25 +227,31 @@ function MenuIcon:init()
 	end
 
 	if ChromeEnabled() and FFlagTiltIconUnibarFocusNav then
-		self.onMenuIconSelectionChanged = function(MenuIcon: GuiObject, isMenuIconSelected: boolean, oldSelection: GuiObject, newSelection: GuiObject)
-			local UNFOCUS_TILT = "Unfocus_Tilt"
-			local function unfocusTilt(actionName, userInputState, input): Enum.ContextActionResult
-				if not FFlagEnableChromeShortcutBar and userInputState == Enum.UserInputState.End 
-				    or FFlagEnableChromeShortcutBar and userInputState == Enum.UserInputState.Begin then
-					GuiService.SelectedCoreObject = nil
-					return Enum.ContextActionResult.Sink
+	self.onMenuIconSelectionChanged = function(MenuIcon: GuiObject, isMenuIconSelected: boolean, oldSelection: GuiObject, newSelection: GuiObject)
+			if FFlagMenuIconRemoveBinding then 
+				if not (FFlagShowUnibarOnVirtualCursor and GamepadService.GamepadCursorEnabled) and newSelection and string.find(newSelection.Name, UnibarConstants.ICON_NAME_PREFIX :: string) then
+						ChromeService:enableFocusNav()
+				end
+			else
+				local UNFOCUS_TILT = "Unfocus_Tilt"
+				local function unfocusTilt(actionName, userInputState, input): Enum.ContextActionResult
+					if not FFlagEnableChromeShortcutBar and userInputState == Enum.UserInputState.End 
+						or FFlagEnableChromeShortcutBar and userInputState == Enum.UserInputState.Begin then
+						GuiService.SelectedCoreObject = nil
+						return Enum.ContextActionResult.Sink
+					end
+
+					return Enum.ContextActionResult.Pass
 				end
 
-				return Enum.ContextActionResult.Pass
-			end
-
-			if isMenuIconSelected then
-				ContextActionService:BindCoreAction(UNFOCUS_TILT, unfocusTilt, false, Enum.KeyCode.ButtonB)
-			else
-				ContextActionService:UnbindCoreAction(UNFOCUS_TILT)
-				-- update inFocusNav if GuiSelection enters Unibar
-				if not (FFlagShowUnibarOnVirtualCursor and GamepadService.GamepadCursorEnabled) and newSelection and string.find(newSelection.Name, UnibarConstants.ICON_NAME_PREFIX :: string) then
-					ChromeService:enableFocusNav()
+				if isMenuIconSelected then
+					ContextActionService:BindCoreAction(UNFOCUS_TILT, unfocusTilt, false, Enum.KeyCode.ButtonB)
+				else
+					ContextActionService:UnbindCoreAction(UNFOCUS_TILT)
+					-- update inFocusNav if GuiSelection enters Unibar
+					if not (FFlagShowUnibarOnVirtualCursor and GamepadService.GamepadCursorEnabled) and newSelection and string.find(newSelection.Name, UnibarConstants.ICON_NAME_PREFIX :: string) then
+						ChromeService:enableFocusNav()
+					end
 				end
 			end
 		end
@@ -236,8 +289,55 @@ function MenuIcon:init()
 
 end
 
+function MenuIcon:renderWithTooltipCompat(tooltipProps, tooltipOptions, renderTriggerPoint)
+	if isInExperienceUIVREnabled and isSpatial() then
+		local triggerPointName = "MenuIconTriggerPoint"
+		local triggerPointChanged = function(rbx: GuiObject)
+			self:setState({
+				triggerPointSize = rbx.AbsoluteSize,
+				triggerPointPosition = rbx.AbsolutePosition,
+			})
+		end
+		return React.createElement(
+			React.Fragment,
+			nil,
+			{
+				VRSpatialTooltip = if tooltipOptions.active
+						and self.state.triggerPointSize
+						and Panel3DInSpatialUI
+					then React.createElement(Panel3DInSpatialUI, {
+						panelType = PanelType.ToolTipsContainer,
+						renderFunction = function(panelSize)
+							return React.createElement(TooltipCallout, {
+								textAlignment = Enum.TextXAlignment.Center,
+								headerText = tooltipProps.headerText,
+								orientation = TooltipOrientation.Top,
+								distanceOffset = 0,
+								triggerPointCenter = Vector2.new(
+									self.state.triggerPointPosition.X + self.state.triggerPointSize.X / 2,
+									panelSize.Y - SPATIAL_TOOLTIP_SPACING
+								),
+								contentOffsetVector = Vector2.zero,
+								triggerPointRadius = Vector2.zero,
+							})
+						end,
+					})
+					else nil,
+				[triggerPointName] = renderTriggerPoint(triggerPointChanged),
+			} :: any
+		)
+	else
+		return withTooltip(tooltipProps, tooltipOptions, renderTriggerPoint)
+	end
+end
+
 function MenuIcon:render()
-	local visible = (not VRService.VREnabled or self.state.vrShowMenuIcon)
+	local visible
+	if isInExperienceUIVREnabled then
+		visible = true
+	else
+		visible = (not VRService.VREnabled or self.state.vrShowMenuIcon)
+	end
 
 	local onAreaChanged = function(rbx)
 		if rbx then
@@ -290,6 +390,12 @@ function MenuIcon:render()
 			headerText = tooltipText,
 			hotkeyCodes = MENU_HOTKEYS,
 		}
+
+		if FFlagEnableReferralRewardTooltip and self.props.referralRewardTooltipText and self.props.referralRewardTooltipText ~= "" then
+			tooltipProps.headerText = self.props.referralRewardTooltipText
+			tooltipProps.hotkeyCodes = {}
+		end
+
 		local tooltipOptions = {
 			active = self.state.showTooltip,
 			guiTarget = CoreGui,
@@ -297,7 +403,11 @@ function MenuIcon:render()
 			DisplayOrder = 10,
 		}
 
-		return withTooltip(tooltipProps, tooltipOptions, function(triggerPointChanged)
+		if FFlagEnableReferralRewardTooltip and self.props.referralRewardTooltipText and self.props.referralRewardTooltipText ~= "" then
+			tooltipOptions.active = true
+		end
+
+		return self:renderWithTooltipCompat(tooltipProps, tooltipOptions, function(triggerPointChanged)
 			local onChange = function(rbx)
 				onAreaChanged(rbx)
 				triggerPointChanged(rbx)
@@ -327,7 +437,7 @@ function MenuIcon:render()
 			end
 
 			return Roact.createElement("Frame", {
-				Visible = if ChromeEnabled() and FFlagHideTopBarConsole then self.showIcon:map(function(showIcon)
+					Visible = if ChromeEnabled() and FFlagHideTopBarConsole then self.showIcon:map(function(showIcon)
 					return visible and showIcon
 				end) else visible,
 				BackgroundTransparency = 1,
@@ -337,8 +447,6 @@ function MenuIcon:render()
 				SelectionBehaviorLeft = if ChromeEnabled() and FFlagTiltIconUnibarFocusNav then Enum.SelectionBehavior.Stop else nil :: never,
 				SelectionBehaviorUp = if ChromeEnabled() and FFlagTiltIconUnibarFocusNav then Enum.SelectionBehavior.Stop else nil :: never,
 				SelectionBehaviorDown =  if ChromeEnabled() and FFlagTiltIconUnibarFocusNav then Enum.SelectionBehavior.Stop else nil :: never,
-				
-
 				[Roact.Change.AbsoluteSize] = onChange,
 				[Roact.Change.AbsolutePosition] = onChange,
 			}, {
@@ -346,7 +454,7 @@ function MenuIcon:render()
 				Background = if ChromeEnabled() and FFlagTiltIconUnibarFocusNav then nil else background,
 				IconHitArea = if ChromeEnabled() and FFlagTiltIconUnibarFocusNav then IconHitArea else 
 					if FFlagFixMenuIconBackground then nil else background :: never,
-				ShowTopBarListener = showTopBarListener,
+					ShowTopBarListener = showTopBarListener,
 			})
 		end)
 	else
@@ -382,4 +490,10 @@ local function mapDispatchToProps(dispatch)
 	}
 end
 
-return RoactRodux.UNSTABLE_connect2(nil, mapDispatchToProps)(MenuIcon)
+local menuIconComponent = RoactRodux.UNSTABLE_connect2(nil, mapDispatchToProps)(MenuIcon)
+
+if FFlagEnableReferralRewardTooltip then
+	return withReferralRewardTooltipInfo(menuIconComponent)
+else
+	return menuIconComponent
+end

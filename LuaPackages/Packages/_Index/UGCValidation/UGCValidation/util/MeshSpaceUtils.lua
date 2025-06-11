@@ -1,5 +1,3 @@
---!strict
-
 --[[
 validateBodyPartChildAttachmentBounds.lua performs calculations in the space of the MeshPart mesh. This file gives functions to go to and from mesh space
 

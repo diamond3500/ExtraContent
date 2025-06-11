@@ -26,6 +26,17 @@ local GAMEPAD_ICONS_WIDTH = GAMEPAD_IMAGE_WIDTH - GAMEPAD_WIDTH
 
 local RELATIVE_TEXT_HEIGHT = 0.026
 
+local FFlagStaticDefLocKeysVRGamepadControls = game:DefineFastFlag("StaticDefLocKeysVRGamepadControls", false)
+
+local GAMEPAD_LABEL_KEYS = {
+	["ResetCameraLabel"] = "CoreScripts.InGameMenu.Controls.ResetCameraLabel",
+	["MenuLabel"] = "CoreScripts.InGameMenu.Controls.MenuLabel",
+	["SelectItemLabel"] = "CoreScripts.InGameMenu.Controls.SelectItemLabel",
+	["BackExitLabel"] = "CoreScripts.InGameMenu.Controls.BackExitLabel",
+	["FirstPersonCameraLabel"] = "CoreScripts.InGameMenu.Controls.FirstPersonCameraLabel",
+	["JumpSelectLabel"] = "CoreScripts.InGameMenu.Controls.JumpSelectLabel",
+}
+
 local function GamepadControls(props)
 	return Roact.createElement(ControlLayoutContainer, {
 		titleText = "CoreScripts.InGameMenu.Controls.GamepadTitle",
@@ -40,7 +51,13 @@ local function GamepadControls(props)
 			[React.Tag] = "data-testid=VRGamepadInstructions",
 		}, {
 			Array.map(Controls.questGamepadLabels, function(item, index)
-				local localizationKey = "CoreScripts.InGameMenu.Controls." .. item.labelKey
+				local localizationKey
+				if FFlagStaticDefLocKeysVRGamepadControls then
+					localizationKey = GAMEPAD_LABEL_KEYS[item.labelKey]
+				else
+					localizationKey = "CoreScripts.InGameMenu.Controls." .. item.labelKey
+				end
+
 				return withLocalization({ localizationKey })(function(localized)
 					return Roact.createElement(ThemedTextLabel, {
 						key = item.labelKey,

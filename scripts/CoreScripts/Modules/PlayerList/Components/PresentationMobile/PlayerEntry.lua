@@ -6,6 +6,7 @@ local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 
 local Roact = require(CorePackages.Packages.Roact)
+local React = require(CorePackages.Packages.React)
 local RoactRodux = require(CorePackages.Packages.RoactRodux)
 local AppFonts = require(CorePackages.Workspace.Packages.Style).AppFonts
 local t = require(CorePackages.Packages.t)
@@ -33,6 +34,8 @@ local ClosePlayerDropDown = require(PlayerList.Actions.ClosePlayerDropDown)
 local OpenPlayerDropDown = require(PlayerList.Actions.OpenPlayerDropDown)
 local GetFFlagGateLeaderboardPlayerDropdownViaGUAC = require(SharedFlags).GetFFlagGateLeaderboardPlayerDropdownViaGUAC
 local GetFFlagLuaAppEnableFoundationColors = require(SharedFlags).GetFFlagLuaAppEnableFoundationColors
+local createShallowEqualAndTables = require(PlayerList.createShallowEqualAndTables)
+local FFlagPlayerListReduceRerenders = require(PlayerList.Flags.FFlagPlayerListReduceRerenders)
 
 local PlayerEntry = Roact.PureComponent:extend("PlayerEntry")
 
@@ -59,13 +62,17 @@ PlayerEntry.validateProps = t.strictInterface({
 		isFollower = t.boolean,
 	}),
 
-	gameStats = t.array(t.strictInterface({
-		name = t.string,
-		text = t.string,
-		addId = t.integer,
-		isPrimary = t.boolean,
-		priority = t.number,
-	})),
+	gameStats = if FFlagPlayerListReduceRerenders
+		then nil
+		else t.array(t.strictInterface({
+			name = t.string,
+			text = t.string,
+			addId = t.integer,
+			isPrimary = t.boolean,
+			priority = t.number,
+		})),
+
+	gameStatNames = if FFlagPlayerListReduceRerenders then t.array(t.string) else nil,
 
 	[Roact.Ref] = t.optional(t.table),
 
@@ -211,17 +218,32 @@ function PlayerEntry:render()
 				}),
 			})
 
-			for i, gameStat in ipairs(self.props.gameStats) do
-				if i > layoutValues.MaxLeaderstats then
-					break
+			if FFlagPlayerListReduceRerenders then
+				for i, gameStatName in self.props.gameStatNames do
+					if i > layoutValues.MaxLeaderstats then
+						break
+					end
+					children["GameStat_" .. gameStatName] = Roact.createElement(StatEntry, {
+						statValue = self.props.playerStats[gameStatName],
+						isTitleEntry = self.props.titlePlayerEntry,
+						isTeamEntry = false,
+						layoutOrder = i,
+						textStyle = textStyle,
+					})
 				end
-				children["GameStat_" .. gameStat.name] = Roact.createElement(StatEntry, {
-					statValue = self.props.playerStats[gameStat.name],
-					isTitleEntry = self.props.titlePlayerEntry,
-					isTeamEntry = false,
-					layoutOrder = i,
-					textStyle = textStyle,
-				})
+			else
+				for i, gameStat in ipairs(self.props.gameStats) do
+					if i > layoutValues.MaxLeaderstats then
+						break
+					end
+					children["GameStat_" .. gameStat.name] = Roact.createElement(StatEntry, {
+						statValue = self.props.playerStats[gameStat.name],
+						isTitleEntry = self.props.titlePlayerEntry,
+						isTeamEntry = false,
+						layoutOrder = i,
+						textStyle = textStyle,
+					})
+				end
 			end
 
 			local topDiv = self.props.topDiv or false
@@ -288,4 +310,12 @@ local function mapDispatchToProps(dispatch)
 		end,
 	}
 end
+
+if FFlagPlayerListReduceRerenders then
+	return React.memo(
+		RoactRodux.connect(mapStateToProps, mapDispatchToProps)(PlayerEntry),
+		createShallowEqualAndTables({ "gameStatNames" })
+	)
+end
+
 return RoactRodux.connect(mapStateToProps, mapDispatchToProps)(PlayerEntry)

@@ -6,6 +6,7 @@ local React = require(CorePackages.Packages.React)
 local ChromeService = require(Chrome.Service)
 local ChromeUtils = require(Chrome.ChromeShared.Service.ChromeUtils)
 local ChromeIntegrationUtils = require(Chrome.Integrations.ChromeIntegrationUtils)
+local RespawnUtils = require(Chrome.Integrations.RespawnUtils)
 local MappedSignal = ChromeUtils.MappedSignal
 
 local CommonIcon = require(Chrome.Integrations.CommonIcon)
@@ -18,9 +19,7 @@ local EmotesMenuMaster = require(RobloxGui.Modules.EmotesMenu.EmotesMenuMaster)
 local BackpackModule = require(RobloxGui.Modules.BackpackScript)
 local LocalStore = require(Chrome.ChromeShared.Service.LocalStore)
 local useMappedSignal = require(Chrome.ChromeShared.Hooks.useMappedSignal)
-local SignalLib = require(CorePackages.Workspace.Packages.AppCommonLib)
 local SquadExperimentation = require(CorePackages.Workspace.Packages.SocialExperiments).SquadExperimentation
-local Signal = SignalLib.Signal
 
 local UIBlox = require(CorePackages.Packages.UIBlox)
 local Images = UIBlox.App.ImageSet.Images
@@ -33,6 +32,7 @@ local useMemo = React.useMemo
 local useState = React.useState
 
 local Constants = require(Chrome.ChromeShared.Unibar.Constants)
+local isSpatial = require(CorePackages.Workspace.Packages.AppCommonLib).isSpatial
 
 local SelfieView = require(RobloxGui.Modules.SelfieView)
 
@@ -58,12 +58,17 @@ local GetFFlagShouldShowMusicFtuxTooltipXTimes = require(Chrome.Flags.GetFFlagSh
 local GetFStringMusicTooltipLocalStorageKey_v2 = require(Chrome.Flags.GetFStringMusicTooltipLocalStorageKey_v2)
 local GetFFlagEnableSongbirdInChrome = require(Chrome.Flags.GetFFlagEnableSongbirdInChrome)
 local GetFFlagShouldShowSimpleMusicFtuxTooltip = require(Chrome.Flags.GetFFlagShouldShowSimpleMusicFtuxTooltip)
+local FFlagEnableUnibarTooltipQueue = require(Chrome.Flags.FFlagEnableUnibarTooltipQueue)()
+local FFlagFixIntegrationActivated = game:DefineFastFlag("FixIntegrationActivated", false)
 
 local SharedFlags = require(CorePackages.Workspace.Packages.SharedFlags)
 local GetFFlagAppChatRebrandStringUpdates = SharedFlags.GetFFlagAppChatRebrandStringUpdates
 
 local FFlagAppChatEnabledChromeDropdownFtuxTooltip =
 	game:DefineFastFlag("AppChatEnabledChromeDropdownFtuxTooltip", false)
+
+local FIntUnibarConnectIconTooltipPriority = game:DefineFastInt("UnibarConnectTooltipPriority", 2000)
+local FIntUnibarMusicIconTooltipPriority = game:DefineFastInt("UnibarMusicIconTooltipPriority", 3000)
 local shouldShowConnectTooltip = GetFFlagEnableAppChatInExperience()
 	and FFlagEnableUnibarFtuxTooltips
 	and InExperienceAppChatExperimentation.default.variant.ShowPlatformChatChromeDropdownEntryPoint
@@ -73,6 +78,9 @@ local shouldShowConnectTooltip = GetFFlagEnableAppChatInExperience()
 local shouldShowMusicTooltip = FFlagEnableUnibarFtuxTooltips
 	and GetFFlagShouldShowMusicFtuxTooltip()
 	and GetFFlagEnableSongbirdInChrome()
+
+local isInExperienceUIVREnabled =
+	require(CorePackages.Workspace.Packages.SharedExperimentDefinition).isInExperienceUIVREnabled
 
 local SELFIE_ID = Constants.SELFIE_VIEW_ID
 local ICON_SIZE = Constants.ICON_SIZE
@@ -85,16 +93,20 @@ local leaderboard = ChromeService:register({
 	id = "leaderboard",
 	label = "CoreScripts.TopBar.Leaderboard",
 	activated = function(self)
-		if VRService.VREnabled then
+		if not isInExperienceUIVREnabled and VRService.VREnabled then
 			local InGameMenu = require(RobloxGui.Modules.InGameMenu)
 			InGameMenu.openPlayersPage()
 		else
 			if PlayerListMaster:GetSetVisible() then
 				PlayerListMaster:SetVisibility(not PlayerListMaster:GetSetVisible())
 			else
-				ChromeIntegrationUtils.dismissRobloxMenuAndRun(function()
+				if isInExperienceUIVREnabled and isSpatial() then
 					PlayerListMaster:SetVisibility(not PlayerListMaster:GetSetVisible())
-				end)
+				else
+					ChromeIntegrationUtils.dismissRobloxMenuAndRun(function()
+						PlayerListMaster:SetVisibility(not PlayerListMaster:GetSetVisible())
+					end)
+				end
 			end
 		end
 	end,
@@ -119,9 +131,13 @@ local emotes = ChromeService:register({
 		if EmotesMenuMaster:isOpen() then
 			EmotesMenuMaster:close()
 		else
-			ChromeIntegrationUtils.dismissRobloxMenuAndRun(function()
+			if isInExperienceUIVREnabled and isSpatial() then
 				EmotesMenuMaster:open()
-			end)
+			else
+				ChromeIntegrationUtils.dismissRobloxMenuAndRun(function()
+					EmotesMenuMaster:open()
+				end)
+			end
 		end
 	end,
 	isActivated = function()
@@ -165,9 +181,13 @@ local backpack = ChromeService:register({
 		if BackpackModule.IsOpen then
 			BackpackModule:OpenClose()
 		else
-			ChromeIntegrationUtils.dismissRobloxMenuAndRun(function()
+			if isInExperienceUIVREnabled and isSpatial() then
 				BackpackModule:OpenClose()
-			end)
+			else
+				ChromeIntegrationUtils.dismissRobloxMenuAndRun(function()
+					BackpackModule:OpenClose()
+				end)
+			end
 		end
 	end,
 	isActivated = function()
@@ -181,37 +201,14 @@ local backpack = ChromeService:register({
 })
 ChromeUtils.setCoreGuiAvailability(backpack, Enum.CoreGuiType.Backpack)
 
-local respawnPageOpen = false
-local respawnPageOpenSignal = Signal.new()
-local mappedRespawnPageOpenSignal = MappedSignal.new(respawnPageOpenSignal, function()
-	return respawnPageOpen
-end)
-
-task.defer(function()
-	local SettingsHub = require(RobloxGui.Modules.Settings.SettingsHub)
-	SettingsHub.CurrentPageSignal:connect(function(pageName)
-		respawnPageOpen = pageName == SettingsHub.Instance.ResetCharacterPage.Page.Name
-		respawnPageOpenSignal:fire()
-	end)
-end)
-
 local respawn = ChromeService:register({
 	id = "respawn",
 	label = "CoreScripts.InGameMenu.QuickActions.Respawn",
 	activated = function(self)
-		local SettingsHub = require(RobloxGui.Modules.Settings.SettingsHub)
-		if SettingsHub:GetVisibility() then
-			if respawnPageOpen then
-				SettingsHub:SetVisibility(false)
-			else
-				SettingsHub:SwitchToPage(SettingsHub.Instance.ResetCharacterPage, true)
-			end
-		else
-			SettingsHub:SetVisibility(true, false, SettingsHub.Instance.ResetCharacterPage)
-		end
+		RespawnUtils.respawnPage()
 	end,
 	isActivated = function()
-		return mappedRespawnPageOpenSignal:get()
+		return RespawnUtils.respawnPageOpenSignal:get()
 	end,
 	components = {
 		Icon = function(props)
@@ -328,6 +325,8 @@ function HamburgerButton(props)
 	local connectTooltip = if shouldShowConnectTooltip
 		then if shouldShowMusicTooltip and not hasUserAlreadySeenConnectTooltip
 			then CommonFtuxTooltip({
+				id = if FFlagEnableUnibarTooltipQueue then "CONNECT_TOOLTIP" else nil,
+				priority = if FFlagEnableUnibarTooltipQueue then FIntUnibarConnectIconTooltipPriority else nil,
 				isIconVisible = props.visible,
 
 				headerKey = if GetFFlagAppChatRebrandStringUpdates()
@@ -346,6 +345,8 @@ function HamburgerButton(props)
 				onDismissed = if shouldShowMusicTooltip then onConnectTooltipDismissed else nil,
 			})
 			else CommonFtuxTooltip({
+				id = if FFlagEnableUnibarTooltipQueue then "CONNECT_TOOLTIP" else nil,
+				priority = if FFlagEnableUnibarTooltipQueue then FIntUnibarConnectIconTooltipPriority else nil,
 				isIconVisible = props.visible,
 
 				headerKey = if GetFFlagAppChatRebrandStringUpdates()
@@ -366,6 +367,8 @@ function HamburgerButton(props)
 
 	local musicTooltip = if isMusicTooltipVisible and not hasUserAlreadySeenMusicTooltip
 		then CommonFtuxTooltip({
+			id = if FFlagEnableUnibarTooltipQueue then "MUSIC_TOOLTIP" else nil,
+			priority = if FFlagEnableUnibarTooltipQueue then FIntUnibarMusicIconTooltipPriority else nil,
 			isIconVisible = props.visible,
 
 			headerKey = "CoreScripts.FTUX.Heading.MusicIsAvailable",
@@ -447,6 +450,13 @@ return ChromeService:register({
 	notification = ChromeService:subMenuNotifications("nine_dot"),
 	id = "nine_dot",
 	label = "CoreScripts.TopBar.MoreMenu",
+	isActivated = if FFlagFixIntegrationActivated
+		then function()
+			-- There is a delay of submenuVisibility, which get function returns previouse status here
+			local isToggleOn = not submenuVisibility:get()
+			return isToggleOn
+		end
+		else nil,
 	components = {
 		Icon = function(props)
 			return React.createElement(HamburgerButton, props)

@@ -3,6 +3,7 @@ local Foundation = PreferencesContext:FindFirstAncestor("Foundation")
 local Packages = Foundation.Parent
 
 export type Preferences = {
+	preferredTextSize: Enum.PreferredTextSize,
 	preferredTransparency: number,
 	reducedMotion: boolean,
 }

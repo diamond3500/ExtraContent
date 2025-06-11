@@ -1,4 +1,3 @@
---!strict
 game:DefineFastInt("UGCValidationLCHandleScaleOffsetMaximum", 10)
 
 return function()

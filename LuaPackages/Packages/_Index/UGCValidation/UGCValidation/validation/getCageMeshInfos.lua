@@ -1,5 +1,3 @@
---!strict
-
 local UGCValidateCageMeshInfosFix = game:DefineFastFlag("UGCValidateCageMeshInfosFix", false)
 
 local root = script.Parent.Parent

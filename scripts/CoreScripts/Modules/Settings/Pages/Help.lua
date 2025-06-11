@@ -11,6 +11,7 @@
 local KEYBOARD_MOUSE_TAG = "KeyboardMouse"
 local TOUCH_TAG = "Touch"
 local GAMEPAD_TAG = "Gamepad"
+local SPATIAL_GAMEPAD_TAG = "SpatialGamepad"
 local PC_TABLE_SPACING = 4
 local CONTROLLER_IMAGE_OFFSET_X = 30
 local CONTROLLER_IMAGE_OFFSET_Y = 7
@@ -39,12 +40,28 @@ local Create = require(CorePackages.Workspace.Packages.AppCommonLib).Create
 local PageInstance = nil
 RobloxGui:WaitForChild("Modules"):WaitForChild("TenFootInterface")
 local isTenFootInterface = require(RobloxGui.Modules.TenFootInterface):IsEnabled()
+local isSpatial = require(CorePackages.Workspace.Packages.AppCommonLib).isSpatial
 
 ------------ FFLAGS -------------------
 local success, result = pcall(function() return settings():GetFFlag('UseNotificationsLocalization') end)
 local FFlagUseNotificationsLocalization = success and result
 local GetFFlagOptimizeHelpMenuInputEvent = require(RobloxGui.Modules.Flags.GetFFlagOptimizeHelpMenuInputEvent)
 local GetFFlagFixIGMBottomBarVisibility = require(RobloxGui.Modules.Settings.Flags.GetFFlagFixIGMBottomBarVisibility)
+local isInExperienceUIVREnabled =
+	require(CorePackages.Workspace.Packages.SharedExperimentDefinition).isInExperienceUIVREnabled
+
+------------ Localization -------------------
+local locales = nil
+if isInExperienceUIVREnabled then
+	local LocalizationService = game:GetService("LocalizationService")
+	local Localization = require(CorePackages.Workspace.Packages.InExperienceLocales).Localization
+	locales = Localization.new(LocalizationService.RobloxLocaleId)
+end
+
+------------ Constants -------------------
+local HelpConstants = if isInExperienceUIVREnabled
+	then require(RobloxGui.Modules.Settings.Resources.HelpConstants)
+	else nil
 
 ----------- CLASS DECLARATION --------------
 
@@ -58,6 +75,10 @@ local function Initialize()
 	local lastInputType = nil
 
 	function this:GetCurrentInputType()
+		if isInExperienceUIVREnabled and isSpatial() then
+			return SPATIAL_GAMEPAD_TAG
+		end
+
 		if lastInputType == nil then -- we don't know what controls the user has, just use reasonable defaults
 		  local platform = UserInputService:GetPlatform()
 		  if platform == Enum.Platform.XBoxOne or platform == Enum.Platform.WiiU then
@@ -552,6 +573,58 @@ local function Initialize()
 		return createdElements
 	end
 
+	local function createSpatialGamepadHelp(parentFrame)
+		local questGamepadImageInfo = HelpConstants.Images.GamepadQuest
+		local questGamepadLabels = HelpConstants.Labels.QuestGamepadLabels
+
+		local gamepadImage = questGamepadImageInfo.Image
+		local gamepadImageHeightRatio = questGamepadImageInfo.HeightRatio
+		local localizationKeyPrefix = questGamepadLabels.LocalizationKeyPrefix
+		local labelRelativeTextHeight = questGamepadLabels.LabelRelativeTextHeight
+		local questGamepadLabelsInfo = questGamepadLabels.LabelsInfo
+
+		local spatialGamepadImageLabel = Create("ImageLabel")({
+			Name = "SpatialGamepadImage",
+			Size = UDim2.new(1, 0, gamepadImageHeightRatio, 0),
+			Position = UDim2.new(0.5, 0, 0, 0),
+			AnchorPoint = Vector2.new(0.5, 0),
+			SizeConstraint = Enum.SizeConstraint.RelativeXX,
+			Image = gamepadImage,
+			BackgroundTransparency = 1,
+			ZIndex = 2,
+			Parent = parentFrame,
+		})
+
+		local padding = this.Page:FindFirstChildOfClass("UIPadding")
+		local paddingOffsetX = if padding then padding.PaddingLeft.Offset + padding.PaddingRight.Offset else 0
+		parentFrame.Size = UDim2.new(
+			parentFrame.Size.X.Scale,
+			parentFrame.Size.X.Offset,
+			0,
+			(this.Page.AbsoluteSize.X - paddingOffsetX) * gamepadImageHeightRatio
+		)
+
+		for _, labelInfo in questGamepadLabelsInfo do
+			local localizationKey = localizationKeyPrefix .. labelInfo.labelKey
+			local labelText = locales:Format(localizationKey)
+
+			Create("TextLabel")({
+				Name = labelInfo.labelKey,
+				BackgroundTransparency = 1,
+				Position = UDim2.fromScale(labelInfo.xPosition, labelInfo.yPosition),
+				Size = UDim2.fromScale(labelInfo.width, labelRelativeTextHeight),
+				Text = labelText,
+				TextXAlignment = labelInfo.xAlignment or Enum.TextXAlignment.Right,
+				Font = Theme.font(nil, "HelpGamepad"),
+				TextColor3 = Theme.color("TextEmphasis"),
+				TextTransparency = Theme.transparency("TextEmphasis"),
+				ZIndex = 2,
+				TextScaled = true,
+				Parent = spatialGamepadImageLabel,
+			})
+		end
+	end
+
 	local function createHelpDisplay(typeOfHelp)
 		local helpContents = nil
 		local helpFrame = Create'Frame'
@@ -579,6 +652,8 @@ local function Initialize()
 		  createGamepadHelp(helpFrame)
 		elseif typeOfHelp == TOUCH_TAG then
 		  helpContents = createTouchHelp(helpFrame)
+		elseif isInExperienceUIVREnabled and typeOfHelp == SPATIAL_GAMEPAD_TAG then
+			createSpatialGamepadHelp(helpFrame)
 		end
 
 		return helpFrame, helpContents

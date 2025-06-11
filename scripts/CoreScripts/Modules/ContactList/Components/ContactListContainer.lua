@@ -59,6 +59,8 @@ local PHONEBOOK_CONTAINER_TOP_MARGIN = PHONEBOOK_CONTAINER_MARGIN + TopBarConsta
 -- calculate the content size
 local PEEK_HEADER_HEIGHT = 25
 
+local FFlagContactListPeekViewFixEnabled = game:DefineFastFlag("ContactListPeekViewFixEnabled", false)
+
 local function ContactListContainer()
 	local analytics = useAnalytics()
 	local style = useStyle()
@@ -251,13 +253,21 @@ local function ContactListContainer()
 					else UDim2.new(0, -DOCKED_WIDTH, 0, PHONEBOOK_CONTAINER_TOP_MARGIN),
 				AutoButtonColor = false,
 				BackgroundColor3 = theme.BackgroundDefault.Color,
+				BackgroundTransparency = if FFlagContactListPeekViewFixEnabled
+					then theme.BackgroundDefault.Transparency
+					else nil,
+				BorderSizePixel = if FFlagContactListPeekViewFixEnabled then 0 else nil,
 				ref = contactListContainerRef,
 			}, {
-				UICorner = React.createElement("UICorner", {
-					CornerRadius = UDim.new(0, 12),
-				}),
+				UICorner = if FFlagContactListPeekViewFixEnabled and isSmallScreen
+					then nil
+					else React.createElement("UICorner", {
+						CornerRadius = UDim.new(0, 12),
+					}),
 				UIPadding = React.createElement("UIPadding", {
-					PaddingTop = if isSmallScreen then UDim.new(0, 0) else UDim.new(0, PADDING),
+					PaddingTop = if not FFlagContactListPeekViewFixEnabled and isSmallScreen
+						then UDim.new(0, 0)
+						else UDim.new(0, PADDING),
 				}),
 				Layout = React.createElement("UIListLayout", {
 					FillDirection = Enum.FillDirection.Vertical,
@@ -299,7 +309,7 @@ local function ContactListContainer()
 	if isSmallScreen then
 		-- Use a unique id to ensure that just one PeekView is associated with
 		-- each open.
-		children["Content" .. tostring(contactListId)] = React.createElement("Frame", {
+		children["ContactListContent" .. tostring(contactListId)] = React.createElement("Frame", {
 			Size = UDim2.new(1, 0, 1, -PHONEBOOK_CONTAINER_TOP_MARGIN),
 			Position = UDim2.fromOffset(0, PHONEBOOK_CONTAINER_TOP_MARGIN),
 			BackgroundTransparency = 1,
@@ -316,7 +326,7 @@ local function ContactListContainer()
 			}),
 		})
 	else
-		children["Content"] = contactListContainerContent
+		children["ContactListContent"] = contactListContainerContent
 	end
 
 	return if currentPage

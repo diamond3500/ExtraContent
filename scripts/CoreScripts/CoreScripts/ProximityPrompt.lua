@@ -12,7 +12,6 @@ local CoreUtility = require(RobloxGui.Modules.CoreUtility)
 local AppFonts = require(CorePackages.Workspace.Packages.Style).AppFonts
 
 local EnableAutomaticSizeVerticalOffsetWidthFix = require(RobloxGui.Modules.Flags.FFlagEnableAutomaticSizeVerticalOffsetWidthFix)
-local FFlagFixProximityPromptAncestry = require(RobloxGui.Modules.Flags.FFlagFixProximityPromptAncestry)
 
 local LocalPlayer = Players.LocalPlayer
 while LocalPlayer == nil do
@@ -506,10 +505,7 @@ local function createPrompt(prompt, inputType, gui)
 	local function updateUIAncestry()
 		promptUI.Adornee = prompt.Parent
 	end
-	local ancestryConnection = nil
-	if FFlagFixProximityPromptAncestry then
-		ancestryConnection = prompt.AncestryChanged:Connect(updateUIAncestry)
-	end
+	local ancestryConnection = prompt.AncestryChanged:Connect(updateUIAncestry)
 
 	for _, tween in ipairs(tweensForFadeIn) do
 		tween:Play()
@@ -527,9 +523,7 @@ local function createPrompt(prompt, inputType, gui)
 		triggeredConnection:Disconnect()
 		triggerEndedConnection:Disconnect()
 		changedConnection:Disconnect()
-		if FFlagFixProximityPromptAncestry then
-			ancestryConnection:Disconnect()
-		end
+		ancestryConnection:Disconnect()
 
 		for _, tween in ipairs(tweensForFadeOut) do
 			tween:Play()

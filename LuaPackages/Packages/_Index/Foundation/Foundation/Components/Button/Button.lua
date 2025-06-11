@@ -25,8 +25,9 @@ local Types = require(Foundation.Components.Types)
 local Image = require(Foundation.Components.Image)
 local View = require(Foundation.Components.View)
 local Text = require(Foundation.Components.Text)
-local Flags = require(Foundation.Utility.Flags)
 
+local Flags = require(Foundation.Utility.Flags)
+local getIconScale = require(Foundation.Utility.getIconScale)
 local withDefaults = require(Foundation.Utility.withDefaults)
 local withCommonProps = require(Foundation.Utility.withCommonProps)
 
@@ -63,28 +64,10 @@ local function onProgressChange(progress: number)
 	})
 end
 
--- Remove with removal of FoundationButtonEnableLoadingState
-local function getTransparency(transparency: number?, isDisabled: boolean?): number?
-	assert(
-		not Flags.FoundationButtonEnableLoadingState,
-		"FoundationButtonEnableLoadingState must be disabled in getTransparency"
-	)
-	if transparency ~= nil and isDisabled then
-		return transparency + (1 - transparency) * DISABLED_TRANSPARENCY
-	end
-
-	return transparency
-end
-
--- Rename with removal of FoundationButtonEnableLoadingState
-local function getTransparencyFromBinding(
+local function getTransparency(
 	transparency: number?,
 	disabledTransparency: React.Binding<number>
 ): React.Binding<number>
-	assert(
-		Flags.FoundationButtonEnableLoadingState,
-		"FoundationButtonEnableLoadingState must be enabled in getTransparencyFromBinding"
-	)
 	return disabledTransparency:map(function(disabledValue)
 		if transparency ~= nil then
 			return transparency + (1 - transparency) * disabledValue
@@ -114,7 +97,7 @@ local defaultProps = {
 	isDisabled = false,
 	isLoading = false,
 	variant = ButtonVariant.Standard,
-	size = if Flags.FoundationEnableNewButtonSizes then InputSize.Medium else InputSize.Small,
+	size = InputSize.Medium,
 	width = UDim.new(0, 0),
 	inputDelay = 0,
 }
@@ -122,6 +105,7 @@ local defaultProps = {
 local function Button(buttonProps: ButtonProps, ref: React.Ref<GuiObject>?)
 	local props = withDefaults(buttonProps, defaultProps)
 	local inputDelay: number = props.inputDelay
+	local intrinsicIconSize, scale = getIconScale(props.icon, props.size)
 
 	local controlState, setControlState = React.useBinding(ControlState.Initialize :: ControlState)
 	local isDelaying, setIsDelaying = React.useState(inputDelay > 0)
@@ -153,22 +137,18 @@ local function Button(buttonProps: ButtonProps, ref: React.Ref<GuiObject>?)
 	local values, animate = useMotion(motionStates.Default)
 
 	React.useEffect(function()
-		if Flags.FoundationButtonEnableLoadingState then
-			if props.isLoading then
-				animate(motionStates.Loading)
-			else
-				animate(motionStates.Default)
-			end
+		if props.isLoading then
+			animate(motionStates.Loading)
+		else
+			animate(motionStates.Default)
 		end
 	end, { props.isLoading })
 
 	React.useEffect(function()
-		if Flags.FoundationButtonEnableLoadingState then
-			if props.isDisabled then
-				animateDisabledValues(motionStates.Disabled)
-			else
-				animateDisabledValues(motionStates.Default)
-			end
+		if props.isDisabled then
+			animateDisabledValues(motionStates.Disabled)
+		else
+			animateDisabledValues(motionStates.Default)
 		end
 	end, { props.isDisabled })
 
@@ -187,8 +167,8 @@ local function Button(buttonProps: ButtonProps, ref: React.Ref<GuiObject>?)
 		withCommonProps(props, {
 			AutomaticSize = if props.width.Scale == 0 then Enum.AutomaticSize.X else nil,
 			cornerRadius = UDim.new(0, variantProps.container.radius),
-			backgroundStyle = if Flags.FoundationButtonEnableLoadingState and variantProps.container.style
-				then getTransparencyFromBinding(variantProps.container.style.Transparency, disabledValues.transparency):map(
+			backgroundStyle = if variantProps.container.style
+				then getTransparency(variantProps.container.style.Transparency, disabledValues.transparency):map(
 					function(transparency)
 						return {
 							Color3 = variantProps.container.style.Color3,
@@ -196,10 +176,6 @@ local function Button(buttonProps: ButtonProps, ref: React.Ref<GuiObject>?)
 						}
 					end
 				)
-				elseif variantProps.container.style then {
-					Color3 = variantProps.container.style.Color3,
-					Transparency = getTransparency(variantProps.container.style.Transparency, props.isDisabled),
-				}
 				else nil,
 			flexItem = if props.fillBehavior
 				then {
@@ -211,12 +187,10 @@ local function Button(buttonProps: ButtonProps, ref: React.Ref<GuiObject>?)
 			stroke = if variantProps.container.stroke
 				then {
 					Color = variantProps.container.stroke.Color,
-					Transparency = if Flags.FoundationButtonEnableLoadingState
-						then getTransparencyFromBinding(
-							variantProps.container.stroke.Transparency,
-							disabledValues.transparency
-						)
-						else getTransparency(variantProps.container.stroke.Transparency, props.isDisabled),
+					Transparency = getTransparency(
+						variantProps.container.stroke.Transparency,
+						disabledValues.transparency
+					),
 				}
 				else nil,
 			Size = UDim2.new(
@@ -242,21 +216,10 @@ local function Button(buttonProps: ButtonProps, ref: React.Ref<GuiObject>?)
 			ref = ref,
 		}),
 		{
-			Icon = if not Flags.FoundationButtonEnableLoadingState and props.icon
-				then React.createElement(Image, {
-					Image = props.icon,
-					Size = variantProps.icon.size,
-					imageStyle = {
-						Color3 = variantProps.content.style.Color3,
-						Transparency = getTransparency(variantProps.content.style.Transparency, props.isDisabled),
-					},
-					LayoutOrder = 1,
-				})
-				else nil,
 			-- If there is an icon, render icon and spinner in place of eachother.
 			-- Otherwise, render a Folder to exempt from layout, and use exclusively for loading spinnner.
-			IconWrapper = if Flags.FoundationButtonEnableLoadingState and (props.icon or props.isLoading)
-				then React.createElement(if not props.icon then "Folder" else View, {
+			IconWrapper = if props.icon or props.isLoading
+				then React.createElement(if props.icon then View else "Folder", {
 					Size = if props.icon then variantProps.icon.size else nil,
 				}, {
 					PresenceWrapper = React.createElement(AnimatePresence, {}, {
@@ -273,20 +236,20 @@ local function Button(buttonProps: ButtonProps, ref: React.Ref<GuiObject>?)
 							else nil,
 						Icon = if not props.isLoading and props.icon
 							then React.createElement(Image, {
+								tag = "anchor-center-center position-center-center",
 								Image = props.icon,
-								Size = variantProps.icon.size,
+								Size = if Flags.FoundationAdjustButtonIconSizes and intrinsicIconSize
+									then UDim2.fromOffset(intrinsicIconSize.X, intrinsicIconSize.Y)
+									else variantProps.icon.size,
 								imageStyle = disabledValues.transparency:map(function(transparency)
 									return {
 										Color3 = variantProps.content.style.Color3,
 										Transparency = transparency,
 									}
 								end),
-								AnchorPoint = Vector2.new(0.5, 0.5),
-								Position = UDim2.fromScale(0.5, 0.5),
-							}, {
-								UIScale = React.createElement("UIScale", {
-									Scale = values.iconScale,
-								}),
+								scale = values.iconScale:map(function(iconScale: number)
+									return iconScale * (if Flags.FoundationAdjustButtonIconSizes then scale else 1)
+								end),
 							})
 							else nil,
 					}),
@@ -297,22 +260,17 @@ local function Button(buttonProps: ButtonProps, ref: React.Ref<GuiObject>?)
 					Text = controlState:map(formatText) :: any,
 					RichText = if BUTTON_VARIANT_TO_RICH_TEXT_FORMAT[props.variant] ~= nil then true else false,
 					tag = variantProps.text.tag,
-					textStyle = if Flags.FoundationButtonEnableLoadingState
-						then React.joinBindings({ disabledValues.transparency, values.textTransparency })
-							:map(function(transparencies)
-								local disabledTransparency: number = transparencies[1]
-								local textTransparency: number = transparencies[2]
-								return {
-									Color3 = variantProps.content.style.Color3,
-									Transparency = if props.icon
-										then disabledTransparency
-										else textTransparency + disabledTransparency,
-								}
-							end)
-						else {
-							Color3 = variantProps.content.style.Color3,
-							Transparency = getTransparency(variantProps.content.style.Transparency, props.isDisabled),
-						},
+					textStyle = React.joinBindings({ disabledValues.transparency, values.textTransparency })
+						:map(function(transparencies)
+							local disabledTransparency: number = transparencies[1]
+							local textTransparency: number = transparencies[2]
+							return {
+								Color3 = variantProps.content.style.Color3,
+								Transparency = if props.icon
+									then disabledTransparency
+									else textTransparency + disabledTransparency,
+							}
+						end),
 					LayoutOrder = 2,
 				})
 				else nil,

@@ -8,6 +8,8 @@
 local root = script.Parent.Parent
 
 local getEngineFeatureRemoveProxyWrap = require(root.flags.getEngineFeatureRemoveProxyWrap)
+local getFFlagUGCValidateSupportSurfaceAppearanceContent =
+	require(root.flags.getFFlagUGCValidateSupportSurfaceAppearanceContent)
 
 local Constants = require(root.Constants)
 local checkForProxyWrap = require(root.util.checkForProxyWrap)
@@ -94,14 +96,34 @@ local function hasInExpCreatedEditableInstance(object, fieldName, validationCont
 		return false
 	end
 
-	local instanceFieldsToEditableImageMap = validationContext.editableImages[object]
-	if instanceFieldsToEditableImageMap and instanceFieldsToEditableImageMap[fieldName] then
-		return true
-	end
+	if getFFlagUGCValidateSupportSurfaceAppearanceContent() then
+		local instanceFieldsToEditableImageMap = validationContext.editableImages[object]
+		if
+			instanceFieldsToEditableImageMap
+			and instanceFieldsToEditableImageMap[fieldName]
+			and instanceFieldsToEditableImageMap[fieldName].instance
+		then
+			return true
+		end
 
-	local instanceFieldsToEditableMeshMap = validationContext.editableMeshes[object]
-	if instanceFieldsToEditableMeshMap and instanceFieldsToEditableMeshMap[fieldName] then
-		return true
+		local instanceFieldsToEditableMeshMap = validationContext.editableMeshes[object]
+		if
+			instanceFieldsToEditableMeshMap
+			and instanceFieldsToEditableMeshMap[fieldName]
+			and instanceFieldsToEditableMeshMap[fieldName].instance
+		then
+			return true
+		end
+	else
+		local instanceFieldsToEditableImageMap = validationContext.editableImages[object]
+		if instanceFieldsToEditableImageMap and instanceFieldsToEditableImageMap[fieldName] then
+			return true
+		end
+
+		local instanceFieldsToEditableMeshMap = validationContext.editableMeshes[object]
+		if instanceFieldsToEditableMeshMap and instanceFieldsToEditableMeshMap[fieldName] then
+			return true
+		end
 	end
 
 	return false

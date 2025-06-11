@@ -33,7 +33,6 @@ local ChromeEnabled = require(RobloxGui.Modules.Chrome.Enabled)()
 local Constants = require(script.Constants)
 local MenuNavigationPromptTokenMapper = require(script.TokenMappers.MenuNavigationPromptTokenMapper)
 
-local FFlagUIBloxFoundationProvider = SharedFlags.GetFFlagUIBloxFoundationProvider()
 local GetFFlagSimpleChatUnreadMessageCount = SharedFlags.GetFFlagSimpleChatUnreadMessageCount
 
 if ChromeEnabled and (not TenFootInterface:IsEnabled() or FFlagAdaptUnibarAndTiltSizing) then
@@ -193,11 +192,10 @@ function TopBar.new()
 	self.root = Roact.createElement(VoiceStateContext.Provider, nil, self.root)
 
 	-- Root should be a Folder so that style provider stylesheet elements can be portaled properly; otherwise, they will attach to CoreGui
-	if FFlagUIBloxFoundationProvider then
-		self.root = Roact.createElement("Folder", {
-			Name = "TopBarApp",
-		}, self.root)
-	end
+	self.root = Roact.createElement("Folder", {
+		Name = "TopBarApp",
+	}, self.root)
+
 	self.element = Roact.mount(self.root, CoreGui, "TopBar")
 
 	-- add binding

@@ -1,5 +1,3 @@
---!strict
-
 --[[
 	validatePose.lua checks arms and legs to ensure they are approximately in I pose, A pose, or T pose
 ]]

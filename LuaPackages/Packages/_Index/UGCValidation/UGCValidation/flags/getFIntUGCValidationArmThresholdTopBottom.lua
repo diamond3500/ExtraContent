@@ -1,5 +1,3 @@
---!strict
-
 game:DefineFastInt("UGCValidationArmThresholdTopBottom", 10)
 
 return function()

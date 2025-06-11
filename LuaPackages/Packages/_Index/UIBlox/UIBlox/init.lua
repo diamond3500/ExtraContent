@@ -543,12 +543,8 @@ local function initializeLibrary(configs)
 			SystemBar = lazify(function()
 				return require(script.App.Navigation.SystemBar)
 			end),
-
 			NavigationBar = lazify(function()
 				return require(script.App.Navigation.NavigationBar)
-			end),
-			NavigationBarV2 = lazify(function()
-				return require(script.App.Navigation.NavigationBarV2)
 			end),
 			NavigationRail = lazify(function()
 				return require(script.App.Navigation.NavigationRail)

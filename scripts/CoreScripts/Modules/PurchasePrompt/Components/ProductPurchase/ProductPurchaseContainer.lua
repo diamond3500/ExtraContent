@@ -48,6 +48,7 @@ local MultiTextLocalizer = require(Root.Components.Connection.MultiTextLocalizer
 local LocalizationService = require(Root.Localization.LocalizationService)
 local getPlayerPrice = require(Root.Utils.getPlayerPrice)
 local isGenericChallengeResponse = require(Root.Utils.isGenericChallengeResponse)
+local SelectedRobuxPackage = require(Root.Utils.SelectedRobuxPackage)
 
 local initiateUserPurchaseSettingsPrecheck = require(Root.Thunks.initiateUserPurchaseSettingsPrecheck)
 local GetFFlagEnableTexasU18VPCForInExperienceBundleRobuxUpsellFlow =
@@ -149,7 +150,7 @@ function ProductPurchaseContainer:init()
 					item_name = self.props.productInfo.name,
 					price = tostring(self.props.productInfo.price),
 					user_balance = tostring(self.props.accountInfo.balance) or nil,
-					package_robux_amount = tostring(self.props.nativeUpsell.robuxPurchaseAmount) or nil,
+					package_robux_amount = tostring(self.props.robuxPurchaseAmount) or nil,
 				}),
 			}
 			self.props.onAnalyticEvent("UserPurchaseFlow", data)
@@ -449,7 +450,6 @@ function ProductPurchaseContainer:render()
 	local purchaseError = self.props.purchaseError
 	local productInfo = self.props.productInfo
 	local accountInfo = self.props.accountInfo
-	local nativeUpsell = self.props.nativeUpsell
 	local isTestPurchase = self.props.isTestPurchase
 
 	local prompt
@@ -494,8 +494,8 @@ function ProductPurchaseContainer:render()
 			itemIcon = productInfo.imageUrl,
 			itemName = productInfo.name,
 			itemRobuxCost = getPlayerPrice(productInfo, accountInfo.membershipType == 4, expectedPrice),
-			robuxPurchaseAmount = nativeUpsell.robuxPurchaseAmount,
-			robuxPurchaseAmountBeforeBonus = nativeUpsell.robuxAmountBeforeBonus,
+			robuxPurchaseAmount = self.props.robuxPurchaseAmount,
+			robuxPurchaseAmountBeforeBonus = self.props.robuxAmountBeforeBonus,
 			balanceAmount = accountInfo.balance,
 
 			isDelayedInput = self.hasDelayedInput(),
@@ -697,7 +697,8 @@ local function mapStateToProps(state)
 		purchaseError = state.purchaseError,
 		productInfo = state.productInfo,
 		accountInfo = state.accountInfo,
-		nativeUpsell = state.nativeUpsell,
+		robuxPurchaseAmount = SelectedRobuxPackage.getRobuxPurchaseAmount(state),
+		robuxAmountBeforeBonus = SelectedRobuxPackage.getRobuxAmountBeforeBonus(state),
 		isTestPurchase = isTestPurchase,
 		isGamepadEnabled = state.gamepadEnabled,
 	}

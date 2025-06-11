@@ -1,5 +1,3 @@
---!strict
-
 --[[
 	get the back-end response for https://apis.roblox.com/assets/rcc/v1/assets/{assetId}
 ]]

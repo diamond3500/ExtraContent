@@ -19,9 +19,6 @@ local withCommonProps = require(Foundation.Utility.withCommonProps)
 local InputSize = require(Foundation.Enums.InputSize)
 type InputSize = InputSize.InputSize
 
-local InputLabelSize = require(Foundation.Enums.InputLabelSize)
-type InputLabelSize = InputLabelSize.InputLabelSize
-
 local getInputTextSize = require(Foundation.Utility.getInputTextSize)
 
 local ControlState = require(Foundation.Enums.ControlState)

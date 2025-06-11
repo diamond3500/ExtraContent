@@ -1,5 +1,3 @@
---!strict
-
 --[[
 	pretty print Vector3
 ]]

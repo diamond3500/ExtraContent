@@ -1,5 +1,3 @@
---!strict
-
 game:DefineFastInt("UGCValidateCageDuplicateUVThreshold", 100)
 
 return function()

@@ -1,5 +1,3 @@
---!strict
-
 --[[
 	validateMeshPartBodyPart.lua exposes common tests for MeshPart Dynamic heads and body parts
 ]]
@@ -12,13 +10,19 @@ local getFFlagDebugUGCDisableSurfaceAppearanceTests = require(root.flags.getFFla
 local getFFlagUGCValidateBodyPartsCollisionFidelity = require(root.flags.getFFlagUGCValidateBodyPartsCollisionFidelity)
 local getFFlagUGCValidateBodyPartsModeration = require(root.flags.getFFlagUGCValidateBodyPartsModeration)
 local getFFlagRefactorValidateAssetTransparency = require(root.flags.getFFlagRefactorValidateAssetTransparency)
-local getFFlagUGCValidateOrientedSizing = require(root.flags.getFFlagUGCValidateOrientedSizing)
 local getFFlagUGCValidateMeshMin = require(root.flags.getFFlagUGCValidateMeshMin)
 local getFFlagUGCValidateIndividualPartBBoxes = require(root.flags.getFFlagUGCValidateIndividualPartBBoxes)
+local getEngineFeatureUGCValidateBodyPartCageMeshDistance =
+	require(root.flags.getEngineFeatureUGCValidateBodyPartCageMeshDistance)
+local getFFlagRefactorBodyAttachmentOrientationsCheck =
+	require(root.flags.getFFlagRefactorBodyAttachmentOrientationsCheck)
+local getFFlagUGCValidateBoundsManipulation = require(root.flags.getFFlagUGCValidateBoundsManipulation)
 
 local validateBodyPartMeshBounds = require(root.validation.validateBodyPartMeshBounds)
 local validateAssetBounds = require(root.validation.validateAssetBounds)
+local validateAccurateBoundingBox = require(root.validation.validateAccurateBoundingBox)
 local validateBodyPartChildAttachmentBounds = require(root.validation.validateBodyPartChildAttachmentBounds)
+local validateBodyPartChildAttachmentOrientations = require(root.validation.validateBodyPartChildAttachmentOrientations)
 local validateBodyPartExtentsRelativeToParent = require(root.validation.validateBodyPartExtentsRelativeToParent)
 local validateDependencies = require(root.validation.validateDependencies)
 local validateDescendantMeshMetrics = require(root.validation.validateDescendantMeshMetrics)
@@ -35,6 +39,7 @@ local validateAssetTransparency = require(root.validation.validateAssetTranspare
 local DEPRECATED_validateAssetTransparency = require(root.validation.DEPRECATED_validateAssetTransparency)
 local validatePose = require(root.validation.validatePose)
 local ValidateBodyBlockingTests = require(root.util.ValidateBodyBlockingTests)
+local ValidateAssetBodyPartCages = require(root.validation.ValidateAssetBodyPartCages)
 
 local validateWithSchema = require(root.util.validateWithSchema)
 local FailureReasonsAccumulator = require(root.util.FailureReasonsAccumulator)
@@ -82,7 +87,7 @@ local function validateMeshPartBodyPart(
 	]]
 	local success, errorMessage = resetPhysicsData({ inst }, validationContext)
 	if not success then
-		return false, { errorMessage }
+		return false, { errorMessage :: string }
 	end
 
 	if getFFlagUGCValidateMeshMin() then
@@ -97,16 +102,27 @@ local function validateMeshPartBodyPart(
 
 	reasonsAccumulator:updateReasons(validateBodyPartMeshBounds(inst, validationContext))
 
+	if getEngineFeatureUGCValidateBodyPartCageMeshDistance() then
+		reasonsAccumulator:updateReasons(ValidateAssetBodyPartCages.validate(inst, validationContext))
+	end
+
 	reasonsAccumulator:updateReasons(validateBodyPartChildAttachmentBounds(inst, validationContext))
 	if getFFlagUGCValidateIndividualPartBBoxes() then
 		reasonsAccumulator:updateReasons(validateBodyPartExtentsRelativeToParent.runValidation(inst, validationContext))
 	end
-
-	if getFFlagUGCValidateOrientedSizing() then
-		reasonsAccumulator:updateReasons(validatePose(inst, validationContext))
+	if getFFlagRefactorBodyAttachmentOrientationsCheck() then
+		reasonsAccumulator:updateReasons(
+			validateBodyPartChildAttachmentOrientations.runValidation(inst, validationContext)
+		)
 	end
 
+	reasonsAccumulator:updateReasons(validatePose(inst, validationContext))
+
 	reasonsAccumulator:updateReasons(validateAssetBounds(nil, inst, validationContext))
+
+	if getFFlagUGCValidateBoundsManipulation() then
+		reasonsAccumulator:updateReasons(validateAccurateBoundingBox(inst, validationContext))
+	end
 
 	reasonsAccumulator:updateReasons(validateDescendantMeshMetrics(inst, validationContext))
 

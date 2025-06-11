@@ -1,5 +1,3 @@
---!strict
-
 game:DefineFastInt("UGCValidateMaxCoplanarIntersectionsPercentage", 15)
 
 return function()

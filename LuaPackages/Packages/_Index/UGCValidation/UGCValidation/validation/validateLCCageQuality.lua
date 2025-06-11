@@ -1,11 +1,8 @@
---!strict
-
 local root = script.Parent.Parent
 
 local getCageMeshInfos = require(root.validation.getCageMeshInfos)
 local getEngineFeatureEngineUGCValidateLCCagesVerticesSimilarity =
 	require(root.flags.getEngineFeatureEngineUGCValidateLCCagesVerticesSimilarity)
-local getEngineFeatureUGCValidateMeshInsideMesh = require(root.flags.getEngineFeatureUGCValidateMeshInsideMesh)
 
 local getEngineFeatureEngineUGCValidateLCCagingRelevancy =
 	require(root.flags.getEngineFeatureEngineUGCValidateLCCagingRelevancy)
@@ -14,6 +11,7 @@ local getEngineFeatureUGCValidateCageMeshDistance = require(root.flags.getEngine
 local getFFlagUGCValidateImportOrigin = require(root.flags.getFFlagUGCValidateImportOrigin)
 local getFIntUGCValidateImportOriginMax = require(root.flags.getFIntUGCValidateImportOriginMax)
 local getFFlagUGCValidatePropertiesRefactor = require(root.flags.getFFlagUGCValidatePropertiesRefactor)
+local getFFlagUGCValidationHyperlinksInCageQuality = require(root.flags.getFFlagUGCValidationHyperlinksInCageQuality)
 
 local getEngineFeatureEngineUGCValidationCageUVDuplicates =
 	require(root.flags.getEngineFeatureEngineUGCValidationCageUVDuplicates)
@@ -82,7 +80,7 @@ local function validateLCCageQuality(
 		end
 	end
 
-	if getEngineFeatureUGCValidateMeshInsideMesh() then
+	do
 		local success: boolean, failedReason: { string }? =
 			validateRenderMeshInsideOuterCageMesh(wrapLayer, outerCage, meshInfoRenderMesh, validationContext)
 		if not success then
@@ -150,13 +148,18 @@ local function validateLCCageQuality(
 
 	if not validationResult then
 		if getFStringLCCageQualityDocumentationLink() ~= "" then
-			table.insert(
-				issues,
-				string.format(
+			local urlErrorMessage
+			if getFFlagUGCValidationHyperlinksInCageQuality() then
+				urlErrorMessage =
+					string.format("[Caging best practices](%s)", getFStringLCCageQualityDocumentationLink())
+			else
+				urlErrorMessage = string.format(
 					"To better understand caging requirements, please visit %s",
 					getFStringLCCageQualityDocumentationLink()
 				)
-			)
+			end
+
+			table.insert(issues, urlErrorMessage)
 		end
 
 		return false, issues

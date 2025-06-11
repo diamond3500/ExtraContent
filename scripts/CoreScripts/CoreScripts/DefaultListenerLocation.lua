@@ -2,7 +2,6 @@ local SoundService = game:GetService("SoundService") :: any
 local VoiceChatService: VoiceChatService = game:GetService("VoiceChatService")
 local Players: Players = game:GetService("Players")
 local RunService: RunService = game:GetService("RunService")
-local FFlagSoundServiceDefaultListenerLocation = game:DefineFastFlag("SoundServiceDefaultListenerLocation2", false)
 local LocalPlayer = Players.LocalPlayer :: Player
 
 local function ShouldUseDefaultVoice() : boolean
@@ -20,9 +19,6 @@ local function ShouldUseCharacter(): boolean
 end
 
 local function ShouldSpawnListener(): boolean
-	if not FFlagSoundServiceDefaultListenerLocation then
-		return false
-	end
 	if SoundService.DefaultListenerLocation == (Enum :: any).ListenerLocation.None then
 		return false
 	end

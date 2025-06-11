@@ -1,5 +1,3 @@
---!strict
-
 --[[
 	test to make sure that the average distance between outer cage to render mesh is below threshold
 ]]
@@ -14,6 +12,7 @@ local Types = require(root.util.Types)
 local pcallDeferred = require(root.util.pcallDeferred)
 
 local getFIntUGCValidateCageMeshDistanceThreshold = require(root.flags.getFIntUGCValidateCageMeshDistanceThreshold)
+local getFFlagUGCValidationHyperlinksInCageQuality = require(root.flags.getFFlagUGCValidationHyperlinksInCageQuality)
 
 local function validateCageMeshDistance(
 	innerCageMeshInfo: Types.MeshInfo,
@@ -57,18 +56,25 @@ local function validateCageMeshDistance(
 			validationContext
 		)
 		if averageOuterCageToMeshDistance < 0 then
-			table.insert(
-				reasons,
+			local errorString =
 				"Average distance between outer cage to mesh is too high. Mesh seems to be outside of the outer cage."
-			)
+			if getFFlagUGCValidationHyperlinksInCageQuality() then
+				errorString = errorString
+					.. "[Read more](https://create.roblox.com/docs/art/validation-errors#cageMeshDistance)"
+			end
+
+			table.insert(reasons, errorString)
 		else
-			table.insert(
-				reasons,
-				string.format(
-					"Average distance between outer cage to mesh is too high (%.2f). Make adjustment to cage to fit the mesh better.",
-					averageOuterCageToMeshDistance
-				)
+			local errorString = string.format(
+				"Average distance between outer cage to mesh is too high (%.2f). Make adjustment to cage to fit the mesh better.",
+				averageOuterCageToMeshDistance
 			)
+			if getFFlagUGCValidationHyperlinksInCageQuality() then
+				errorString = errorString
+					.. "[Read more](https://create.roblox.com/docs/art/validation-errors#cageMeshDistance)"
+			end
+
+			table.insert(reasons, errorString)
 		end
 	end
 

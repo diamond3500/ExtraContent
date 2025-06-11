@@ -1,20 +1,20 @@
 local Foundation = script:FindFirstAncestor("Foundation")
 local Packages = Foundation.Parent
+
 local React = require(Packages.React)
+local Dash = require(Packages.Dash)
+
 local Image = require(Foundation.Components.Image)
 local View = require(Foundation.Components.View)
 local Text = require(Foundation.Components.Text)
 local useTokens = require(Foundation.Providers.Style.useTokens)
 
+local getRbxThumb = require(Foundation.Utility.getRbxThumb)
+local ThumbnailType = require(Foundation.Enums.ThumbnailType)
+local ThumbnailSize = require(Foundation.Enums.ThumbnailSize)
+type ThumbnailSize = ThumbnailSize.ThumbnailSize
 local ControlState = require(Foundation.Enums.ControlState)
 type ControlState = ControlState.ControlState
-
-local function Story(props)
-	return React.createElement(Image, {
-		Image = "icons/graphic/success_xlarge",
-		tag = "size-2800",
-	})
-end
 
 local function AssetStory(props)
 	local tokens = useTokens()
@@ -61,13 +61,13 @@ local function StoryGuiState(props)
 	return React.createElement(Image, {
 		Image = guiState:map(function(state)
 			if state == ControlState.Default then
-				return "rbxthumb://type=Asset&id=23155839&w=420&h=420"
+				return getRbxThumb(ThumbnailType.Asset, 23155839, ThumbnailSize.Large)
 			elseif state == ControlState.Hover then
-				return "rbxthumb://type=Asset&id=23155842&w=420&h=420"
+				return getRbxThumb(ThumbnailType.Asset, 23155842, ThumbnailSize.Large)
 			elseif state == ControlState.Pressed then
-				return "rbxthumb://type=Asset&id=23155847&w=420&h=420"
+				return getRbxThumb(ThumbnailType.Asset, 23155847, ThumbnailSize.Large)
 			end
-			return "rbxthumb://type=Asset&id=23155833&w=420&h=420"
+			return getRbxThumb(ThumbnailType.Asset, 23155833, ThumbnailSize.Large)
 		end),
 		backgroundStyle = tokens.Color.Extended.Purple.Purple_500,
 		tag = "col align-x-center align-y-center size-2800",
@@ -80,7 +80,12 @@ return {
 	stories = {
 		{
 			name = "Basic Image",
-			story = Story :: any,
+			story = function(props)
+				return React.createElement(Image, {
+					Image = "icons/graphic/success_xlarge",
+					tag = "size-2800",
+				})
+			end :: any,
 		},
 		{
 			name = "Basic Asset Use",
@@ -90,5 +95,10 @@ return {
 			name = "GUI State Use",
 			story = StoryGuiState,
 		},
+	},
+	controls = {
+		type = Dash.values(ThumbnailType),
+		id = 1,
+		size = { ThumbnailSize.Medium :: ThumbnailSize, ThumbnailSize.Large, ThumbnailSize.XLarge, ThumbnailSize.Small },
 	},
 }

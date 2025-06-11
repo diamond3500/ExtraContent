@@ -69,7 +69,6 @@ local FFlagInExperienceMenuReorderFirstVariant =
 	require(RobloxGui.Modules.Settings.Flags.FFlagInExperienceMenuReorderFirstVariant)
 local FFlagOverrideInExperienceMenuReorderFirstVariant =
 	require(RobloxGui.Modules.Settings.Flags.FFlagOverrideInExperienceMenuReorderFirstVariant)
-local FFlagCameraToggleInitBugFix = game:DefineFastFlag("CameraToggleInitBugFix", false)
 local FFlagMicroprofileGameSettingsFix = game:DefineFastFlag("MicroprofileGameSettingsFix", false)
 local GetFFlagFixSeamlessVoiceIntegrationWithPrivateVoice = SharedFlags.GetFFlagFixSeamlessVoiceIntegrationWithPrivateVoice
 local GetFFlagVoiceChatClientRewriteMasterLua = SharedFlags.GetFFlagVoiceChatClientRewriteMasterLua
@@ -390,6 +389,7 @@ end
 game:DefineFastInt("V1MenuLanguageSelectionFeaturePerMillageRollout", 0)
 game:DefineFastString("V1MenuLanguageSelectionFeatureForcedUserIds", "")
 local FFlagIGMEnableGFXReset = game:DefineFastFlag("IGMEnableGFXReset", false)
+local FFlagNewLanguageSelectorEndpoint = game:DefineFastFlag("NewLanguageSelectorEndpoint", false)
 
 ----------- CLASS DECLARATION --------------
 
@@ -1239,32 +1239,20 @@ local function Initialize()
 				end
 
 				if currentSavedMode > -1 then
-					-- https://roblox.atlassian.net/browse/APPEXP-2133, seems that algorithm relies
-					-- on any enum to have value -1 of corresponding key index in cameraEnumNames.
+					-- the algorithm relies on any enum to have value -1 of 
+					-- corresponding key index in cameraEnumNames.
 					-- CameraToggle, specifically (and only) does not follow this pattern.
 					-- Temporary fix due to https://roblox.atlassian.net/browse/APPEXP-2069 being planned soon
-					if FFlagCameraToggleInitBugFix then
-						if
-							UserInputService.TouchEnabled
-							or GameSettings.ComputerCameraMovementMode
-								~= Enum.ComputerCameraMovementMode.CameraToggle
-						then
-							currentSavedMode = currentSavedMode + 1
-						end
-						updateCurrentCameraMovementIndex(currentSavedMode)
-						this.CameraMode:SetSelectionIndex(currentSavedMode)
-					else
+					if
+						UserInputService.TouchEnabled
+						or GameSettings.ComputerCameraMovementMode
+							~= Enum.ComputerCameraMovementMode.CameraToggle
+					then
 						currentSavedMode = currentSavedMode + 1
-						local savedEnum = nil
-						local exists = pcall(function()
-							savedEnum = enumsToAdd[currentSavedMode]
-						end)
-						if exists and savedEnum then
-							updateCurrentCameraMovementIndex(savedEnum.Value + 1)
-							this.CameraMode:SetSelectionIndex(savedEnum.Value + 1)
-						end
 					end
-				end
+					updateCurrentCameraMovementIndex(currentSavedMode)
+					this.CameraMode:SetSelectionIndex(currentSavedMode)
+			end
 			end
 
 			this.CameraModeFrame, this.CameraModeLabel, this.CameraMode =
@@ -1809,8 +1797,14 @@ local function Initialize()
 		})
 
 		-- Request to get the supported language codes for the experience
-		local experienceSupportedLanguagesUrl = Url.GAME_INTERNATIONALIZATION_URL
-			.. string.format("v1/supported-languages/games/%d", game.GameId)
+		local experienceSupportedLanguagesUrl = nil
+		if FFlagNewLanguageSelectorEndpoint then
+			experienceSupportedLanguagesUrl = Url.GAME_INTERNATIONALIZATION_URL
+				.. string.format("v1/supported-languages/games/%d/in-experience-language-selection", game.GameId)
+		else
+			experienceSupportedLanguagesUrl = Url.GAME_INTERNATIONALIZATION_URL
+				.. string.format("v1/supported-languages/games/%d", game.GameId)
+		end
 		local experienceSupportedLanguagesRequest = HttpService:RequestInternal({
 			Url = experienceSupportedLanguagesUrl,
 			Method = "GET",
@@ -3492,7 +3486,7 @@ local function Initialize()
 	local crossExperienceVoiceJoinedListener = nil
 	local crossExperienceVoiceLeftListener = nil
 	local teardownCrossExperienceVoiceListeners = nil
-	if game:GetEngineFeature("VoiceChatSupported") then
+	if game:GetEngineFeature("VoiceChatSupported") and (if isInExperienceUIVREnabled then not isSpatial() else true) then
 		spawn(function()
 			VoiceChatServiceManager:asyncInit()
 				:andThen(function()
@@ -3594,7 +3588,7 @@ local function Initialize()
 				end)
 		end)
 	end
-	if GetFFlagEnableCrossExpVoice() then
+	if GetFFlagEnableCrossExpVoice() and (if isInExperienceUIVREnabled then not isSpatial() else true) then
 		crossExperienceVoiceJoinedListener = CrossExperienceVoiceManager.ExperienceJoined.Event:Connect(function()
 			updateInputDeviceVisibility()
 		end)
@@ -3622,7 +3616,7 @@ local function Initialize()
 			cameraPermissionGrantedListener = nil
 		end
 	end
-	if FFlagAvatarChatCoreScriptSupport or GetFFlagSelfViewCameraSettings() then
+	if (FFlagAvatarChatCoreScriptSupport or GetFFlagSelfViewCameraSettings()) and (if isInExperienceUIVREnabled then not isSpatial() else true) then
 		local callback = function(response)
 			this.VideoOptionsEnabled = response.hasCameraPermissions
 		end
@@ -3652,10 +3646,12 @@ local function Initialize()
 		end
 	end
 
-	createCameraModeOptions(
-		not isTenFootInterface
-			and (UserInputService.TouchEnabled or UserInputService.MouseEnabled or UserInputService.KeyboardEnabled)
-	)
+	if not isInExperienceUIVREnabled then
+		createCameraModeOptions(
+			not isTenFootInterface
+				and (UserInputService.TouchEnabled or UserInputService.MouseEnabled or UserInputService.KeyboardEnabled)
+		)
+	end
 
 	local checkGamepadOptions = function()
 		if GameSettings.IsUsingGamepadCameraSensitivity then
@@ -3690,24 +3686,52 @@ local function Initialize()
 		end
 	end
 
-	if GameSettings.IsUsingCameraYInverted then
-		createCameraInvertedOptions()
-	else
-		local gamesettingsConn = nil
-		gamesettingsConn = GameSettings.Changed:connect(function(prop)
-			if prop == "IsUsingCameraYInverted" then
-				if GameSettings.IsUsingCameraYInverted then
-					gamesettingsConn:disconnect()
-					createCameraInvertedOptions()
+	if not isInExperienceUIVREnabled then
+		if GameSettings.IsUsingCameraYInverted then
+			createCameraInvertedOptions()
+		else
+			local gamesettingsConn = nil
+			gamesettingsConn = GameSettings.Changed:connect(function(prop)
+				if prop == "IsUsingCameraYInverted" then
+					if GameSettings.IsUsingCameraYInverted then
+						gamesettingsConn:disconnect()
+						createCameraInvertedOptions()
+					end
 				end
-			end
-		end)
+			end)
+		end
 	end
 
 	if isInExperienceUIVREnabled then
 		if isSpatial() then
 			createVRComfortSettingOptions()
 			createVRSafetyBubbleModeOptions()
+		else
+			createCameraModeOptions(
+				not isTenFootInterface
+					and (
+						UserInputService.TouchEnabled
+						or UserInputService.MouseEnabled
+						or UserInputService.KeyboardEnabled
+					)
+			)
+
+			if GameSettings.IsUsingCameraYInverted then
+				createCameraInvertedOptions()
+			else
+				local gamesettingsConn = nil
+				gamesettingsConn = GameSettings.Changed:connect(function(prop)
+					if prop == "IsUsingCameraYInverted" then
+						if GameSettings.IsUsingCameraYInverted then
+							gamesettingsConn:disconnect()
+							createCameraInvertedOptions()
+						end
+					end
+				end)
+			end
+
+			createReducedMotionOptions()
+			createPreferredTransparencyOptions()
 		end
 	end
 
@@ -3719,8 +3743,10 @@ local function Initialize()
 	createHapticsToggle()
 	createGraphicsOptions()
 
-	createReducedMotionOptions()
-	createPreferredTransparencyOptions()
+	if not isInExperienceUIVREnabled then
+		createReducedMotionOptions()
+		createPreferredTransparencyOptions()
+	end
 
 	if GetFFlagEnablePreferredTextSizeSettingInMenus() then
 		createPreferredTextSizeOptions()
@@ -3820,6 +3846,12 @@ local function Initialize()
 	this.OpenSettingsPage = function()
 		this.PageOpen = true
 
+		if isInExperienceUIVREnabled then
+			if isSpatial() then
+				return
+			end
+		end
+
 		-- Update device info each time user opens the menu
 		-- TODO: This should be simplified by new API
 		updateAudioOptions()
@@ -3861,6 +3893,13 @@ local function Initialize()
 
 	this.CloseSettingsPage = function()
 		this.PageOpen = false
+
+		if isInExperienceUIVREnabled then
+			if isSpatial() then
+				return
+			end
+		end
+
 		teardownDeviceChangedListener()
 		if GetFFlagEnableCrossExpVoice() and teardownCrossExperienceVoiceListeners then
 			teardownCrossExperienceVoiceListeners()
@@ -3912,6 +3951,12 @@ local function Initialize()
 
 	function this:SetHub(newHubRef)
 		this.HubRef = newHubRef
+
+		if isInExperienceUIVREnabled then
+			if isSpatial() then
+				return
+			end
+		end
 
 		if isLangaugeSelectionDropdownEnabled() then
 			createTranslationOptions()

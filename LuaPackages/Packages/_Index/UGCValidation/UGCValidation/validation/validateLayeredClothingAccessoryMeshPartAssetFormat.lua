@@ -10,6 +10,10 @@ local function validateLayeredClothingAccessoryMeshPartAssetFormat(
 	specialMeshAssetFormatAccessory: Instance,
 	validationContext: Types.ValidationContext
 ): (boolean, { string }?)
+	assert(
+		validationContext.instances ~= nil,
+		"instances required in validationContext for validateLayeredClothingAccessoryMeshPartAssetFormat"
+	)
 	local instances = validationContext.instances
 
 	local success: boolean, reasons: { string }?

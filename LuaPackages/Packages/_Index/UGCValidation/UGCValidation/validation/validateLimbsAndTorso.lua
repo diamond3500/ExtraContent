@@ -1,5 +1,3 @@
---!strict
-
 local root = script.Parent.Parent
 
 local Analytics = require(root.Analytics)
@@ -59,7 +57,7 @@ local function compareFolderInfo(
 				validationContext
 			)
 			reasonsAccumulator:updateReasons(false, {
-				`Attribute {key} has a different values in different children folders. You need to use the same value in all folders.`,
+				`Attribute {key} has different values in different children folders. You need to use the same value in all folders.`,
 			})
 		end
 	end

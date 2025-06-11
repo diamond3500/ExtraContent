@@ -1,5 +1,3 @@
---!strict
-
 game:DefineFastFlag("UGCValidateLCCagesQuality", false)
 
 return function()

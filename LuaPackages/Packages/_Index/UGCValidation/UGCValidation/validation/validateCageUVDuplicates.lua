@@ -1,5 +1,3 @@
---!strict
-
 --[[
 	Checks that cage UVs are within references UV set and how many uvs are duplicates
 ]]
@@ -12,6 +10,7 @@ local pcallDeferred = require(root.util.pcallDeferred)
 local WRAP_TARGET_CAGE_REFERENCE_VALUES = require(root.WrapTargetCageUVReferenceValues)
 
 local getFIntUGCValidateCageDuplicateUVThreshold = require(root.flags.getFIntUGCValidateCageDuplicateUVThreshold)
+local getFFlagUGCValidationHyperlinksInCageQuality = require(root.flags.getFFlagUGCValidationHyperlinksInCageQuality)
 local FailureReasonsAccumulator = require(root.util.FailureReasonsAccumulator)
 local Analytics = require(root.Analytics)
 
@@ -57,14 +56,19 @@ local function validateCageUVDuplicates(
 				nil,
 				validationContext
 			)
-			return false,
-				{
-					string.format(
-						"There are %d UV values in %s cage that do not belong to the template. Please correct the cage UV.",
-						countUVNotInReference,
-						if isInner then "inner" else "outer"
-					),
-				}
+
+			local errorString = string.format(
+				"There are %d UV values in %s cage that do not belong to the template. Please correct the cage UV.",
+				countUVNotInReference,
+				if isInner then "inner" else "outer"
+			)
+
+			if getFFlagUGCValidationHyperlinksInCageQuality() then
+				errorString = errorString
+					.. "[Read more](https://create.roblox.com/docs/art/validation-errors#cageExtraUvs)"
+			end
+
+			return false, { errorString }
 		end
 		return true
 	end

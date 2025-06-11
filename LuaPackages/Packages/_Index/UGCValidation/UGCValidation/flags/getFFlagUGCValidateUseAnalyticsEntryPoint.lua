@@ -1,5 +1,3 @@
---!strict
-
 game:DefineFastFlag("UGCValidateUseAnalyticsEntryPoint", false)
 
 return function()

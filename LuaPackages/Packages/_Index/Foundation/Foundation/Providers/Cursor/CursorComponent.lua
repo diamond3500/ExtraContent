@@ -1,7 +1,7 @@
-local RunService = game:GetService("RunService")
-
 local Foundation = script:FindFirstAncestor("Foundation")
 local Packages = Foundation.Parent
+
+local RunService = require(Foundation.Utility.Wrappers).Services.RunService
 
 local React = require(Packages.React)
 local ReactUtils = require(Packages.ReactUtils)

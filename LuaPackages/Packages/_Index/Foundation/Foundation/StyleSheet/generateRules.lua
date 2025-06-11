@@ -133,6 +133,16 @@ local function createTokens(tokens: Tokens): (
 		end
 	end
 
+	for name, value in tokens.Inverse :: any do
+		-- Generate only Content colors on purpose
+		if name == "Content" then
+			for innerName, innerValue in value do
+				local tagName = if KeepPrefix[name] then name .. innerName else innerName
+				colors[name][`inverse-{pascalToKebab(tagName)}`] = innerValue
+			end
+		end
+	end
+
 	for name, value in tokens.Stroke do
 		table.insert(strokes, { name = pascalToKebab(name), size = value })
 	end
@@ -389,6 +399,22 @@ local function ListLayoutRules(gaps: Gaps, gutters: Gutters)
 				VerticalFlex = alignment,
 			},
 		})
+
+		table.insert(flexAlignments, {
+			tag = `flex-x-{name}`,
+			pseudo = "UIListLayout",
+			properties = {
+				HorizontalFlex = alignment,
+			},
+		})
+
+		table.insert(flexAlignments, {
+			tag = `flex-y-{name}`,
+			pseudo = "UIListLayout",
+			properties = {
+				VerticalFlex = alignment,
+			},
+		})
 	end
 
 	local itemAlignments = {
@@ -559,6 +585,11 @@ local function StrokeSizeRules(strokes: Strokes)
 	local rules = {}
 
 	for _, stroke in strokes do
+		-- TODO: UIBLOX-1946 to come up with a longer-term solution for this
+		if stroke.name == "none" then
+			continue
+		end
+
 		table.insert(rules, {
 			tag = `stroke-{stroke.name}`,
 			pseudo = "UIStroke",

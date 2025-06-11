@@ -304,7 +304,7 @@ local function DetailsPageTenfootTemplate(props: Props)
 			style = {
 				BackgroundTransparency = 1,
 				ScrollBarThickness = 0,
-				ScrollingEnabled = if UIBloxConfig.enableAnimatedFlatListScrolling then true else false,
+				ScrollingEnabled = true,
 				Selectable = false,
 				VerticalScrollBarInset = Enum.ScrollBarInset.None,
 				ZIndex = 3,

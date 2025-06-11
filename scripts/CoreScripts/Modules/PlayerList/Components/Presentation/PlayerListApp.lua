@@ -14,6 +14,8 @@ local StatsUtils = require(RobloxGui.Modules.Stats.StatsUtils)
 local Presentation = script.Parent
 local PlayerList = Presentation.Parent.Parent
 
+local FFlagPlayerListClosedNoRender = require(PlayerList.Flags.FFlagPlayerListClosedNoRender)
+
 local PlayerListSorter = require(Presentation.PlayerListSorter)
 local PlayerEntry = require(Presentation.PlayerEntry)
 local TenFootSideBar = require(Presentation.Parent.PresentationCommon.TenFootSideBar)
@@ -24,6 +26,7 @@ local ContextActionsBinder = require(Connection.ContextActionsBinder)
 local TopStatConnector = require(Connection.TopStatConnector)
 local LayoutValues = require(Connection.LayoutValues)
 local WithLayoutValues = LayoutValues.WithLayoutValues
+local FFlagPlayerListReduceRerenders = require(PlayerList.Flags.FFlagPlayerListReduceRerenders)
 
 local MOTOR_OPTIONS = {
 	dampingRatio = 1,
@@ -83,6 +86,9 @@ function PlayerListApp:init()
 end
 
 function PlayerListApp:render()
+	if FFlagPlayerListClosedNoRender and not self.state.visible then
+		return Roact.createElement(ContextActionsBinder)
+	end
 	return WithLayoutValues(function(layoutValues)
 		local containerPosition = layoutValues.ContainerPosition
 		local containerSize = layoutValues.ContainerSize
@@ -134,6 +140,14 @@ function PlayerListApp:render()
 		local childElements = {}
 
 		if layoutValues.IsTenFoot then
+			local gameStatNames = nil
+			if FFlagPlayerListReduceRerenders then
+				gameStatNames = {}
+				for _, gameStat in self.props.gameStats do
+					table.insert(gameStatNames, gameStat.name)
+				end
+			end
+			
 			for _, player in ipairs(self.props.players) do
 				if player == Players.LocalPlayer then
 					childElements["TitlePlayerEntry"] = Roact.createElement("Frame", {
@@ -148,7 +162,8 @@ function PlayerListApp:render()
 							playerRelationship = self.props.playerRelationship[player.UserId],
 							titlePlayerEntry = true,
 							hasDivider = false,
-							gameStats = self.props.gameStats,
+							gameStats = if FFlagPlayerListReduceRerenders then nil else self.props.gameStats,
+							gameStatNames = gameStatNames,
 							entrySize = entrySize,
 						}),
 					})

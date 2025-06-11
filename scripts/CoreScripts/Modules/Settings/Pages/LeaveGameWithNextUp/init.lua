@@ -18,15 +18,17 @@ local React = require(CorePackages.Packages.React)
 local ReactRoblox = require(CorePackages.Packages.ReactRoblox)
 
 local ChromeEnabled = require(RobloxGui.Modules.Chrome.Enabled)()
-local ChromeService = if ChromeEnabled then require(RobloxGui.Modules.Chrome.Service) else nil
-local ChromeConstants = if ChromeEnabled then require(RobloxGui.Modules.Chrome.ChromeShared.Unibar.Constants) else nil
+local ChromeService = if ChromeEnabled then require(RobloxGui.Modules.Chrome.Service) else nil :: never
+local ChromeConstants = if ChromeEnabled then require(RobloxGui.Modules.Chrome.ChromeShared.Unibar.Constants) else nil :: never
 
 ------------ Variables -------------------
 local PageInstance = nil
 RobloxGui:WaitForChild("Modules"):WaitForChild("TenFootInterface")
 local isTenFootInterface = require(RobloxGui.Modules.TenFootInterface):IsEnabled()
 
-local FFlagEnableChromeShortcutBar = require(CorePackages.Workspace.Packages.SharedFlags).FFlagEnableChromeShortcutBar
+local SharedFlags = require(CorePackages.Workspace.Packages.SharedFlags)
+local FFlagEnableChromeShortcutBar = SharedFlags.FFlagEnableChromeShortcutBar
+local FFlagChromeShortcutRemoveRespawnOnLeavePage = SharedFlags.FFlagChromeShortcutRemoveRespawnOnLeavePage
 
 local Constants = require(RobloxGui.Modules:WaitForChild("InGameMenu"):WaitForChild("Resources"):WaitForChild("Constants"))
 
@@ -172,8 +174,14 @@ end
 PageInstance.Displayed.Event:connect(function()
 	GuiService.SelectedCoreObject = PageInstance.LeaveGameButton
 	if FFlagEnableChromeShortcutBar then 
-		if ChromeEnabled and ChromeService and ChromeConstants then 
-			ChromeService:setShortcutBar(ChromeConstants.TILTMENU_DIALOG_SHORTCUTBAR_ID)
+		if FFlagChromeShortcutRemoveRespawnOnLeavePage then
+			if ChromeEnabled then 
+				ChromeService:setShortcutBar(ChromeConstants.TILTMENU_LEAVE_DIALOG_SHORTCUTBAR_ID)
+			end
+		else
+			if ChromeEnabled and ChromeService and ChromeConstants then 
+				ChromeService:setShortcutBar(ChromeConstants.TILTMENU_DIALOG_SHORTCUTBAR_ID)
+			end
 		end
 	else
 		ContextActionService:BindCoreAction(LEAVE_GAME_ACTION, PageInstance.DontLeaveFromGamepad, false, Enum.KeyCode.ButtonB)

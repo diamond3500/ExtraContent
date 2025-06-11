@@ -1,5 +1,3 @@
---!strict
-
 game:DefineFastFlag("UGCValidateLCHandleScale", false)
 
 return function()

@@ -1,5 +1,3 @@
---!strict
-
 local function getAttachment(parent: Instance, names: { string }): Attachment?
 	for _, name in pairs(names) do
 		local result = parent:FindFirstChild(name)

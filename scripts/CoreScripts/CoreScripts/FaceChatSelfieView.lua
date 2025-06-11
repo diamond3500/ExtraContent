@@ -35,7 +35,6 @@ end
 local newTrackerStreamAnimation = nil
 local cloneStreamTrack = nil
 
-local EngineFeatureAvatarJointUpgrade = game:GetEngineFeature("AvatarJointUpgradeFeature")
 local EngineFeatureAnimatorAndADFRefactor = game:GetEngineFeature("AnimatorAndADFRefactor")
 local EngineFeaturePlayerViewRemoteEventSupport = game:GetEngineFeature("PlayerViewRemoteEventSupport")
 local AnalyticsService = game:GetService("RbxAnalyticsService")
@@ -55,6 +54,7 @@ local FFlagSelfViewTweaksPass = game:DefineFastFlag("SelfViewTweaksPass", false)
 local FFlagInExperienceUpsellSelfViewFix = game:DefineFastFlag("InExperienceUpsellSelfViewFix", false)
 local FFlagRemoveVoiceJoiceDisconnectFix = game:DefineFastFlag("RemoveVoiceJoiceDisconnectFix", false)
 local FFlagFixUpdateMicIconCallBeforeReady = game:DefineFastFlag("FixUpdateMicIconCallBeforeReady", false)
+local FFlagSelfViewAvatarJointUpgrade = game:DefineFastFlag("SelfViewAvatarJointUpgrade", false)
 
 local CorePackages = game:GetService("CorePackages")
 local CharacterUtility = require(CorePackages.Packages.Thumbnailing).CharacterUtility
@@ -281,8 +281,8 @@ local ALLOWLISTED_INSTANCE_TYPES = {
 	Accessory = "Accessory",
 	Animator = "Animator",
 	Attachment = "Attachment",
-	AnimationConstraint = EngineFeatureAvatarJointUpgrade and "AnimationConstraint" or nil,
-	BallSocketConstraint = EngineFeatureAvatarJointUpgrade and "BallSocketConstraint" or nil,
+	AnimationConstraint = FFlagSelfViewAvatarJointUpgrade and "AnimationConstraint" or nil,
+	BallSocketConstraint = FFlagSelfViewAvatarJointUpgrade and "BallSocketConstraint" or nil,
 	BodyColors = "BodyColors",
 	CharacterMesh = "CharacterMesh",
 	Decal = "Decal",

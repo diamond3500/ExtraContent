@@ -21,8 +21,6 @@ local FFlagAppChatInExpForceCursor = game:DefineFastFlag("AppChatInExpForceCurso
 local FFlagAppChatInExpUseUnibarNotification = game:DefineFastFlag("AppChatInExpUseUnibarNotification", false)
 
 local SquadExperimentation = require(CorePackages.Workspace.Packages.SocialExperiments).SquadExperimentation
-local GetFFlagAppChatInExperienceRenameToRobloxChat =
-	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagAppChatInExperienceRenameToRobloxChat
 local GetFFlagAppChatRebrandStringUpdates =
 	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagAppChatRebrandStringUpdates
 
@@ -35,10 +33,7 @@ return function(id: string, initialAvailability: number)
 		id = id,
 		label = if GetFFlagAppChatRebrandStringUpdates() and SquadExperimentation.getSquadEntrypointsEnabled()
 			then "Feature.Squads.Label.Party" -- translated in some languages
-			elseif
-				GetFFlagAppChatInExperienceRenameToRobloxChat()
-			then "Feature.Chat.Label.RobloxChat" -- intentionally not translated, temp string before Party launch
-			else "Feature.Chat.Label.Connect", -- intentionally not translated
+			else "Feature.Chat.Label.RobloxChat", -- intentionally not translated, temp string before Party launch
 		activated = function()
 			InExperienceAppChatModal:toggleVisibility()
 			if FFlagEnableUnibarFtuxTooltips then

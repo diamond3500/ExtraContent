@@ -1,5 +1,3 @@
---!strict
-
 game:DefineFastFlag("UGCValidationAdjustLegBounds", false)
 
 return function()

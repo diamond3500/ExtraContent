@@ -1,5 +1,3 @@
---!strict
-
 game:DefineFastInt("UGCValidateCageMeshDistanceThreshold", 60)
 
 return function()

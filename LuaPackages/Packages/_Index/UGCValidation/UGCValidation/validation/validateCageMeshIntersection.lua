@@ -13,6 +13,8 @@ local function validateCageMeshIntersection(
 	meshInfo: Types.MeshInfo,
 	validationContext: Types.ValidationContext
 ): (boolean, { string }?)
+	assert(validationContext.assetTypeEnum, "validationContext.assetTypeEnum is required")
+
 	local assetTypeEnum = validationContext.assetTypeEnum
 	if not meshInfo.editableMesh then
 		Analytics.reportFailure(

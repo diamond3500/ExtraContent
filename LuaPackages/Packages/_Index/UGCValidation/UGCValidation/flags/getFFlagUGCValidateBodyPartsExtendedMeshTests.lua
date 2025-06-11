@@ -1,5 +1,3 @@
---!strict
-
 game:DefineFastFlag("UGCValidateBodyPartsExtendedMeshTests", false)
 
 return function()

@@ -5,6 +5,7 @@ local Players = game:GetService("Players")
 local GuiService = game:GetService("GuiService")
 
 local Roact = require(CorePackages.Packages.Roact)
+local React = require(CorePackages.Packages.React)
 local RoactRodux = require(CorePackages.Packages.RoactRodux)
 local t = require(CorePackages.Packages.t)
 local Otter = require(CorePackages.Packages.Otter)
@@ -34,6 +35,7 @@ local ClosePlayerDropDown = require(PlayerList.Actions.ClosePlayerDropDown)
 local SetPlayerListVisibility = require(PlayerList.Actions.SetPlayerListVisibility)
 
 local GetFFlagFixDropDownVisibility = require(PlayerList.Flags.GetFFlagFixDropDownVisibility)
+local FFlagPlayerListReduceRerenders = require(PlayerList.Flags.FFlagPlayerListReduceRerenders)
 
 local BlockPlayer = require(PlayerList.Thunks.BlockPlayer)
 local UnblockPlayer = require(PlayerList.Thunks.UnblockPlayer)
@@ -343,6 +345,10 @@ local function mapDispatchToProps(dispatch)
 			return dispatch(RequestFriendship(player))
 		end,
 	}
+end
+
+if FFlagPlayerListReduceRerenders then
+	return React.memo(RoactRodux.connect(mapStateToProps, mapDispatchToProps)(PlayerDropDown))
 end
 
 return RoactRodux.connect(mapStateToProps, mapDispatchToProps)(PlayerDropDown)

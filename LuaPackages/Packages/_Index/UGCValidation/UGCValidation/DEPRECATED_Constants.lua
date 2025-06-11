@@ -12,15 +12,10 @@ local getFIntMeshDivisionNarrow = require(root.flags.getFIntMeshDivisionNarrow)
 local getEngineFeatureRemoveProxyWrap = require(root.flags.getEngineFeatureRemoveProxyWrap)
 
 local getFFlagAddUGCValidationForPackage = require(root.flags.getFFlagAddUGCValidationForPackage)
-local getFFlagUGCValidationAdjustLegBounds = require(root.flags.getFFlagUGCValidationAdjustLegBounds)
 local getFFlagUGCValidateSurfaceAppearanceAlphaMode = require(root.flags.getFFlagUGCValidateSurfaceAppearanceAlphaMode)
 local getFFlagFixPackageIDFieldName = require(root.flags.getFFlagFixPackageIDFieldName)
 local getFFlagUGCValidateRestrictAttachmentPositions =
 	require(root.flags.getFFlagUGCValidateRestrictAttachmentPositions)
-local getFFlagUGCValidateConfigurableBodyBounds = require(root.flags.getFFlagUGCValidateConfigurableBodyBounds)
-local getFFlagUGCValidateConfigurableFullBodyBounds = require(root.flags.getFFlagUGCValidateConfigurableFullBodyBounds)
-local getFFlagUGCValidateConfigurableAssetTriangleLimits =
-	require(root.flags.getFFlagUGCValidateConfigurableAssetTriangleLimits)
 local getFFlagFixValidateTransparencyProperty = require(root.flags.getFFlagFixValidateTransparencyProperty)
 
 local FIntUGCValidateTriangleLimitDynamicHead = game:DefineFastInt("UGCValidateTriangleLimitDynamicHead", 4000)
@@ -438,22 +433,7 @@ local backMesh = {
 
 Constants.ASSET_TYPE_INFO[Enum.AssetType.RightArm] = {
 	isBodyPart = true,
-	bounds = if getFFlagUGCValidateConfigurableBodyBounds()
-		then ConstantBounds.getArmBounds()
-		else {
-			Classic = {
-				minSize = Vector3.new(0.25, 1.5, 0.25),
-				maxSize = Vector3.new(2, 3, 2),
-			},
-			ProportionsSlender = {
-				minSize = Vector3.new(0.25, 1.5, 0.25),
-				maxSize = Vector3.new(1.5, 4, 2),
-			},
-			ProportionsNormal = {
-				minSize = Vector3.new(0.25, 1.5, 0.25),
-				maxSize = Vector3.new(2, 4.5, 2),
-			},
-		},
+	bounds = ConstantBounds.getArmBounds(),
 	subParts = {
 		RightHand = {
 			rigAttachmentToParent = {
@@ -496,22 +476,7 @@ Constants.ASSET_TYPE_INFO[Enum.AssetType.RightArm] = {
 
 Constants.ASSET_TYPE_INFO[Enum.AssetType.DynamicHead] = {
 	isBodyPart = true,
-	bounds = if getFFlagUGCValidateConfigurableBodyBounds()
-		then ConstantBounds.getHeadBounds()
-		else {
-			Classic = {
-				minSize = Vector3.new(0.5, 0.5, 0.5),
-				maxSize = Vector3.new(1.5, 1.75, 2),
-			},
-			ProportionsSlender = {
-				minSize = Vector3.new(0.5, 0.5, 0.5),
-				maxSize = Vector3.new(2, 2, 2),
-			},
-			ProportionsNormal = {
-				minSize = Vector3.new(0.5, 0.5, 0.5),
-				maxSize = Vector3.new(3, 2, 2),
-			},
-		},
+	bounds = ConstantBounds.getHeadBounds(),
 	subParts = {
 		Head = {
 			rigAttachmentToParent = {
@@ -538,22 +503,7 @@ Constants.ASSET_TYPE_INFO[Enum.AssetType.DynamicHead] = {
 
 Constants.ASSET_TYPE_INFO[Enum.AssetType.LeftArm] = {
 	isBodyPart = true,
-	bounds = if getFFlagUGCValidateConfigurableBodyBounds()
-		then ConstantBounds.getArmBounds()
-		else {
-			Classic = {
-				minSize = Vector3.new(0.25, 1.5, 0.25),
-				maxSize = Vector3.new(2, 3, 2),
-			},
-			ProportionsSlender = {
-				minSize = Vector3.new(0.25, 1.5, 0.25),
-				maxSize = Vector3.new(1.5, 4, 2),
-			},
-			ProportionsNormal = {
-				minSize = Vector3.new(0.25, 1.5, 0.25),
-				maxSize = Vector3.new(2, 4.5, 2),
-			},
-		},
+	bounds = ConstantBounds.getArmBounds(),
 	subParts = {
 		LeftLowerArm = {
 			rigAttachmentToParent = {
@@ -596,22 +546,7 @@ Constants.ASSET_TYPE_INFO[Enum.AssetType.LeftArm] = {
 
 Constants.ASSET_TYPE_INFO[Enum.AssetType.Torso] = {
 	isBodyPart = true,
-	bounds = if getFFlagUGCValidateConfigurableBodyBounds()
-		then ConstantBounds.getTorsoBounds()
-		else {
-			Classic = {
-				minSize = Vector3.new(1, 2, 0.7),
-				maxSize = Vector3.new(3.5, 3.25, 2),
-			},
-			ProportionsSlender = {
-				minSize = Vector3.new(1, 2, 0.7),
-				maxSize = Vector3.new(2.5, 3, 2),
-			},
-			ProportionsNormal = {
-				minSize = Vector3.new(1, 2, 0.7),
-				maxSize = Vector3.new(4, 3, 2.25),
-			},
-		},
+	bounds = ConstantBounds.getTorsoBounds(),
 	subParts = {
 		UpperTorso = {
 			rigAttachmentToParent = {
@@ -684,26 +619,7 @@ Constants.ASSET_TYPE_INFO[Enum.AssetType.Torso] = {
 
 Constants.ASSET_TYPE_INFO[Enum.AssetType.RightLeg] = {
 	isBodyPart = true,
-	bounds = if getFFlagUGCValidateConfigurableBodyBounds()
-		then ConstantBounds.getLegBounds()
-		else {
-			Classic = {
-				minSize = Vector3.new(0.25, 2, 0.5),
-				maxSize = Vector3.new(1.5, 2.75, 2),
-			},
-			ProportionsSlender = {
-				minSize = Vector3.new(0.25, 2, 0.5),
-				maxSize = if getFFlagUGCValidationAdjustLegBounds()
-					then Vector3.new(1.5, 3.3, 2)
-					else Vector3.new(1.5, 3, 2),
-			},
-			ProportionsNormal = {
-				minSize = Vector3.new(0.25, 2, 0.5),
-				maxSize = if getFFlagUGCValidationAdjustLegBounds()
-					then Vector3.new(1.5, 3.3, 2)
-					else Vector3.new(1.5, 3, 2),
-			},
-		},
+	bounds = ConstantBounds.getLegBounds(),
 	subParts = {
 		RightUpperLeg = {
 			rigAttachmentToParent = {
@@ -743,26 +659,7 @@ Constants.ASSET_TYPE_INFO[Enum.AssetType.RightLeg] = {
 
 Constants.ASSET_TYPE_INFO[Enum.AssetType.LeftLeg] = {
 	isBodyPart = true,
-	bounds = if getFFlagUGCValidateConfigurableBodyBounds()
-		then ConstantBounds.getLegBounds()
-		else {
-			Classic = {
-				minSize = Vector3.new(0.25, 2, 0.5),
-				maxSize = Vector3.new(1.5, 2.75, 2),
-			},
-			ProportionsSlender = {
-				minSize = Vector3.new(0.25, 2, 0.5),
-				maxSize = if getFFlagUGCValidationAdjustLegBounds()
-					then Vector3.new(1.5, 3.3, 2)
-					else Vector3.new(1.5, 3, 2),
-			},
-			ProportionsNormal = {
-				minSize = Vector3.new(0.25, 2, 0.5),
-				maxSize = if getFFlagUGCValidationAdjustLegBounds()
-					then Vector3.new(1.5, 3.3, 2)
-					else Vector3.new(1.5, 3, 2),
-			},
-		},
+	bounds = ConstantBounds.getLegBounds(),
 	subParts = {
 		LeftFoot = {
 			rigAttachmentToParent = {
@@ -800,9 +697,7 @@ Constants.ASSET_TYPE_INFO[Enum.AssetType.LeftLeg] = {
 	},
 }
 
-if getFFlagUGCValidateConfigurableFullBodyBounds() then
-	Constants.FULL_BODY_BOUNDS = ConstantBounds.getFullBodyBounds()
-end
+Constants.FULL_BODY_BOUNDS = ConstantBounds.getFullBodyBounds()
 
 Constants.RenderVsWrapMeshMaxDiff = 1
 
@@ -921,23 +816,14 @@ Constants.TEXTURE_CONTENT_ID_FIELDS = {
 	SurfaceAppearance = { "ColorMap", "MetalnessMap", "NormalMap", "RoughnessMap" },
 }
 
-Constants.ASSET_RENDER_MESH_MAX_TRIANGLES = if getFFlagUGCValidateConfigurableAssetTriangleLimits()
-	then {
-		DynamicHead = FIntUGCValidateTriangleLimitDynamicHead,
-		LeftArm = FIntUGCValidateTriangleLimitLeftArm,
-		RightArm = FIntUGCValidateTriangleLimitRightArm,
-		Torso = FIntUGCValidateTriangleLimitTorso,
-		LeftLeg = FIntUGCValidateTriangleLimitLeftLeg,
-		RightLeg = FIntUGCValidateTriangleLimitRightLeg,
-	}
-	else {
-		DynamicHead = 4000,
-		LeftArm = 1248,
-		RightArm = 1248,
-		Torso = 1750,
-		LeftLeg = 1248,
-		RightLeg = 1248,
-	}
+Constants.ASSET_RENDER_MESH_MAX_TRIANGLES = {
+	DynamicHead = FIntUGCValidateTriangleLimitDynamicHead,
+	LeftArm = FIntUGCValidateTriangleLimitLeftArm,
+	RightArm = FIntUGCValidateTriangleLimitRightArm,
+	Torso = FIntUGCValidateTriangleLimitTorso,
+	LeftLeg = FIntUGCValidateTriangleLimitLeftLeg,
+	RightLeg = FIntUGCValidateTriangleLimitRightLeg,
+}
 
 Constants.WRAP_TARGET_CAGE_MESH_UV_COUNTS = {
 	Head = 343,

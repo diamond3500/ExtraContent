@@ -1,5 +1,3 @@
---!strict
-
 game:DefineFastFlag("FixValidateTransparencyProperty", false)
 
 return function()

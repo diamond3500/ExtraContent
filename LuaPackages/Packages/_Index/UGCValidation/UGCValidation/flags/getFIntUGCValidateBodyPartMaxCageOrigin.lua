@@ -1,5 +1,3 @@
---!strict
-
 game:DefineFastInt("UGCValidateBodyPartMaxCageOrigin", 100)
 
 return function()

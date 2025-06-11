@@ -1,5 +1,3 @@
---!strict
-
 game:DefineFastInt("UGCLCCageVerticesSimilarityMaximum", 15)
 
 return function()

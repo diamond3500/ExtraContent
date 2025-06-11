@@ -1,5 +1,3 @@
---!strict
-
 --[[
 this file is mainly to allow smaller functions called from validateAssetTransparency to be unit tested
 

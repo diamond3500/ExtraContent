@@ -7,26 +7,12 @@ local TextService = game:GetService("TextService")
 local CleanRichTextTags = require(script.Parent.CleanRichTextTags)
 local UIBlox = script.Parent.Parent.Parent
 local Logger = require(UIBlox.Logger)
+local UIBloxConfig = require(UIBlox.UIBloxConfig)
 
 local TEMPORARY_TEXT_SIZE_PADDING = Vector2.new(2, 2)
 
-local function getTextSize(
-	string: string,
-	fontSize: number,
-	font: Enum.Font,
-	frameSize: Vector2,
-	--[[
-		Removes all RichText tags from input string. 
-
-		This does not guarantee correct calculation of text containing RichText. This simply removes the tags from the calculation.
-		However, if your rich text only contains tags that do not modify size (e.g. color, transparency, etc) then this will correctly
-		calculate the text size.
-
-		To be deprecated once UISYS-1260 is completed.
-	]]
-	ignoreRichTextTags: boolean?
-)
-	if ignoreRichTextTags then
+local function getTextSize(string: string, fontSize: number, font: Enum.Font, frameSize: Vector2, isRichText: boolean?)
+	if isRichText and not UIBloxConfig.useEngineRichTextBounds then
 		string = CleanRichTextTags(string)
 	end
 
@@ -35,6 +21,9 @@ local function getTextSize(
 	params.Size = fontSize
 	params.Text = string
 	params.Width = frameSize.X
+	if UIBloxConfig.useEngineRichTextBounds then
+		params.RichText = isRichText or false
+	end
 
 	-- pcall because GetTextBoundsAsync can error if network call fails
 	local success, value = pcall(function()

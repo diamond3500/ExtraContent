@@ -1,5 +1,3 @@
---!strict
-
 game:DefineFastFlag("UGCValidateBodyPartsCollisionFidelity", false)
 
 return function()

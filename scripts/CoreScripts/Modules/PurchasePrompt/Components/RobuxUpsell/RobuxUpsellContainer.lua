@@ -16,7 +16,12 @@ local FocusNavigationCoreScriptsWrapper = FocusNavigationUtils.FocusNavigationCo
 local FocusRoot = FocusNavigationUtils.FocusRoot
 local FocusNavigableSurfaceIdentifierEnum = FocusNavigationUtils.FocusNavigableSurfaceIdentifierEnum
 
+local PromptNativeUpsellSuggestions = require(Root.Actions.PromptNativeUpsellSuggestions)
+
 local PurchaseFlow = require(Root.Enums.PurchaseFlow)
+
+local RobuxUpsell =  require(Root.Models.RobuxUpsell)
+type RobuxUpsellProduct = RobuxUpsell.Product
 
 local completeRequest = require(Root.Thunks.completeRequest)
 local purchaseItem = require(Root.Thunks.purchaseItem)
@@ -30,14 +35,16 @@ local sendEvent = require(Root.Thunks.sendEvent)
 local isMockingPurchases = require(Root.Utils.isMockingPurchases)
 local getPlayerPrice = require(Root.Utils.getPlayerPrice)
 local isLinksAllowed = require(Root.Utils.isLinksAllowed)
+local SelectedRobuxPackage = require(Root.Utils.SelectedRobuxPackage)
 local connectToStore = require(Root.connectToStore)
 
 local ExternalEventConnection = require(Root.Components.Connection.ExternalEventConnection)
 
 local GetFFLagUseCoreScriptsRootProviderForUpsellModal =
 	require(Root.Flags.GetFFLagUseCoreScriptsRootProviderForUpsellModal)
-local GetFFlagEnableEventMetadataInUpsell = IAPExperience.Flags.GetFFlagEnableEventMetadataInUpsell
 local FFlagCSFocusWrapperRefactor = require(CorePackages.Workspace.Packages.SharedFlags).FFlagCSFocusWrapperRefactor
+local FFlagEnableUpsellSuggestionsAPI = require(CorePackages.Workspace.Packages.SharedFlags).FFlagEnableUpsellSuggestionsAPI
+local UpsellSuggestionsAPIMaxPackages = require(CorePackages.Workspace.Packages.SharedFlags).UpsellSuggestionsAPIMaxPackages
 
 local RobuxUpsellOverlay = require(script.Parent.RobuxUpsellOverlay)
 
@@ -91,19 +98,28 @@ function RobuxUpsellContainer:createElement()
 			purchaseFlow = props.purchaseFlow,
 			purchaseError = props.purchaseError,
 
-			robuxProviderId = props.nativeUpsell.robuxProductId,
-			robuxProductId = props.nativeUpsell.productId,
+			-- Robux Upsell Suggestions
+			useUpsellSuggestions = FFlagEnableUpsellSuggestionsAPI and UpsellSuggestionsAPIMaxPackages > 1,
+			upsellSuggestions = props.robuxSuggestions,
+			selectedUpsellIndex = props.robuxPackageSelection,
+			virtualItemBadgeType = props.virtualItemBadgeType,
+			onUpsellSuggestionsSelected = function(index: number)
+				props.onUpsellSuggestionsSelected(props.robuxSuggestions, index)
+			end,
+
+			robuxProviderId = props.robuxProductId,
+			robuxProductId = props.productId,
 
 			itemIcon = imageIcon,
-			itemProductId = if GetFFlagEnableEventMetadataInUpsell then props.productInfo.productId else nil,
+			itemProductId = props.productInfo.productId,
 			itemName = props.productInfo.name,
 			itemRobuxCost = getPlayerPrice(
 				props.productInfo,
 				props.accountInfo.membershipType == 4,
 				props.expectedPrice
 			),
-			iapRobuxAmount = props.nativeUpsell.robuxPurchaseAmount or 0,
-			iapCostStr = props.nativeUpsell.price,
+			iapRobuxAmount = props.robuxPurchaseAmount or 0,
+			iapCostStr = props.price,
 			beforeRobuxBalance = props.accountInfo.balance,
 
 			isTestPurchase = props.isTestPurchase,
@@ -174,7 +190,18 @@ RobuxUpsellContainer = connectToStore(function(state)
 
 		productInfo = state.productInfo,
 		accountInfo = state.accountInfo,
-		nativeUpsell = state.nativeUpsell,
+		
+		-- Robux Upsell Suggestions
+		robuxSuggestions = state.robuxUpsellSuggestions.products,
+		robuxPackageSelection = state.robuxUpsellSuggestions.selection,
+		virtualItemBadgeType = state.robuxUpsellSuggestions.virtualItemBadgeType,
+
+		-- Selected Robux Package details - used for legacy upsell flow and processing
+		robuxProductId = SelectedRobuxPackage.getRobuxProductId(state),
+		productId = SelectedRobuxPackage.getProductId(state),
+		robuxPurchaseAmount = SelectedRobuxPackage.getRobuxPurchaseAmount(state),
+		robuxAmountBeforeBonus = SelectedRobuxPackage.getRobuxAmountBeforeBonus(state),
+		price = SelectedRobuxPackage.getPrice(state),
 
 		isTestPurchase = isTestPurchase,
 		isGamepadEnabled = state.gamepadEnabled,
@@ -208,6 +235,9 @@ end, function(dispatch)
 		completeRequest = function()
 			GuiService.SelectedCoreObject = nil
 			return dispatch(completeRequest())
+		end,
+		onUpsellSuggestionsSelected = function(products: {[number]: RobuxUpsellProduct}, index: number)
+			return dispatch(PromptNativeUpsellSuggestions(products, index))
 		end,
 		onAnalyticEvent = function(name, data)
 			return dispatch(sendEvent(name, data))

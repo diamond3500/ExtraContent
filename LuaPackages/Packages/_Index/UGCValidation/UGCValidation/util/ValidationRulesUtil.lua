@@ -1,8 +1,19 @@
 local AvatarCreationService = game:GetService("AvatarCreationService")
 
-local ValidationRulesUtil = {}
+type ValidationRulesUtil = {
+	rules: any?,
+	rigAttachmentToParentMap: { [string]: string },
 
-ValidationRulesUtil.rigAttachmentToParentMap = {
+	getRules: (self: ValidationRulesUtil) -> any,
+	getBodyPartMaxTrianglesRule: (self: ValidationRulesUtil, assetTypeEnum: Enum.AssetType) -> number,
+	getAccessoryRules: (self: ValidationRulesUtil, dest: { [Enum.AssetType]: any }) -> (),
+	getBodyPartRules: (self: ValidationRulesUtil, dest: { [Enum.AssetType]: any }) -> (),
+	getFullBodyRulesBounds: (self: ValidationRulesUtil) -> { [string]: { minSize: number, maxSize: number } },
+}
+
+local ValidationRulesUtilImpl = {}
+
+ValidationRulesUtilImpl.rigAttachmentToParentMap = {
 	Head = "NeckRigAttachment",
 	UpperTorso = "WaistRigAttachment",
 	LowerTorso = "RootRigAttachment",
@@ -20,7 +31,7 @@ ValidationRulesUtil.rigAttachmentToParentMap = {
 	LeftUpperLeg = "LeftHipRigAttachment",
 }
 
-function ValidationRulesUtil:getRules()
+function ValidationRulesUtilImpl:getRules()
 	if not self.rules then
 		self.rules = AvatarCreationService:GetValidationRules()
 	end
@@ -28,11 +39,11 @@ function ValidationRulesUtil:getRules()
 	return self.rules
 end
 
-function ValidationRulesUtil:getBodyPartMaxTrianglesRule(assetTypeEnum)
+function ValidationRulesUtilImpl:getBodyPartMaxTrianglesRule(assetTypeEnum)
 	return self:getRules().MeshRules.BodyPartMaxTriangles[assetTypeEnum]
 end
 
-function ValidationRulesUtil:getAccessoryRules(dest)
+function ValidationRulesUtilImpl:getAccessoryRules(dest)
 	for assetType, info in self:getRules().AccessoryRules do
 		local assetTypeInfo = {
 			rigidAllowed = info.RigidAllowed,
@@ -50,7 +61,7 @@ function ValidationRulesUtil:getAccessoryRules(dest)
 	end
 end
 
-function ValidationRulesUtil:getBodyPartRules(dest)
+function ValidationRulesUtilImpl:getBodyPartRules(dest)
 	for assetType, info in self:getRules().BodyPartRules do
 		local assetTypeInfo = {
 			isBodyPart = true,
@@ -68,7 +79,7 @@ function ValidationRulesUtil:getBodyPartRules(dest)
 				rigAttachmentToParent = {},
 				otherAttachments = {},
 			}
-			local rigAttachmentToParent = ValidationRulesUtil.rigAttachmentToParentMap[partName]
+			local rigAttachmentToParent = ValidationRulesUtilImpl.rigAttachmentToParentMap[partName]
 			for attachmentName, attachmentInfo in attachments do
 				if rigAttachmentToParent == attachmentName then
 					partAttachmentInfo.rigAttachmentToParent = {
@@ -93,7 +104,7 @@ function ValidationRulesUtil:getBodyPartRules(dest)
 	end
 end
 
-function ValidationRulesUtil:getFullBodyRulesBounds()
+function ValidationRulesUtilImpl:getFullBodyRulesBounds()
 	local result = {}
 	for scaleType, boundsInfo in self:getRules().FullBodyRules.Bounds do
 		result[scaleType] = {
@@ -103,5 +114,7 @@ function ValidationRulesUtil:getFullBodyRulesBounds()
 	end
 	return result
 end
+
+local ValidationRulesUtil: ValidationRulesUtil = ValidationRulesUtilImpl
 
 return ValidationRulesUtil

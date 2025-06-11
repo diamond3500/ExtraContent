@@ -1,5 +1,3 @@
---!strict
-
 game:DefineFastInt("UGCValidateImportOriginMax", 120)
 
 return function()

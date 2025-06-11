@@ -8,7 +8,6 @@ local renderWithCoreScriptsStyleProvider = require(RobloxGui.Modules.Common.rend
 local Roact = require(CorePackages.Packages.Roact)
 local Rodux = require(CorePackages.Packages.Rodux)
 local RoactRodux = require(CorePackages.Packages.RoactRodux)
-local UIBlox = require(CorePackages.Packages.UIBlox)
 
 local AvatarEditorPromptsApp = require(script.Components.AvatarEditorPromptsApp)
 local Reducer = require(script.Reducer)
@@ -19,8 +18,6 @@ local AvatarEditorPromptsPolicy = require(script.AvatarEditorPromptsPolicy)
 local RoactGlobalConfig = require(script.RoactGlobalConfig)
 
 local ConnectAvatarEditorServiceEvents = require(script.ConnectAvatarEditorServiceEvents)
-
-local FFlagUIBloxFoundationProvider = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagUIBloxFoundationProvider()
 
 local AvatarEditorPrompts = {}
 AvatarEditorPrompts.__index = AvatarEditorPrompts
@@ -57,9 +54,9 @@ function AvatarEditorPrompts.new()
 		}),
 	})
 	-- Root should be a Folder so that style provider stylesheet elements can be portaled properly; otherwise, they will attach to CoreGui
-	self.root = if FFlagUIBloxFoundationProvider then Roact.createElement("Folder", {
+	self.root = Roact.createElement("Folder", {
 		Name = "AvatarEditorPromptsApp",
-	}, providerWrappedApp) else providerWrappedApp
+	}, providerWrappedApp)
 
 	self.element = Roact.mount(self.root, CoreGui, "AvatarEditorPrompts")
 

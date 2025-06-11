@@ -38,6 +38,9 @@ local Theme = require(Modules.Settings.Theme)
 
 local CONTROLLER_BAR_HEIGHT = require(CoreGui.RobloxGui.Modules.InGameMenuConstants).ControllerBarHeight
 
+local isInExperienceUIVREnabled =
+	require(CorePackages.Workspace.Packages.SharedExperimentDefinition).isInExperienceUIVREnabled
+
 local AssetDetails = Roact.PureComponent:extend("AssetDetails")
 local ITEM_OWNED = "InGame.InspectMenu.Label.OwnedItems"
 local OWNED_ITEM_IMAGE = "icons/status/item/owned"
@@ -270,12 +273,21 @@ function AssetDetails:render()
 						Padding = UDim.new(0, 10),
 					}),
 					DetailsThumbnail = Roact.createElement(DetailsThumbnail),
-					TryOnViewport = localPlayerModel and Roact.createElement(TryOnViewport, {
-						localPlayerModel = localPlayerModel,
-						setScrollingEnabled = function(enabled)
-							self:setScrollingEnabled(enabled)
-						end,
-					}),
+					TryOnViewport = if isInExperienceUIVREnabled
+						then (if detailsInformation.viewingDetails and localPlayerModel
+							then Roact.createElement(TryOnViewport, {
+								localPlayerModel = localPlayerModel,
+								setScrollingEnabled = function(enabled)
+									self:setScrollingEnabled(enabled)
+								end,
+							})
+							else nil)
+						else localPlayerModel and Roact.createElement(TryOnViewport, {
+							localPlayerModel = localPlayerModel,
+							setScrollingEnabled = function(enabled)
+								self:setScrollingEnabled(enabled)
+							end,
+						}),
 					DetailsText = Roact.createElement(DetailsText, {
 						localPlayerModel = localPlayerModel,
 					}),

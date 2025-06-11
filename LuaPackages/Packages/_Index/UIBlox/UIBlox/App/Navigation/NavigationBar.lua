@@ -7,42 +7,28 @@ local React = require(Packages.React)
 local ReactOtter = require(Packages.ReactOtter)
 local StyleTypes = require(App.Style.StyleTypes)
 local useStyle = require(UIBlox.Core.Style.useStyle)
-local InteractableList = require(UIBlox.Core.Control.InteractableList)
-local ControlStateEnum = require(UIBlox.Core.Control.Enum.ControlState)
 local NavigationBarAlignment = require(App.Navigation.Enum.NavigationBarAlignment)
-local UIBloxConfig = require(UIBlox.UIBloxConfig)
-
-local defaultProps = {
-	visible = true,
-	zIndex = 1,
-	position = UDim2.new(0, 0, 0, 0),
-	size = UDim2.new(1, 0, 1, 0),
-	maxWidth = 600,
-	animationConfig = {
-		dampingRatio = 1,
-		frequency = 3,
-	},
-	showAnimation = false,
-}
-
-type ControlState = ControlStateEnum.ControlState
 
 export type NavigationBarItem = {
 	onActivated: (() -> ())?,
 	[any]: any,
 }
+
 export type Props = {
 	-- NavigationBar alignment type
 	alignment: NavigationBarAlignment.NavigationBarAlignmentType,
 	-- Array of items to be rendered
 	items: { NavigationBarItem },
-	-- Determines if the NavigationBar is visible, and animate in/out when this property is toggled
-	isVisible: boolean,
+	-- Callback function to render each item (item: NavigationBarItem, selected: boolean)
+	renderItem: (NavigationBarItem, boolean) -> React.ReactElement,
 	-- Size of the NavigationBar
-	-- Height is size.Y.Offset
-	size: UDim2,
-	-- Callback function to render each item
-	renderItem: (NavigationBarItem, ControlState, boolean, number) -> (React.ReactElement?, { [any]: any }?),
+	size: UDim2?,
+	-- Enable in & out animation
+	animated: boolean?,
+	-- If animated is true, this will animate in/out the component
+	isVisible: boolean?,
+	-- If provided, this will override animated and isVisible props. It should range from 0 to 1
+	visibility: React.Binding<number>?,
 	-- Overrides the default color and transparency of the navigation bar background
 	backgroundColor: StyleTypes.BackgroundStyle?,
 	-- Overrides the default color and transparency of the root background
@@ -55,24 +41,36 @@ export type Props = {
 	visible: boolean?,
 	-- Override ZIndex of the component
 	zIndex: number?,
-	-- Selection number in the InteractableList
+	-- Selection index of the items
 	selection: number?,
 	-- Spacing between items
 	spacing: UDim?,
-	-- show NavigationBar Y Offset Animation
-	showAnimation: boolean?,
-	-- Max width of the NavigationBar
+	-- Max width of the InnerFrame group of items
 	maxWidth: number?,
 	-- ClipsDescendants
 	clipsDescendants: boolean?,
+	-- Automatically size component based on the size of its descendants
+	automaticSize: Enum.AutomaticSize?,
+	-- ReactOtter animation spring settings
+	animationConfig: ReactOtter.SpringOptions?,
+}
+
+local defaultProps = {
+	visible = true,
+	zIndex = 1,
+	animated = false,
+	maxWidth = 600,
+	animationConfig = {
+		dampingRatio = 1,
+		frequency = 3,
+	},
 }
 
 local function NavigationBar(providedProps: Props)
 	assert(#providedProps.items > 0, "At least one item should be present!")
 	local props = Cryo.Dictionary.join(defaultProps, providedProps)
 	local style = useStyle()
-	local itemBindingSize, setItemBindingSize = React.useBinding(UDim2.new())
-	local height = props.size.Y.Offset :: number
+	local animationY, setAnimationY = React.useState(if props.size then props.size.Y.Offset else 0)
 	local paddingTop = if props.paddings and props.paddings.Top
 		then props.paddings.Top
 		else style.Tokens.Global.Space_75
@@ -85,188 +83,105 @@ local function NavigationBar(providedProps: Props)
 	local paddingRight = if props.paddings and props.paddings.Right
 		then props.paddings.Right
 		else style.Tokens.Global.Space_75
-
-	local onAbsoluteSizeChanged = React.useCallback(function(rbx: GuiObject)
-		if props.alignment == NavigationBarAlignment.EvenlyDistributed then
-			-- Calculate itemSize width based on the number of items
-			local totalWidth = if rbx.AbsoluteSize.X > props.maxWidth then props.maxWidth else rbx.AbsoluteSize.X
-			local itemWidth = (totalWidth - paddingLeft - paddingRight) / #props.items
-			local itemHeight = height - paddingTop - paddingBottom
-			setItemBindingSize(UDim2.new(0, itemWidth, 0, itemHeight))
-		end
-	end, {
-		height,
-		paddingTop,
-		paddingBottom,
-		paddingLeft,
-		paddingRight,
-		props.maxWidth,
-		props.alignment,
-		props.items,
-	})
-
-	local heightOffset, animateHeightOffset = ReactOtter.useAnimatedBinding(0)
-	React.useEffect(function()
-		if props.isVisible then
-			animateHeightOffset(ReactOtter.spring(0, props.animationConfig))
-		else
-			animateHeightOffset(ReactOtter.spring(height, props.animationConfig))
-		end
-		return nil
-	end, { height, props.isVisible, props.animationConfig } :: { any })
-
-	local renderAnimatedList = React.useCallback(function(items, renderItem)
-		local children = Cryo.List.map(items, function(item, key)
-			if UIBloxConfig.fixAppNavTestIssues then
-				local listItem = renderItem(key)
-				-- workaround: remove the key property set by InteractableList's renderItem function to avoid conflict
-				listItem["key"] = nil
-				return listItem
-			else
-				return renderItem(key)
-			end
-		end)
-		return React.createElement("Frame", {
-			BackgroundColor3 = if UIBloxConfig.enableAppNavTransparentBackground
-				then nil
-				else (if props.rootBackgroundColor
-					then props.rootBackgroundColor.Color
-					else style.Theme.BackgroundDefault.Color),
-			BackgroundTransparency = if UIBloxConfig.enableAppNavTransparentBackground
-				then 1
-				else (if props.rootBackgroundColor
-					then props.rootBackgroundColor.Transparency
-					else style.Theme.BackgroundDefault.Transparency),
-			BorderSizePixel = if UIBloxConfig.enableAppNavTransparentBackground then nil else 0,
-			ClipsDescendants = props.clipsDescendants,
-			Size = props.size,
-			Position = props.position,
-			Visible = props.visible,
-			[React.Change.AbsoluteSize] = onAbsoluteSizeChanged,
-		}, {
-			AnimatedNavigationBar = React.createElement("Frame", {
-				Position = heightOffset:map(function(heightOffset)
-					if UIBloxConfig.enableAppNavAnimationFix then
-						return UDim2.new(0, 0, 0, math.floor((heightOffset :: number) + 0.5))
-					else
-						return UDim2.new(0, 0, 0, heightOffset)
-					end
-				end),
-				BorderSizePixel = 0,
-				Size = UDim2.new(1, 0, 1, 0),
-				BackgroundColor3 = if props.backgroundColor
-					then props.backgroundColor.Color
-					else style.Theme.NavigationBar.Color,
-				BackgroundTransparency = if props.backgroundColor
-					then props.backgroundColor.Transparency
-					else style.Theme.NavigationBar.Transparency,
-				Selectable = false,
-				Visible = props.visible,
-				ZIndex = props.zIndex,
-			}, {
-				Layout = React.createElement("UIListLayout", {
-					FillDirection = Enum.FillDirection.Horizontal,
-					VerticalAlignment = Enum.VerticalAlignment.Top,
-					HorizontalAlignment = Enum.HorizontalAlignment.Center,
-				}),
-				InnerFrame = React.createElement(
-					"Frame",
-					{
-						BackgroundTransparency = 1,
-						Size = UDim2.new(1, 0, 1, 0),
-					},
-					Cryo.Dictionary.join({
-						Constraint = React.createElement("UISizeConstraint", {
-							MaxSize = Vector2.new(props.maxWidth, height),
-						}),
-						UIPadding = React.createElement("UIPadding", {
-							PaddingTop = UDim.new(0, paddingTop),
-							PaddingBottom = UDim.new(0, paddingBottom),
-							PaddingLeft = UDim.new(0, paddingLeft),
-							PaddingRight = UDim.new(0, paddingRight),
-						}),
-						Layout = React.createElement("UIListLayout", {
-							FillDirection = Enum.FillDirection.Horizontal,
-							VerticalAlignment = Enum.VerticalAlignment.Center,
-							HorizontalAlignment = Enum.HorizontalAlignment.Center,
-						}),
-					}, children)
-				),
-			}),
-		})
-	end, {
-		style,
-		height,
-		paddingTop,
-		paddingBottom,
-		paddingLeft,
-		paddingRight,
-		props.maxWidth,
-		props.visible,
-		props.zIndex,
-		props.size,
-		props.clipsDescendants,
-		if UIBloxConfig.enableAppNavTransparentBackground then nil else props.rootBackgroundColor,
-		props.backgroundColor,
-	} :: { any })
-
-	local alignmentTypesProps = {}
+	local hAlignment = nil
+	local hFlex = nil
 	if props.alignment == NavigationBarAlignment.Left then
-		alignmentTypesProps = {
-			itemSize = UDim2.fromScale(0, 0),
-			automaticSize = Enum.AutomaticSize.X,
-			padding = props.spacing,
-		} :: { any }
+		hAlignment = Enum.HorizontalAlignment.Left
 	elseif props.alignment == NavigationBarAlignment.EvenlyDistributed then
-		alignmentTypesProps = {
-			itemSize = itemBindingSize,
-		} :: { any }
+		hFlex = Enum.UIFlexAlignment.SpaceAround
+		hAlignment = Enum.HorizontalAlignment.Center
 	else
 		error("NavigationBar Alignment type is incorrect!")
 	end
-
-	local selection = props.selection
-	if selection then
-		if props.items[selection] == nil then
-			if UIBloxConfig.enableNavigationBarSelectionChangeFix then
-				selection = { nil }
+	-- animation
+	local onAbsoluteSizeChanged = React.useCallback(function(rbx: GuiObject)
+		if props.visibility or props.animated then
+			setAnimationY(rbx.AbsoluteSize.Y)
+		end
+	end, { props.visibility, props.animated })
+	local yOffset, animateYOffset = ReactOtter.useAnimatedBinding(0)
+	React.useEffect(function()
+		if not props.visibility and props.animated then
+			if props.isVisible then
+				animateYOffset(ReactOtter.spring(0, props.animationConfig))
 			else
-				selection = nil
+				animateYOffset(ReactOtter.spring(animationY, props.animationConfig))
 			end
-		else
-			selection = { selection }
 		end
-	else
-		if UIBloxConfig.enableNavigationBarSelectionChangeFix then
-			selection = { nil }
-		end
+		return nil
+	end, { props.visibility, props.animated, props.isVisible, animationY, props.animationConfig })
+	-- render items
+	local children = {
+		Constraint = if props.maxWidth ~= nil
+			then React.createElement("UISizeConstraint", {
+				MaxSize = Vector2.new(props.maxWidth, math.huge),
+			})
+			else nil,
+		UIPadding = React.createElement("UIPadding", {
+			PaddingTop = UDim.new(0, paddingTop),
+			PaddingBottom = UDim.new(0, paddingBottom),
+			PaddingLeft = UDim.new(0, paddingLeft),
+			PaddingRight = UDim.new(0, paddingRight),
+		}),
+		Layout = React.createElement("UIListLayout", {
+			Padding = props.spacing,
+			SortOrder = Enum.SortOrder.Name,
+			FillDirection = Enum.FillDirection.Horizontal,
+			HorizontalFlex = hFlex,
+			VerticalAlignment = Enum.VerticalAlignment.Center,
+			HorizontalAlignment = Enum.HorizontalAlignment.Left,
+		}),
+	}
+	for idx, item in ipairs(props.items) do
+		local selected = (idx == props.selection)
+		children[tostring(idx)] = props.renderItem(item, selected)
 	end
+	-- inner frame position
+	local visibilityPos = if props.visibility
+		then props.visibility:map(function(ratio: number)
+			local y = (1 - ratio) * animationY
+			return UDim2.new(0, 0, 0, math.floor(y + 0.5))
+		end)
+		else yOffset:map(function(yOffset: number)
+			return UDim2.new(0, 0, 0, math.floor(yOffset + 0.5))
+		end)
 
-	local onSelectionChanged = React.useCallback(function(selection)
-		local item = props.items[selection[1]]
-		if item ~= nil then
-			if item.onActivated ~= nil then
-				item.onActivated()
-			end
-		end
-	end, { props.items } :: { any })
-
-	return React.createElement(
-		InteractableList,
-		Cryo.Dictionary.join({
-			fillDirection = Enum.FillDirection.Horizontal,
-			horizontalAlignment = Enum.HorizontalAlignment.Left,
-			verticalAlignment = Enum.VerticalAlignment.Center,
-			sortOrder = Enum.SortOrder.LayoutOrder,
-			size = props.size,
-			position = props.position,
-			itemList = props.items,
-			selection = selection,
-			renderItem = props.renderItem,
-			onSelectionChanged = onSelectionChanged,
-			renderList = if props.showAnimation then renderAnimatedList else nil,
-		}, alignmentTypesProps)
-	)
+	return React.createElement("Frame", {
+		BackgroundTransparency = 1,
+		ClipsDescendants = props.clipsDescendants,
+		Size = props.size,
+		AutomaticSize = props.automaticSize,
+		Position = props.position,
+		Visible = props.visible,
+		[React.Change.AbsoluteSize] = onAbsoluteSizeChanged,
+	}, {
+		AnimatedFrame = React.createElement("Frame", {
+			Position = visibilityPos,
+			BorderSizePixel = 0,
+			Size = UDim2.fromScale(1, 1),
+			AutomaticSize = props.automaticSize,
+			BackgroundColor3 = if props.backgroundColor
+				then props.backgroundColor.Color
+				else style.Theme.NavigationBar.Color,
+			BackgroundTransparency = if props.backgroundColor
+				then props.backgroundColor.Transparency
+				else style.Theme.NavigationBar.Transparency,
+			Selectable = false,
+			Visible = props.visible,
+			ZIndex = props.zIndex,
+		}, {
+			Layout = React.createElement("UIListLayout", {
+				FillDirection = Enum.FillDirection.Horizontal,
+				VerticalAlignment = Enum.VerticalAlignment.Top,
+				HorizontalAlignment = hAlignment,
+			}),
+			InnerFrame = React.createElement("Frame", {
+				BackgroundTransparency = 1,
+				Size = UDim2.fromScale(1, 1),
+				AutomaticSize = props.automaticSize,
+			}, children),
+		}),
+	})
 end
 
 return NavigationBar

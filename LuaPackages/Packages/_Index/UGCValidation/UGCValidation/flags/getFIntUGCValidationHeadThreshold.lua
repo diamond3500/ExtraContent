@@ -1,5 +1,3 @@
---!strict
-
 game:DefineFastInt("UGCValidationHeadThreshold", 30)
 
 return function()

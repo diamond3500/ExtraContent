@@ -6,9 +6,9 @@ dependencies = [
     "GraphQL GraphQL 15.6.3 registry",
     "GraphQLTag GraphqlTag 2.12.9 registry",
     "LuauPolyfill LuauPolyfill 1.2.3 registry",
-    "LuauRegExp RegExp 0.2.1 registry",
+    "LuauRegExp RegExp 0.2.2 registry",
     "Promise <patched> Promise 3.5.0 registry",
-    "React React 17.1.19 registry",
+    "React React 17.2.0 registry",
     "RobloxRequests RobloxRequests 0.1.0 registry",
     "ZenObservable ZenObservable 0.8.16-roblox.0 registry",
 ]

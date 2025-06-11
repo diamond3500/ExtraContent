@@ -30,6 +30,7 @@ local getFFlagAppChatCoreUIConflictFix = SharedFlags.getFFlagAppChatCoreUIConfli
 local GetFFlagChatActiveChangedSignal = SharedFlags.GetFFlagChatActiveChangedSignal
 local getFFlagExposeChatWindowToggled = SharedFlags.getFFlagExposeChatWindowToggled
 local FFlagConsoleChatOnExpControls = SharedFlags.FFlagConsoleChatOnExpControls
+local FFlagChromeChatGamepadSupportFix = SharedFlags.FFlagChromeChatGamepadSupportFix
 
 local SocialExperiments = require(CorePackages.Workspace.Packages.SocialExperiments)
 local TenFootInterfaceExpChatExperimentation = SocialExperiments.TenFootInterfaceExpChatExperimentation
@@ -65,7 +66,7 @@ do
 
 	function interface:FocusSelectChatBar(onSelectionLost: ()->()?, keybinds: {Enum.KeyCode}?)
 		if (useModule) then
-			if FFlagConsoleChatOnExpControls and TenFootInterfaceExpChatExperimentation.getIsEnabled() then
+			if FFlagConsoleChatOnExpControls and (FFlagChromeChatGamepadSupportFix or TenFootInterfaceExpChatExperimentation.getIsEnabled()) then
 				useModule:FocusSelectChatBar(onSelectionLost, keybinds)
 			end
 		end

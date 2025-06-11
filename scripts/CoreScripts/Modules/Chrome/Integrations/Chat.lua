@@ -20,9 +20,11 @@ local AvailabilitySignalState = ChromeUtils.AvailabilitySignalState
 local CommonIcon = require(Chrome.Integrations.CommonIcon)
 local GameSettings = UserSettings().GameSettings
 local GuiService = game:GetService("GuiService")
+local isSpatial = require(CorePackages.Workspace.Packages.AppCommonLib).isSpatial
 
 local SharedFlags = require(CorePackages.Workspace.Packages.SharedFlags)
 local FFlagConsoleChatOnExpControls = SharedFlags.FFlagConsoleChatOnExpControls
+local FFlagChromeChatGamepadSupportFix = SharedFlags.FFlagChromeChatGamepadSupportFix
 
 local AppChat = require(CorePackages.Workspace.Packages.AppChat)
 local InExperienceAppChatExperimentation = AppChat.App.InExperienceAppChatExperimentation
@@ -44,6 +46,8 @@ local FFlagShowChatButtonWhenChatForceOpened = game:DefineFastFlag("ShowChatButt
 local FFlagHideChatButtonForChatDisabledUsers = game:DefineFastFlag("HideChatButtonForChatDisabledUsers", false)
 local FFlagAlwaysShowChatButtonWhenWindowIsVisible =
 	game:DefineFastFlag("AlwaysShowChatButtonWhenWindowIsVisibleV2", false)
+local isInExperienceUIVREnabled =
+	require(CorePackages.Workspace.Packages.SharedExperimentDefinition).isInExperienceUIVREnabled
 
 local SocialExperiments
 local TenFootInterfaceExpChatExperimentation
@@ -132,7 +136,10 @@ local dismissCallback = function(menuWasOpen)
 			ChatSelector:ToggleVisibility()
 		end
 	end
-	if FFlagConsoleChatOnExpControls and TenFootInterfaceExpChatExperimentation.getIsEnabled() then
+	if
+		FFlagConsoleChatOnExpControls
+		and (FFlagChromeChatGamepadSupportFix or TenFootInterfaceExpChatExperimentation.getIsEnabled())
+	then
 		FocusSelectExpChat(chatChromeIntegration.id)
 	end
 end
@@ -148,9 +155,13 @@ chatChromeIntegration = ChromeService:register({
 				ChatSelector:ToggleVisibility()
 			end
 		else
-			ChromeIntegrationUtils.dismissRobloxMenuAndRun(function(menuWasOpen)
-				dismissCallback(menuWasOpen)
-			end)
+			if isInExperienceUIVREnabled and isSpatial() then
+				ChatSelector:SetVisible(true)
+			else
+				ChromeIntegrationUtils.dismissRobloxMenuAndRun(function(menuWasOpen)
+					dismissCallback(menuWasOpen)
+				end)
+			end
 		end
 	end,
 	isActivated = function()
@@ -289,7 +300,10 @@ if FFlagConsoleChatOnExpControls then
 
 		local chatIsAvailable = chatChromeIntegration.availability:get() ~= AvailabilitySignalState.Unavailable
 
-		if TextChatService.ChatVersion ~= Enum.ChatVersion.TextChatService and chatIsAvailable then
+		if
+			FFlagChromeChatGamepadSupportFix and not TenFootInterfaceExpChatExperimentation.getIsEnabled()
+			or TextChatService.ChatVersion ~= Enum.ChatVersion.TextChatService and chatIsAvailable
+		then
 			chatChromeIntegration.availability:unavailable()
 		end
 	end

@@ -26,6 +26,12 @@ local sizeMapping = {
 	[StandardButtonSize.XSmall] = InputSize.XSmall,
 }
 
+local fitContentDefaultMapping = {
+	[StandardButtonSize.Regular] = false,
+	[StandardButtonSize.Small] = false,
+	[StandardButtonSize.XSmall] = true,
+}
+
 local function findIcon(searchData)
 	if not searchData then
 		return nil
@@ -43,6 +49,8 @@ local function getSizeMapping(standardSize, size: UDim2?, tokens: typeof(Foundat
 	elseif size then
 		if size.Y.Offset >= tokens.Size.Size_1200 then
 			return InputSize.Large
+		elseif size.Y.Scale > 0 then
+			return InputSize.Medium
 		elseif size.Y.Offset >= tokens.Size.Size_1000 then
 			return InputSize.Medium
 		elseif size.Y.Offset >= tokens.Size.Size_800 then
@@ -54,8 +62,29 @@ local function getSizeMapping(standardSize, size: UDim2?, tokens: typeof(Foundat
 	return nil
 end
 
-local function getWidth(size: UDim2?, fitContent): UDim?
-	if size then
+local function getWidth(standardSize: string?, size: UDim2?, maxWidth: number?, fitContent: boolean?): UDim?
+	maxWidth = maxWidth or 640
+
+	if standardSize then
+		local fitContentDefault = fitContentDefaultMapping[standardSize]
+		if fitContent == nil then
+			fitContent = fitContentDefault
+		end
+
+		if fitContent then
+			return nil
+		end
+
+		size = UDim2.fromScale(1, 0)
+
+		if maxWidth then
+			-- Size should be the minimum of the props size and the max width
+			if size and size.X.Offset > 0 then
+				return UDim.new(0, math.min(size.X.Offset, maxWidth))
+			end
+		end
+		return UDim.new(0, maxWidth)
+	elseif size then
 		return size.X
 	elseif fitContent then
 		return nil

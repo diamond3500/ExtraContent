@@ -27,6 +27,7 @@ type AppliedGuiObjectProps = {
 	Selectable: Bindable<boolean>?,
 	SelectionImageObject: Bindable<React.Ref<GuiObject>>?,
 	SelectionOrder: Bindable<number>?,
+	SizeConstraint: Bindable<Enum.SizeConstraint>?,
 	NextSelectionDown: Bindable<React.Ref<GuiObject>>?,
 	NextSelectionLeft: Bindable<React.Ref<GuiObject>>?,
 	NextSelectionRight: Bindable<React.Ref<GuiObject>>?,
@@ -47,6 +48,7 @@ local function withGuiObjectProps<T>(props: GuiObjectProps & CommonProps, basePr
 		baseProps.BorderSizePixel = props.BorderSizePixel
 		baseProps.ClipsDescendants = props.ClipsDescendants
 		baseProps.Rotation = props.Rotation
+		baseProps.SizeConstraint = props.SizeConstraint
 
 		if props.selection then
 			baseProps.Selectable = props.selection.Selectable

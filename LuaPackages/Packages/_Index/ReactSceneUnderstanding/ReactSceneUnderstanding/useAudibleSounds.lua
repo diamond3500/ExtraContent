@@ -8,20 +8,8 @@ local useCameraState = require(Root.useCameraState)
 local sortByAudibleVolume = require(Root.audio.sortByAudibleVolume)
 local useAudioSources = require(Root.audio.useAudioSources)
 local useTimedLoop = require(Root.useTimedLoop)
-local getFFlagFixAudibleSoundDetectionPerformance = require(Root.flags.getFFlagFixAudibleSoundDetectionPerformance)
 
 local AUTO_REFRESH_SECONDS = 1
-
-local ALLOWED_SOUND_PROPERTIES = {
-	"Volume",
-	"Playing",
-	"RollOffGain",
-	"SoundGroup",
-}
-
-local ALLOWED_AUDIO_PLAYER_PROPERTIES = {
-	"Volume",
-}
 
 local useCallback = React.useCallback
 local useEffect = React.useEffect
@@ -74,34 +62,6 @@ local function useAudibleSounds(): { AudioPlayer | Sound }
 			updateAudibleSounds()
 		end
 	end, { #sceneAnalysis.audibleSounds, #audioSources, updateAudibleSounds } :: { unknown })
-
-	if not getFFlagFixAudibleSoundDetectionPerformance() then
-		useEffect(function()
-			local connections: { RBXScriptConnection } = {}
-
-			for _, audioSource in audioSources do
-				local watchedProperties
-				if audioSource:IsA("Sound") then
-					watchedProperties = ALLOWED_SOUND_PROPERTIES
-				elseif audioSource:IsA("AudioPlayer") then
-					watchedProperties = ALLOWED_AUDIO_PLAYER_PROPERTIES
-				end
-
-				for _, property in watchedProperties do
-					table.insert(
-						connections,
-						audioSource:GetPropertyChangedSignal(property):Connect(updateAudibleSounds)
-					)
-				end
-			end
-
-			return function()
-				for _, connection in connections do
-					connection:Disconnect()
-				end
-			end
-		end, { audioSources } :: { unknown })
-	end
 
 	useEffect(function()
 		if cameraState ~= prevCameraState and cameraState == enums.CameraState.Idle then

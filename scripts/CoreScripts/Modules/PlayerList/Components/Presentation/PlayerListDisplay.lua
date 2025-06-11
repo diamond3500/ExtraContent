@@ -33,6 +33,7 @@ local TitleBar = require(script.Parent.TitleBar)
 
 local PlayerList = Components.Parent
 local SetPlayerListVisibility = require(PlayerList.Actions.SetPlayerListVisibility)
+local FFlagPlayerListReduceRerenders = require(PlayerList.Flags.FFlagPlayerListReduceRerenders)
 
 local FAKE_NEUTRAL_TEAM = require(PlayerList.GetFakeNeutralTeam)
 
@@ -133,6 +134,24 @@ function PlayerListDisplay:init()
 
 	self.minimizedBinding, self.updateMinimizedBinding = Roact.createBinding(0)
 
+	if FFlagPlayerListReduceRerenders then
+		self.defaultTransparencyBinding, self.updateDefaultTransparencyBinding =
+			Roact.createBinding(0)
+		self.fadedTransparencyBinding, self.updateFadedTransparencyBinding =
+			Roact.createBinding(0)
+		self.transparencyBinding = Roact.joinBindings({
+			self.minimizedBinding,
+			self.defaultTransparencyBinding,
+			self.fadedTransparencyBinding,
+		}):map(function(values)
+			local value = values[1]
+			local defaultTransparency = values[2]
+			local fadedTransparency = values[3]
+			local delta = fadedTransparency - defaultTransparency
+			return defaultTransparency + (delta * value)
+		end)
+	end
+
 	self.minimizedMotor = Otter.createSingleMotor(0)
 	self.minimizedMotor:onStep(self.updateMinimizedBinding)
 	self.minimizedMotor:onComplete(function(value)
@@ -185,6 +204,14 @@ function PlayerListDisplay:render()
 			local canvasSizeY = 0
 			local dropDownPosition = 0
 
+			local gameStatNames = nil
+			if FFlagPlayerListReduceRerenders then
+				gameStatNames = {}
+				for _, gameStat in self.props.gameStats do
+					table.insert(gameStatNames, gameStat.name)
+				end
+			end
+
 			if self.props.sortedTeams then
 				local addedEntriesCount = 0
 				local firstPlayer = true
@@ -199,7 +226,8 @@ function PlayerListDisplay:render()
 								teamName = self.props.teamNames[sortedTeam.team],
 								teamColor = self.props.teamColors[sortedTeam.team],
 								leaderstats = self.props.teamScores[sortedTeam.team],
-								gameStats = self.props.gameStats,
+								gameStats = if FFlagPlayerListReduceRerenders then nil else self.props.gameStats,
+								gameStatNames = gameStatNames,
 								entrySize = self.props.entrySize,
 							}),
 						})
@@ -233,7 +261,8 @@ function PlayerListDisplay:render()
 									playerIconInfo = self.props.playerIconInfo[userId],
 									playerRelationship = self.props.playerRelationship[userId],
 									titlePlayerEntry = false,
-									gameStats = self.props.gameStats,
+									gameStats = if FFlagPlayerListReduceRerenders then nil else self.props.gameStats,
+									gameStatNames = gameStatNames,
 									hasDivider = not (j == #teamPlayers),
 									entrySize = self.props.entrySize,
 
@@ -266,7 +295,8 @@ function PlayerListDisplay:render()
 								playerIconInfo = self.props.playerIconInfo[userId],
 								playerRelationship = self.props.playerRelationship[userId],
 								titlePlayerEntry = false,
-								gameStats = self.props.gameStats,
+								gameStats = if FFlagPlayerListReduceRerenders then nil else self.props.gameStats,
+								gameStatNames = gameStatNames,
 								hasDivider = i ~= #self.props.sortedPlayers,
 								entrySize = self.props.entrySize,
 
@@ -323,13 +353,23 @@ function PlayerListDisplay:render()
 					then style.Theme.BackgroundUIContrast.Color
 					else style.Theme.BackgroundContrast.Color
 
-				local transparencyBinding = self.minimizedBinding:map(function(value)
-					local defaultTransparency = layoutValues.OverrideBackgroundTransparency
-						* style.Settings.PreferredTransparency
-					local fadedTransparency = layoutValues.FadedBackgroundTransparency
-					local delta = fadedTransparency - defaultTransparency
-					return defaultTransparency + (delta * value)
-				end)
+				local transparencyBinding
+				if FFlagPlayerListReduceRerenders then
+					self.updateDefaultTransparencyBinding(
+						layoutValues.OverrideBackgroundTransparency
+							* style.Settings.PreferredTransparency
+					)
+					self.updateFadedTransparencyBinding(layoutValues.FadedBackgroundTransparency)
+					transparencyBinding = self.transparencyBinding
+				else
+					transparencyBinding = self.minimizedBinding:map(function(value)
+						local defaultTransparency = layoutValues.OverrideBackgroundTransparency
+							* style.Settings.PreferredTransparency
+						local fadedTransparency = layoutValues.FadedBackgroundTransparency
+						local delta = fadedTransparency - defaultTransparency
+						return defaultTransparency + (delta * value)
+					end)
+				end
 
 				local dropDownContentsVisible = self.state.contentsVisible
 

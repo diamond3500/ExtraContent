@@ -33,6 +33,8 @@ export type ScrollingFrameProps = {
 	AutomaticCanvasSize: Bindable<Enum.AutomaticSize>?,
 	CanvasSize: Bindable<UDim2>?,
 	ScrollingDirection: Bindable<Enum.ScrollingDirection>?,
+	VerticalScrollBarInset: Bindable<Enum.ScrollBarInset>?,
+	HorizontalScrollBarInset: Bindable<Enum.ScrollBarInset>?,
 }
 
 local defaultProps = {
@@ -42,6 +44,8 @@ local defaultProps = {
 local function ScrollingFrame(scrollingFrameProps: ScrollingFrameProps, ref: React.Ref<GuiObject>?)
 	local props = withDefaults(scrollingFrameProps, defaultProps)
 	local tokens = useTokens()
+	local scrollBarStyle = tokens.Semantic.Color.Common.Placeholder
+	local scrollBarThickness = tokens.Size.Size_300
 	local cursor = useCursor()
 
 	local delayRef = React.useRef(nil :: thread?)
@@ -52,7 +56,7 @@ local function ScrollingFrame(scrollingFrameProps: ScrollingFrameProps, ref: Rea
 		end
 
 		if isVisible then
-			updateScrollBarTransparency(ReactOtter.spring(tokens.Color.Shift.Shift_200.Transparency, ANIMATION_CONFIG))
+			updateScrollBarTransparency(ReactOtter.spring(scrollBarStyle.Transparency, ANIMATION_CONFIG))
 		end
 
 		if delay ~= nil then
@@ -60,7 +64,7 @@ local function ScrollingFrame(scrollingFrameProps: ScrollingFrameProps, ref: Rea
 				updateScrollBarTransparency(ReactOtter.spring(1, ANIMATION_CONFIG))
 			end)
 		end
-	end, { tokens })
+	end, { scrollBarStyle })
 
 	React.useEffect(function()
 		if props.scrollBarVisibility == "None" then
@@ -82,8 +86,11 @@ local function ScrollingFrame(scrollingFrameProps: ScrollingFrameProps, ref: Rea
 		AutomaticCanvasSize = props.AutomaticCanvasSize,
 		CanvasSize = props.CanvasSize,
 		ScrollingDirection = props.ScrollingDirection,
-		ScrollBarImageColor3 = tokens.Color.Shift.Shift_200.Color3,
+		ScrollBarImageColor3 = scrollBarStyle.Color3,
 		ScrollBarImageTransparency = scrollBarTransparency,
+		ScrollBarThickness = scrollBarThickness,
+		VerticalScrollBarInset = props.VerticalScrollBarInset,
+		HorizontalScrollBarInset = props.HorizontalScrollBarInset,
 
 		-- Support insets when they are fixed at the engine level
 		-- https://roblox.atlassian.net/browse/UISYS-3298

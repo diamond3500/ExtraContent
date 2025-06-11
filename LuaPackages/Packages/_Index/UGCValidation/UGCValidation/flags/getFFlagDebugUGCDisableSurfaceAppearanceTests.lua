@@ -1,5 +1,3 @@
---!strict
-
 game:DefineFastFlag("DebugUGCDisableSurfaceAppearanceTests", false)
 
 return function()

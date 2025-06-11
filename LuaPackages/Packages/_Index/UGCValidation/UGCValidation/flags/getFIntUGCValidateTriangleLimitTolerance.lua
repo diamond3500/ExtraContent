@@ -1,5 +1,3 @@
---!strict
-
 game:DefineFastInt("UGCValidateTriangleLimitTolerance", 10)
 
 return function()

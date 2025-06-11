@@ -15,6 +15,7 @@ local Players = game:GetService("Players")
 
 ----------- UTILITIES --------------
 local PerfUtils = require(RobloxGui.Modules.Common.PerfUtils)
+local Cryo = require(CorePackages.Packages.Cryo)
 local MessageBus = require(CorePackages.Workspace.Packages.MessageBus).MessageBus
 local coreGuiFinalStateAnalytics = require(script:FindFirstAncestor("Settings").Analytics.CoreGuiFinalStateAnalytics).new()
 
@@ -22,26 +23,35 @@ local coreGuiFinalStateAnalytics = require(script:FindFirstAncestor("Settings").
 RobloxGui:WaitForChild("Modules"):WaitForChild("TenFootInterface")
 
 local GetFFlagEnableInGameMenuDurationLogger = require(RobloxGui.Modules.Common.Flags.GetFFlagEnableInGameMenuDurationLogger)
+local FFlagLeaveActionChromeShortcutTelemetry = require(RobloxGui.Modules.Chrome.Flags.FFlagLeaveActionChromeShortcutTelemetry)
 
 local GetDefaultQualityLevel = require(CorePackages.Workspace.Packages.AppCommonLib).GetDefaultQualityLevel
 
 local Constants = require(RobloxGui.Modules:WaitForChild("InGameMenu"):WaitForChild("Resources"):WaitForChild("Constants"))
 
-local leaveGame = function(publishSurveyMessage: boolean)
+export type LeaveGameProps = {
+	telemetryFields: { [string] : any},
+}
+
+local leaveGame = function(publishSurveyMessage: boolean, props: LeaveGameProps?)
     if GetFFlagEnableInGameMenuDurationLogger() then
         PerfUtils.leavingGame()
     end
     GuiService.SelectedCoreObject = nil -- deselects the button and prevents spamming the popup to save in studio when using gamepad
 
+	local customTelemetryFields = {
+		confirmed = Constants.AnalyticsConfirmedName,
+		universeid = tostring(game.GameId),
+		source = Constants.AnalyticsLeaveGameSource
+	}
+	if FFlagLeaveActionChromeShortcutTelemetry and props and props.telemetryFields then
+		customTelemetryFields = Cryo.Dictionary.join(customTelemetryFields, props.telemetryFields)
+	end
     AnalyticsService:SetRBXEventStream(
         Constants.AnalyticsTargetName,
         Constants.AnalyticsInGameMenuName,
         Constants.AnalyticsLeaveGameName,
-        {
-            confirmed = Constants.AnalyticsConfirmedName,
-            universeid = tostring(game.GameId),
-            source = Constants.AnalyticsLeaveGameSource
-        }
+		customTelemetryFields
     )
 
     if publishSurveyMessage then

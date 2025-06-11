@@ -1,4 +1,3 @@
---!strict
 --[[
 calculateAssetBounds:
 	traverses through the hierarchy of each part of an asset type in order to determine the total bounds

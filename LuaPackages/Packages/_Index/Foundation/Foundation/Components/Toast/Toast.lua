@@ -16,7 +16,6 @@ local useTokens = require(Foundation.Providers.Style.useTokens)
 local withCommonProps = require(Foundation.Utility.withCommonProps)
 local withDefaults = require(Foundation.Utility.withDefaults)
 local useScaledValue = require(Foundation.Utility.useScaledValue)
-local Flags = require(Foundation.Utility.Flags)
 
 local ButtonVariant = require(Foundation.Enums.ButtonVariant)
 local InputSize = require(Foundation.Enums.InputSize)
@@ -70,7 +69,7 @@ local function Toast(props: ToastProps, ref: React.Ref<GuiObject>?)
 
 				local buttonProps = Cryo.Dictionary.union(withDefaults(action, defaultButtonProps), {
 					LayoutOrder = #actions - i,
-					size = if Flags.FoundationEnableNewButtonSizes then InputSize.Medium else InputSize.Small,
+					size = InputSize.Medium,
 					fillBehavior = FillBehavior.Fill,
 				})
 				buttons["ToastButton" .. i] = React.createElement(Button, buttonProps)

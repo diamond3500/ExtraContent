@@ -1,5 +1,3 @@
---!strict
-
 --[[
 	validateCoplanarIntersection.lua calculates whether any triangles in a mesh intersect on the same plane.
 ]]
@@ -7,9 +5,6 @@
 local UGCValidationService = game:GetService("UGCValidationService")
 
 local root = script.Parent.Parent
-
-local getEngineFeatureEngineUGCValidateCoplanarTriTest =
-	require(root.flags.getEngineFeatureEngineUGCValidateCoplanarTriTest)
 
 local getFIntMaxCoplanarIntersectionsPercentage = require(root.flags.getFIntMaxCoplanarIntersectionsPercentage)
 
@@ -51,10 +46,6 @@ local function validateCoplanarIntersection(
 	meshScale: Vector3,
 	validationContext: Types.ValidationContext
 ): (boolean, { string }?)
-	if not getEngineFeatureEngineUGCValidateCoplanarTriTest() then
-		return true
-	end
-
 	local startTime = tick()
 
 	local isServer = validationContext.isServer

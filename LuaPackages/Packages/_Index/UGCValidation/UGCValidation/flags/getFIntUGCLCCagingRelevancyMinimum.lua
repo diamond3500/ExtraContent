@@ -1,5 +1,3 @@
---!strict
-
 game:DefineFastInt("UGCLCCagingRelevancyMinimum", 10)
 
 return function()

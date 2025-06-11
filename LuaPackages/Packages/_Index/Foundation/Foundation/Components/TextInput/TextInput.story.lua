@@ -61,7 +61,7 @@ local function Story(props)
 			onChanged = handleChange,
 			onFocusGained = onFocusGained,
 			onReturnPressed = onReturnPressed,
-			label = controls.input,
+			label = controls.label,
 			size = controls.size,
 			hint = if controls.hint == "" then nil else controls.hint,
 			placeholder = controls.placeholder,
@@ -116,7 +116,7 @@ return {
 			Enum.TextInputType.Number,
 		},
 		size = Dash.values(InputSize),
-		input = "Input Label",
+		label = "Input Label",
 		hint = "Helper text goes here",
 		placeholder = "Placeholder text",
 		iconLeading = {

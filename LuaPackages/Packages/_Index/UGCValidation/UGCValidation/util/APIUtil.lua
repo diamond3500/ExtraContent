@@ -1,5 +1,3 @@
---!strict
-
 --[[
 	APIUtil.lua exposes utility functions to help call back-end APIs
 ]]

@@ -1,5 +1,3 @@
---!strict
-
 --[[
 	validateMeshComparison.lua compares the extents of two meshes to see if they are close in size to each other
 ]]

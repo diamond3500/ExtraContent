@@ -1,8 +1,8 @@
-local CoreGui = game:GetService("CoreGui")
-local GuiService = game:GetService("GuiService")
-
 local Foundation = script:FindFirstAncestor("Foundation")
 local Packages = Foundation.Parent
+
+local CoreGui = require(Foundation.Utility.Wrappers).Services.CoreGui
+local GuiService = require(Foundation.Utility.Wrappers).Services.GuiService
 
 local React = require(Packages.React)
 local RoactGamepad = require(Packages.RoactGamepad)

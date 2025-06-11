@@ -31,7 +31,6 @@ local getAccessoryScale = require(root.util.getAccessoryScale)
 local getEditableMeshFromContext = require(root.util.getEditableMeshFromContext)
 local getEditableImageFromContext = require(root.util.getEditableImageFromContext)
 
-local getFFlagUGCValidateCoplanarTriTestAccessory = require(root.flags.getFFlagUGCValidateCoplanarTriTestAccessory)
 local getFFlagUGCValidateMeshVertColors = require(root.flags.getFFlagUGCValidateMeshVertColors)
 local getFFlagUGCValidateThumbnailConfiguration = require(root.flags.getFFlagUGCValidateThumbnailConfiguration)
 local getFFlagUGCValidationNameCheck = require(root.flags.getFFlagUGCValidationNameCheck)
@@ -40,8 +39,6 @@ local getEngineFeatureEngineUGCValidateRigidNonSkinned =
 
 local FFlagLegacyAccessoryCheckAvatarPartScaleType =
 	game:DefineFastFlag("LegacyAccessoryCheckAvatarPartScaleType", false)
-local getFFlagUGCValidateTotalSurfaceAreaTestAccessory =
-	require(root.flags.getFFlagUGCValidateTotalSurfaceAreaTestAccessory)
 
 local function validateLegacyAccessory(validationContext: Types.ValidationContext): (boolean, { string }?)
 	local instances = validationContext.instances
@@ -212,12 +209,10 @@ local function validateLegacyAccessory(validationContext: Types.ValidationContex
 	end
 
 	if hasMeshContent then
-		if getFFlagUGCValidateTotalSurfaceAreaTestAccessory() then
-			success, failedReason = validateTotalSurfaceArea(meshInfo, meshScale, validationContext)
-			if not success then
-				table.insert(reasons, table.concat(failedReason, "\n"))
-				validationResult = false
-			end
+		success, failedReason = validateTotalSurfaceArea(meshInfo, meshScale, validationContext)
+		if not success then
+			table.insert(reasons, table.concat(failedReason, "\n"))
+			validationResult = false
 		end
 
 		if FFlagLegacyAccessoryCheckAvatarPartScaleType and handle:FindFirstChild("AvatarPartScaleType") then
@@ -256,12 +251,10 @@ local function validateLegacyAccessory(validationContext: Types.ValidationContex
 			end
 		end
 
-		if getFFlagUGCValidateCoplanarTriTestAccessory() then
-			success, failedReason = validateCoplanarIntersection(meshInfo, meshScale, validationContext)
-			if not success then
-				table.insert(reasons, table.concat(failedReason, "\n"))
-				validationResult = false
-			end
+		success, failedReason = validateCoplanarIntersection(meshInfo, meshScale, validationContext)
+		if not success then
+			table.insert(reasons, table.concat(failedReason, "\n"))
+			validationResult = false
 		end
 
 		if getEngineFeatureEngineUGCValidateRigidNonSkinned() then

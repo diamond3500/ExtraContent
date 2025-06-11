@@ -1,5 +1,3 @@
---!strict
-
 game:DefineFastInt("UGCValidateMaxTotalSurfaceArea", 70)
 
 return function()

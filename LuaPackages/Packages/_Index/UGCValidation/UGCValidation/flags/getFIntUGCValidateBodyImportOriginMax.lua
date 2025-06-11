@@ -1,5 +1,3 @@
---!strict
-
 game:DefineFastInt("UGCValidateBodyImportOriginMax", 100)
 
 return function()

@@ -12,6 +12,8 @@ local Input = require(VirtualCursorFolder.Input)
 local Interface = require(VirtualCursorFolder.Interface)
 local Properties = require(VirtualCursorFolder.Properties)
 
+local fixAllowedScrollingDirection = game:DefineFastFlag("FixVirtualCursorScrollingFrameAllowedDirection", false)
+
 local velocityTarget = 1
 local lastSelectedObject = nil
 local isScrolling = false
@@ -54,11 +56,11 @@ local function handleScrollingFrame(element, pos, dt)
 	local rotRad = element.Rotation / 180 * PI
 
 	-- Right thumbstick scrolling
-	if abs(rthumbstick.x) > Properties.ThumbstickDeadzone then 
+	if abs(rthumbstick.x) > Properties.ThumbstickDeadzone and (not fixAllowedScrollingDirection or canScrollX) then 
 		element.CanvasPosition = element.CanvasPosition + Vector2.new(rthumbstick.x * scrollSpeed, 0)
 	end
 
-	if abs(rthumbstick.y) > Properties.ThumbstickDeadzone then
+	if abs(rthumbstick.y) > Properties.ThumbstickDeadzone and (not fixAllowedScrollingDirection or canScrollY) then
 		element.CanvasPosition = element.CanvasPosition + Vector2.new(0, rthumbstick.y * scrollSpeed)
 	end
 

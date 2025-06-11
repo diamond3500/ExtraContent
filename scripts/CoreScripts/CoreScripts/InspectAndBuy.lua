@@ -13,6 +13,20 @@ local renderWithCoreScriptsStyleProvider = require(RobloxGui.Modules.Common.rend
 
 local TopBar = require(RobloxGui.Modules.TopBar)
 
+local isInExperienceUIVREnabled =
+	require(CorePackages.Workspace.Packages.SharedExperimentDefinition).isInExperienceUIVREnabled
+
+local isSpatial
+local UIManager
+local PanelType
+if isInExperienceUIVREnabled then
+	isSpatial = require(CorePackages.Workspace.Packages.AppCommonLib).isSpatial
+
+	local VrSpatialUi = require(CorePackages.Workspace.Packages.VrSpatialUi)
+	UIManager = VrSpatialUi.UIManager
+	PanelType = VrSpatialUi.Constants.PanelType
+end
+
 local INSPECT_MENU_KEY = "InspectMenu"
 
 local function mount(humanoidDescription, playerName, userId, ctx)
@@ -30,7 +44,12 @@ local function mount(humanoidDescription, playerName, userId, ctx)
 		}),
 	})
 
-	InspectAndBuyInstanceHandle = Roact.mount(inspectAndBuy, RobloxGui, "InspectAndBuy")
+	if isInExperienceUIVREnabled and isSpatial() then
+		local panelObject = UIManager.getInstance():getPanelObject(PanelType.MoreMenu)
+		InspectAndBuyInstanceHandle = Roact.mount(inspectAndBuy, panelObject, "InspectAndBuy")
+	else
+		InspectAndBuyInstanceHandle = Roact.mount(inspectAndBuy, RobloxGui, "InspectAndBuy")
+	end
 	GuiService:SetMenuIsOpen(true, INSPECT_MENU_KEY)
 
 	TopBar:setInspectMenuOpen(true)

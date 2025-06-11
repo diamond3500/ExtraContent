@@ -1,5 +1,3 @@
---!strict
-
 --[[
 	can the vector be normalized?
 ]]

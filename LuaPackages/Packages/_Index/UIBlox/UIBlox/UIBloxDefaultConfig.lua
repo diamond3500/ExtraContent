@@ -53,12 +53,6 @@ return {
 	-- Disable token scaling for console
 	disableTokenScalingForConsole = false,
 
-	-- Flag for updating tile and cell to use Interactable
-	useInteractableWithTileAndCell = false,
-
-	-- Add optional max height to getTextHeight
-	getTextHeightOptionalMaxHeight = false,
-
 	-- Indicate whether the fix for button loading shimmer panel not covering edges is enabled
 	enableButtonLoadingShimmerPanelFix = false,
 
@@ -92,9 +86,6 @@ return {
 	-- Use Foundation button
 	useFoundationButton = false,
 
-	-- Use Foundation provider
-	useFoundationProvider = false,
-
 	-- Update FullPageModal sizing on mount
 	didMountUpdateFullPageModal = false,
 
@@ -106,9 +97,6 @@ return {
 
 	-- Fix incorrect disabling of LaserPointer in PointerOverlay
 	fixLaserPointerDisable = false,
-
-	-- Enable the flex layout of AppNav
-	enableAppNavFlexLayout = false,
 
 	-- Enable Panel managed anchoring for Panel3D
 	enablePanelManagedAnchoring = false,
@@ -122,20 +110,11 @@ return {
 	-- Update NavigationBar & NavigationRail's backgrounds to be transparent
 	enableAppNavTransparentBackground = false,
 
-	-- Fix the AppNav NavigationBar/Rail animation issues
-	enableAppNavAnimationFix = false,
-
-	-- Fix the NavigationBarV2 bug
-	enableAppNavNavigationBarV2Fix = false,
-
 	-- Enable the workaround to fix the text flickering engine bug
 	enableAppNavTextFlickerFix = false,
 
 	-- Enable better laser pointer mode
 	enableBetterLaserPointerMode = false,
-
-	-- Turn on scrolling for AnimatedFlatList, which is what Console EDP uses
-	enableAnimatedFlatListScrolling = false,
 
 	-- Remove Details Page files moved to LuaApps
 	moveDetailsPageToLuaApps = false,
@@ -151,4 +130,10 @@ return {
 
 	-- Allow to disable color mapping for the color experiment on SignUp/Login
 	allowDisableColorMapping = false,
+
+	-- Uses engine rich text support for GetTextBoundsAsync
+	useEngineRichTextBounds = false,
+
+	-- Uses the Foundation Interactable component instead
+	useFoundationInteractable = false,
 }

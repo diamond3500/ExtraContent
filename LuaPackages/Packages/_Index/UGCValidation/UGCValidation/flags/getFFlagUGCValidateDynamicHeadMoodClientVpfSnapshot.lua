@@ -1,5 +1,3 @@
---!strict
-
 game:DefineFastFlag("UGCValidateDynamicHeadMoodClientVpfSnapshot", false)
 
 return function()

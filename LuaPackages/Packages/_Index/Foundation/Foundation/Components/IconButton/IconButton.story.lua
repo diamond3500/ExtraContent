@@ -2,6 +2,7 @@ local Foundation = script:FindFirstAncestor("Foundation")
 local Packages = Foundation.Parent
 local React = require(Packages.React)
 local Dash = require(Packages.Dash)
+local BuilderIcons = require(Packages.BuilderIcons)
 
 local IconButton = require(Foundation.Components.IconButton)
 local IconSize = require(Foundation.Enums.IconSize)
@@ -14,11 +15,14 @@ local function Story(props)
 		isDisabled = false,
 		onActivated = function() end,
 		size = controls.size,
-		icon = controls.name,
+		icon = {
+			name = controls.name,
+			variant = controls.variant,
+		},
 	})
 end
 
-local iconSizes = { IconSize.Medium, IconSize.Small, IconSize.Large, IconSize.XLarge, IconSize.XXLarge } :: { IconSize }
+local iconSizes = { IconSize.Large, IconSize.XSmall, IconSize.Small, IconSize.Medium } :: { IconSize }
 
 return {
 	summary = "Icon component for displaying icons",
@@ -30,18 +34,14 @@ return {
 					controls = {
 						size = size,
 						name = props.controls.name,
+						variant = props.controls.variant,
 					},
 				})
 			end,
 		}
 	end),
 	controls = {
-		name = {
-			"icons/common/notificationOff",
-			"icons/common/robux",
-			"icons/common/search_small",
-			"icons/controls/voice/microphone_off_light",
-			"icons/controls/voice/video_on_light",
-		},
+		name = Dash.values(BuilderIcons.Icon),
+		variant = Dash.values(BuilderIcons.IconVariant),
 	},
 }

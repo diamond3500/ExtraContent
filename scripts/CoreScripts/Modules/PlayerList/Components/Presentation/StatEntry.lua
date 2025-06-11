@@ -3,6 +3,7 @@ local CorePackages = game:GetService("CorePackages")
 local CoreGui = game:GetService("CoreGui")
 
 local Roact = require(CorePackages.Packages.Roact)
+local React = require(CorePackages.Packages.React)
 local t = require(CorePackages.Packages.t)
 local UIBlox = require(CorePackages.Packages.UIBlox)
 
@@ -18,6 +19,9 @@ local WithLayoutValues = LayoutValues.WithLayoutValues
 
 local PlayerList = Components.Parent
 local FormatStatString = require(PlayerList.FormatStatString)
+
+local createShallowEqualAndTables = require(PlayerList.createShallowEqualAndTables)
+local FFlagPlayerListReduceRerenders = require(PlayerList.Flags.FFlagPlayerListReduceRerenders)
 
 local StatEntry = Roact.PureComponent:extend("StatEntry")
 
@@ -171,6 +175,10 @@ function StatEntry:render()
 			})
 		end)
 	end)
+end
+
+if FFlagPlayerListReduceRerenders then
+	return React.memo(StatEntry, createShallowEqualAndTables({ "backgroundStyle" }))
 end
 
 return StatEntry

@@ -39,7 +39,6 @@ export type InteractableProps = {
 local defaultProps = {
 	component = "ImageButton",
 	isDisabled = false,
-	userInteractionEnabled = true,
 }
 
 --selene: allow(roblox_internal_custom_color)
@@ -131,24 +130,11 @@ local function Interactable(interactableProps: InteractableProps, forwardedRef: 
 		end :: (any) -> ColorStyleValue)
 	end, { originalBackgroundStyle :: any, controlState, getBackgroundStyle, props.isDisabled })
 
-	-- This is a temporarily solution to handle the userInteractionEnabled prop until GuiState.NonInteractable is released
-	-- userInteractionEnabled will just set a prop on an instance when GuiState.NonInteractable is released
-	-- TODO: Refactor with GuiState.NonInteractable UISYS-2497
-	local wrappedRef, guiStateTable = useGuiControlState(guiObjectRef, onStateChanged, props.userInteractionEnabled)
+	local wrappedRef = useGuiControlState(guiObjectRef, onStateChanged)
 
 	React.useImperativeHandle(forwardedRef, function()
 		return guiObjectRef.current
 	end, {})
-
-	if not Flags.FoundationInteractableUseGuiState then
-		React.useEffect(function()
-			if props.isDisabled then
-				guiStateTable.events.Disabled()
-			else
-				guiStateTable.events.Enabled()
-			end
-		end, { props.isDisabled :: any, guiStateTable })
-	end
 
 	local mergedProps: any = Cryo.Dictionary.union(props, {
 		BackgroundColor3 = backgroundStyleBinding:map(function(backgroundStyle)
@@ -158,17 +144,13 @@ local function Interactable(interactableProps: InteractableProps, forwardedRef: 
 			return backgroundStyle.Transparency
 		end),
 		Active = not props.isDisabled,
-		Interactable = if Flags.FoundationInteractableUseGuiState then not props.isDisabled else nil,
-		[React.Event.Activated] = if not props.isDisabled
-				and (Flags.FoundationInteractableUseGuiState or props.userInteractionEnabled)
-			then props.onActivated
-			else nil,
+		Interactable = not props.isDisabled,
+		[React.Event.Activated] = if not props.isDisabled then props.onActivated else nil,
 		ref = wrappedRef,
 		SelectionImageObject = props.SelectionImageObject or cursor,
 	})
 	mergedProps.component = nil
 	mergedProps.isDisabled = nil
-	mergedProps.userInteractionEnabled = nil
 	mergedProps.onActivated = nil
 	mergedProps.onStateChanged = nil
 	mergedProps.stateLayer = nil

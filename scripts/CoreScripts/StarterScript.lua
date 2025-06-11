@@ -24,8 +24,6 @@ local CachedPolicyService = require(CorePackages.Workspace.Packages.CachedPolicy
 
 local FFlagUseRoactGlobalConfigInCoreScripts = require(RobloxGui.Modules.Flags.FFlagUseRoactGlobalConfigInCoreScripts)
 
-local FFlagDebugAvatarChatVisualization = game:DefineFastFlag("DebugAvatarChatVisualization", false)
-
 local GetFFlagScreenshotHudApi = require(RobloxGui.Modules.Flags.GetFFlagScreenshotHudApi)
 
 local GetFFlagEnableVoiceDefaultChannel = require(RobloxGui.Modules.Flags.GetFFlagEnableVoiceDefaultChannel)
@@ -391,14 +389,6 @@ end
 
 if FFlagAvatarChatCoreScriptSupport then
 	ScriptContext:AddCoreScriptLocal("CoreScripts/FaceChatSelfieView", RobloxGui)
-
-	if FFlagDebugAvatarChatVisualization then
-		ScriptContext:AddCoreScriptLocal("CoreScripts/AvatarChatDebugVisualization", script.Parent)
-	end
-
-	if game:GetEngineFeature("TrackerLodControllerDebugUI") then
-		ScriptContext:AddCoreScriptLocal("CoreScripts/TrackerLodControllerDebugUI", script.Parent)
-	end
 end
 
 if game:GetEngineFeature("NewMoodAnimationTypeApiEnabled") and game:GetFastFlag("MoodsEmoteFix3") then

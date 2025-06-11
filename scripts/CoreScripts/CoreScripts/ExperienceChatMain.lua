@@ -5,10 +5,12 @@ local TextChatService = game:GetService("TextChatService")
 local StarterGui = game:GetService("StarterGui")
 local RobloxGui = CoreGui.RobloxGui
 local FFlagEnableUIManagerPackgify = require(CorePackages.Workspace.Packages.SharedFlags).FFlagEnableUIManagerPackgify
+local isInExperienceUIVREnabled =
+	require(CorePackages.Workspace.Packages.SharedExperimentDefinition).isInExperienceUIVREnabled
 local PanelType
 local UIManager
 local SpatialUIType
-if FFlagEnableUIManagerPackgify then
+if isInExperienceUIVREnabled or FFlagEnableUIManagerPackgify then
 	local VrSpatialUi = require(CorePackages.Workspace.Packages.VrSpatialUi)
 	PanelType = VrSpatialUi.Constants.PanelType
 	UIManager = VrSpatialUi.UIManager
@@ -108,6 +110,15 @@ if IsSpatialRobloxGuiEnabled then
 	local uiCreationResult = UIManager.getInstance():createUI(panelProps)
 	screenGui = uiCreationResult.panelObject
 	spatialUIStruct = uiCreationResult
+	if isInExperienceUIVREnabled then
+		local Observable = require(CorePackages.Workspace.Packages.Observable)
+		local ChatSelector = require(CoreGui.RobloxGui.Modules.ChatSelector)
+		local chatVisibilityValue = Observable.ObservableValue.new(ChatSelector:GetVisibility())
+		ChatSelector.VisibilityStateChanged:connect(function(visible)
+			chatVisibilityValue:set(visible)
+		end)
+		UIManager.getInstance():connectPanelVisibility(panelProps.panelType, chatVisibilityValue)
+	end
 else
 	screenGui = Instance.new("ScreenGui")
 	screenGui.Name = "ExperienceChat"

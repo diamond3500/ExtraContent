@@ -1,7 +1,12 @@
 local CorePackages = game:GetService("CorePackages")
 
 local Roact = require(CorePackages.Packages.Roact)
+local React = require(CorePackages.Packages.React)
 local t = require(CorePackages.Packages.t)
+
+local PlayerList = script.Parent.Parent.Parent
+local createShallowEqualAndTables = require(PlayerList.createShallowEqualAndTables)
+local FFlagPlayerListReduceRerenders = require(PlayerList.Flags.FFlagPlayerListReduceRerenders)
 
 local CellExtender = Roact.PureComponent:extend("CellExtender")
 
@@ -45,6 +50,10 @@ function CellExtender:render()
 			BorderSizePixel = 0,
 		}),
 	})
+end
+
+if FFlagPlayerListReduceRerenders then
+	return React.memo(CellExtender, createShallowEqualAndTables({ "backgroundStyle" }))
 end
 
 return CellExtender

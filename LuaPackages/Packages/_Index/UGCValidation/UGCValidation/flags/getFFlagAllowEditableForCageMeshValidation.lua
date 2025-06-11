@@ -1,5 +1,3 @@
---!strict
-
 game:DefineFastFlag("AllowEditableForCageMeshValidation", false)
 
 return function()

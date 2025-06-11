@@ -8,9 +8,14 @@ local UserInputService = game:GetService("UserInputService")
 local useLocalization = require(CorePackages.Workspace.Packages.Localization).Hooks.useLocalization
 
 local React = require(CorePackages.Packages.React)
+local dependencyArray = require(CorePackages.Workspace.Packages.RoactUtils).Hooks.dependencyArray
 local Cryo = require(CorePackages.Packages.Cryo)
 local ChromeService = require(Chrome.Service)
 local LocalStore = require(Chrome.ChromeShared.Service.LocalStore)
+local TooltipContext = require(Chrome.ChromeShared.Unibar.Tooltips.TooltipContext)
+local TooltipProvider = require(Chrome.ChromeShared.Unibar.Tooltips.TooltipProvider)
+local useIsTooltipShown = require(Chrome.ChromeShared.Unibar.Tooltips.useIsTooltipTurn)
+local FFlagEnableUnibarTooltipQueue = require(Chrome.Flags.FFlagEnableUnibarTooltipQueue)()
 
 local LuauPolyfill = require(CorePackages.Packages.LuauPolyfill)
 local clearTimeout = LuauPolyfill.clearTimeout
@@ -20,6 +25,8 @@ local menuIconHoveredSignal = require(Chrome.Parent.TopBar.Components.Presentati
 
 local FtuxTooltipAnchor = require(Chrome.Integrations.FtuxTooltipAnchor)
 
+type TooltipContextType = TooltipProvider.ContextType
+
 type FtuxTooltipDismissalReason =
 	"timeout"
 	| "unibarHovered"
@@ -28,6 +35,14 @@ type FtuxTooltipDismissalReason =
 	| "menuIconHovered"
 	| "outsideInput"
 
+local defaultProps = {
+	id = nil,
+	priority = 1,
+	showDelay = 3000,
+	dismissDelay = 5000,
+	onDismissed = function(_: boolean, _: FtuxTooltipDismissalReason?) end,
+}
+
 local FtuxTooltip = function(props)
 	local tooltipRef = React.useRef(nil)
 	local tooltipDelayPassed, setTooltipDelayPassed = React.useState(false)
@@ -35,15 +50,26 @@ local FtuxTooltip = function(props)
 	local showTimerRef = React.useRef(setTimeout(function() end, props.showDelay))
 	local dismissTimerRef = React.useRef(setTimeout(function() end, props.dismissDelay))
 
+	local tooltipQueue = nil :: TooltipContextType?
+	local isTooltipShown = false
+	if FFlagEnableUnibarTooltipQueue then
+		tooltipQueue = React.useContext(TooltipContext)
+		isTooltipShown = useIsTooltipShown(props.id) or false
+	end
+
 	local hasSeenTooltipFromLocalStorage = React.useMemo(function()
 		local hasSeenTooltipFromLocalStorage = false
 		if props.localStorageKey then
 			hasSeenTooltipFromLocalStorage = LocalStore.getValue(props.localStorageKey) or false
 		end
+
 		return hasSeenTooltipFromLocalStorage
 	end, { props.localStorageKey })
+
 	local canShowTooltip = props.isIconVisible and not hasSeenTooltipFromLocalStorage and not dismissed
-	local shouldShowTooltip = tooltipDelayPassed and canShowTooltip
+	local shouldShowTooltip = if FFlagEnableUnibarTooltipQueue
+		then canShowTooltip and isTooltipShown
+		else canShowTooltip and tooltipDelayPassed
 
 	local localized = useLocalization({
 		headerText = props.headerKey,
@@ -56,6 +82,9 @@ local FtuxTooltip = function(props)
 			props.onDismissed(shouldShowTooltip, dismissalReason)
 		end
 		setDismissed(true)
+		if tooltipQueue and props.id then
+			tooltipQueue.dismissTooltip(props.id, dismissalReason)
+		end
 	end, { setDismissed, shouldShowTooltip } :: { any })
 
 	-- dismiss tooltip if interacting outside of tooltip, if props allow for it
@@ -98,6 +127,22 @@ local FtuxTooltip = function(props)
 	end, { dismissed, tooltipDelayPassed, canShowTooltip } :: { any })
 
 	React.useEffect(function()
+		if tooltipQueue and props.id and canShowTooltip then
+			tooltipQueue.registerTooltip(
+				props.id,
+				props.priority,
+				props.showDelay or defaultProps.showDelay,
+				props.dismissDelay or defaultProps.dismissDelay
+			)
+		end
+		return function()
+			if tooltipQueue and props.id and canShowTooltip then
+				tooltipQueue.unregisterTooltip(props.id)
+			end
+		end
+	end, dependencyArray(canShowTooltip, props.id))
+
+	React.useEffect(function()
 		-- Currently, interacting with any Chrome element or the menu should dismiss the tooltip
 		-- Unless the tooltip is ineleigible to show (ex: icon not visible)
 		local connections = {
@@ -134,27 +179,30 @@ local FtuxTooltip = function(props)
 		end
 	end, { ChromeService, GuiService, menuIconHoveredSignal, canShowTooltip, onDismissed } :: { any })
 
-	-- show tooltip after props.showDelay sustained seconds of it being eligible to show
-	React.useEffect(function()
-		clearTimeout(showTimerRef.current)
-		if canShowTooltip then
-			showTimerRef.current = setTimeout(function()
-				if canShowTooltip then
-					setTooltipDelayPassed(true)
-				end
-			end, props.showDelay)
-		end
-	end, { canShowTooltip, showTimerRef } :: { any })
+	-- Showing/Dismissing is handled in the Tooltip queue system
+	if not FFlagEnableUnibarTooltipQueue then
+		-- show tooltip after props.showDelay sustained seconds of it being eligible to show
+		React.useEffect(function()
+			clearTimeout(showTimerRef.current)
+			if canShowTooltip then
+				showTimerRef.current = setTimeout(function()
+					if canShowTooltip then
+						setTooltipDelayPassed(true)
+					end
+				end, props.showDelay)
+			end
+		end, { canShowTooltip, showTimerRef } :: { any })
 
-	-- dismiss tooltip after props.dismissDelay sustained seconds of it being shown
-	React.useEffect(function()
-		clearTimeout(dismissTimerRef.current)
-		if tooltipDelayPassed then
-			dismissTimerRef.current = setTimeout(function()
-				onDismissed("timeout")
-			end, props.dismissDelay)
-		end
-	end, { tooltipDelayPassed, dismissTimerRef } :: { any })
+		-- dismiss tooltip after props.dismissDelay sustained seconds of it being shown
+		React.useEffect(function()
+			clearTimeout(dismissTimerRef.current)
+			if tooltipDelayPassed then
+				dismissTimerRef.current = setTimeout(function()
+					onDismissed("timeout")
+				end, props.dismissDelay)
+			end
+		end, { tooltipDelayPassed, dismissTimerRef } :: { any })
+	end
 
 	React.useEffect(function()
 		if shouldShowTooltip and props.localStorageKey then
@@ -182,12 +230,6 @@ type CommonFtuxTooltipProps = {
 	dismissOnOutsideInput: boolean?,
 
 	onDismissed: ((boolean, FtuxTooltipDismissalReason?) -> nil)?,
-}
-
-local defaultProps = {
-	showDelay = 3000,
-	dismissDelay = 5000,
-	onDismissed = function(_: boolean, _: FtuxTooltipDismissalReason?) end,
 }
 
 return function(incomingProps: CommonFtuxTooltipProps)

@@ -1,5 +1,3 @@
---!strict
-
 --[[
 	validateDescendantTextureMetrics.lua checks all textures referenced in the asset hierarchy have the correct specifications
 ]]

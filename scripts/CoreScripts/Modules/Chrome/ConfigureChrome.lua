@@ -13,19 +13,25 @@ local ChromeService = require(Chrome.Service)
 local PartyConstants = require(Chrome.Integrations.Party.Constants)
 local isConnectUnibarEnabled = require(Chrome.Integrations.Connect.isConnectUnibarEnabled)
 local isConnectDropdownEnabled = require(Chrome.Integrations.Connect.isConnectDropdownEnabled)
+local isInExperienceUIVREnabled =
+	require(CorePackages.Workspace.Packages.SharedExperimentDefinition).isInExperienceUIVREnabled
+local ConfigureShortcuts = require(Chrome.ChromeShared.Shortcuts.ConfigureShortcuts)
 
-local GetFFlagDebugEnableUnibarDummyIntegrations =
-	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagDebugEnableUnibarDummyIntegrations
-local GetFFlagEnableChromePinIntegrations =
-	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagEnableChromePinIntegrations
+local SharedFlags = require(CorePackages.Workspace.Packages.SharedFlags)
+local GetFFlagDebugEnableUnibarDummyIntegrations = SharedFlags.GetFFlagDebugEnableUnibarDummyIntegrations
+local GetFFlagEnableChromePinIntegrations = SharedFlags.GetFFlagEnableChromePinIntegrations
 local GetFFlagEnableSongbirdInChrome = require(Chrome.Flags.GetFFlagEnableSongbirdInChrome)
-local GetFFlagEnableJoinVoiceOnUnibar =
-	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagEnableJoinVoiceOnUnibar
+local GetFFlagEnableJoinVoiceOnUnibar = SharedFlags.GetFFlagEnableJoinVoiceOnUnibar
+local FFlagChromeCentralizedShortcutConfig = SharedFlags.FFlagChromeCentralizedShortcutConfig
 
 local isSpatial = require(CorePackages.Workspace.Packages.AppCommonLib).isSpatial
 
 local function initializeIntegrations()
 	require(Chrome.Integrations)
+end
+
+local initializeShortcuts = function()
+	ConfigureShortcuts()
 end
 
 local function configureUnibar()
@@ -70,10 +76,22 @@ local function configureUnibar()
 		table.insert(v4Ordering, toggleMicIndex + 1, PartyConstants.TOGGLE_MIC_INTEGRATION_ID)
 	end
 
-	ChromeService:configureMenu({ v4Ordering })
+	if isInExperienceUIVREnabled and isSpatial() then
+		local vrControls = { "vr_toggle_button", "vr_safety_bubble" }
+		ChromeService:configureMenu({ vrControls, v4Ordering })
+	else
+		ChromeService:configureMenu({ v4Ordering })
+	end
 
-	table.insert(nineDot, 2, "camera_entrypoint")
-	table.insert(nineDot, 2, "selfie_view")
+	if isInExperienceUIVREnabled then
+		if not isSpatial() then
+			table.insert(nineDot, 2, "camera_entrypoint")
+			table.insert(nineDot, 2, "selfie_view")
+		end
+	else
+		table.insert(nineDot, 2, "camera_entrypoint")
+		table.insert(nineDot, 2, "selfie_view")
+	end
 
 	-- TO-DO: Replace GuiService:IsTenFootInterface() once APPEXP-2014 has been merged
 	-- selene: allow(denylist_filter)
@@ -86,6 +104,9 @@ local function configureUnibar()
 end
 
 initializeIntegrations()
+if FFlagChromeCentralizedShortcutConfig then
+	initializeShortcuts()
+end
 configureUnibar()
 
 return nil

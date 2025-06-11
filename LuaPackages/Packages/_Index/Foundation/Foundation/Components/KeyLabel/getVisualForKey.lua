@@ -1,4 +1,6 @@
-local UserInputService = game:GetService("UserInputService")
+local Foundation = script:FindFirstAncestor("Foundation")
+
+local UserInputService = require(Foundation.Utility.Wrappers).Services.UserInputService
 
 export type KeyVisual = {
 	keyVisualType: "Image" | "String",

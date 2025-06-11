@@ -19,7 +19,7 @@ local function Story(props)
 			items,
 			React.createElement(RadioGroup.Item, {
 				value = value,
-				label = optionLabel .. " " .. value,
+				label = if #optionLabel > 0 then `{optionLabel} {value}` else "",
 				isDisabled = value == "D",
 				size = controls.size,
 			})

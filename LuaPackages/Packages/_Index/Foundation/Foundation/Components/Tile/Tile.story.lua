@@ -1,7 +1,6 @@
 local UserService = game:GetService("UserService")
 local MarketplaceService = game:GetService("MarketplaceService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Players = game:GetService("Players")
 
 local _, InsertService = pcall(function()
 	return game:GetService("InsertService")
@@ -12,6 +11,8 @@ end)
 
 local Foundation = script:FindFirstAncestor("Foundation")
 local Packages = Foundation.Parent
+
+local Players = require(Foundation.Utility.Wrappers).Services.Players
 
 local React = require(Packages.React)
 local ReactOtter = require(Packages.ReactOtter)
@@ -34,6 +35,7 @@ local Text = require(Foundation.Components.Text)
 local View = require(Foundation.Components.View)
 local Types = require(Foundation.Components.Types)
 local useTokens = require(Foundation.Providers.Style.useTokens)
+local useTextSizeOffset = require(Foundation.Providers.Style.useTextSizeOffset)
 
 local ObjectViewport = require(script.Parent.ObjectViewport)
 
@@ -71,7 +73,8 @@ local function getPlayerCount(tokens)
 		fontStyle = tokens.Typography.TitleLarge,
 		Text = "82% 👍 92k 👤",
 		TextXAlignment = Enum.TextXAlignment.Left,
-		TextWrapped = true,
+		TextWrapped = false,
+		TextTruncate = Enum.TextTruncate.AtEnd,
 		Size = UDim2.fromScale(1, 0),
 		AutomaticSize = Enum.AutomaticSize.Y,
 	})
@@ -97,12 +100,21 @@ return {
 			name = "Configurable Tile",
 			story = function(props)
 				local tokens = useTokens()
+				local textSizeOffset = useTextSizeOffset()
+				-- tile is highly configurable, so want to compute appropriate offset according to
+				-- expected number of text lines; here we have props for numTitleLines, numSubtitleLines, and add a footer
+				local footerTextLines = 1
+				local tileOffset = (
+					(props.controls.numTitleLines or 0)
+					+ props.controls.numSubtitleLines
+					+ footerTextLines
+				) * textSizeOffset
 
 				return React.createElement(Tile.Root, {
 					FillDirection = props.controls.fillDirection,
 					Size = if props.controls.fillDirection == Enum.FillDirection.Vertical
-						then UDim2.fromOffset(150, 275)
-						else UDim2.fromOffset(300, 150),
+						then UDim2.fromOffset(150, 275 + tileOffset)
+						else UDim2.fromOffset(300, 150 + tileOffset),
 					isContained = props.controls.isContained,
 				}, {
 					TileMedia = React.createElement(Tile.Media, {
@@ -171,11 +183,16 @@ return {
 					end
 				end, { itemId })
 
+				local titleLines = 2
+				local subtitleLines = 1
+				local textSizeOffset = useTextSizeOffset()
+				local tileOffset = (titleLines + subtitleLines) * textSizeOffset
+
 				return React.createElement(Tile.Root, {
 					isContained = true,
 					-- Add negative size to offset border
 					FillDirection = Enum.FillDirection.Horizontal,
-					Size = UDim2.fromOffset(300, 150) - UDim2.fromOffset(2, 2),
+					Size = UDim2.fromOffset(300, 150 + tileOffset) - UDim2.fromOffset(2, 2),
 				}, {
 					TileMedia = React.createElement(Tile.Media, {
 						shape = MediaShape.Square,
@@ -196,13 +213,14 @@ return {
 								text = item.Name,
 								isLoading = item.Name == nil,
 								fontStyle = tokens.Typography.HeadingSmall,
-								numLines = 2,
+								numLines = titleLines,
 							},
 							subtitle = {
 								text = item.PriceText,
 								isLoading = item.PriceText == nil,
 								fontStyle = tokens.Typography.BodyLarge,
 								colorStyle = tokens.Color.Content.Muted,
+								numLines = subtitleLines,
 							},
 						}),
 					}),
@@ -245,6 +263,13 @@ return {
 					setGoal(ReactOtter.ease(target, { duration = 0.3, easingStyle = { 0.2, 0.0, 0.0, 1.0 } }))
 				end, { isHoveringWide })
 
+				local titleLines = 2
+				local footerTextLines = 1
+				local buttonTextLines = 1 -- generally, buttons will not wrap text
+				local textSizeOffset = useTextSizeOffset()
+				local tileOffset = (titleLines + footerTextLines + buttonTextLines) * textSizeOffset
+				local tileNoButtonOffset = (titleLines + footerTextLines) * textSizeOffset
+
 				return React.createElement(View, {
 					tag = "auto-xy gap-large padding-small row",
 				}, {
@@ -253,7 +278,7 @@ return {
 						onStateChanged = onTileStateChanged,
 						FillDirection = Enum.FillDirection.Vertical,
 						-- Add negative size to offset border
-						Size = experienceTileSize - UDim2.fromOffset(2, 2),
+						Size = experienceTileSize + UDim2.fromOffset(0, tileNoButtonOffset) - UDim2.fromOffset(2, 2),
 						LayoutOrder = 1,
 					}, {
 						TileMedia = React.createElement(Tile.Media, {
@@ -267,7 +292,7 @@ return {
 									text = place.Name,
 									isLoading = place.Name == nil,
 									fontStyle = tokens.Typography.HeadingSmall,
-									numLines = 2,
+									numLines = titleLines,
 								},
 							}),
 							TileFooter = React.createElement(Tile.Footer, {}, {
@@ -297,7 +322,7 @@ return {
 							isContained = false,
 							FillDirection = Enum.FillDirection.Vertical,
 							Size = sizeOffsetBinding:map(function(offset: number)
-								return wideTileSize + UDim2.fromOffset(offset * 2, offset * 2)
+								return wideTileSize + UDim2.fromOffset(offset * 2, offset * 2 + tileOffset)
 							end),
 							AnchorPoint = Vector2.new(0.5, 0.5),
 							Position = UDim2.fromScale(0.5, 0.5),
@@ -313,7 +338,7 @@ return {
 										text = place.Name,
 										isLoading = place.Name == nil,
 										fontStyle = tokens.Typography.TitleLarge,
-										numLines = 2,
+										numLines = titleLines,
 									},
 									subtitle = "82% 👍 92k 👤",
 								}),
@@ -340,7 +365,7 @@ return {
 						WideTile = React.createElement(Tile.Root, {
 							isContained = true,
 							FillDirection = Enum.FillDirection.Vertical,
-							Size = wideTileSize,
+							Size = wideTileSize + UDim2.fromOffset(0, tileOffset),
 							AnchorPoint = Vector2.new(0.5, 0.5),
 							Position = UDim2.fromScale(0.5, 0.5),
 						}, {
@@ -357,7 +382,7 @@ return {
 										text = place.Name,
 										isLoading = place.Name == nil,
 										fontStyle = tokens.Typography.TitleLarge,
-										numLines = 2,
+										numLines = titleLines,
 									},
 									subtitle = "82% 👍 92k 👤",
 								}),
@@ -404,11 +429,15 @@ return {
 					end)
 				end, { itemId })
 
+				local titleLines, subtitleLines = 2, 1
+				local textSizeOffset = useTextSizeOffset()
+				local tileOffset = (titleLines + subtitleLines) * textSizeOffset
+
 				return React.createElement(Tile.Root, {
 					isContained = true,
 					FillDirection = Enum.FillDirection.Vertical,
 					-- Add negative size to offset border
-					Size = itemTileSize - UDim2.fromOffset(2, 2),
+					Size = itemTileSize + UDim2.fromOffset(0, tileOffset) - UDim2.fromOffset(2, 2),
 				}, {
 					TileMedia = React.createElement(Tile.Media, {
 						id = itemId,
@@ -424,13 +453,14 @@ return {
 								text = item.Name,
 								isLoading = item.Name == nil,
 								fontStyle = tokens.Typography.HeadingSmall,
-								numLines = 2,
+								numLines = titleLines,
 							},
 							subtitle = {
 								text = item.PriceText,
 								isLoading = item.PriceText == nil,
 								fontStyle = tokens.Typography.BodyLarge,
 								colorStyle = tokens.Color.Content.Muted,
+								numLines = subtitleLines,
 							},
 						}),
 					}),
@@ -488,12 +518,16 @@ return {
 					-- setModel(fetchedModel)
 				end, { userId })
 
+				local titleLines, footerLines, subtitleLines, textSizeOffset = 1, 1, 1, useTextSizeOffset()
+				local tileOffset = (titleLines + footerLines + subtitleLines) * textSizeOffset
+				local oldTileOffset = (titleLines + subtitleLines) * textSizeOffset
+
 				return React.createElement(View, {
 					tag = "auto-xy gap-large row",
 				}, {
 					PlayerTile = React.createElement(Tile.Root, {
 						FillDirection = Enum.FillDirection.Vertical,
-						Size = playerTileSize,
+						Size = playerTileSize + UDim2.fromOffset(0, tileOffset),
 						isContained = true,
 					}, {
 						TileMedia = React.createElement(Tile.Media, {
@@ -563,7 +597,7 @@ return {
 					}),
 					OldPlayerTile = React.createElement(Tile.Root, {
 						FillDirection = Enum.FillDirection.Vertical,
-						Size = UDim2.fromOffset(90, 115),
+						Size = UDim2.fromOffset(90, 115 + oldTileOffset),
 					}, {
 						TileMedia = React.createElement(Tile.Media, {
 							id = userId,

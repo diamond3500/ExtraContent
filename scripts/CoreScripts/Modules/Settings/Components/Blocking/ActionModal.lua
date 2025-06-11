@@ -11,6 +11,7 @@ local ButtonType = UIBlox.App.Button.Enum.ButtonType
 local InteractiveAlert = UIBlox.App.Dialog.Alert.InteractiveAlert
 
 local GetFFlagWrapBlockModalScreenInProvider = require(RobloxGui.Modules.Flags.GetFFlagWrapBlockModalScreenInProvider)
+local FFlagEnableNewBlockingModal = require(RobloxGui.Modules.Common.Flags.FFlagEnableNewBlockingModal)
 
 local ActionModal = Roact.PureComponent:extend("ActionModal")
 
@@ -19,13 +20,21 @@ ActionModal.defaultProps = {
 }
 
 ActionModal.validateProps = t.interface({
-	action = t.callback,
-	actionText = t.string,
-	body = t.string,
+	action = if FFlagEnableNewBlockingModal then nil else t.callback,
+	actionText = if FFlagEnableNewBlockingModal then nil else t.string,
+
+	block = if FFlagEnableNewBlockingModal then t.callback else nil,
+	blockText = if FFlagEnableNewBlockingModal then t.string else nil,
+
+	blockAndReport = if FFlagEnableNewBlockingModal then t.callback else nil,
+	blockAndReportText = if FFlagEnableNewBlockingModal then t.string else nil,
+
 	cancel = t.callback,
 	cancelText = t.string,
-	screenSize = t.optional(t.Vector2),
+
+	body = t.string,
 	title = t.string,
+	screenSize = t.optional(t.Vector2),
 })
 
 function ActionModal:render()
@@ -41,10 +50,36 @@ function ActionModal:render()
 			[Roact.Event.Activated] = self.props.cancel,
 		}, {
 			AlertModal = Roact.createElement(InteractiveAlert, {
+				screenSize = self.props.screenSize,
 				title = self.props.title,
 				bodyText = self.props.body,
+				richText = if FFlagEnableNewBlockingModal then true else nil,
 				buttonStackInfo = {
-					buttons = {
+					buttons = if FFlagEnableNewBlockingModal then
+						{
+							{
+								buttonType = ButtonType.Secondary,
+								props = {
+									text = self.props.cancelText,
+									onActivated = self.props.cancel,
+								},
+							},
+							{
+								buttonType = ButtonType.Alert,
+								props = {
+									text = self.props.blockAndReportText,
+									onActivated = self.props.blockAndReport,
+								},
+							},
+							{
+								buttonType = ButtonType.Alert,
+								props = {
+									text = self.props.blockText,
+									onActivated = self.props.block,
+								},
+							},
+						}
+					else {
 						{
 							buttonType = ButtonType.Secondary,
 							props = {
@@ -61,7 +96,6 @@ function ActionModal:render()
 						},
 					},
 				},
-				screenSize = self.props.screenSize,
 			}),
 		})
 	end)

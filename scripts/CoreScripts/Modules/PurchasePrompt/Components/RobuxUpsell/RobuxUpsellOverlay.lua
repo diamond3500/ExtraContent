@@ -12,6 +12,7 @@ local RobuxUpsellFlow = IAPExperience.PurchaseFlow.RobuxUpsellFlow
 local RobuxUpsellFlowState = IAPExperience.PurchaseFlow.RobuxUpsellFlowState
 local U13ConfirmType = IAPExperience.PurchaseFlow.U13ConfirmType
 local PurchaseErrorType = IAPExperience.PurchaseFlow.PurchaseErrorType
+local RobuxUpsell = require(Root.Models.RobuxUpsell)
 
 local PromptState = require(Root.Enums.PromptState)
 local PurchaseError = require(Root.Enums.PurchaseError)
@@ -24,8 +25,6 @@ local CANCEL_BUTTON_BIND = "ProductPurchaseCancelButtonBind"
 
 local GetFFlagDisablePurchasePromptFunctionForMaquettes =
 	require(Root.Flags.GetFFlagDisablePurchasePromptFunctionForMaquettes)
-local GetFFlagEnableEventMetadataInUpsell = IAPExperience.Flags.GetFFlagEnableEventMetadataInUpsell
-
 local PaymentPlatform = require(Root.Enums.PaymentPlatform)
 local getPaymentPlatform = require(Root.Utils.getPaymentPlatform)
 
@@ -41,6 +40,13 @@ type Props = {
 	purchaseFlow: any?,
 	promptState: any?,
 	purchaseError: any?,
+
+	-- Robux Upsell Suggestions
+	useUpsellSuggestions: boolean?,
+	upsellSuggestions: { [number]: RobuxUpsell.Product },
+	selectedUpsellIndex: number,
+	onUpsellSuggestionsSelected: (index: number) -> any?,
+	virtualItemBadgeType: string?,
 
 	robuxProviderId: string,
 	robuxProductId: number,
@@ -283,12 +289,21 @@ function RobuxUpsellOverlay:render()
 
 		model = props.humanoidModel,
 		itemIcon = props.itemIcon,
-		itemProductId = if GetFFlagEnableEventMetadataInUpsell then props.itemProductId else nil,
+		itemProductId = props.itemProductId,
 		itemName = props.itemName,
 		itemRobuxCost = props.itemRobuxCost,
+
+		-- Robux Upsell Details
 		iapCostStr = props.iapCostStr,
 		iapRobuxAmount = props.iapRobuxAmount,
 		beforeRobuxBalance = props.beforeRobuxBalance,
+
+		-- Robux Upsell Suggestions
+		useUpsellSuggestions = props.useUpsellSuggestions,
+		upsellSuggestions = props.upsellSuggestions,
+		selectedUpsellIndex = props.selectedUpsellIndex,
+		onUpsellSuggestionsSelected = props.onUpsellSuggestionsSelected,
+		virtualItemBadgeType = props.virtualItemBadgeType,
 
 		purchaseState = self:getFlowState(),
 		errorType = self:getErrorType(),

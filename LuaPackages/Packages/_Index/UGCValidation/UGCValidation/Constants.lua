@@ -5,14 +5,10 @@ local Cryo = require(root.Parent.Cryo)
 local getEngineFeatureRemoveProxyWrap = require(root.flags.getEngineFeatureRemoveProxyWrap)
 
 local ValidationRulesUtil = require(root.util.ValidationRulesUtil)
-local ConstantBounds = require(root.ConstantBounds)
 
 local getFFlagAddUGCValidationForPackage = require(root.flags.getFFlagAddUGCValidationForPackage)
 local getFFlagUGCValidateSurfaceAppearanceAlphaMode = require(root.flags.getFFlagUGCValidateSurfaceAppearanceAlphaMode)
 local getFFlagFixPackageIDFieldName = require(root.flags.getFFlagFixPackageIDFieldName)
-local getEngineFeatureUGCValidateFullBodyBoundsAvatarRules =
-	require(root.flags.getEngineFeatureUGCValidateFullBodyBoundsAvatarRules)
-local getFFlagUGCValidateConfigurableFullBodyBounds = require(root.flags.getFFlagUGCValidateConfigurableFullBodyBounds)
 local getFFlagFixValidateTransparencyProperty = require(root.flags.getFFlagFixValidateTransparencyProperty)
 local getFFlagUGCValidateWrapLayersEnabled = require(root.flags.getFFlagUGCValidateWrapLayersEnabled)
 local getFFlagUGCValidatePropertiesRefactor = require(root.flags.getFFlagUGCValidatePropertiesRefactor)
@@ -165,11 +161,7 @@ Constants.ASSET_STATUS = {
 Constants.ASSET_TYPE_INFO = {}
 ValidationRulesUtil:getAccessoryRules(Constants.ASSET_TYPE_INFO)
 
-if getEngineFeatureUGCValidateFullBodyBoundsAvatarRules() then
-	Constants.FULL_BODY_BOUNDS = ValidationRulesUtil:getFullBodyRulesBounds()
-elseif getFFlagUGCValidateConfigurableFullBodyBounds() then
-	Constants.FULL_BODY_BOUNDS = ConstantBounds.getFullBodyBounds()
-end
+Constants.FULL_BODY_BOUNDS = ValidationRulesUtil:getFullBodyRulesBounds()
 
 Constants.AvatarPartScaleTypes = {
 	Classic = true,

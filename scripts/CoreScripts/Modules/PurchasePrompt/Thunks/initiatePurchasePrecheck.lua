@@ -13,6 +13,8 @@ local Analytics = require(Root.Services.Analytics)
 local ExternalSettings = require(Root.Services.ExternalSettings)
 local Thunk = require(Root.Thunk)
 
+local SelectedRobuxPackage = require(Root.Utils.SelectedRobuxPackage)
+
 local resolvePurchasePrecheck = require(script.Parent.resolvePurchasePrecheck)
 local SetPromptState = require(Root.Actions.SetPromptState)
 local PromptState = require(Root.Enums.PromptState)
@@ -41,12 +43,12 @@ local function initiatePurchasePrecheck()
 		local upsellFlow = getUpsellFlow(externalSettings.getPlatform())
 
 		local productId = state.productInfo.productId
-		local nativeProductId = state.nativeUpsell.robuxProductId
+		local nativeProductId = SelectedRobuxPackage.getRobuxProductId(state)
 		local robuxProductId = nil
 		local isPremium = state.accountInfo.membershipType == 4
 		
 		if upsellFlow == UpsellFlow.Web then
-			robuxProductId = state.nativeUpsell.productId
+			robuxProductId = SelectedRobuxPackage.getProductId(state)
 			nativeProductId = nil
 		else
 			robuxProductId = nil

@@ -236,10 +236,12 @@ local ButtonForwardRef = React.forwardRef(function(buttonProps, ref)
 			{
 				variant = FoundationButtonUtils.buttonMapping[props.buttonType],
 				size = FoundationButtonUtils.getSizeMapping(props.standardSize, props.size, tokens),
-				width = FoundationButtonUtils.getWidth(props.size, props.fitContent),
-				AnchorPoint = props.anchorPoint,
-				Position = props.position,
-				LayoutOrder = props.layoutOrder,
+				width = FoundationButtonUtils.getWidth(
+					props.standardSize,
+					props.size,
+					props.maxWidth,
+					props.fitContent
+				),
 				icon = FoundationButtonUtils.findIcon(props.icon),
 				text = props.text,
 				isLoading = props.isLoading,
@@ -250,6 +252,10 @@ local ButtonForwardRef = React.forwardRef(function(buttonProps, ref)
 				onActivated = props.onActivated,
 				testId = FoundationButtonUtils.getTestId(props[React.Tag]),
 				ref = ref or props.buttonRef,
+
+				AnchorPoint = props.anchorPoint,
+				Position = props.position,
+				LayoutOrder = props.layoutOrder,
 
 				NextSelectionUp = props.NextSelectionUp,
 				NextSelectionDown = props.NextSelectionDown,

@@ -1,5 +1,3 @@
---!strict
-
 game:DefineFastInt("UGCValidateMeshDivisionFull", 159)
 
 return function()

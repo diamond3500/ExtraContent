@@ -1,5 +1,3 @@
---!strict
-
 local root = script.Parent.Parent
 
 local getFFlagUGCValidatePreciseFloatEquals = require(root.flags.getFFlagUGCValidatePreciseFloatEquals)

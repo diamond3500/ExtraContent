@@ -1,5 +1,3 @@
---!strict
-
 --[[
 	validateFullBody.lua checks the entire body is not too big or too small
 ]]
@@ -185,7 +183,7 @@ local function resetAllPhysicsData(validationContext: Types.ValidationContext): 
 	for _, instancesAndType in fullBodyData do
 		local success, errorMessage = resetPhysicsData(instancesAndType.allSelectedInstances, validationContext)
 		if not success then
-			return false, { errorMessage }
+			return false, { errorMessage :: string }
 		end
 	end
 

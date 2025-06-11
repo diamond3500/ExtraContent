@@ -17,6 +17,9 @@ local VariantsContext = require(Style.VariantsContext)
 local withDefaults = require(Foundation.Utility.withDefaults)
 local useGeneratedRules = require(Foundation.Utility.useGeneratedRules)
 local StyleSheetContext = require(Style.StyleSheetContext)
+local TextSizeOffsetContext = require(Style.TextSizeOffsetContext)
+local usePreferences = require(Foundation.Providers.Preferences.usePreferences)
+local getTextSizeOffset = require(Foundation.Utility.getTextSizeOffset)
 
 local getTokens = Tokens.getTokens
 
@@ -25,7 +28,6 @@ export type StyleProviderProps = {
 	device: Device?,
 	-- **Deprecated**. Use useStyleSheet hook insteads to derive the Foundation styles.
 	derives: { StyleSheet }?,
-	sheetRef: React.Ref<StyleSheet>?,
 	children: React.ReactNode,
 }
 
@@ -71,42 +73,50 @@ local function StyleProvider(styleProviderProps: StyleProviderProps)
 
 	local rules = if Flags.FoundationStylingPolyfill then useGeneratedRules(props.theme, props.device) else nil
 
+	local preferences = usePreferences()
+	local preferredTextSize = preferences.preferredTextSize
+
+	local textSizeOffset = React.useMemo(function()
+		return getTextSizeOffset() or 0
+	end, { preferredTextSize })
+
 	return React.createElement(TokensContext.Provider, {
 		value = tokens,
 	}, {
-		VariantsContext = React.createElement(
-			VariantsContext.Provider,
-			{
-				value = useVariants,
-			},
-			if Flags.FoundationStylingPolyfill
-				then {
-					RulesContext = React.createElement(RulesContext.Provider, {
-						value = rules,
-					}, styleProviderProps.children),
-				}
-				else {
-					TagsContext = React.createElement(
-						TagsContext.Provider,
-						{
-							value = addTags,
-						},
-						if Flags.FoundationStyleSheetContext
-							then React.createElement(StyleSheetContextWrapper, {
+		TextSizeOffsetContext = React.createElement(TextSizeOffsetContext.Provider, {
+			value = textSizeOffset,
+		}, {
+			VariantsContext = React.createElement(
+				VariantsContext.Provider,
+				{
+					value = useVariants,
+				},
+				if Flags.FoundationStylingPolyfill
+					then {
+						RulesContext = React.createElement(RulesContext.Provider, {
+							value = rules,
+						}, styleProviderProps.children),
+					}
+					else {
+						TagsContext = React.createElement(
+							TagsContext.Provider,
+							{
+								value = addTags,
+							},
+							React.createElement(StyleSheetContextWrapper, {
 								setStyleSheetRef = setStyleSheetRef,
 							}, styleProviderProps.children)
-							else styleProviderProps.children
-					),
-					StyleSheet = React.createElement(StyleSheet, {
-						theme = props.theme :: Theme,
-						device = props.device :: Device,
-						tags = tags,
-						derives = styleProviderProps.derives,
-						sheetRef = styleProviderProps.sheetRef,
-						setStyleSheetRef = if Flags.FoundationStyleSheetContext then setStyleSheetRef else nil,
-					}),
-				}
-		),
+						),
+						StyleSheet = React.createElement(StyleSheet, {
+							theme = props.theme :: Theme,
+							device = props.device :: Device,
+							tags = tags,
+							derives = styleProviderProps.derives,
+							setStyleSheetRef = setStyleSheetRef,
+						}),
+					}
+			),
+		}),
 	})
 end
 

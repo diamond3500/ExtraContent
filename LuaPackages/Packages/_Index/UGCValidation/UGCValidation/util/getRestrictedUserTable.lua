@@ -1,5 +1,3 @@
---!strict
-
 local isInStudio, result = pcall(function()
 	return game:GetService("StudioService")
 end)

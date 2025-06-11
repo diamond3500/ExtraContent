@@ -18,6 +18,7 @@ local validatePackage = require(root.validation.validatePackage)
 
 local function validateBodyPartInternal(validationContext: Types.ValidationContext)
 	local assetTypeEnum = validationContext.assetTypeEnum
+	assert(assetTypeEnum ~= nil, "assetTypeEnum is required in validateBodyPartInternal")
 	assert(ConstantsInterface.isBodyPart(assetTypeEnum)) --checking in the calling function, so must be true
 
 	if Enum.AssetType.DynamicHead == assetTypeEnum then
@@ -27,6 +28,8 @@ local function validateBodyPartInternal(validationContext: Types.ValidationConte
 end
 
 local function validateInternal(validationContext: Types.ValidationContext): (boolean, { string }?)
+	assert(validationContext.instances ~= nil, "instances required in validationContext for validateInternal")
+	assert(validationContext.assetTypeEnum ~= nil, "assetTypeEnum required in validationContext for validateInternal")
 	local instances = validationContext.instances
 	local assetTypeEnum = validationContext.assetTypeEnum
 	local validateMeshPartAccessories = validationContext.validateMeshPartAccessories

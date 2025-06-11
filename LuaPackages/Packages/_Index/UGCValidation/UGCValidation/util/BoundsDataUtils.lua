@@ -1,4 +1,3 @@
---!strict
 --[[
 combineBounds:
 	takes in two Types.BoundsData and combines them into one Types.BoundsData

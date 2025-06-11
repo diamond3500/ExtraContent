@@ -20,7 +20,6 @@ local GenericTextLabel = require(UIBlox.Core.Text.GenericTextLabel.GenericTextLa
 local divideTransparency = require(UIBlox.Utility.divideTransparency)
 local validateFontInfo = require(Packages.UIBlox.Core.Style.Validator.validateFontInfo)
 
-local Controllable = require(Packages.UIBlox.Core.Control.Controllable)
 local ControlState = require(Packages.UIBlox.Core.Control.Enum.ControlState)
 
 local KeyLabel = require(script.Parent.KeyLabel.KeyLabel)
@@ -390,65 +389,30 @@ function Cell:renderWithSelectionCursor(getSelectionCursor)
 			}),
 		}
 
-		if UIBloxConfig.useInteractableWithTileAndCell then
-			return Roact.createElement(Interactable, {
-				Size = UDim2.new(1, 0, 0, self.props.elementHeight),
-				BackgroundTransparency = 1,
+		return Roact.createElement(Interactable, {
+			Size = UDim2.new(1, 0, 0, self.props.elementHeight),
+			BackgroundTransparency = 1,
 
-				Image = nil,
-				ScaleType = Enum.ScaleType.Slice,
-				SliceCenter = sliceCenter,
-				ImageRectSize = imageRectSize,
-				ImageRectOffset = imageRectOffset,
-				SliceScale = 1 / Images.ImagesResolutionScale,
-				ImageTransparency = 1,
-				ImageColor3 = cellStyle.Color,
-				AutoButtonColor = false,
-				LayoutOrder = self.props.layoutOrder,
-				BorderSizePixel = 0,
-				[Roact.Ref] = self.props.setButtonRef,
-				SelectionImageObject = if UIBloxConfig.migrateToNewSelectionCursor
-					then self.props.selectionCursor
-					else getSelectionCursor(self.props.cursorKind),
-				SelectionOrder = self.props.selectionOrder,
-				onStateChanged = self.onStateChanged,
-				[Roact.Event.Activated] = self.props.onActivated,
-				isDisabled = self.props.disabled,
-			}, children)
-		else
-			return Roact.createElement(Controllable, {
-				controlComponent = {
-					component = "ImageButton",
-					props = {
-						Size = UDim2.new(1, 0, 0, self.props.elementHeight),
-						BackgroundTransparency = 1,
-
-						Image = nil,
-						ScaleType = Enum.ScaleType.Slice,
-						SliceCenter = sliceCenter,
-						ImageRectSize = imageRectSize,
-						ImageRectOffset = imageRectOffset,
-						SliceScale = 1 / Images.ImagesResolutionScale,
-						ImageTransparency = 1,
-						ImageColor3 = cellStyle.Color,
-						AutoButtonColor = false,
-						LayoutOrder = self.props.layoutOrder,
-						BorderSizePixel = 0,
-						[Roact.Ref] = self.props.setButtonRef,
-						[Roact.Event.Activated] = self.props.onActivated,
-						SelectionImageObject = if UIBloxConfig.migrateToNewSelectionCursor
-							then self.props.selectionCursor
-							else getSelectionCursor(self.props.cursorKind),
-						SelectionOrder = self.props.selectionOrder,
-					},
-					children = children,
-				},
-				onStateChanged = function(_, newState)
-					self.setControlState(newState)
-				end,
-				isDisabled = self.props.disabled,
-			})
-		end
+			Image = nil,
+			ScaleType = Enum.ScaleType.Slice,
+			SliceCenter = sliceCenter,
+			ImageRectSize = imageRectSize,
+			ImageRectOffset = imageRectOffset,
+			SliceScale = 1 / Images.ImagesResolutionScale,
+			ImageTransparency = 1,
+			ImageColor3 = cellStyle.Color,
+			AutoButtonColor = false,
+			LayoutOrder = self.props.layoutOrder,
+			BorderSizePixel = 0,
+			[Roact.Ref] = self.props.setButtonRef,
+			SelectionImageObject = if UIBloxConfig.migrateToNewSelectionCursor
+				then self.props.selectionCursor
+				else getSelectionCursor(self.props.cursorKind),
+			SelectionOrder = self.props.selectionOrder,
+			onStateChanged = self.onStateChanged,
+			[Roact.Event.Activated] = self.props.onActivated,
+			isDisabled = self.props.disabled,
+		}, children)
 	end)
 end
 

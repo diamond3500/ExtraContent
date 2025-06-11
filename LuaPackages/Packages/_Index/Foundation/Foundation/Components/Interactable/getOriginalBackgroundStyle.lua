@@ -14,11 +14,9 @@ local function getOriginalBackgroundStyle(
 ): ColorStyle
 	if ReactIs.isBinding(backgroundColor) and ReactIs.isBinding(backgroundTransparency) then
 		return React.joinBindings({
-			backgroundColor3 = backgroundColor,
-			backgroundTransparency = backgroundTransparency,
-		}):map(function(values)
-			return { Color3 = values.backgroundColor3, Transparency = values.backgroundTransparency }
-		end)
+			Color3 = backgroundColor :: React.Binding<Color3>,
+			Transparency = backgroundTransparency :: React.Binding<number>,
+		})
 	elseif ReactIs.isBinding(backgroundColor) then
 		return (backgroundColor :: React.Binding<Color3>):map(function(backgroundColor3)
 			return { Color3 = backgroundColor3 :: Color3, Transparency = backgroundTransparency :: number }

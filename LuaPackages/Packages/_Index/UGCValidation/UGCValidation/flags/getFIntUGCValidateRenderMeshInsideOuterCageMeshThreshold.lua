@@ -1,5 +1,3 @@
---!strict
-
 game:DefineFastInt("UGCValidateRenderMeshInsideOuterCageMeshThreshold", 35)
 
 return function()

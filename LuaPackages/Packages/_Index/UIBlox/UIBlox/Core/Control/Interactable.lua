@@ -18,6 +18,7 @@ end
 
 local Cryo = require(Packages.Cryo)
 local React = require(Packages.React)
+local Foundation = require(Packages.Foundation)
 
 local ControlStateEnum = require(Core.Control.Enum.ControlState)
 local ControlStateEventEnum = require(UIBlox.Core.Control.Enum.ControlStateEvent)
@@ -139,4 +140,30 @@ local function Interactable(props: Props, forwardedRef: React.Ref<Instance>)
 	return React.createElement(component, mergedProps)
 end
 
-return React.forwardRef(Interactable)
+local stateLayerProps = {
+	affordance = Foundation.Enums.StateLayerAffordance.None,
+}
+
+local function InteractableFoundationWrapper(props: Props, forwardedRef: React.Ref<Instance>)
+	local newProps = table.clone(props)
+	newProps.isDisabled = newProps.isDisabled or newProps.userInteractionEnabled == false
+	newProps.userInteractionEnabled = nil
+	newProps.ref = forwardedRef
+	newProps.component = newProps.component or ImageSetComponent.Button
+	newProps.stateLayer = stateLayerProps
+
+	local previousState = React.useRef(ControlStateEnum.Initialize)
+	if props.onStateChanged then
+		newProps.onStateChanged = function(newState: ControlState)
+			local controlState = ControlStateEnum[newState]
+			props.onStateChanged(previousState.current, controlState)
+			previousState.current = controlState
+		end
+	end
+
+	return React.createElement(Foundation.UNSTABLE.Interactable, newProps)
+end
+
+return if UIBloxConfig.useFoundationInteractable
+	then React.forwardRef(InteractableFoundationWrapper)
+	else React.forwardRef(Interactable) :: never

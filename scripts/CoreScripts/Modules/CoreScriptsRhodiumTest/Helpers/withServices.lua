@@ -2,7 +2,7 @@
 local HttpService = game:GetService("HttpService")
 local CoreGui = game:GetService("CoreGui")
 local CorePackages = game:GetService("CorePackages")
-local Modules = CoreGui.RobloxGui.Modules
+
 local Roact = require(CorePackages.Packages.Roact)
 local Rodux = require(CorePackages.Packages.Rodux)
 local RoactRodux = require(CorePackages.Packages.RoactRodux)
@@ -53,7 +53,9 @@ return function(test, component, reducer, initialStoreState, props)
 				fontName = StyleConstants.FontName.Gotham,
 			},
 		}, {
-			Root = Roact.createElement(component, props),
+			Folder = Roact.createElement("Folder", {}, {
+				Root = Roact.createElement(component, props),
+			}),
 		}),
 	})
 	local name = tostring(component)
@@ -67,7 +69,7 @@ return function(test, component, reducer, initialStoreState, props)
 	local instanceName = "Test-" .. HttpService:GenerateGUID(false)
 	local tree = Roact.mount(root, CoreGui, instanceName)
 
-	local path = ("game.CoreGui.%s.*"):format(instanceName)
+	local path = ("game.CoreGui.%s.*[ClassName=Folder].*"):format(instanceName)
 
 	local success, result = pcall(function()
 		test(path)

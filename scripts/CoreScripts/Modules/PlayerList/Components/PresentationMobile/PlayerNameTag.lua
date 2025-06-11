@@ -15,6 +15,8 @@ local Connection = Components.Connection
 local LayoutValues = require(Connection.LayoutValues)
 local WithLayoutValues = LayoutValues.WithLayoutValues
 local usePlayerCombinedName = require(PlayerList.Hooks.usePlayerCombinedName)
+local createShallowEqualAndTables = require(PlayerList.createShallowEqualAndTables)
+local FFlagPlayerListReduceRerenders = require(PlayerList.Flags.FFlagPlayerListReduceRerenders)
 
 local PlayerNameTag = React.PureComponent:extend("PlayerNameTag")
 
@@ -84,5 +86,8 @@ local function PlayerNameTagContainer(props: Props)
 	}))
 end
 
-return PlayerNameTagContainer
+if FFlagPlayerListReduceRerenders then
+	return (React.memo(PlayerNameTagContainer, createShallowEqualAndTables({ "textFont" })) :: unknown) :: typeof(PlayerNameTagContainer)
+end
 
+return PlayerNameTagContainer

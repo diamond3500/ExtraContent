@@ -1,5 +1,3 @@
---!strict
-
 game:DefineFastFlag("UGCValidateIndividualPartBBoxes2", false)
 
 return function()

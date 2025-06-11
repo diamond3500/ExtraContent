@@ -3,6 +3,7 @@ local CorePackages = game:GetService("CorePackages")
 local CoreGui = game:GetService("CoreGui")
 
 local Roact = require(CorePackages.Packages.Roact)
+local React = require(CorePackages.Packages.React)
 local RoactRodux = require(CorePackages.Packages.RoactRodux)
 local t = require(CorePackages.Packages.t)
 local UIBlox = require(CorePackages.Packages.UIBlox)
@@ -13,6 +14,9 @@ local Components = script.Parent.Parent
 local Connection = Components.Connection
 local LayoutValues = require(Connection.LayoutValues)
 local WithLayoutValues = LayoutValues.WithLayoutValues
+
+local PlayerList = script.Parent.Parent.Parent
+local FFlagPlayerListReduceRerenders = require(PlayerList.Flags.FFlagPlayerListReduceRerenders)
 
 local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 local GameTranslator = require(RobloxGui.Modules.GameTranslator)
@@ -102,6 +106,10 @@ local function mapStateToProps(state)
 	return {
 		isSmallTouchDevice = state.displayOptions.isSmallTouchDevice,
 	}
+end
+
+if FFlagPlayerListReduceRerenders then
+	return React.memo(RoactRodux.connect(mapStateToProps, nil)(TitleBar))
 end
 
 return RoactRodux.connect(mapStateToProps, nil)(TitleBar)

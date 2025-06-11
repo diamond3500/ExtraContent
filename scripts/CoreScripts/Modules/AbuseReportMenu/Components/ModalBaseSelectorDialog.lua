@@ -28,6 +28,18 @@ local SharedFlags = require(CorePackages.Workspace.Packages.SharedFlags)
 local FFlagCSFocusWrapperRefactor = SharedFlags.FFlagCSFocusWrapperRefactor
 local GetFFlagModalSelectorCloseButton = require(root.Flags.GetFFlagModalSelectorCloseButton)
 local GetFFlagLuaAppEnableOpenTypeSupport = SharedFlags.GetFFlagLuaAppEnableOpenTypeSupport
+local isInExperienceUIVREnabled =
+	require(CorePackages.Workspace.Packages.SharedExperimentDefinition).isInExperienceUIVREnabled
+
+local Responsive
+local UIManager
+local PanelType
+if isInExperienceUIVREnabled then
+	Responsive = require(CorePackages.Workspace.Packages.Responsive)
+	local VrSpatialUi = require(CorePackages.Workspace.Packages.VrSpatialUi)
+	UIManager = VrSpatialUi.UIManager
+	PanelType = VrSpatialUi.Constants.PanelType
+end
 
 type Props = {
 	isShown: boolean,
@@ -54,7 +66,18 @@ local function ModalBaseSelectorDialog(props: Props)
 	local theme = style.Theme
 
 	local HEADER_HEIGHT = style.Tokens.Global.Space_500 -- 40 for desktop, 60 for console
-	local listTableHeight = math.min(#props.cellData * TABLE_CELL_HEIGHT, props.viewportHeight - 80 - MODAL_PADDING * 2)
+	local listTableHeight
+	if isInExperienceUIVREnabled then
+		local isSpatial = Responsive.useIsSpatial()
+		local viewHeight = props.viewportHeight
+		if isSpatial then
+			local panelObject = UIManager.getInstance():getPanelObject(PanelType.MoreMenu) :: SurfaceGui
+			viewHeight = panelObject.AbsoluteSize.Y
+		end
+		listTableHeight = math.min(#props.cellData * TABLE_CELL_HEIGHT, viewHeight - 80 - MODAL_PADDING * 2)
+	else
+		listTableHeight = math.min(#props.cellData * TABLE_CELL_HEIGHT, props.viewportHeight - 80 - MODAL_PADDING * 2)
+	end
 
 	local modalContentHeight = listTableHeight + MODAL_PADDING * 2
 	local listTablePaddingTop = 0

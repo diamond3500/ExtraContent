@@ -1,5 +1,3 @@
---!strict
-
 game:DefineFastInt("UGCValidationMaxMsPerFrame", 3)
 
 return function()

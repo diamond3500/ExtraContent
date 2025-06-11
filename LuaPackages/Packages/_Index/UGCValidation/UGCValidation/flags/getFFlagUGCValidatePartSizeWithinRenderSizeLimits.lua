@@ -1,5 +1,3 @@
---!strict
-
 game:DefineFastFlag("UGCValidatePartSizeWithinRenderSizeLimits", false)
 
 return function()

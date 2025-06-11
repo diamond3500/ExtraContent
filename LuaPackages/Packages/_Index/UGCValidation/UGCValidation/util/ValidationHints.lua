@@ -1,5 +1,3 @@
---!strict
-
 --[[
 	ValidationHints.lua provides functions which give hints for how to change what's being validated so it passes
 

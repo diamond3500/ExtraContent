@@ -13,6 +13,9 @@ local Constants = require(Root.Unibar.Constants)
 
 local ChromeService = require(Root.Service)
 
+local SharedFlags = require(CorePackages.Workspace.Packages.SharedFlags)
+local FFlagChromeUnbindShortcutBarOnHide = SharedFlags.FFlagChromeUnbindShortcutBarOnHide
+
 function ChromeShortcutBar(props)
 	local shortcuts, setShortcuts = React.useState({})
 	local showShortcutBar, setShowShortcutBar = React.useBinding(false)
@@ -26,13 +29,23 @@ function ChromeShortcutBar(props)
 		local showTopBar = GamepadConnector:getShowTopBar()
 		local gamepadActive = GamepadConnector:getGamepadActive()
 
-		local function shouldShowShortcutBar()
-			local shouldShow = showTopBar:get() and gamepadActive:get()
-			setShowShortcutBar(shouldShow)
-		end
+		if FFlagChromeUnbindShortcutBarOnHide then
+			local function shouldHideShortcutBar()
+				local shouldHide = not showTopBar:get() or not gamepadActive:get()
+				ChromeService:setHideShortcutBar("TopBar", shouldHide)
+			end
 
-		showTopBar:connect(shouldShowShortcutBar)
-		gamepadActive:connect(shouldShowShortcutBar)
+			showTopBar:connect(shouldHideShortcutBar)
+			gamepadActive:connect(shouldHideShortcutBar)
+		else
+			local function shouldShowShortcutBar()
+				local shouldShow = showTopBar:get() and gamepadActive:get()
+				setShowShortcutBar(shouldShow)
+			end
+
+			showTopBar:connect(shouldShowShortcutBar)
+			gamepadActive:connect(shouldShowShortcutBar)
+		end
 	end, {})
 
 	local shortcutItems = {}
@@ -55,11 +68,12 @@ function ChromeShortcutBar(props)
 			Name = "ShortcutBar",
 			DisplayOrder = Constants.SHORTCUTBAR_DISPLAYORDER,
 			ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
-			Enabled = showShortcutBar,
+			Enabled = if FFlagChromeUnbindShortcutBarOnHide then nil else showShortcutBar,
 		}, {
 			React.createElement(ShortcutBar, {
 				position = UDim2.fromScale(0.5, 0.9),
 				anchorPoint = Vector2.new(0.5, 0),
+				-- ShortcutBar will not render if there are no items
 				items = shortcutItems,
 			}),
 		}),

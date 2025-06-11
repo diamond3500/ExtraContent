@@ -1,5 +1,3 @@
---!strict
-
 --[[
 	get the verts of a mesh
 ]]

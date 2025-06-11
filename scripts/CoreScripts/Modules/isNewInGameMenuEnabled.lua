@@ -14,11 +14,17 @@ local CoreGui = game:GetService("CoreGui")
 local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 
 local isSubjectToDesktopPolicies = require(CorePackages.Workspace.Packages.SharedFlags).isSubjectToDesktopPolicies
+local isInExperienceUIVREnabled =
+	require(CorePackages.Workspace.Packages.SharedExperimentDefinition).isInExperienceUIVREnabled
 
 return function()
 	-- new IGM is always on in VR
 	if VRService.VREnabled then
-		return true
+		if isInExperienceUIVREnabled then
+			return false
+		else
+			return true
+		end
 	end
 
 	local localPlayer = Players.LocalPlayer

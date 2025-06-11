@@ -15,14 +15,6 @@ export type IntegrationIdList = { [number]: string }
 export type MenuConfig = { [number]: IntegrationIdList }
 export type CompactUtilityId = string
 export type CompactUtilityConfig = { [CompactUtilityId]: MenuConfig }
-export type PeekId = string
-export type PeekLifetimeConfig = {
-	duration: number?,
-}
-export type PeekConfig = {
-	integrations: IntegrationIdList,
-	lifetime: PeekLifetimeConfig?,
-}
 
 export type ShortcutId = string
 export type ShortcutIdList = { [number]: ShortcutId }
@@ -34,6 +26,7 @@ export type ShortcutProps = {
 	integration: IntegrationId?,
 	actionName: string?,
 	activated: (() -> Enum.ContextActionResult?)?,
+	availability: ChromeUtils.AvailabilitySignal,
 }
 export type ShortcutRegisterProps = {
 	id: ShortcutId,
@@ -42,10 +35,12 @@ export type ShortcutRegisterProps = {
 	integration: IntegrationId?,
 	actionName: string?,
 	activated: (() -> Enum.ContextActionResult?)?,
+	availability: ChromeUtils.AvailabilitySignal?,
 }
 export type ShortcutBarId = string
 export type ShortcutBarProps = ShortcutIdList
 export type ShortcutBarList = { [ShortcutBarId]: ShortcutBarProps }
+export type ShortcutOverrideId = string
 
 export type SecondaryAction = {
 	label: string,
@@ -114,8 +109,11 @@ export type IntegrationComponentProps = {
 export type IntegrationList = { [IntegrationId]: IntegrationProps }
 export type MenuList = { [number]: IntegrationComponentProps }
 export type WindowList = { [number]: IntegrationComponentProps }
-export type PeekList = { IntegrationComponentProps }
 export type ShortcutList = { [ShortcutId]: ShortcutProps }
 export type ShortcutBarItems = { [number]: ShortcutProps }
+
+export type ActivateProps = {
+	fromShortcut: boolean?,
+}
 
 return nil

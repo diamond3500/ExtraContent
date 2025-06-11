@@ -1,6 +1,18 @@
+--[[
+	validateAssetTransparency.lua: This file validates that a mesh part has transparency set to zero
+	and that the geometry of the mesh part is visible enough. The visibility of the geometry is
+	determined by a score in two categories, area covered and distribution/how long it is. The
+	asset is scored from a number of different rendered views and it's score must be above a
+	threshold set for every view.
+
+	Description of visibility algorithm:
+	https://docs.google.com/document/d/1iwqaLDV1rQL5IQxG7-jSAakV-NL5KrQLzaMs6bAeMyo/edit?usp=sharing
+]]
+
 local root = script.Parent.Parent
 
 local Types = require(root.util.Types)
+local Constants = require(root.Constants)
 local tryYield = require(root.util.tryYield)
 local getEditableMeshFromContext = require(root.util.getEditableMeshFromContext)
 local FailureReasonsAccumulator = require(root.util.FailureReasonsAccumulator)
@@ -8,6 +20,7 @@ local BoundsCalculator = require(root.util.BoundsCalculator)
 local RasterUtil = require(root.util.RasterUtil)
 local TransparencyUtil = require(root.util.TransparencyUtil)
 local getExpectedPartSize = require(root.util.getExpectedPartSize)
+local SummedAreaTable = require(root.util.SummedAreaTable)
 
 local ConstantsTransparencyValidation = require(root.ConstantsTransparencyValidation)
 
@@ -15,8 +28,12 @@ local getEngineFeatureEditableImageDrawTriangleEnabled =
 	require(root.flags.getEngineFeatureEditableImageDrawTriangleEnabled)
 local getFFlagRefactorValidateAssetTransparency = require(root.flags.getFFlagRefactorValidateAssetTransparency)
 local getFFlagUGCValidateFixTransparencyReporting = require(root.flags.getFFlagUGCValidateFixTransparencyReporting)
+local getFFlagUGCValidateMinBoundsVisibility = require(root.flags.getFFlagUGCValidateMinBoundsVisibility)
 
 local FFlagFixNonZeroTransparency = game:DefineFastFlag("FixNonZeroTransparency", false)
+
+type SummedAreaTable = SummedAreaTable.SummedAreaTable
+type ValidationContext = Types.ValidationContext
 
 local function checkFlags()
 	return getEngineFeatureEditableImageDrawTriangleEnabled() and getFFlagRefactorValidateAssetTransparency()
@@ -67,7 +84,52 @@ local function getViews()
 	}
 end
 
-local function getAspectRatio(assetSize, viewId)
+local function getAvatarPartScaleType(inst: Instance): string?
+	local avatarScaleType = nil
+	local avatarScaleTypeStringValue = inst:FindFirstChild("AvatarPartScaleType", true)
+	if avatarScaleTypeStringValue and avatarScaleTypeStringValue:IsA("StringValue") then
+		if Constants.AvatarPartScaleTypes[avatarScaleTypeStringValue.Value] then
+			avatarScaleType = avatarScaleTypeStringValue.Value
+		end
+	end
+
+	return avatarScaleType
+end
+
+local function getAssetTypeMinSize(inst: Instance, assetTypeEnum: Enum.AssetType): Vector3?
+	local avatarScaleType = getAvatarPartScaleType(inst)
+	if not avatarScaleType then
+		return nil
+	end
+	return Constants.ASSET_TYPE_INFO[assetTypeEnum].bounds[avatarScaleType].minSize
+end
+
+local function getBoundingBoxFace(bounds: Vector3, viewAxes): Vector2
+	local viewMatrix = CFrame.fromMatrix(Vector3.zero, viewAxes.axis1, viewAxes.axis2, viewAxes.normal:Abs())
+	local transformBounds = viewMatrix * bounds
+	return Vector2.new(transformBounds.X, transformBounds.Y)
+end
+
+local function calculateTargetPixelsPerStud(windowSize: Vector2, meshSize: Vector2): number
+	local windowArea = windowSize.X * windowSize.Y
+	-- pps * W * pps * L = TargetPixelsInBox, solve for pps
+	local pixelsPerStud = math.sqrt(ConstantsTransparencyValidation.AREA_OF_INTEREST_TARGET_PIXELS / windowArea)
+
+	local largestDim = math.max(meshSize.X, meshSize.Y)
+	local maxPixelsPerStud = ConstantsTransparencyValidation.ASSET_TRANSPARENCY_MAX_RASTER_SIZE / largestDim
+
+	return math.min(pixelsPerStud, maxPixelsPerStud)
+end
+
+local function rasterSizeFromViewSpaceSize(pixelsPerStud: number, viewFace: Vector2): Vector2
+	local rasterSize = viewFace * pixelsPerStud
+
+	local eps = 0.001
+	return Vector2.new(math.floor(rasterSize.X + eps), math.floor(rasterSize.Y + eps))
+end
+
+-- remove with FFlagUGCValidateMinBoundsVisibility
+local function getAspectRatio(assetSize: Vector3, viewId)
 	if
 		viewId == ConstantsTransparencyValidation.CAMERA_ANGLES.Front
 		or viewId == ConstantsTransparencyValidation.CAMERA_ANGLES.Back
@@ -84,6 +146,7 @@ local function getAspectRatio(assetSize, viewId)
 	end
 end
 
+-- remove with FFlagUGCValidateMinBoundsVisibility
 local function getScaleFactor(meshSize, viewId)
 	local aspectRatio = getAspectRatio(meshSize, viewId)
 
@@ -199,6 +262,7 @@ local function getCombinedMeshData(
 	end
 end
 
+-- remove with FFlagUGCValidateMinBoundsVisibility
 local function getOpacity(raster)
 	local pixels = raster:ReadPixelsBuffer(Vector2.new(0, 0), raster.Size)
 	local totalPixels = 0
@@ -216,10 +280,89 @@ local function getOpacity(raster)
 	end
 
 	if totalPixels == 0 then
-		return false
+		return false, 0.0
 	end
 
 	return true, 1 - (transparentPixels / totalPixels)
+end
+
+local function getSubregionVisibility(
+	windowPos: Vector2,
+	windowSize: Vector2,
+	areaTable: SummedAreaTable,
+	distributionDirection: Vector2?
+): number
+	local windowArea = windowSize.X * windowSize.Y
+	local areaCoverage: number = areaTable:GetAreaDensity(windowPos, windowSize)
+	local areaScore = areaCoverage / windowArea
+	local visibility = areaScore
+
+	if distributionDirection then
+		local sliceDirection = Vector2.one - distributionDirection
+		local distributionLength = windowSize:Dot(distributionDirection)
+		local sliceLength = windowSize:Dot(sliceDirection)
+		local sliceSize = (sliceDirection * sliceLength):Max(Vector2.one)
+		local maxSliceArea = sliceLength * ConstantsTransparencyValidation.DISTRIBUTION_SLICE_MAX
+		local filledAreaUnderThresholdLine = 0.0
+		local AreaUnderThresholdLine = maxSliceArea * distributionLength
+		for sliceIndex = 0, distributionLength, 1 do
+			local sliceStart = windowPos + distributionDirection * sliceIndex
+			local sliceCoveredArea = areaTable:GetAreaDensity(sliceStart, sliceSize)
+			local sliceClamped = math.min(sliceCoveredArea, maxSliceArea)
+			filledAreaUnderThresholdLine += sliceClamped
+		end
+
+		local distributionScore = filledAreaUnderThresholdLine / AreaUnderThresholdLine
+
+		local distributionScoreWeight = ConstantsTransparencyValidation.DISTRIBUTION_SCORE_WEIGHT
+		local areaScoreWeight = 1.0 - distributionScoreWeight
+		visibility = distributionScore * distributionScoreWeight + areaScore * areaScoreWeight
+	end
+
+	return visibility
+end
+
+local function getHighestSubregionVisibility(raster: EditableImage, windowSize: Vector2, threshold: number): number
+	local windowArea = windowSize.X * windowSize.Y
+	if windowArea <= 0 then
+		return 0.0
+	end
+
+	local assetOpacityScan = SummedAreaTable.new(raster.Size, function(color)
+		if color.R > 0 or color.G > 0 or color.B > 0 then
+			return 1
+		end
+
+		return 0
+	end)
+
+	assetOpacityScan:BuildSummedAreaTable(raster)
+
+	local distributionDirection = nil
+	if ConstantsTransparencyValidation.DISTRIBUTION_ASPECT_CUTOFF then
+		if windowSize.X / windowSize.Y >= ConstantsTransparencyValidation.DISTRIBUTION_ASPECT_CUTOFF then
+			distributionDirection = Vector2.xAxis
+		elseif windowSize.Y / windowSize.X >= ConstantsTransparencyValidation.DISTRIBUTION_ASPECT_CUTOFF then
+			distributionDirection = Vector2.yAxis
+		end
+	end
+
+	local maxOpacity = 0.0
+	local yDifference = raster.Size.Y - windowSize.Y
+	local xDifference = raster.Size.X - windowSize.X
+	for y = 0, yDifference, 1 do
+		for x = 0, xDifference, 1 do
+			local windowPos = Vector2.new(x, y)
+			local subregionOpacity =
+				getSubregionVisibility(windowPos, windowSize, assetOpacityScan, distributionDirection)
+			if subregionOpacity >= threshold then
+				return subregionOpacity
+			end
+			maxOpacity = math.max(maxOpacity, subregionOpacity)
+		end
+	end
+
+	return maxOpacity
 end
 
 local function checkPartsTransparency(meshParts)
@@ -240,10 +383,10 @@ local function checkPartsTransparency(meshParts)
 			}
 	end
 
-	return true
+	return true, {}
 end
 
-local function validateAssetTransparency(inst: Instance, validationContext: Types.ValidationContext)
+local function validateAssetTransparency(inst: Instance, validationContext: ValidationContext)
 	if not checkFlags() then
 		return true
 	end
@@ -275,11 +418,12 @@ local function validateAssetTransparency(inst: Instance, validationContext: Type
 		end
 	end
 
-	local boundsSuccess, boundsErrors, origins =
+	local boundsSuccess, boundsErrors, originsOpt =
 		BoundsCalculator.calculateIndividualAssetPartsData(inst, validationContext)
 	if not boundsSuccess then
 		return false, boundsErrors
 	end
+	local origins = originsOpt :: { string: any }
 
 	local combinedMeshData = {}
 	local boundsData = {
@@ -287,7 +431,7 @@ local function validateAssetTransparency(inst: Instance, validationContext: Type
 		max = Vector3.new(-math.huge, -math.huge, -math.huge),
 	}
 	for _, meshPart in meshParts do
-		local success, srcMesh = getEditableMeshFromContext(meshPart, "MeshId", validationContext)
+		local success, srcMeshOpt = getEditableMeshFromContext(meshPart, "MeshId", validationContext)
 		if not success then
 			return false,
 				{
@@ -297,6 +441,7 @@ local function validateAssetTransparency(inst: Instance, validationContext: Type
 					),
 				}
 		end
+		local srcMesh = srcMeshOpt :: EditableMesh
 		srcMesh:Triangulate()
 
 		local meshScaling = nil
@@ -319,59 +464,112 @@ local function validateAssetTransparency(inst: Instance, validationContext: Type
 		return false, { string.format("Meshes %s should not have zero size", assetTypeEnum.Name) }
 	end
 
-	local reasonsAccumulator = FailureReasonsAccumulator.new()
-	local views = getViews()
-	for _, view in views do
-		if #combinedMeshData == 0 then
-			reasonsAccumulator:updateReasons(
-				false,
-				{ string.format("Mesh for %s has no triangles.", assetTypeEnum.Name) }
-			)
-			continue
-		end
-
+	if getFFlagUGCValidateMinBoundsVisibility() then
 		local meshSize = boundsData.max - boundsData.min
 		local meshCenter = boundsData.min + (meshSize / 2)
-		local rasterSize = Vector2.new(
-			ConstantsTransparencyValidation.ASSET_TRANSPARENCY_RASTER_SIZE,
-			ConstantsTransparencyValidation.ASSET_TRANSPARENCY_RASTER_SIZE
-		) * getScaleFactor(meshSize, view.viewId)
-
-		local editableImage =
-			RasterUtil.rasterMesh(combinedMeshData, rasterSize, view, meshCenter, meshSize, validationContext)
-
-		local threshold = ConstantsTransparencyValidation.ASSET_TRANSPARENCY_THRESHOLDS[assetTypeEnum][view.viewId]
-		local success, opacity = getOpacity(editableImage)
-		if not success then
-			reasonsAccumulator:updateReasons(
-				false,
-				{ string.format("Mesh for %s is completely invisible.", assetTypeEnum.Name) }
-			)
-			editableImage:Destroy()
-			continue
+		local minBoundsSize = getAssetTypeMinSize(inst, assetTypeEnum)
+		if not minBoundsSize then
+			return false, {}
 		end
-		if opacity < threshold then
-			reasonsAccumulator:updateReasons(false, {
-				if getFFlagUGCValidateFixTransparencyReporting()
-					then string.format(
-						"%s is not opaque enough from the %s. Opacity is %.2f but needs to be above %.2f.",
+		local paddedMeshSize = meshSize:Max(minBoundsSize)
+
+		local reasonsAccumulator = FailureReasonsAccumulator.new()
+		local views = getViews()
+		for _, view in views do
+			if #combinedMeshData == 0 then
+				reasonsAccumulator:updateReasons(
+					false,
+					{ string.format("Mesh for %s has no triangles.", assetTypeEnum.Name) }
+				)
+				continue
+			end
+
+			local paddedMeshSizeViewSpace = getBoundingBoxFace(paddedMeshSize, view)
+			local minBoundsViewSpace = getBoundingBoxFace(minBoundsSize :: Vector3, view)
+			local pixelsPerStud = calculateTargetPixelsPerStud(minBoundsViewSpace, paddedMeshSizeViewSpace)
+
+			local rasterSize = rasterSizeFromViewSpaceSize(pixelsPerStud, paddedMeshSizeViewSpace)
+			local minBoundsPixelSpace = rasterSizeFromViewSpaceSize(pixelsPerStud, minBoundsViewSpace)
+
+			local editableImage =
+				RasterUtil.rasterMesh(combinedMeshData, rasterSize, view, meshCenter, paddedMeshSize, validationContext)
+
+			local threshold = ConstantsTransparencyValidation.ASSET_TRANSPARENCY_THRESHOLDS[assetTypeEnum][view.viewId]
+			local visibility = getHighestSubregionVisibility(editableImage, minBoundsPixelSpace, threshold)
+			editableImage:Destroy()
+
+			if visibility == 0.0 and threshold > 0.0 then
+				reasonsAccumulator:updateReasons(false, {
+					string.format("Mesh for %s is completely invisible from the %s.", assetTypeEnum.Name, view.viewId),
+				})
+			elseif visibility < threshold then
+				reasonsAccumulator:updateReasons(false, {
+					string.format(
+						"%s is not visible enough from the %s. The most visible region found, scored %.2f but needs to be above %.2f.",
 						assetTypeEnum.Name,
 						view.viewId,
-						opacity,
-						threshold
-					)
-					else string.format(
-						"%s is not opague enough. Opacity is %f but needs to be above %f.",
-						assetTypeEnum.Name,
-						opacity,
+						visibility,
 						threshold
 					),
-			})
+				})
+			end
 		end
-		editableImage:Destroy()
-	end
 
-	return reasonsAccumulator:getFinalResults()
+		return reasonsAccumulator:getFinalResults()
+	else
+		local reasonsAccumulator = FailureReasonsAccumulator.new()
+		local views = getViews()
+		for _, view in views do
+			if #combinedMeshData == 0 then
+				reasonsAccumulator:updateReasons(
+					false,
+					{ string.format("Mesh for %s has no triangles.", assetTypeEnum.Name) }
+				)
+				continue
+			end
+			local meshSize = boundsData.max - boundsData.min
+			local meshCenter = boundsData.min + (meshSize / 2)
+			local rasterSize = Vector2.new(
+				ConstantsTransparencyValidation.ASSET_TRANSPARENCY_RASTER_SIZE,
+				ConstantsTransparencyValidation.ASSET_TRANSPARENCY_RASTER_SIZE
+			) * getScaleFactor(meshSize, view.viewId)
+
+			local editableImage =
+				RasterUtil.rasterMesh(combinedMeshData, rasterSize, view, meshCenter, meshSize, validationContext)
+
+			local threshold = ConstantsTransparencyValidation.ASSET_TRANSPARENCY_THRESHOLDS[assetTypeEnum][view.viewId]
+			local success, opacity = getOpacity(editableImage)
+			if not success then
+				reasonsAccumulator:updateReasons(
+					false,
+					{ string.format("Mesh for %s is completely invisible.", assetTypeEnum.Name) }
+				)
+				editableImage:Destroy()
+				continue
+			end
+			if opacity < threshold then
+				reasonsAccumulator:updateReasons(false, {
+					if getFFlagUGCValidateFixTransparencyReporting()
+						then string.format(
+							"%s is not opaque enough from the %s. Opacity is %.2f but needs to be above %.2f.",
+							assetTypeEnum.Name,
+							view.viewId,
+							opacity,
+							threshold
+						)
+						else string.format(
+							"%s is not opague enough. Opacity is %f but needs to be above %f.",
+							assetTypeEnum.Name,
+							opacity,
+							threshold
+						),
+				})
+			end
+			editableImage:Destroy()
+		end
+
+		return reasonsAccumulator:getFinalResults()
+	end
 end
 
 return validateAssetTransparency

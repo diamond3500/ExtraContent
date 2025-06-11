@@ -10,6 +10,7 @@ local withDefaults = require(Foundation.Utility.withDefaults)
 type PreferencesFull = PreferencesContext.Preferences
 
 export type PreferencesProps = {
+	preferredTextSize: Enum.PreferredTextSize?,
 	preferredTransparency: number?,
 	reducedMotion: boolean?,
 }
@@ -19,12 +20,14 @@ export type PreferencesProviderProps = {
 } & PreferencesProps
 
 local defaultPreferences = {
+	preferredTextSize = Enum.PreferredTextSize.Medium,
 	preferredTransparency = 1,
 	reducedMotion = false,
 }
 
 local function PreferencesProvider(preferencesProviderProps: PreferencesProviderProps)
 	local props = withDefaults({
+		preferredTextSize = preferencesProviderProps.preferredTextSize,
 		preferredTransparency = preferencesProviderProps.preferredTransparency,
 		reducedMotion = preferencesProviderProps.reducedMotion,
 	}, defaultPreferences)

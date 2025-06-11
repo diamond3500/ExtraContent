@@ -60,14 +60,14 @@ local defaultProps = {
 }
 
 -- Create ReportPersonMenuItemsContainer component
-local element = React.createElement(StyleProviderWithDefaultTheme, {
-	withDarkTheme = true,
+local element = React.createElement(Foundation.FoundationProvider, {
+	theme = Foundation.Enums.Theme.Dark,
 }, {
 	LocalizationProvider = React.createElement(LocalizationProvider, {
 		localization = Localization.new(LocalizationService.RobloxLocaleId),
 	}, {
-		FoundationProvider = React.createElement(Foundation.FoundationProvider, {
-			theme = Foundation.Enums.Theme.Dark,
+		StyleProvider = React.createElement(StyleProviderWithDefaultTheme, {
+			withDarkTheme = true,
 		}, {
 			menuItems = React.createElement(ReportPersonMenuItemsContainer, {
 				utilityProps = utilityProps,

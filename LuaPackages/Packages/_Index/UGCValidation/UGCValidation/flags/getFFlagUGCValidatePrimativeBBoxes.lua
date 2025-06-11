@@ -1,5 +1,3 @@
---!strict
-
 game:DefineFastFlag("UGCValidatePrimativeBBoxes", false)
 
 return function()

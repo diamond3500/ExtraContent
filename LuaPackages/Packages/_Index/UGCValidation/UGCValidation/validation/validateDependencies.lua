@@ -1,5 +1,3 @@
---!strict
-
 --[[
 	validateDependencies.lua checks that all the properties in the hierarchy tree of an asset that should contain a value, do contain an asset id, and
 	that asset id points to an asset that exists (and when used from Studio, it uses validateModeration.lua which ensures the assets are created by the

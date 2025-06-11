@@ -20,6 +20,7 @@ local FFlagHideTopBarConsole = SharedFlags.FFlagHideTopBarConsole
 local GetFFlagEnableSongbirdInChrome = require(Root.Parent.Flags.GetFFlagEnableSongbirdInChrome)
 local GetFFlagSimpleChatUnreadMessageCount = SharedFlags.GetFFlagSimpleChatUnreadMessageCount
 local FFlagSubmenuFocusNavFixes = SharedFlags.FFlagSubmenuFocusNavFixes
+local FFlagChromeFixInitialFocusSubmenu = SharedFlags.FFlagChromeFixInitialFocusSubmenu
 local FFlagConsoleChatOnExpControls = SharedFlags.FFlagConsoleChatOnExpControls
 
 local ChromeFlags = script.Parent.Parent.Parent.Flags
@@ -52,9 +53,23 @@ local FFlagReduceTopBarInsetsWhileHidden = SharedFlags.FFlagReduceTopBarInsetsWh
 local PartyConstants = require(Root.Parent.Integrations.Party.Constants)
 local isConnectUnibarEnabled = require(Root.Parent.Integrations.Connect.isConnectUnibarEnabled)
 local isConnectDropdownEnabled = require(Root.Parent.Integrations.Connect.isConnectDropdownEnabled)
+
 local GamepadConnector = if FFlagHideTopBarConsole
 	then require(Root.Parent.Parent.TopBar.Components.GamepadConnector)
 	else nil
+local isInExperienceUIVREnabled =
+	require(CorePackages.Workspace.Packages.SharedExperimentDefinition).isInExperienceUIVREnabled
+
+local Panel3DInSpatialUI
+local PanelType
+local SubMenuVisibilitySignal
+if isInExperienceUIVREnabled then
+	local VrSpatialUi = require(CorePackages.Workspace.Packages.VrSpatialUi)
+	Panel3DInSpatialUI = VrSpatialUi.Panel3DInSpatialUI
+	PanelType = VrSpatialUi.Constants.PanelType
+	local Observable = require(CorePackages.Workspace.Packages.Observable)
+	SubMenuVisibilitySignal = Observable.ObservableValue.new(true)
+end
 
 type Array<T> = { [number]: T }
 type Table = { [any]: any }
@@ -102,10 +117,22 @@ if not GetFFlagChromeCentralizedConfiguration() then
 			table.insert(v4Ordering, toggleMicIndex + 1, PartyConstants.TOGGLE_MIC_INTEGRATION_ID)
 		end
 
-		ChromeService:configureMenu({ v4Ordering })
+		if isInExperienceUIVREnabled and isSpatial() then
+			local vrControls = { "vr_toggle_button", "vr_safety_bubble" }
+			ChromeService:configureMenu({ vrControls, v4Ordering })
+		else
+			ChromeService:configureMenu({ v4Ordering })
+		end
 
-		table.insert(nineDot, 2, "camera_entrypoint")
-		table.insert(nineDot, 2, "selfie_view")
+		if isInExperienceUIVREnabled then
+			if not isSpatial() then
+				table.insert(nineDot, 2, "camera_entrypoint")
+				table.insert(nineDot, 2, "selfie_view")
+			end
+		else
+			table.insert(nineDot, 2, "camera_entrypoint")
+			table.insert(nineDot, 2, "selfie_view")
+		end
 
 		-- TO-DO: Replace GuiService:IsTenFootInterface() once APPEXP-2014 has been merged
 		-- selene: allow(denylist_filter)
@@ -192,6 +219,9 @@ function AnimationStateHelper(props)
 						GuiService.SelectedCoreObject = selectedChild
 					else
 						if FFlagUnibarMenuOpenSubmenu then
+							if FFlagChromeFixInitialFocusSubmenu then
+								ChromeService:selectedItem():set("nine_dot")
+							end
 							ChromeService:toggleSubMenu("nine_dot")
 						else
 							GuiService:Select(props.menuFrameRef.current)
@@ -622,12 +652,112 @@ function Unibar(props: UnibarProp)
 	)
 end
 
+type UnibarPillsProp = {
+	menuFrameRef: any,
+	subMenuHostRef: any,
+}
+
+local function UnibarPills(props: UnibarPillsProp)
+	local style = useStyle()
+
+	-- Tree of menu items to display
+	local menuItems = useChromeMenuItems()
+
+	local submenuOpen = ChromeService:currentSubMenu():get() == "nine_dot"
+	local toggleSubmenuTransition, setToggleSubmenuTransition =
+		ReactOtter.useAnimatedBinding(if submenuOpen then 1 else 0)
+
+	assert(menuItems ~= nil, "Menu items should not be nil")
+	local pillListItems = {}
+	local iconHostItems = {}
+	for k, item in menuItems do
+		if item.integration and item.isDivider == false then
+			-- add to existing pillItemsTable
+			iconHostItems["icon_host" .. k] = React.createElement(IconHost, {
+				toggleTransition = toggleSubmenuTransition,
+				integration = item,
+			}) :: any
+		end
+		if item.isDivider or k == #menuItems then
+			-- create a pill for remaining items
+			local pillContainer = React.createElement("Frame", {
+				Size = UDim2.new(0, 0, 0, 0),
+				AutomaticSize = Enum.AutomaticSize.XY,
+				BorderSizePixel = 0,
+				BackgroundColor3 = style.Theme.BackgroundUIContrast.Color,
+				BackgroundTransparency = style.Theme.BackgroundUIContrast.Transparency
+					* style.Settings.PreferredTransparency,
+			}, {
+				UICorner = React.createElement("UICorner", {
+					CornerRadius = UDim.new(1, 0),
+				}),
+				Padding = React.createElement("UIPadding", {
+					PaddingLeft = UDim.new(0, Constants.UNIBAR_END_PADDING),
+					PaddingRight = UDim.new(0, Constants.UNIBAR_END_PADDING),
+				}),
+				PillsHorizontalList = React.createElement("UIListLayout", {
+					FillDirection = Enum.FillDirection.Horizontal,
+					HorizontalAlignment = Enum.HorizontalAlignment.Center,
+					VerticalAlignment = Enum.VerticalAlignment.Center,
+				}),
+			}, iconHostItems)
+			pillListItems["pill_" .. k] = pillContainer :: any
+			iconHostItems = {}
+		end
+	end
+	return React.createElement(
+		"Frame",
+		{
+			BorderSizePixel = 0,
+			BackgroundTransparency = 1,
+			SelectionGroup = true,
+			ref = props.menuFrameRef,
+			AutomaticSize = Enum.AutomaticSize.XY,
+		},
+		{
+			React.createElement(AnimationStateHelper, {
+				setToggleSubmenuTransition = setToggleSubmenuTransition,
+				menuFrameRef = props.menuFrameRef,
+				subMenuHostRef = props.subMenuHostRef,
+			}),
+			React.createElement("UIListLayout", {
+				FillDirection = Enum.FillDirection.Horizontal,
+				HorizontalAlignment = Enum.HorizontalAlignment.Center,
+				VerticalAlignment = Enum.VerticalAlignment.Center,
+				Padding = UDim.new(0, Constants.MENU_SUBMENU_PADDING),
+			}),
+		} :: Array<any>,
+		pillListItems
+	)
+end
+
 export type UnibarMenuProp = {
 	layoutOrder: number,
 	onAreaChanged: (id: string, position: Vector2, size: Vector2) -> nil,
 	onMinWidthChanged: (width: number) -> (),
 	menuRef: any,
 }
+
+local function SubMenuWrapper(props)
+	if isInExperienceUIVREnabled and isSpatial() and Panel3DInSpatialUI then
+		local currentSubMenu = useObservableValue(ChromeService:currentSubMenu())
+		SubMenuVisibilitySignal:set(currentSubMenu ~= nil)
+	end
+	local renderFunc = React.useCallback(function()
+		return React.createElement(SubMenu, { subMenuHostRef = props.subMenuHostRef }) :: any
+	end, {
+		props.subMenuHostRef,
+	})
+	return if isInExperienceUIVREnabled
+			and isSpatial()
+			and Panel3DInSpatialUI
+		then React.createElement(Panel3DInSpatialUI, {
+			panelType = PanelType.ChromeSubMenu,
+			renderFunction = renderFunc,
+			visibilityObservable = SubMenuVisibilitySignal,
+		})
+		else React.createElement(SubMenu, { subMenuHostRef = props.subMenuHostRef }) :: any
+end
 
 local UnibarMenu = function(props: UnibarMenuProp)
 	local menuFrame = React.useRef(nil)
@@ -679,7 +809,6 @@ local UnibarMenu = function(props: UnibarMenuProp)
 			end
 		end
 	end)
-
 	return {
 		React.createElement("Frame", {
 			Name = "UnibarMenu",
@@ -703,13 +832,20 @@ local UnibarMenu = function(props: UnibarMenuProp)
 				VerticalAlignment = Enum.VerticalAlignment.Top,
 				Padding = UDim.new(0, Constants.MENU_SUBMENU_PADDING),
 			}) :: any,
-			React.createElement(Unibar, {
-				menuFrameRef = menuFrame,
-				subMenuHostRef = if FFlagUnibarMenuOpenSubmenu then subMenuHostRef else nil,
-				onAreaChanged = props.onAreaChanged,
-				onMinWidthChanged = props.onMinWidthChanged,
-			}) :: any,
-			React.createElement(SubMenu, { subMenuHostRef = subMenuHostRef }) :: any,
+			if isInExperienceUIVREnabled and isSpatial()
+				then React.createElement(UnibarPills, {
+					menuFrameRef = menuFrame,
+					subMenuHostRef = subMenuHostRef,
+				}) :: any
+				else React.createElement(Unibar, {
+					menuFrameRef = menuFrame,
+					subMenuHostRef = if FFlagUnibarMenuOpenSubmenu then subMenuHostRef else nil,
+					onAreaChanged = props.onAreaChanged,
+					onMinWidthChanged = props.onMinWidthChanged,
+				}) :: any,
+			if isInExperienceUIVREnabled
+				then React.createElement(SubMenuWrapper, { subMenuHostRef = subMenuHostRef }) :: any
+				else React.createElement(SubMenu, { subMenuHostRef = subMenuHostRef }) :: any,
 			if FFlagEnableChromeShortcutBar then React.createElement(ShortcutBar) else nil,
 			React.createElement(WindowManager) :: React.React_Element<any>,
 		}),

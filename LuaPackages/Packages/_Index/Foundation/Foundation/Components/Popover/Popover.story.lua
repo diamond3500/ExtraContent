@@ -10,6 +10,24 @@ local Popover = require(Foundation.Components.Popover)
 local InputSize = require(Foundation.Enums.InputSize)
 local PopoverSide = require(Foundation.Enums.PopoverSide)
 local PopoverAlign = require(Foundation.Enums.PopoverAlign)
+local Radius = require(Foundation.Enums.Radius)
+local useTokens = require(Foundation.Providers.Style.useTokens)
+local Types = require(Foundation.Components.Types)
+
+type PopoverAlign = PopoverAlign.PopoverAlign
+type PopoverSide = PopoverSide.PopoverSide
+
+local useBackgroundStyle = function(key: string): Types.ColorStyle?
+	local tokens = useTokens()
+	return ({
+		Default = nil,
+		Surface_0 = tokens.Color.Surface.Surface_0,
+		Surface_200 = tokens.Color.Surface.Surface_200,
+		ActionAlert = tokens.Color.ActionAlert.Background,
+	})[key]
+end
+-- This is required because storybook sucks, so the only way to order the options if you want to use a map is to use an array.
+local backgroundStyleOrderedKeys = { "Default", "Surface_0", "Surface_200", "ActionAlert" }
 
 return {
 	summary = "Popover",
@@ -17,6 +35,7 @@ return {
 		Basic = {
 			name = "Basic",
 			story = function(props)
+				local backgroundStyle = useBackgroundStyle(props.controls.backgroundStyle)
 				return React.createElement(View, {
 					Size = UDim2.new(1, 0, 0, 1000),
 					tag = "row align-x-center align-y-center",
@@ -48,6 +67,8 @@ return {
 							{
 								align = props.controls.align,
 								side = props.controls.side,
+								backgroundStyle = backgroundStyle,
+								radius = props.controls.radius,
 							},
 							React.createElement(View, {
 								tag = "col gap-small padding-medium auto-xy",
@@ -126,5 +147,7 @@ return {
 	controls = {
 		side = Dash.values(PopoverSide),
 		align = Dash.values(PopoverAlign),
+		radius = { Radius.Small :: Radius.Radius, Radius.Medium },
+		backgroundStyle = backgroundStyleOrderedKeys,
 	},
 }

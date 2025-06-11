@@ -17,6 +17,8 @@ local MenuFrontButton = Roact.PureComponent:extend("MenuFrontButton")
 local isTenFootInterface = require(RobloxGui.Modules.TenFootInterface):IsEnabled()
 local Theme = require(RobloxGui.Modules.Settings.Theme)
 
+local FFlagShowTeleportHistoryFrontButton = game:DefineFastFlag("ShowTeleportHistoryFrontButton", false)
+
 local yPadding = 6
 
 MenuFrontButton.validateProps = t.strictInterface({
@@ -26,7 +28,7 @@ MenuFrontButton.validateProps = t.strictInterface({
 	LayoutOrder = t.optional(t.integer),
 })
 MenuFrontButton.defaultProps = {
-	frontEnabled = FrontButtonController.hasReturnUniverse(),
+	frontEnabled = FFlagShowTeleportHistoryFrontButton and FrontButtonController.hasReturnUniverse(),
 }
 function MenuFrontButton:init()
 	self:setState({

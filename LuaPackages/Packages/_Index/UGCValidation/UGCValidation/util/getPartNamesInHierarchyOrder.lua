@@ -1,4 +1,3 @@
---!strict
 --[[
 	returns the names of the parts in an asset in hierarchy order i.e parents before children
 ]]
