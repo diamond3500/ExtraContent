@@ -13,7 +13,7 @@ local validateMaterials = require(root.validation.validateMaterials)
 local validateTags = require(root.validation.validateTags)
 local validateMeshBounds = require(root.validation.validateMeshBounds)
 local validateTextureSize = require(root.validation.validateTextureSize)
-local validateProperties = require(root.validation.validateProperties)
+local validatePropertyRequirements = require(root.validation.validatePropertyRequirements)
 local validateAttributes = require(root.validation.validateAttributes)
 local validateMeshVertColors = require(root.validation.validateMeshVertColors)
 local validateSingleInstance = require(root.validation.validateSingleInstance)
@@ -21,6 +21,8 @@ local validateHSR = require(root.validation.validateHSR)
 local validateThumbnailConfiguration = require(root.validation.validateThumbnailConfiguration)
 local validateAccessoryName = require(root.validation.validateAccessoryName)
 local validateScaleType = require(root.validation.validateScaleType)
+local validateLCInRenderBounds = require(root.validation.validateLayeredClothingInRenderBounds)
+local ValidateMeshSizeProperty = require(root.validation.ValidateMeshSizeProperty)
 
 local validateTotalSurfaceArea = require(root.validation.validateTotalSurfaceArea)
 local validateCoplanarIntersection = require(root.validation.validateCoplanarIntersection)
@@ -42,15 +44,14 @@ local getFFlagUGCValidationNameCheck = require(root.flags.getFFlagUGCValidationN
 local getEngineFeatureEngineUGCValidationMaxVerticesCollision =
 	require(root.flags.getEngineFeatureEngineUGCValidationMaxVerticesCollision)
 
-local getFIntUGCValidateAccessoryMaxCageOrigin = require(root.flags.getFIntUGCValidateAccessoryMaxCageOrigin)
 local getFFlagUGCValidateLCHandleScale = require(root.flags.getFFlagUGCValidateLCHandleScale)
 local getFFlagUGCValidationRefactorMeshScale = require(root.flags.getFFlagUGCValidationRefactorMeshScale)
-local getFFlagUGCValidatePropertiesRefactor = require(root.flags.getFFlagUGCValidatePropertiesRefactor)
 
 local getFIntUGCValidationLCHandleScaleOffsetMaximum =
 	require(root.flags.getFIntUGCValidationLCHandleScaleOffsetMaximum) -- / 1000
-
-local maxAccessoryCageOrigin = getFIntUGCValidateAccessoryMaxCageOrigin() / 100
+local getFFlagValidateDeformedLayeredClothingIsInBounds =
+	require(root.flags.getFFlagValidateDeformedLayeredClothingIsInBounds)
+local getFFlagCheckLayeredClothingMeshSize = require(root.flags.getFFlagCheckLayeredClothingMeshSize)
 
 local function validateLayeredClothingAccessory(validationContext: Types.ValidationContext): (boolean, { string }?)
 	local instances = validationContext.instances
@@ -225,7 +226,7 @@ local function validateLayeredClothingAccessory(validationContext: Types.Validat
 		validationResult = false
 	end
 
-	success, failedReason = validateProperties(instance, nil, validationContext)
+	success, failedReason = validatePropertyRequirements(instance, nil, validationContext)
 	if not success then
 		table.insert(reasons, table.concat(failedReason, "\n"))
 		validationResult = false
@@ -289,31 +290,6 @@ local function validateLayeredClothingAccessory(validationContext: Types.Validat
 				table.insert(reasons, table.concat(failedReason, "\n"))
 				validationResult = false
 			end
-
-			if not getFFlagUGCValidatePropertiesRefactor() then
-				Analytics.reportFailure(
-					Analytics.ErrorType.validateLayeredClothingAccessory_CageOriginOutOfBounds,
-					nil,
-					validationContext
-				)
-				-- for layered clothing accessories there is no reason not to have the CageOrigin of the WrapLayer at 0,0,0 as the item should get
-				-- fitted to the character's WrapTarget mesh regardless of the CageOrigin position. There is an exploit that if you have identical
-				-- CageMesh and ReferenceMesh in the WrapLayer then your Accessory will not deform to the character's WrapTarget, then you can
-				-- have a large CageOrigin Position to put Accessories far above the character. This check protects against that
-				if wrapLayer.CageOrigin.Position.Magnitude > maxAccessoryCageOrigin then
-					table.insert(
-						reasons,
-						string.format(
-							"WrapLayer %s found under %s.%s has a CageOrigin position greater than %.2f. You need to set CageOrigin.Position to 0,0,0.",
-							wrapLayer.Name,
-							instance.Name,
-							handle.Name,
-							maxAccessoryCageOrigin
-						)
-					)
-					validationResult = false
-				end
-			end
 		end
 	end
 
@@ -334,6 +310,14 @@ local function validateLayeredClothingAccessory(validationContext: Types.Validat
 		if not success then
 			table.insert(reasons, table.concat(failedReason, "\n"))
 			validationResult = false
+		end
+
+		if getFFlagCheckLayeredClothingMeshSize() then
+			success, failedReason = ValidateMeshSizeProperty.validateSingleMeshPart(handle, validationContext)
+			if not success then
+				table.insert(reasons, table.concat(failedReason, "\n"))
+				validationResult = false
+			end
 		end
 
 		success, failedReason = validateMeshBounds(
@@ -385,6 +369,14 @@ local function validateLayeredClothingAccessory(validationContext: Types.Validat
 			for _, issue in failedReason do
 				table.insert(reasons, issue)
 			end
+			validationResult = false
+		end
+	end
+
+	if getFFlagValidateDeformedLayeredClothingIsInBounds() then
+		success, failedReason = validateLCInRenderBounds(instance, validationContext)
+		if not success then
+			table.insert(reasons, table.concat(failedReason, "\n"))
 			validationResult = false
 		end
 	end

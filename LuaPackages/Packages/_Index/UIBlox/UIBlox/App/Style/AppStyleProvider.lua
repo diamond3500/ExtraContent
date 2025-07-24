@@ -84,7 +84,8 @@ local defaultStyle: StyleProps = {
 local function AppStyleProvider(props: Props)
 	local style: StyleProps = Object.assign({}, defaultStyle, props.style)
 	local themeName, setThemeName = React.useState(style.themeName)
-	local tokens: Tokens = getTokens(style.deviceType, themeName) :: Tokens
+	local scale = style.settings and style.settings.scale
+	local tokens: Tokens = getTokens(style.deviceType, themeName, scale) :: Tokens
 	local textSizeOffset, setTextSizeOffset = React.useState(0)
 	local theme = getThemeFromName(themeName)
 	local foundationProviderPresent = useTokens().Config ~= nil
@@ -96,18 +97,16 @@ local function AppStyleProvider(props: Props)
 			else false
 	end
 
-	if UIBloxConfig.useFoundationColors then
-		if UIBloxConfig.allowDisableColorMapping then
-			if not disableColorMapping then
-				local foundationTokens = getFoundationTokens(style.deviceType, themeName)
-				tokens = TokensMappers.mapColorTokensToFoundation(tokens, foundationTokens)
-				theme = TokensMappers.mapThemeToFoundation(theme, foundationTokens)
-			end
-		else
+	if UIBloxConfig.allowDisableColorMapping then
+		if not disableColorMapping then
 			local foundationTokens = getFoundationTokens(style.deviceType, themeName)
 			tokens = TokensMappers.mapColorTokensToFoundation(tokens, foundationTokens)
 			theme = TokensMappers.mapThemeToFoundation(theme, foundationTokens)
 		end
+	else
+		local foundationTokens = getFoundationTokens(style.deviceType, themeName)
+		tokens = TokensMappers.mapColorTokensToFoundation(tokens, foundationTokens)
+		theme = TokensMappers.mapThemeToFoundation(theme, foundationTokens)
 	end
 
 	-- TODO: Add additional validation for tokens here to make it safe. We can remove the call after design token stuff is fully stable.
@@ -121,6 +120,7 @@ local function AppStyleProvider(props: Props)
 				PreferredTransparency = style.settings.preferredTransparency,
 				ReducedMotion = style.settings.reducedMotion,
 				PreferredTextSize = style.settings.preferredTextSize,
+				Scale = style.settings.scale,
 			}
 			else Constants.DefaultSettings,
 	}

@@ -20,8 +20,6 @@ local Promise = require(Root.Promise)
 
 local UniversalAppPolicy = require(CorePackages.Workspace.Packages.UniversalAppPolicy)
 local getAppFeaturePolicies = UniversalAppPolicy.getAppFeaturePolicies
-local FFlagEnablePreSignedVngShopRedirectUrl =
-	require(CorePackages.Workspace.Packages.SharedFlags).FFlagEnablePreSignedVngShopRedirectUrl
 local GetFStringVNGWebshopUrl =
 	require(CorePackages.Workspace.Packages.SharedFlags).GetFStringVNGWebshopUrl
 local FFlagInExperiencePurchaseFlowRework =
@@ -34,6 +32,7 @@ local PreparePaymentCheck = IAPExperience.PreparePaymentCheck
 local GetFFlagEnableConsolePreparePaymentCheck = IAPExperience.GetEnableConsolePreparePaymentCheck
 
 local SelectedRobuxPackage = require(Root.Utils.SelectedRobuxPackage)
+local DesktopUpsellExperiment = IAPExperience.Utility.DesktopUpsellExperiment
 
 local requiredServices = {
 	Analytics,
@@ -95,26 +94,27 @@ local function launchRobuxUpsell()
 			analytics.signalProductPurchaseUpsellConfirmed(productId, requestType, SelectedRobuxPackage.getProductId(state))
 			if getAppFeaturePolicies().getRedirectBuyRobuxToVNG() then
 				if state.promptState == PromptState.LeaveRobloxWarning then
-					if FFlagEnablePreSignedVngShopRedirectUrl then
-						network.getVngShopUrl(network):andThen(function(vngShopUrl)
-							platformInterface.openVngStore(vngShopUrl.vngShopRedirectUrl)
-							store:dispatch(SetPromptState(PromptState.UpsellInProgress))
-						end):catch(function()
-							platformInterface.openVngStore(GetFStringVNGWebshopUrl())
-							store:dispatch(SetPromptState(PromptState.UpsellInProgress))
-						end)
-					else
-						platformInterface.openVngStore()
+					network.getVngShopUrl(network):andThen(function(vngShopUrl)
+						platformInterface.openVngStore(vngShopUrl.vngShopRedirectUrl)
 						store:dispatch(SetPromptState(PromptState.UpsellInProgress))
-					end
+					end):catch(function()
+						platformInterface.openVngStore(GetFStringVNGWebshopUrl())
+						store:dispatch(SetPromptState(PromptState.UpsellInProgress))
+					end)
 				else
 					store:dispatch(SetPromptState(PromptState.LeaveRobloxWarning))
 				end
 			else
-				if FFlagInExperiencePurchaseFlowRework then
-					local context = {
-						analyticId = state.purchaseFlowUUID,
-					}
+				local context = {
+					analyticId = state.purchaseFlowUUID,
+				}
+				-- Gate experiment logic on there being a variation
+				local upsellExpVariant = DesktopUpsellExperiment.getVariant()
+				if upsellExpVariant == DesktopUpsellExperiment.variants.OpenRobuxStore then
+					platformInterface.openRobuxStoreWithContext(context, SelectedRobuxPackage.getProductId(state))
+				elseif upsellExpVariant == DesktopUpsellExperiment.variants.OpenPaymentsPage then
+					platformInterface.openPaymentsPageWithContext(context, SelectedRobuxPackage.getProductId(state))
+				elseif FFlagInExperiencePurchaseFlowRework then
 					platformInterface.startRobuxUpsellWebByFlowWithContext(context, state.purchaseFlow, SelectedRobuxPackage.getProductId(state))
 				else
 					platformInterface.startRobuxUpsellWebByFlow(state.purchaseFlow, SelectedRobuxPackage.getProductId(state))

@@ -4,60 +4,53 @@ local Packages = Foundation.Parent
 local CoreGui = require(Foundation.Utility.Wrappers).Services.CoreGui
 local GuiService = require(Foundation.Utility.Wrappers).Services.GuiService
 
+local Cryo = require(Packages.Cryo)
 local React = require(Packages.React)
-local RoactGamepad = require(Packages.RoactGamepad)
+local ReactUtils = require(Packages.ReactUtils)
+local useRefCache = ReactUtils.useRefCache
 
 local CursorContext = require(script.Parent.CursorContext)
 local CursorComponent = require(script.Parent.CursorComponent)
 local Cursor = require(script.Parent.Cursors.Cursor)
+local KeyUtilities = require(script.Parent.KeyUtilities)
 local CursorType = require(Foundation.Enums.CursorType)
 type CursorType = CursorType.CursorType
+local useTokens = require(Foundation.Providers.Style.useTokens)
+local Types = require(Foundation.Components.Types)
+
+local Flags = require(Foundation.Utility.Flags)
 
 type Props = {
 	children: React.ReactNode,
 }
 
-local decodeKey = function(key: string): (UDim, number, number)
-	local radius1 = math.huge
-	local radius2 = math.huge
-	local offset = math.huge
-	local borderWidth = math.huge
-
-	for idx, token in string.split(key, " ") do
-		local num = tonumber(token)
-		if num ~= nil then
-			if idx == 1 then
-				radius1 = num
-			elseif idx == 2 then
-				radius2 = num
-			elseif idx == 3 then
-				offset = num
-			elseif idx == 4 then
-				borderWidth = num
-			end
-		end
-	end
-	assert(
-		radius1 ~= math.huge and radius2 ~= math.huge and offset ~= math.huge and borderWidth ~= math.huge,
-		"Error! Not all parameters are decoded."
-	)
-	local cornerRadius = UDim.new(radius1, math.max(0, radius2 + offset))
-
-	return cornerRadius, offset, borderWidth
-end
-
 local function CursorProvider(props: Props)
 	local mountedCursors, setMountedCursors = React.useState({} :: { [string]: boolean })
 	local frameRef = React.useRef(nil :: GuiObject?)
 	local selectionImageObject, setSelectionImageObject = React.useState(nil)
-	local refCache = RoactGamepad.useRefCache()
+	local refCache = useRefCache()
+	local tokens = useTokens()
 
 	local contextValue = React.useMemo(function()
 		return {
 			refCache = refCache,
 			setMountedCursors = setMountedCursors,
+			getCursor = function(cursor: Types.Cursor?)
+				local key = KeyUtilities.mapCursorToKey(cursor, tokens)
+
+				setMountedCursors(function(mountedExisting)
+					if mountedExisting[key] == nil then
+						return Cryo.Dictionary.union(mountedExisting, {
+							[key] = true,
+						})
+					end
+					return mountedExisting
+				end)
+
+				return refCache[key]
+			end,
 		}
-	end, { refCache :: any, setMountedCursors })
+	end, { refCache :: any, setMountedCursors, if Flags.FoundationSelectionCursorMigration then tokens else nil })
 
 	local renderCursors = function(): any
 		local cursors: { [string | CursorType]: React.ReactElement<any> } = {}
@@ -75,7 +68,7 @@ local function CursorProvider(props: Props)
 					cursorType = key :: CursorType,
 				})
 			else
-				local cornerRadius, offset, borderWidth = decodeKey(key)
+				local cornerRadius, offset, borderWidth = KeyUtilities.decodeKey(key)
 
 				cursors[key] = React.createElement(CursorComponent, {
 					ref = refCache[key],
@@ -95,9 +88,7 @@ local function CursorProvider(props: Props)
 			return
 		end
 
-		local isDescendantOfCoreGui = if frameRef.current ~= nil
-			then frameRef.current:IsDescendantOf(CoreGui)
-			else false
+		local isDescendantOfCoreGui = frameRef.current:IsDescendantOf(CoreGui)
 
 		local function setUpSelectionImageObjectConnection()
 			-- Listen to different signals depending on whether it's under CoreGui or PlayerGui.
@@ -123,23 +114,19 @@ local function CursorProvider(props: Props)
 		end
 
 		local selectionImageObjectConnection = setUpSelectionImageObjectConnection()
-		local ancestryConnection = if frameRef.current ~= nil
-			then frameRef.current.AncestryChanged:Connect(function()
-				-- This component listens for the event "all parents have been set".
-				-- In didMount, parents of the mounted component are not required to be set,
-				-- therefore we can't do ancestry checks (like checking to see if the mounted
-				-- component is a child of CoreGui or PlayerGui). This component makes it easy to
-				-- do this check and trigger functions when all parents are assigned after didMount.
-				selectionImageObjectConnection:Disconnect()
-				selectionImageObjectConnection = setUpSelectionImageObjectConnection()
-			end)
-			else nil
+		local ancestryConnection = frameRef.current.AncestryChanged:Connect(function()
+			-- This component listens for the event "all parents have been set".
+			-- In didMount, parents of the mounted component are not required to be set,
+			-- therefore we can't do ancestry checks (like checking to see if the mounted
+			-- component is a child of CoreGui or PlayerGui). This component makes it easy to
+			-- do this check and trigger functions when all parents are assigned after didMount.
+			selectionImageObjectConnection:Disconnect()
+			selectionImageObjectConnection = setUpSelectionImageObjectConnection()
+		end)
 
 		return function()
 			selectionImageObjectConnection:Disconnect()
-			if ancestryConnection ~= nil then
-				ancestryConnection:Disconnect()
-			end
+			ancestryConnection:Disconnect()
 		end
 	end, {})
 

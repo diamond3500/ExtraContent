@@ -1,5 +1,6 @@
 local Foundation = script:FindFirstAncestor("Foundation")
 local Packages = Foundation.Parent
+local Flags = require(Foundation.Utility.Flags)
 
 local React = require(Packages.React)
 local ReactOtter = require(Packages.ReactOtter)
@@ -10,8 +11,8 @@ local withDefaults = require(Foundation.Utility.withDefaults)
 local useTokens = require(Foundation.Providers.Style.useTokens)
 local useCursor = require(Foundation.Providers.Cursor.useCursor)
 
-local ScrollBarVisibility = require(Foundation.Enums.ScrollBarVisibility)
-type ScrollBarVisibility = ScrollBarVisibility.ScrollBarVisibility
+local Visibility = require(Foundation.Enums.Visibility)
+type Visibility = Visibility.Visibility
 
 local ControlState = require(Foundation.Enums.ControlState)
 type ControlState = ControlState.ControlState
@@ -24,7 +25,7 @@ local ANIMATION_CONFIG = {
 
 export type ScrollingFrameProps = {
 	controlState: ControlState,
-	scrollBarVisibility: Bindable<ScrollBarVisibility>?,
+	scrollBarVisibility: Bindable<Visibility>?,
 	onCanvasPositionChanged: ((instance: ScrollingFrame) -> ())?,
 	onAbsoluteCanvasSizeChanged: ((instance: ScrollingFrame) -> ())?,
 	onAbsoluteWindowSizeChanged: ((instance: ScrollingFrame) -> ())?,
@@ -45,7 +46,15 @@ local function ScrollingFrame(scrollingFrameProps: ScrollingFrameProps, ref: Rea
 	local props = withDefaults(scrollingFrameProps, defaultProps)
 	local tokens = useTokens()
 	local scrollBarStyle = tokens.Semantic.Color.Common.Placeholder
-	local scrollBarThickness = tokens.Size.Size_300
+	local scrollBarThickness = if Flags.FoundationFixVisibleNoneScrollBarThickness
+		then React.useMemo(function()
+			if props.scrollBarVisibility == Visibility.None then
+				return 0
+			else
+				return tokens.Size.Size_300
+			end
+		end, { props.scrollBarVisibility })
+		else tokens.Size.Size_300
 	local cursor = useCursor()
 
 	local delayRef = React.useRef(nil :: thread?)

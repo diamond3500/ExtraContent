@@ -7,15 +7,25 @@ local SafeFlags = require(Packages.SafeFlags)
 -- Example:
 -- 	MyFastFlag = SafeFlags.createGetFFlag("MyFastFlag")(), <-- Make sure to call the function to get the value
 return {
-	FoundationStylingPolyfill = SafeFlags.createGetFFlag("FoundationStylingPolyfill")(),
+	FoundationDisableStylingPolyfill = SafeFlags.createGetFFlag("FoundationDisableStylingPolyfill")(),
 	FoundationDisableBadgeTruncation = SafeFlags.createGetFFlag("FoundationDisableBadgeTruncation")(),
-	FoundationMigrateStylingV2 = SafeFlags.createGetFFlag("FoundationMigrateStylingV2")(),
-	FoundationTextStateLayer = SafeFlags.createGetFFlag("FoundationTextStateLayer")(),
-	FoundationFixChipEmphasisHoverState = SafeFlags.createGetFFlag("FoundationFixChipEmphasisHoverState")(),
-	FoundationFixDisablingForIconButtons = SafeFlags.createGetFFlag("FoundationFixDisablingForIconButtons")(),
-	FoundationFixUseFloatingContentSize = SafeFlags.createGetFFlag("FoundationFixUseFloatingContentSize")(),
-	FoundationAdjustButtonIconSizes = SafeFlags.createGetFFlag("FoundationAdjustButtonIconSizes2")(),
-	FoundationFixBackgroundForStylingV2 = SafeFlags.createGetFFlag("FoundationFixBackgroundForStylingV2")(),
-	FoundationRefactorInputs = SafeFlags.createGetFFlag("FoundationRefactorInputs")(),
+	FoundationFixScrollViewBackgroundForStylingV2 = SafeFlags.createGetFFlag(
+		"FoundationFixScrollViewBackgroundForStylingV2"
+	)(),
+	FoundationStandardizeInputLabelSizes = SafeFlags.createGetFFlag("FoundationStandardizeInputLabelSizes")(),
+	FoundationWarnOnMultipleStyleLinks = SafeFlags.createGetFFlag("FoundationWarnOnMultipleStyleLinks")(),
+	FoundationMigrateIconNames = SafeFlags.createGetFFlag("FoundationMigrateIconNames")(),
+	FoundationDisableDragPositionAdjustmentForGuiInsets = SafeFlags.createGetFFlag(
+		"FoundationDisableDragPositionAdjustmentForGuiInsets"
+	)(),
 	FoundationChipDesignUpdate = SafeFlags.createGetFFlag("FoundationChipDesignUpdate")(),
+	FoundationUpdateBadgeDesign = SafeFlags.createGetFFlag("FoundationUpdateBadgeDesign")(),
+	FoundationSkipPopoverOnPressedOutsideWhenClickingAnchor = SafeFlags.createGetFFlag(
+		"FoundationSkipPopoverOnPressedOutsideWhenClickingAnchor"
+	)(),
+	FoundationSliderOrientationImprovement = SafeFlags.createGetFFlag("FoundationSliderOrientationImprovement")(),
+	FoundationFixVisibleNoneScrollBarThickness = SafeFlags.createGetFFlag("FoundationFixVisibleNoneScrollBarThickness")(),
+	FoundationFixInputFieldWidth = SafeFlags.createGetFFlag("FoundationFixInputFieldWidth")(),
+	FoundationSelectionCursorMigration = SafeFlags.createGetFFlag("FoundationSelectionCursorMigration")(),
+	FoundationFixCursorStyling = SafeFlags.createGetFFlag("FoundationFixCursorStyling")(),
 }

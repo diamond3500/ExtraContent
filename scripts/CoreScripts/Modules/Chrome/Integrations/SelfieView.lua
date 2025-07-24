@@ -24,11 +24,9 @@ local GetFFlagChromeSupportSocialService = require(Chrome.Flags.GetFFlagChromeSu
 local GetFFlagChromeSelfViewIgnoreCoreGui = require(Chrome.Flags.GetFFlagChromeSelfViewIgnoreCoreGui)
 local GetFFlagChromeTrackWindowPosition = require(Chrome.Flags.GetFFlagChromeTrackWindowPosition)
 local GetFFlagChromeTrackWindowStatus = require(Chrome.Flags.GetFFlagChromeTrackWindowStatus)
-local FFlagDisableCameraOnCoreGuiDisabled = game:DefineFastFlag("DisableCameraOnCoreGuiDisabled", false)
 
 local SharedFlags = require(CorePackages.Workspace.Packages.SharedFlags)
 local FFlagChromeSelfieViewUsePolicy = SharedFlags.FFlagChromeSelfieViewUsePolicy
-local FFlagSelfViewFixes = SharedFlags.GetFFlagSelfViewFixes()
 
 local SelfieView = require(SelfieViewModule)
 local FaceChatUtils = require(SelfieViewModule.Utils.FaceChatUtils)
@@ -99,9 +97,7 @@ local selfieViewChromeIntegration = ChromeService:register({
 			return React.createElement(SelfieView.Window, {
 				id = ID,
 				windowSize = windowSize,
-				isDraggedOut = if FFlagSelfViewFixes
-					then connectionObject ~= nil and connectionObject.connection ~= nil
-					else connectionObject ~= nil,
+				isDraggedOut = connectionObject ~= nil and connectionObject.connection ~= nil,
 			}, {})
 		end,
 	},
@@ -119,7 +115,7 @@ local updateAvailability = function(): ()
 	local coreGuiEnabled = StarterGui:GetCoreGuiEnabled(Enum.CoreGuiType.SelfView)
 	if not GetFFlagChromeSelfViewIgnoreCoreGui() and not coreGuiEnabled then
 		-- If CoreGuiType disabled while camera is on, turn it off
-		if FFlagDisableCameraOnCoreGuiDisabled and FaceChatUtils.isCameraOn() then
+		if FaceChatUtils.isCameraOn() then
 			FaceChatUtils.toggleVideoAnimation()
 		end
 		selfieViewChromeIntegration.availability:unavailable()

@@ -11,7 +11,6 @@ local Interactable = require(Foundation.Components.Interactable)
 local Types = require(Foundation.Components.Types)
 local withDefaults = require(Foundation.Utility.withDefaults)
 local useDefaultTags = require(Foundation.Utility.useDefaultTags)
-local StateLayerAffordance = require(Foundation.Enums.StateLayerAffordance)
 local withGuiObjectProps = require(Foundation.Utility.withGuiObjectProps)
 local useStyledDefaults = require(Foundation.Utility.useStyledDefaults)
 local indexBindable = require(Foundation.Utility.indexBindable)
@@ -52,32 +51,20 @@ local DEFAULT_TAGS = "gui-object-defaults text-defaults text-size-defaults text-
 local DEFAULT_TAGS_WITH_BG = `{DEFAULT_TAGS} x-default-transparency`
 
 local function Text(textProps: TextProps, ref: React.Ref<GuiObject>?)
-	local defaultPropsWithStyles = if Flags.FoundationStylingPolyfill
+	local defaultPropsWithStyles = if not Flags.FoundationDisableStylingPolyfill
 		then useStyledDefaults("Text", textProps.tag, DEFAULT_TAGS, defaultProps)
 		else nil
 	local props = withDefaults(
 		textProps,
-		(if Flags.FoundationStylingPolyfill then defaultPropsWithStyles else defaultProps) :: typeof(defaultProps)
+		(
+				if not Flags.FoundationDisableStylingPolyfill then defaultPropsWithStyles else defaultProps
+			) :: typeof(defaultProps)
 	)
 
 	local isInteractable = props.onStateChanged ~= nil or props.onActivated ~= nil
 
-	local defaultTags = DEFAULT_TAGS
-	if Flags.FoundationMigrateStylingV2 then
-		if Flags.FoundationFixBackgroundForStylingV2 then
-			-- Once someone set the background it's their responsibility to provide both color and transparency. We negate the transparency added by gui-object-defaults to avoid UIBLOX-2074
-			if props.backgroundStyle ~= nil then
-				defaultTags = DEFAULT_TAGS_WITH_BG
-			end
-		else
-			local transparency = if props.backgroundStyle ~= nil
-				then indexBindable(props.backgroundStyle, "Transparency") :: any
-				else nil
-			if transparency == 0 then
-				defaultTags ..= " x-default-transparency"
-			end
-		end
-	end
+	local defaultTags = if props.backgroundStyle ~= nil then DEFAULT_TAGS_WITH_BG else DEFAULT_TAGS
+
 	local tagsWithDefaults = useDefaultTags(props.tag, defaultTags)
 	local tag = useStyleTags(tagsWithDefaults)
 
@@ -161,10 +148,9 @@ local function Text(textProps: TextProps, ref: React.Ref<GuiObject>?)
 			component = engineComponent,
 			onActivated = props.onActivated,
 			onStateChanged = props.onStateChanged,
-			stateLayer = if Flags.FoundationTextStateLayer
-				then props.stateLayer
-				else if props.onStateChanged then props.stateLayer else { affordance = StateLayerAffordance.None },
+			stateLayer = props.stateLayer,
 			isDisabled = props.isDisabled,
+			cursor = props.cursor,
 		})
 		else engineComponentProps
 

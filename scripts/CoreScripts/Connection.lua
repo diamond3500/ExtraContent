@@ -40,6 +40,8 @@ local FFlagAllowDisconnectGuiForOkUnknown = require(RobloxGui.Modules.Flags.FFla
 
 local FFlagEnableExperienceGenericChallengeRenderingConnection = game:DefineFastFlag("EnableExperienceGenericChallengeRenderingConnection", false)
 
+local GetFFlagDisplayChannelNameOnErrorPrompt = require(RobloxGui.Modules.Flags.GetFFlagDisplayChannelNameOnErrorPrompt)
+
 local function safeGetFInt(name, defaultValue)
 	local success, result = pcall(function()
 		return tonumber(settings():GetFVariable(name))
@@ -67,8 +69,6 @@ local reconnectDisabledReason = safeGetFString(
 )
 
 local lastErrorTimeStamp = tick()
-
-local coreScriptTableTranslator = CoreGui.CoreScriptLocalization:GetTranslator(LocalizationService.RobloxLocaleId)
 
 -- The new, supported way to translate strings in the client.
 -- This function should be used instead of coreScriptTableTranslator:FormatByKey.
@@ -633,7 +633,11 @@ local function updateErrorPrompt(errorMsg, errorCode, errorType)
 	end
 
 	if errorPrompt then
-		errorPrompt:onErrorChanged(errorMsg, errorCode)
+		if GetFFlagDisplayChannelNameOnErrorPrompt() then
+			errorPrompt:onErrorChanged(errorMsg, errorCode, true)
+		else
+			errorPrompt:onErrorChanged(errorMsg, errorCode)
+		end
 	end
 end
 
@@ -657,13 +661,8 @@ local function onScreenSizeChanged()
 	end
 end
 
-local function onLocaleIdChanged()
-	coreScriptTableTranslator = CoreGui.CoreScriptLocalization:GetTranslator(LocalizationService.RobloxLocaleId)
-end
-
 -- This script is always loaded from the engine
 RobloxGui:GetPropertyChangedSignal("AbsoluteSize"):connect(onScreenSizeChanged)
-LocalizationService:GetPropertyChangedSignal("RobloxLocaleId"):connect(onLocaleIdChanged)
 
 -- pre-run it once in case some error occurs before the connection
 onErrorMessageChanged()

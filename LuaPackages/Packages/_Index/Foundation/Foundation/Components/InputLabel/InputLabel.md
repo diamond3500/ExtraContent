@@ -4,9 +4,11 @@ category: Display
 
 ## Overview
 
-InputLabel displays label text on components like [[Checkbox]]es and [[RadioGroup]].Items. It can be used in place of `Text` and has default sizing and styling support.
+`InputLabel` displays label text on components like [[Checkbox]]es and [[RadioGroup]].Items. It can be used in place of `Text` and has default sizing and styling support.
 
-## How to Use
+---
+
+## Usage
 
 `InputLabel` supports an optional `RichText` prop. 
 
@@ -15,10 +17,12 @@ InputLabel displays label text on components like [[Checkbox]]es and [[RadioGrou
 ```lua
 local Foundation = require(Packages.Foundation)
 local InputLabel = Foundation.InputLabel
+local InputSize = Foundation.Enums.InputSize
 ...
 
 return React.createElement(InputLabel, {
     Text = "I'm an <b>InputLabel</b>.",
     RichText = true,
+    size = InputSize.Medium,
 })
 ```

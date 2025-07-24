@@ -7,19 +7,29 @@ local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 
 local Roact = require(CorePackages.Packages.Roact)
 local RoactRodux = require(CorePackages.Packages.RoactRodux)
+local Signals = require(CorePackages.Packages.Signals)
+local SignalsReact = require(CorePackages.Packages.SignalsReact)
 local Otter = require(CorePackages.Packages.Otter)
+local Cryo = require(CorePackages.Packages.Cryo)
+local PlayerListPackage = require(CorePackages.Workspace.Packages.PlayerList)
+local LeaderboardStore = require(CorePackages.Workspace.Packages.LeaderboardStore)
 
 local StatsUtils = require(RobloxGui.Modules.Stats.StatsUtils)
 
 local Presentation = script.Parent
+local PresentationCommon = Presentation.Parent.PresentationCommon
 local PlayerList = Presentation.Parent.Parent
+
+local useLeaderboardStore = PlayerListPackage.Hooks.useLeaderboardStore
 
 local FFlagPlayerListClosedNoRender = require(PlayerList.Flags.FFlagPlayerListClosedNoRender)
 local FFlagPlayerListClosedNoRenderWithTenFoot = require(PlayerList.Flags.FFlagPlayerListClosedNoRenderWithTenFoot)
 
 local PlayerListSorter = require(Presentation.PlayerListSorter)
+local PlayerEntryContainer = require(PlayerList.Components.Container.PlayerEntryContainer)
+local PlayerListDisplayContainer = require(PlayerList.Components.Container.PlayerListDisplayContainer)
 local PlayerEntry = require(Presentation.PlayerEntry)
-local TenFootSideBar = require(Presentation.Parent.PresentationCommon.TenFootSideBar)
+local TenFootSideBar = require(PresentationCommon.TenFootSideBar)
 
 local Connection = PlayerList.Components.Connection
 local EventConnections = require(Connection.EventConnections)
@@ -28,6 +38,9 @@ local TopStatConnector = require(Connection.TopStatConnector)
 local LayoutValues = require(Connection.LayoutValues)
 local WithLayoutValues = LayoutValues.WithLayoutValues
 local FFlagPlayerListReduceRerenders = require(PlayerList.Flags.FFlagPlayerListReduceRerenders)
+
+local FFlagUseNewPlayerList = PlayerListPackage.Flags.FFlagUseNewPlayerList
+local FFlagAddNewPlayerListFocusNav = PlayerListPackage.Flags.FFlagAddNewPlayerListFocusNav
 
 local MOTOR_OPTIONS = {
 	dampingRatio = 1,
@@ -88,7 +101,11 @@ end
 
 function PlayerListApp:render()
 	if (FFlagPlayerListClosedNoRender or FFlagPlayerListClosedNoRenderWithTenFoot) and not self.state.visible then
-		return Roact.createElement(ContextActionsBinder)
+		return Roact.createFragment({
+			Roact.createElement(ContextActionsBinder),
+			-- TODO: Remove when playerIconInfo and playerRelationship data gets moved to leaderboard store (APPEXP-2963)
+			if FFlagAddNewPlayerListFocusNav then Roact.createElement(EventConnections) else nil,
+		})
 	end
 	return WithLayoutValues(function(layoutValues)
 		local containerPosition = layoutValues.ContainerPosition
@@ -105,7 +122,13 @@ function PlayerListApp:render()
 			maxLeaderstats = layoutValues.MaxLeaderstatsSmallScreen
 		end
 
-		local leaderstatsCount = math.min(#self.props.gameStats, maxLeaderstats)
+		local leaderstatsCount = 0
+		if FFlagUseNewPlayerList then
+			leaderstatsCount = math.min(self.props.gameStatsCount, maxLeaderstats)
+		else
+			leaderstatsCount = math.min(#self.props.gameStats, maxLeaderstats)
+		end
+
 		if leaderstatsCount > 0 then
 			local statOffsetX = layoutValues.StatEntrySizeX + layoutValues.EntryPadding
 			containerSize = containerSize + UDim2.new(0, statOffsetX * leaderstatsCount, 0, 0)
@@ -156,26 +179,35 @@ function PlayerListApp:render()
 						Size = UDim2.new(1, layoutValues.EntryXOffset, 0, layoutValues.PlayerEntrySizeY),
 						BackgroundTransparency = 1,
 					}, {
-						PlayerEntry = Roact.createElement(PlayerEntry, {
-							player = player,
-							playerStats = self.props.playerStats[player.UserId],
-							playerIconInfo = self.props.playerIconInfo[player.UserId],
-							playerRelationship = self.props.playerRelationship[player.UserId],
-							titlePlayerEntry = true,
-							hasDivider = false,
-							gameStats = if FFlagPlayerListReduceRerenders then nil else self.props.gameStats,
-							gameStatNames = gameStatNames,
-							entrySize = entrySize,
-						}),
+						PlayerEntry = if FFlagUseNewPlayerList 
+							then Roact.createElement(PlayerEntryContainer, {
+									entrySizeX = entrySize,
+									titlePlayerEntry = true,
+									player = player,
+									playerIconInfo = self.props.playerIconInfo[player.UserId],
+									playerRelationship = self.props.playerRelationship[player.UserId],
+								})
+							else Roact.createElement(PlayerEntry, {
+									player = player,
+									playerStats = self.props.playerStats[player.UserId],
+									playerIconInfo = self.props.playerIconInfo[player.UserId],
+									playerRelationship = self.props.playerRelationship[player.UserId],
+									titlePlayerEntry = true,
+									hasDivider = false,
+									gameStats = if FFlagPlayerListReduceRerenders then nil else self.props.gameStats,
+									gameStatNames = gameStatNames,
+									entrySize = entrySize,
+								}),
 					})
 					break
 				end
 			end
 		end
 
-		childElements["PlayerScrollList"] = Roact.createElement(PlayerListSorter, {
+		childElements["PlayerScrollList"] = Roact.createElement(if FFlagUseNewPlayerList then PlayerListDisplayContainer else PlayerListSorter, {
 			screenSizeY = self.props.screenSizeY,
 			entrySize = entrySize,
+			isVisible = if FFlagAddNewPlayerListFocusNav then self.state.visible else nil,
 		})
 		childElements["EventConnections"] = Roact.createElement(EventConnections)
 		childElements["ContextActionsBindings"] = Roact.createElement(ContextActionsBinder)
@@ -258,4 +290,21 @@ local function mapStateToProps(state)
 	}
 end
 
-return RoactRodux.UNSTABLE_connect2(mapStateToProps, nil)(PlayerListApp)
+local function PlayerListAppWithLeaderboardStore(props)
+	local leaderboardStore: LeaderboardStore.LeaderboardStore? = useLeaderboardStore()
+
+	local getGameStatsCount = Signals.createComputed(function(scope)
+		return if leaderboardStore then leaderboardStore.getGameStatsList().getCount(scope) else #props.gameStats
+	end)
+	local gameStatsCount = SignalsReact.useSignalState(getGameStatsCount)
+
+	return Roact.createElement(PlayerListApp, Cryo.Dictionary.join(props, {
+		gameStatsCount = gameStatsCount,
+	}))
+end
+
+if FFlagUseNewPlayerList then
+	return RoactRodux.connect(mapStateToProps, nil)(PlayerListAppWithLeaderboardStore)
+else
+	return RoactRodux.UNSTABLE_connect2(mapStateToProps, nil)(PlayerListApp)
+end

@@ -14,15 +14,14 @@ local validateMeshComparison = require(root.validation.validateMeshComparison)
 local getMeshSize = require(root.util.getMeshSize)
 local getEditableMeshFromContext = require(root.util.getEditableMeshFromContext)
 local getExpectedPartSize = require(root.util.getExpectedPartSize)
+local getMeshInfo = require(root.util.getMeshInfo)
 
 local FailureReasonsAccumulator = require(root.util.FailureReasonsAccumulator)
 
-local getFIntUGCValidateBodyPartMaxCageOrigin = require(root.flags.getFIntUGCValidateBodyPartMaxCageOrigin)
-local getFFlagUGCValidatePropertiesRefactor = require(root.flags.getFFlagUGCValidatePropertiesRefactor)
+local getFFlagUGCValidationConsolidateGetMeshInfos = require(root.flags.getFFlagUGCValidationConsolidateGetMeshInfos)
 
-local maxBodyPartCageOrigin = getFIntUGCValidateBodyPartMaxCageOrigin() / 100
-
-local function getMeshInfoHelper(
+-- TODO: Remove with FFlagConsolidateGetMeshInfos
+local function DEPRECATED_getMeshInfoHelper(
 	inst: Instance,
 	fieldName: string,
 	contentId: string,
@@ -48,13 +47,14 @@ local function getMeshInfoHelper(
 	return true, meshInfo
 end
 
-local function getMeshInfo(
+-- TODO: Remove with FFlagConsolidateGetMeshInfos
+local function DEPRECATED_getMeshInfo(
 	inst: Instance,
 	meshScale: Vector3,
 	validationContext: Types.ValidationContext
 ): (boolean, Types.MeshInfo?)
 	if inst:IsA("WrapTarget") then
-		return getMeshInfoHelper(
+		return DEPRECATED_getMeshInfoHelper(
 			inst,
 			"CageMeshId",
 			(inst :: WrapTarget).CageMeshId,
@@ -63,7 +63,14 @@ local function getMeshInfo(
 			validationContext
 		)
 	elseif inst:IsA("MeshPart") then
-		return getMeshInfoHelper(inst, "MeshId", (inst :: MeshPart).MeshId, meshScale, inst.Name, validationContext)
+		return DEPRECATED_getMeshInfoHelper(
+			inst,
+			"MeshId",
+			(inst :: MeshPart).MeshId,
+			meshScale,
+			inst.Name,
+			validationContext
+		)
 	end
 
 	return false
@@ -74,16 +81,37 @@ local function validateWrapTargetComparison(
 	meshHandle: MeshPart,
 	validationContext: Types.ValidationContext
 ): (boolean, { string }?)
-	local getMeshInfoSuccess, meshInfo = getMeshInfo(meshHandle, meshScale, validationContext)
+	local getMeshInfoSuccess, meshInfoErrors, meshInfo
+	if getFFlagUGCValidationConsolidateGetMeshInfos() then
+		getMeshInfoSuccess, meshInfoErrors, meshInfo =
+			getMeshInfo(meshHandle, Constants.MESH_CONTENT_TYPE.RENDER_MESH, validationContext)
+	else
+		getMeshInfoSuccess, meshInfo = DEPRECATED_getMeshInfo(meshHandle, meshScale, validationContext)
+	end
 	if not getMeshInfoSuccess then
-		return false, { "Failed to load mesh data" }
+		return false,
+			if getFFlagUGCValidationConsolidateGetMeshInfos() then meshInfoErrors else { "Failed to load mesh data" }
 	end
 
 	local wrapTarget = meshHandle:FindFirstChildWhichIsA("WrapTarget")
 	assert(wrapTarget, "Missing WrapTarget child for " .. meshHandle.Name)
-	local getOtherMeshInfoSuccess, wrapMeshInfo = getMeshInfo(wrapTarget, meshScale, validationContext)
+	local getOtherMeshInfoSuccess, wrapMeshInfoErrors, wrapMeshInfo
+	if getFFlagUGCValidationConsolidateGetMeshInfos() then
+		getOtherMeshInfoSuccess, wrapMeshInfoErrors, wrapMeshInfo =
+			getMeshInfo(wrapTarget, Constants.MESH_CONTENT_TYPE.OUTER_CAGE, validationContext)
+	else
+		getOtherMeshInfoSuccess, wrapMeshInfo = DEPRECATED_getMeshInfo(wrapTarget, meshScale, validationContext)
+	end
 	if not getOtherMeshInfoSuccess then
-		return false, { "Failed to load mesh data" }
+		return false,
+			if getFFlagUGCValidationConsolidateGetMeshInfos()
+				then wrapMeshInfoErrors
+				else { "Failed to load mesh data" }
+	end
+
+	if getFFlagUGCValidationConsolidateGetMeshInfos() then
+		(meshInfo :: Types.MeshInfo).scale = meshScale;
+		(wrapMeshInfo :: Types.MeshInfo).scale = meshScale
 	end
 
 	return validateMeshComparison(
@@ -136,30 +164,6 @@ local function calculateMeshSize(
 	return true, nil, meshSize
 end
 
--- if the CageOrigin is far from the origin, then layered clothing can get fitted to the character, but it will be visibly offset from the character
-local function validateCageOrigin(
-	meshHandle: MeshPart,
-	validationContext: Types.ValidationContext
-): (boolean, { string }?)
-	local wrapTarget = meshHandle:FindFirstChildWhichIsA("WrapTarget")
-	-- the existance of all required Instances has been checked prior to calling this function where the asset is checked against the schema
-	assert(wrapTarget, "Missing WrapTarget child for " .. meshHandle.Name)
-
-	if wrapTarget.CageOrigin.Position.Magnitude > maxBodyPartCageOrigin :: number then
-		Analytics.reportFailure(Analytics.ErrorType.validateBodyPart_CageOriginOutOfBounds, nil, validationContext)
-		return false,
-			{
-				string.format(
-					"WrapTarget %s found under %s has a CageOrigin position greater than %.2f. You need to set CageOrigin.Position to 0,0,0.",
-					wrapTarget.Name,
-					meshHandle.Name,
-					maxBodyPartCageOrigin :: number
-				),
-			}
-	end
-	return true
-end
-
 local function validateInternal(
 	meshHandle: MeshPart,
 	validationContext: Types.ValidationContext
@@ -174,9 +178,6 @@ local function validateInternal(
 	local meshScale = getExpectedPartSize(meshHandle, validationContext) / meshSize
 
 	local reasonsAccumulator = FailureReasonsAccumulator.new()
-	if not getFFlagUGCValidatePropertiesRefactor() then
-		reasonsAccumulator:updateReasons(validateCageOrigin(meshHandle, validationContext))
-	end
 
 	reasonsAccumulator:updateReasons(validateWrapTargetComparison(meshScale, meshHandle, validationContext))
 

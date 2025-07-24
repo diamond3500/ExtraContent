@@ -17,7 +17,10 @@ local withStyle = UIBlox.Style.withStyle
 local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 local playerInterface = require(RobloxGui.Modules.Interfaces.playerInterface)
 
-local Components = script.Parent.Parent
+local Presentation = script.Parent
+local Components = Presentation.Parent
+local PlayerList = Presentation.Parent.Parent
+
 local Connection = Components.Connection
 local LayoutValues = require(Connection.LayoutValues)
 local WithLayoutValues = LayoutValues.WithLayoutValues
@@ -25,9 +28,6 @@ local WithLayoutValues = LayoutValues.WithLayoutValues
 local PlayerEntry = require(script.Parent.PlayerEntry)
 local TeamEntry = require(script.Parent.TeamEntry)
 local TitleBar = require(script.Parent.TitleBar)
-
-local Presentation = script.Parent
-local PlayerList = Presentation.Parent.Parent
 
 local FFlagPlayerListReduceRerenders = require(PlayerList.Flags.FFlagPlayerListReduceRerenders)
 local FFlagPlayerListFixMobileScrolling = require(PlayerList.Flags.FFlagPlayerListFixMobileScrolling)
@@ -194,6 +194,7 @@ function PlayerListDisplay:render()
 				Size = UDim2.new(1, 0, 0, 24),
 				entrySize = self.props.entrySize,
 				Position = UDim2.fromOffset(0, penPositionY),
+				isSmallTouchDevice = true,
 			})
 			penPositionY += teamEntrySizeY + entryPadding
 

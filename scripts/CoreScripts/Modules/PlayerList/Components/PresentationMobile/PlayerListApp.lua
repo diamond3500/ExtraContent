@@ -6,6 +6,7 @@ local Roact = require(CorePackages.Packages.Roact)
 local RoactRodux = require(CorePackages.Packages.RoactRodux)
 local Otter = require(CorePackages.Packages.Otter)
 local AppFonts = require(CorePackages.Workspace.Packages.Style).AppFonts
+local PlayerListPackage = require(CorePackages.Workspace.Packages.PlayerList)
 
 local CoreGui = game:GetService("CoreGui")
 local Modules = CoreGui.RobloxGui.Modules
@@ -20,6 +21,7 @@ local FFlagPlayerListClosedNoRender = require(PlayerList.Flags.FFlagPlayerListCl
 
 local SetPlayerListVisibility = require(PlayerList.Actions.SetPlayerListVisibility)
 
+local PlayerListDisplayContainer = require(PlayerList.Components.Container.PlayerListDisplayContainer)
 local PlayerDropDown = require(Presentation.PlayerDropDown)
 local PlayerListSorter = require(Presentation.PlayerListSorter)
 
@@ -32,6 +34,8 @@ local WithLayoutValues = LayoutValues.WithLayoutValues
 
 local FFlagPlayerListFixMobileScrolling = require(PlayerList.Flags.FFlagPlayerListFixMobileScrolling)
 local GetFFlagFixDropDownVisibility = require(PlayerList.Flags.GetFFlagFixDropDownVisibility)
+local FFlagUseNewPlayerList = PlayerListPackage.Flags.FFlagUseNewPlayerList
+local FFlagAddNewPlayerListFocusNav = PlayerListPackage.Flags.FFlagAddNewPlayerListFocusNav
 
 local MOTOR_OPTIONS = {
 	dampingRatio = 1,
@@ -240,9 +244,10 @@ function PlayerListApp:render()
 		local childElements = {}
 
 		if self.state.visible then
-			childElements["PlayerScrollList"] = Roact.createElement(PlayerListSorter, {
+			childElements["PlayerScrollList"] = Roact.createElement(if FFlagUseNewPlayerList then PlayerListDisplayContainer else PlayerListSorter, {
 				screenSizeY = self.props.screenSizeY,
 				entrySize = entrySize,
+				isVisible = if FFlagAddNewPlayerListFocusNav then self.props.displayOptions.isVisible else nil,
 			})
 		end
 		childElements["EventConnections"] = Roact.createElement(EventConnections)

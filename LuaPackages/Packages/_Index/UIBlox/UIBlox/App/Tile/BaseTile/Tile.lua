@@ -63,16 +63,16 @@ local tileInterface = t.strictInterface({
 	titleTextLineCount = t.optional(t.integer),
 
 	-- The vertical padding between elements in the ItemTile
-	innerPadding = t.optional(t.integer),
+	innerPadding = t.optional(t.number),
 
 	-- The additional vertical padding above the title area
-	titleTopPadding = t.optional(t.integer),
+	titleTopPadding = t.optional(t.number),
 
 	-- The additional vertical padding above the title area
-	subtitleTopPadding = t.optional(t.integer),
+	subtitleTopPadding = t.optional(t.number),
 
 	-- The additional vertical padding above the footer area
-	footerTopPadding = t.optional(t.integer),
+	footerTopPadding = t.optional(t.number),
 
 	-- The function that gets called on itemTile click
 	onActivated = t.optional(t.callback),
@@ -168,6 +168,9 @@ local tileInterface = t.strictInterface({
 
 	-- Optional callback for when the image is loaded
 	onThumbnailLoaded = t.optional(t.callback),
+
+	-- Whether to enable RoactGamepad functionality
+	isRoactGamepadEnabled = t.optional(t.boolean),
 })
 
 local function tileBannerUseValidator(props)
@@ -195,6 +198,7 @@ Tile.defaultProps = {
 	horizontalAlignment = nil,
 	thumbnailFrameSize = UDim2.new(1, 0, 1, 0),
 	titleRichText = false,
+	isRoactGamepadEnabled = true,
 }
 
 function Tile:init()
@@ -351,48 +355,51 @@ function Tile:render()
 						Padding = UDim.new(0, innerPadding),
 						HorizontalAlignment = if not self.props.nameOverThumbnail then horizontalAlignment else nil,
 					}),
-					Thumbnail = React.createElement(RoactGamepad.Focusable.Frame, {
-						Size = thumbnailFrameSize,
-						SizeConstraint = Enum.SizeConstraint.RelativeXX,
-						BackgroundTransparency = 1,
-						LayoutOrder = 1,
+					Thumbnail = React.createElement(
+						if self.props.isRoactGamepadEnabled then RoactGamepad.Focusable.Frame else "Frame",
+						{
+							Size = thumbnailFrameSize,
+							SizeConstraint = Enum.SizeConstraint.RelativeXX,
+							BackgroundTransparency = 1,
+							LayoutOrder = 1,
 
-						NextSelectionLeft = self.props.NextSelectionLeft,
-						NextSelectionRight = self.props.NextSelectionRight,
-						NextSelectionUp = self.props.NextSelectionUp,
-						NextSelectionDown = self.props.NextSelectionDown,
-						ref = self.props.thumbnailRef,
-						[React.Tag] = self.props[React.Tag],
-						SelectionImageObject = if self.props.cursor
-							then self.props.cursor
-							else getSelectionCursor(CursorKind.RoundedRectNoInset),
-						inputBindings = inputBindings,
-					}, {
-						Image = React.createElement(TileThumbnail, {
-							Image = thumbnail,
-							hasRoundedCorners = hasRoundedCorners,
-							cornerRadius = if self.props.isCircular
-								then UDim.new(0.5, 0)
-								elseif UIBloxConfig.useNewSelectionCursor then THUMBNAIL_CORNER_RADIUS
+							NextSelectionLeft = self.props.NextSelectionLeft,
+							NextSelectionRight = self.props.NextSelectionRight,
+							NextSelectionUp = self.props.NextSelectionUp,
+							NextSelectionDown = self.props.NextSelectionDown,
+							ref = self.props.thumbnailRef,
+							[React.Tag] = self.props[React.Tag],
+							SelectionImageObject = if self.props.cursor
+								then self.props.cursor
+								else getSelectionCursor(CursorKind.RoundedRectNoInset),
+							inputBindings = if self.props.isRoactGamepadEnabled then inputBindings else nil,
+						},
+						{
+							Image = React.createElement(TileThumbnail, {
+								Image = thumbnail,
+								hasRoundedCorners = hasRoundedCorners,
+								cornerRadius = if self.props.isCircular
+									then UDim.new(0.5, 0)
+									else THUMBNAIL_CORNER_RADIUS,
+								isSelected = isSelected,
+								multiSelect = multiSelect,
+								overlayComponents = thumbnailOverlayComponents,
+								imageSize = thumbnailSize,
+								imageColor = thumbnailColor,
+								imageTransparency = thumbnailTransparency,
+								backgroundImage = backgroundImage,
+								scaleType = self.props.thumbnailScaleType,
+								onThumbnailLoaded = self.props.onThumbnailLoaded,
+							}),
+							TileInset = renderTileInset and renderTileInset() or nil,
+							UIAspectRatioConstraint = if self.props.thumbnailAspectRatio ~= nil
+								then React.createElement("UIAspectRatioConstraint", {
+									AspectRatio = self.props.thumbnailAspectRatio,
+									AspectType = Enum.AspectType.ScaleWithParentSize,
+								})
 								else nil,
-							isSelected = isSelected,
-							multiSelect = multiSelect,
-							overlayComponents = thumbnailOverlayComponents,
-							imageSize = thumbnailSize,
-							imageColor = thumbnailColor,
-							imageTransparency = thumbnailTransparency,
-							backgroundImage = backgroundImage,
-							scaleType = self.props.thumbnailScaleType,
-							onThumbnailLoaded = self.props.onThumbnailLoaded,
-						}),
-						TileInset = renderTileInset and renderTileInset() or nil,
-						UIAspectRatioConstraint = if self.props.thumbnailAspectRatio ~= nil
-							then React.createElement("UIAspectRatioConstraint", {
-								AspectRatio = self.props.thumbnailAspectRatio,
-								AspectType = Enum.AspectType.ScaleWithParentSize,
-							})
-							else nil,
-					}),
+						}
+					),
 					TitleArea = React.createElement("Frame", {
 						Size = titleAreaSize,
 						BackgroundTransparency = 1,
@@ -465,7 +472,7 @@ end
 
 return React.forwardRef(function(props, ref)
 	return React.createElement(
-		if UIBloxConfig.useNewSelectionCursor then TileFunctionalWrapper else Tile,
+		TileFunctionalWrapper,
 		Cryo.Dictionary.join(props, {
 			thumbnailRef = ref,
 		})

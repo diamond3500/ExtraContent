@@ -16,10 +16,10 @@ local Focusable = RoactGamepad.Focusable
 local withStyle = require(Packages.UIBlox.Core.Style.withStyle)
 local CursorKind = require(App.SelectionImage.CursorKind)
 local withSelectionCursorProvider = require(App.SelectionImage.withSelectionCursorProvider)
-local withCursor = require(App.SelectionCursor.withCursor)
+local useCursorByType = require(App.SelectionCursor.useCursorByType)
 local CursorType = require(App.SelectionCursor.CursorType)
-
 local UIBloxConfig = require(UIBlox.UIBloxConfig)
+
 local getPageMargin = require(UIBlox.App.Container.getPageMargin)
 
 local SCROLL_BAR_RIGHT_PADDING = 4
@@ -49,6 +49,8 @@ VerticalScrollView.validateProps = t.strictInterface({
 	-- Width of the left and right padding. Minimum 12 points.
 	-- If not given, VerticalScrollView will use [dynamic margins](https://confluence.rbx.com/pages/viewpage.action?pageId=153532381)
 	paddingHorizontal = t.optional(t.number),
+	-- Height of the top padding.
+	paddingTop = t.optional(t.number),
 	-- Whether or not the component should be wrapped in a RoactGamepad.Focusable.
 	-- If it's true, it may also accept some other props related to focus that are documented in the RoactGamepad library.
 	isGamepadFocusable = t.optional(t.boolean),
@@ -74,6 +76,9 @@ VerticalScrollView.validateProps = t.strictInterface({
 	NextSelectionUp = t.optional(t.table),
 	-- Navigation parameter for RoactGamepad support
 	NextSelectionDown = t.optional(t.table),
+
+	-- selectionCursor object
+	cursor = if UIBloxConfig.useFoundationSelectionCursor then t.table else nil,
 
 	-- Children
 	[Roact.Children] = t.optional(t.table),
@@ -185,6 +190,7 @@ function VerticalScrollView:renderWithProviders(stylePalette, getSelectionCursor
 
 	local scrollingFrameChildren = Cryo.Dictionary.join({
 		scrollingFrameInnerMargin = Roact.createElement("UIPadding", {
+			PaddingTop = if self.props.paddingTop ~= nil then UDim.new(0, self.props.paddingTop) else nil,
 			PaddingLeft = self.getPadding(),
 			PaddingRight = self.getPadding(SCROLL_BAR_RIGHT_PADDING),
 		}),
@@ -218,7 +224,7 @@ function VerticalScrollView:renderWithProviders(stylePalette, getSelectionCursor
 			ScrollingEnabled = self.props.ScrollingEnabled,
 			CanvasPosition = self.props.CanvasPosition,
 
-			SelectionImageObject = if UIBloxConfig.migrateToNewSelectionCursor
+			SelectionImageObject = if UIBloxConfig.useFoundationSelectionCursor
 				then cursor
 				else getSelectionCursor(CursorKind.RoundedRect),
 			onFocusGained = isGamepadFocusable and self.onGamepadFocused or nil,
@@ -249,11 +255,8 @@ end
 
 function VerticalScrollView:render()
 	return withStyle(function(stylePalette)
-		if UIBloxConfig.migrateToNewSelectionCursor then
-			return withCursor(function(context)
-				local cursor = context.getCursorByType(CursorType.RoundedRect)
-				return self:renderWithProviders(stylePalette, nil, cursor)
-			end) :: any
+		if UIBloxConfig.useFoundationSelectionCursor then
+			return self:renderWithProviders(stylePalette, nil, self.props.cursor)
 		else
 			return withSelectionCursorProvider(function(getSelectionCursor)
 				return self:renderWithProviders(stylePalette, getSelectionCursor)
@@ -274,5 +277,9 @@ function VerticalScrollView:willUnmount()
 end
 
 return Roact.forwardRef(function(props, ref)
-	return Roact.createElement(VerticalScrollView, Cryo.Dictionary.join(props, { scrollingFrameRef = ref }))
+	local cursor = if UIBloxConfig.useFoundationSelectionCursor then useCursorByType(CursorType.RoundedRect) else nil
+	return Roact.createElement(
+		VerticalScrollView,
+		Cryo.Dictionary.join(props, { scrollingFrameRef = ref, cursor = cursor })
+	)
 end)

@@ -26,12 +26,13 @@ local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 local playerInterface = require(RobloxGui.Modules.Interfaces.playerInterface)
 local ChromeEnabled = require(RobloxGui.Modules.Chrome.Enabled)
 
+local PlayerList = Components.Parent
+
 local PlayerEntry = require(script.Parent.PlayerEntry)
 local TeamEntry = require(script.Parent.TeamEntry)
 local PlayerDropDown = require(script.Parent.PlayerDropDown)
 local TitleBar = require(script.Parent.TitleBar)
 
-local PlayerList = Components.Parent
 local SetPlayerListVisibility = require(PlayerList.Actions.SetPlayerListVisibility)
 local FFlagPlayerListReduceRerenders = require(PlayerList.Flags.FFlagPlayerListReduceRerenders)
 local FFlagPlayerListClosedNoRenderWithTenFoot = require(PlayerList.Flags.FFlagPlayerListClosedNoRenderWithTenFoot)
@@ -438,6 +439,7 @@ function PlayerListDisplay:render()
 						TitleBar = #self.props.gameStats > 0 and Roact.createElement(TitleBar, {
 							LayoutOrder = 2,
 							contentsVisible = self.state.contentsVisible,
+							showBackground = true,
 							backgroundTransparency = transparencyBinding,
 							gameStats = self.props.gameStats,
 							Size = UDim2.new(1, 0, 0, layoutValues.TitleBarSizeY),

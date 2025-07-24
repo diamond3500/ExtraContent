@@ -6,14 +6,18 @@ category: Inputs
 
 `TextInput` is a single line text input with optional label, helper text, and icons.
 
-## How to Use
+---
+
+## Usage
 
 `TextInput` has a default width of 400px unless `width` is specified. The height is static and will depend on whether a label and helper text are provided.
 
 The `isRequired` property should only be used on the inputs that fall in the minority. For example, if most inputs are required, only put `isRequired = false,` on the optional inputs, and `isRequired` as `nil` for the required inputs.
 
-The `textBoxRef` property exposes additional imperative functions to the TextBox. Currently this exposes `focus()` which
-focuses the textbox, and `getIsFocused()`, which returns whether the TextBox is currently focused.
+The `textBoxRef` property exposes additional imperative functions to the TextBox. Currently this exposes: <br>`focus()`, which
+focuses the textbox.
+<br>`releaseFocus()`, which unfocuses the textbox.
+<br>`getIsFocused()`, which returns whether the TextBox is currently focused.
 
 ```lua
 local Foundation = require(Packages.Foundation)

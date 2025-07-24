@@ -11,10 +11,9 @@ local Types = require(Components.Types)
 local useTextInputVariants = require(Components.TextInput.useTextInputVariants)
 local useTokens = require(Foundation.Providers.Style.useTokens)
 local useStyleTags = require(Foundation.Providers.Style.useStyleTags)
-local useCursor = require(Foundation.Providers.Cursor.useCursor)
 local withDefaults = require(Foundation.Utility.withDefaults)
 local withCommonProps = require(Foundation.Utility.withCommonProps)
-local isCoreGui = require(Foundation.Utility.isCoreGui)
+local isPluginSecurity = require(Foundation.Utility.isPluginSecurity)
 
 local InputSize = require(Foundation.Enums.InputSize)
 type InputSize = InputSize.InputSize
@@ -62,7 +61,6 @@ local function InternalTextInput(textInputProps: TextInputProps, ref: React.Ref<
 	local hover, setHover = React.useState(false)
 	local focus, setFocus = React.useState(false)
 
-	local selectionBorderThickness = tokens.Stroke.Thick
 	local outerBorderThickness = tokens.Stroke.Standard
 	local outerBorderOffset = math.ceil(outerBorderThickness) * 2
 	local innerBorderThickness = tokens.Stroke.Thick
@@ -71,6 +69,12 @@ local function InternalTextInput(textInputProps: TextInputProps, ref: React.Ref<
 	local focusTextBox = React.useCallback(function()
 		if textBox.current then
 			textBox.current:CaptureFocus()
+		end
+	end, {})
+
+	local releaseTextBoxFocus = React.useCallback(function()
+		if textBox.current then
+			textBox.current:ReleaseFocus()
 		end
 	end, {})
 
@@ -85,9 +89,10 @@ local function InternalTextInput(textInputProps: TextInputProps, ref: React.Ref<
 		return {
 			getIsFocused = getIsFocused,
 			focus = focusTextBox,
+			releaseFocus = releaseTextBoxFocus,
 			setHover = setHover,
 		}
-	end, { getIsFocused :: unknown, focusTextBox })
+	end, { getIsFocused :: unknown, focusTextBox, releaseTextBoxFocus })
 
 	local onTextChange = React.useCallback(function(rbx: TextBox?)
 		if rbx == nil then
@@ -126,13 +131,15 @@ local function InternalTextInput(textInputProps: TextInputProps, ref: React.Ref<
 		setHover(newState == ControlState.Hover)
 	end, {})
 
-	local textBoxTag = if Flags.FoundationStylingPolyfill then nil else useStyleTags(variantProps.textBox.tag)
+	local textBoxTag = if Flags.FoundationDisableStylingPolyfill then useStyleTags(variantProps.textBox.tag) else nil
 
-	local inputCursor = useCursor({
-		radius = UDim.new(0, variantProps.innerContainer.radius),
-		offset = selectionBorderThickness,
-		borderWidth = selectionBorderThickness,
-	})
+	local cursor = React.useMemo(function()
+		return {
+			radius = UDim.new(0, variantProps.innerContainer.radius),
+			offset = tokens.Stroke.Thick,
+			borderWidth = tokens.Stroke.Thick,
+		}
+	end, { tokens :: unknown, variantProps.innerContainer.radius })
 
 	return React.createElement(
 		View,
@@ -146,8 +153,8 @@ local function InternalTextInput(textInputProps: TextInputProps, ref: React.Ref<
 				Position = UDim2.new(0, outerBorderOffset / 2, 0, outerBorderOffset / 2),
 				selection = {
 					Selectable = not props.isDisabled,
-					SelectionImageObject = inputCursor,
 				},
+				cursor = cursor,
 				stroke = {
 					Color = if props.hasError
 						then tokens.Color.System.Alert.Color3
@@ -191,13 +198,13 @@ local function InternalTextInput(textInputProps: TextInputProps, ref: React.Ref<
 						TextBox = React.createElement("TextBox", {
 							ref = textBox,
 							Text = props.text,
-							TextInputType = if isCoreGui then props.textInputType else nil,
+							TextInputType = if isPluginSecurity() then props.textInputType else nil,
 							ClearTextOnFocus = false,
 							TextEditable = not props.isDisabled,
 							PlaceholderText = props.placeholder,
 							Selectable = false,
 							LineHeight = 1,
-							-- BEGIN: Remove when Flags.FoundationStylingPolyfill is removed
+							-- BEGIN: Remove when Flags.FoundationDisableStylingPolyfill is removed
 							Size = UDim2.fromScale(1, 1),
 							BackgroundTransparency = 1,
 							ClipsDescendants = true,
@@ -207,7 +214,7 @@ local function InternalTextInput(textInputProps: TextInputProps, ref: React.Ref<
 							TextSize = variantProps.textBox.FontSize,
 							TextColor3 = tokens.Color.Content.Emphasis.Color3,
 							TextTransparency = tokens.Color.Content.Emphasis.Transparency,
-							-- END: Remove when Flags.FoundationStylingPolyfill is removed
+							-- END: Remove when Flags.FoundationDisableStylingPolyfill is removed
 
 							[React.Tag] = textBoxTag :: any,
 							[React.Event.Focused] = onFocusGained,

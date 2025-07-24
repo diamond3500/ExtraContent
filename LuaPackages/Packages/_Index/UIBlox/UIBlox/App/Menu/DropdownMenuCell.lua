@@ -19,6 +19,9 @@ local ControlState = require(Core.Control.Enum.ControlState)
 local withStyle = require(Core.Style.withStyle)
 local useStyle = require(UIBlox.Core.Style.useStyle)
 local withSelectionCursorProvider = require(App.SelectionImage.withSelectionCursorProvider)
+local useCursorByType = require(App.SelectionCursor.useCursorByType)
+local CursorType = require(App.SelectionCursor.CursorType)
+local UIBloxConfig = require(UIBlox.UIBloxConfig)
 local CursorKind = require(App.SelectionImage.CursorKind)
 local ImageSetComponent = require(Core.ImageSet.ImageSetComponent)
 local ShimmerPanel = require(App.Loading.ShimmerPanel)
@@ -30,9 +33,6 @@ local ButtonGetContentStyle = require(Core.Button.getContentStyle)
 local validateTypographyInfo = require(Core.Style.Validator.validateTypographyInfo)
 local validateColorInfo = require(Core.Style.Validator.validateColorInfo)
 
-local useCursorByType = require(App.SelectionCursor.useCursorByType)
-local CursorType = require(App.SelectionCursor.CursorType)
-local UIBloxConfig = require(UIBlox.UIBloxConfig)
 local StyleDefaults = require(script.Parent.StyleDefaults)
 
 local DropdownMenuCell = Roact.PureComponent:extend("DropdownMenuCell")
@@ -382,15 +382,16 @@ end
 
 return function(providedProps: any)
 	local props = providedProps
+	local selectionCursor
+	if UIBloxConfig.useFoundationSelectionCursor then
+		selectionCursor = useCursorByType(CursorType.RoundedRectNoInset)
+		props = Cryo.Dictionary.join(props, {
+			selectionCursor = selectionCursor,
+		})
+	end
 	if providedProps.enableTokenOverride then
 		local style = useStyle()
 		props = Cryo.Dictionary.join(StyleDefaults.getDropdownMenuCellDefaultTokens(style), providedProps)
-	end
-	local selectionCursor = useCursorByType(CursorType.RoundedRectNoInset)
-	if UIBloxConfig.migrateToNewSelectionCursor then
-		props = Cryo.Dictionary.join({
-			selectionCursor = selectionCursor,
-		}, props)
 	end
 	return Roact.createElement(DropdownMenuCell, props)
 end

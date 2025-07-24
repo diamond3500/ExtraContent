@@ -9,8 +9,8 @@ local Roact = require(CorePackages.Packages.Roact)
 local Constants = require(root.Components.Constants)
 local ModalBaseSelectorDialog = require(root.Components.ModalBaseSelectorDialog)
 
-local GetFFlagAbuseReportMenuConsoleSupportRefactor =
-	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagAbuseReportMenuConsoleSupportRefactor
+local FFlagHideShortcutsOnReportDropdown = require(root.Flags.FFlagHideShortcutsOnReportDropdown)
+
 local isInExperienceUIVREnabled =
 	require(CorePackages.Workspace.Packages.SharedExperimentDefinition).isInExperienceUIVREnabled
 
@@ -55,7 +55,7 @@ local function unmountModalSelector()
 	end
 end
 
-local function mountModalSelector(viewportHeight, viewportWidth, selections, onSelect, onClose)
+local function mountModalSelector(viewportHeight, viewportWidth, selections, onSelect, onClose, onOpen)
 	local topCornerInset, _ = GuiService:GetGuiInset()
 	if isInExperienceUIVREnabled and isSpatial() then
 		local panelObject = UIManager.getInstance():getPanelObject(PanelType.MoreMenu)
@@ -72,9 +72,7 @@ local function mountModalSelector(viewportHeight, viewportWidth, selections, onS
 		screenGui.DisplayOrder = 7
 		screenGui.Enabled = true
 		screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-		screenGui.Parent = if GetFFlagAbuseReportMenuConsoleSupportRefactor()
-			then CoreGui:FindFirstChild(Constants.AbuseReportMenuPlaceholderFrame, true)
-			else CoreGui:FindFirstChild(Constants.AbuseReportMenuRootName, true)
+		screenGui.Parent = CoreGui:FindFirstChild(Constants.AbuseReportMenuPlaceholderFrame, true)
 
 		elements.modalSelectorScreenGui = screenGui
 
@@ -86,6 +84,11 @@ local function mountModalSelector(viewportHeight, viewportWidth, selections, onS
 
 		elements.modalSelectorFrame = frame
 	end
+
+	if FFlagHideShortcutsOnReportDropdown and onOpen ~= nil then
+		onOpen()
+	end
+
 	local dialog = Roact.createElement(ModalBaseSelectorDialog, {
 		isShown = true,
 		cellData = selections,

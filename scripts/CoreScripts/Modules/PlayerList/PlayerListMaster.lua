@@ -20,12 +20,15 @@ local StyleConstants = UIBlox.App.Style.Constants
 local ApolloClientInstance = require(CoreGui.RobloxGui.Modules.ApolloClient)
 local ApolloClientModule = require(CorePackages.Packages.ApolloClient)
 local ApolloProvider = ApolloClientModule.ApolloProvider
-
 local PlayerList = script.Parent
+local Signals = require(CorePackages.Packages.Signals)
+local CoreGuiCommon = require(CorePackages.Workspace.Packages.CoreGuiCommon)
 
 local Reducer = require(PlayerList.Reducers.Reducer)
 local GlobalConfig = require(PlayerList.GlobalConfig)
 local PlayerListSwitcher = require(PlayerList.PlayerListSwitcher)
+
+local PlayerListPackage = require(CorePackages.Workspace.Packages.PlayerList)
 
 -- Actions
 local SetPlayerListEnabled = require(PlayerList.Actions.SetPlayerListEnabled)
@@ -34,19 +37,21 @@ local SetTempHideKey = require(PlayerList.Actions.SetTempHideKey)
 local SetTenFootInterface = require(PlayerList.Actions.SetTenFootInterface)
 local SetSmallTouchDevice = require(PlayerList.Actions.SetSmallTouchDevice)
 local SetIsUsingGamepad = require(PlayerList.Actions.SetIsUsingGamepad)
-local SetHasPermissionToVoiceChat = require(PlayerList.Actions.SetHasPermissionToVoiceChat)
 local SetMinimized = require(PlayerList.Actions.SetMinimized)
 local SetSubjectToChinaPolicies = require(PlayerList.Actions.SetSubjectToChinaPolicies)
 local SetSettings = require(PlayerList.Actions.SetSettings)
-
-local FFlagXboxRemoveLatentVoiceChatPrivilegeCheck =
-	game:DefineFastFlag("XboxRemoveLatentVoiceChatPrivilegeCheck", false)
 
 if not Players.LocalPlayer then
 	Players:GetPropertyChangedSignal("LocalPlayer"):Wait()
 end
 
-local XPRIVILEGE_COMMUNICATION_VOICE_INGAME = 205
+local FFlagUseNewPlayerList = PlayerListPackage.Flags.FFlagUseNewPlayerList
+local FFlagAddNewPlayerListFocusNav = PlayerListPackage.Flags.FFlagAddNewPlayerListFocusNav
+
+local PlayerListContainer = PlayerListPackage.Container.PlayerListContainer
+local LeaderboardStoreInstanceManager = PlayerListPackage.LeaderboardStoreInstanceManager
+
+local FFlagTopBarSignalizeSetCores = CoreGuiCommon.Flags.FFlagTopBarSignalizeSetCores
 
 local function isSmallTouchScreen()
 	if _G.__TESTEZ_RUNNING_TEST__ then
@@ -108,23 +113,6 @@ function PlayerListMaster.new()
 
 	self.store:dispatch(SetTenFootInterface(TenFootInterface:IsEnabled()))
 
-	if not FFlagXboxRemoveLatentVoiceChatPrivilegeCheck then
-		if TenFootInterface:IsEnabled() then
-			coroutine.wrap(function()
-				pcall(function()
-					--This is pcalled because platformService won't exist in Roblox studio when emulating xbox.
-					local platformService = game:GetService("PlatformService")
-					if
-						platformService:BeginCheckXboxPrivilege(XPRIVILEGE_COMMUNICATION_VOICE_INGAME).PrivilegeCheckResult
-						== "NoIssue"
-					then
-						self.store:dispatch(SetHasPermissionToVoiceChat(true))
-					end
-				end)
-			end)()
-		end
-	end
-
 	coroutine.wrap(function()
 		self.store:dispatch(SetSubjectToChinaPolicies(CachedPolicyService:IsSubjectToChinaPolicies()))
 	end)()
@@ -160,6 +148,25 @@ function PlayerListMaster.new()
 		StoreProvider = self.root,
 	})
 
+	self._mountLeaderboardStore = function()
+		LeaderboardStoreInstanceManager.createLeaderboardStoreInstance()
+	end
+
+	self._unmountLeaderboardStore = function()
+		LeaderboardStoreInstanceManager.cleanUpInstance()
+	end
+
+	if FFlagUseNewPlayerList then
+		self._mountLeaderboardStore()
+		self.root = Roact.createElement(PlayerListContainer, {
+			leaderboardStore = LeaderboardStoreInstanceManager.getLeaderboardStoreInstance,
+			TopBarConstants = require(RobloxGui.Modules.TopBar.Constants),
+			isTenFoot = TenFootInterface:IsEnabled(),
+		}, {
+			PlayerListMaster = self.root,
+		})
+	end
+
 	self.root = Roact.createElement("ScreenGui", {
 		AutoLocalize = false,
 		IgnoreGuiInset = true,
@@ -178,10 +185,27 @@ function PlayerListMaster.new()
 	self:_updateMounted()
 
 	self.SetVisibleChangedEvent = Instance.new("BindableEvent")
+	if FFlagAddNewPlayerListFocusNav then
+		self.VisibilityChangedEvent = Instance.new("BindableEvent")
+	end
+
+	if FFlagTopBarSignalizeSetCores then 
+		self.disposeEffect = Signals.createEffect(function(scope)
+			local getTopBarStore = CoreGuiCommon.Stores.GetTopBarStore
+			if getTopBarStore then
+				self:SetTopBarEnabled(getTopBarStore(scope).getTopBarCoreGuiEnabled(scope))
+			end
+		end)
+	end
 
 	self.store.changed:connect(function(newState, oldState)
 		if newState.displayOptions.setVisible ~= oldState.displayOptions.setVisible then
 			self.SetVisibleChangedEvent:Fire(newState.displayOptions.setVisible)
+		end
+		if FFlagAddNewPlayerListFocusNav then
+			if newState.displayOptions.isVisible ~= oldState.displayOptions.isVisible then
+				self.VisibilityChangedEvent:Fire(newState.displayOptions.isVisible)
+			end
 		end
 	end)
 
@@ -192,10 +216,16 @@ function PlayerListMaster:_updateMounted()
 	if not TenFootInterface:IsEnabled() then
 		local shouldMount = self.coreGuiEnabled and self.topBarEnabled
 		if shouldMount and not self.mounted then
+			if FFlagUseNewPlayerList then
+				self._mountLeaderboardStore()
+			end
 			self.element = Roact.mount(self.root, CoreGui, "PlayerList")
 			self.mounted = true
 		elseif not shouldMount and self.mounted then
 			Roact.unmount(self.element)
+			if FFlagUseNewPlayerList then
+				self._unmountLeaderboardStore()
+			end
 			self.mounted = false
 			if self.inspector then
 				self.inspector:destroy()
@@ -217,6 +247,12 @@ end
 
 function PlayerListMaster:GetVisibility()
 	return self.store:getState().displayOptions.isVisible
+end
+
+if FFlagAddNewPlayerListFocusNav then
+	function PlayerListMaster:GetVisibilityChangedEvent()
+		return self.VisibilityChangedEvent
+	end
 end
 
 function PlayerListMaster:GetSetVisible()

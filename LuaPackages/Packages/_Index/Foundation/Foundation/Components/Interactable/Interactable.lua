@@ -7,8 +7,8 @@ local React = require(Packages.React)
 local ReactIs = require(Packages.ReactIs)
 
 local Types = require(Foundation.Components.Types)
-local Flags = require(Foundation.Utility.Flags)
 local useGuiControlState = require(Foundation.Utility.Control.useGuiControlState)
+local Flags = require(Foundation.Utility.Flags)
 local withDefaults = require(Foundation.Utility.withDefaults)
 local useCursor = require(Foundation.Providers.Cursor.useCursor)
 local useTokens = require(Foundation.Providers.Style.useTokens)
@@ -25,6 +25,7 @@ type StateChangedCallback = Types.StateChangedCallback
 type ColorStyle = Types.ColorStyle
 type ColorStyleValue = Types.ColorStyleValue
 
+-- TODO: https://roblox.atlassian.net/browse/UIBLOX-2446 make this union type
 export type InteractableProps = {
 	component: (React.ReactElement | string)?,
 	isDisabled: boolean?,
@@ -48,16 +49,16 @@ local function Interactable(interactableProps: InteractableProps, forwardedRef: 
 	local props = withDefaults(interactableProps, defaultProps)
 	local guiObjectRef = React.useRef(nil)
 	local tokens = useTokens()
-	local cursor = useCursor()
+	local cursor = useCursor(props.cursor)
 	local controlState, updateControlState = React.useBinding(ControlState.Initialize :: ControlState)
 	local realBackgroundStyle = React.useRef(nil)
 
 	local onStateChanged = React.useCallback(function(newState: ControlState)
 		if controlState:getValue() == ControlState.Default and guiObjectRef.current ~= nil then
-			local guiObjectColor3 = if Flags.FoundationMigrateStylingV2
+			local guiObjectColor3 = if Flags.FoundationDisableStylingPolyfill
 				then guiObjectRef.current:GetStyled("BackgroundColor3")
 				else guiObjectRef.current.BackgroundColor3
-			local guiObjectTransparency = if Flags.FoundationMigrateStylingV2
+			local guiObjectTransparency = if Flags.FoundationDisableStylingPolyfill
 				then guiObjectRef.current:GetStyled("BackgroundTransparency")
 				else guiObjectRef.current.BackgroundTransparency
 			if guiObjectColor3 ~= DEFAULT_GRAY or guiObjectTransparency ~= 0 then
@@ -75,7 +76,7 @@ local function Interactable(interactableProps: InteractableProps, forwardedRef: 
 
 	local originalBackgroundStyle = React.useMemo(function(): ColorStyle
 		return getOriginalBackgroundStyle(props.BackgroundColor3, props.BackgroundTransparency)
-	end, { props.BackgroundColor3, props.BackgroundTransparency })
+	end, { props.BackgroundColor3 :: unknown, props.BackgroundTransparency })
 
 	local getBackgroundStyle = React.useCallback(
 		function(guiState, backgroundStyle: ColorStyleValue, isDisabled: boolean): ColorStyleValue
@@ -149,11 +150,15 @@ local function Interactable(interactableProps: InteractableProps, forwardedRef: 
 		ref = wrappedRef,
 		SelectionImageObject = props.SelectionImageObject or cursor,
 	})
+
+	-- To avoid passing these props to the component, we set them to nil
 	mergedProps.component = nil
 	mergedProps.isDisabled = nil
 	mergedProps.onActivated = nil
 	mergedProps.onStateChanged = nil
 	mergedProps.stateLayer = nil
+	mergedProps.cursor = nil
+
 	return React.createElement(props.component, mergedProps)
 end
 

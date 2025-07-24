@@ -39,19 +39,13 @@ local isShowUKOSAIllegalContentReportingLink = DSAReportingPackage.isShowUKOSAIl
 local OSAReportLink = DSAReportingPackage.OSAReportLink
 local StyleProviderWithDefaultTheme = Style.StyleProviderWithDefaultTheme
 
-local ReactFocusNavigation = require(CorePackages.Packages.ReactFocusNavigation)
 local FocusNavigationUtils = require(CorePackages.Workspace.Packages.FocusNavigationUtils)
 local FocusNavigationCoreScriptsWrapper = FocusNavigationUtils.FocusNavigationCoreScriptsWrapper
 local FocusRoot = FocusNavigationUtils.FocusRoot
 local FocusNavigableSurfaceIdentifierEnum = FocusNavigationUtils.FocusNavigableSurfaceIdentifierEnum
-local focusNavigationService =
-	ReactFocusNavigation.FocusNavigationService.new(ReactFocusNavigation.EngineInterface.CoreGui)
 
 local SharedFlags = require(CorePackages.Workspace.Packages.SharedFlags)
 local FFlagCSFocusWrapperRefactor = SharedFlags.FFlagCSFocusWrapperRefactor
-local GetFFlagSelectInSceneReportMenu = SharedFlags.GetFFlagSelectInSceneReportMenu
-local GetFFlagAbuseReportMenuConsoleSupportRefactor = SharedFlags.GetFFlagAbuseReportMenuConsoleSupportRefactor
-local GetFFlagAddAbuseReportMenuCoreScriptsProvider = require(root.Flags.GetFFlagAddAbuseReportMenuCoreScriptsProvider)
 local isAbuseReportMenuOpenCloseSignalEnabled = require(root.Flags.isAbuseReportMenuOpenCloseSignalEnabled)
 local GetFFlagWHAM1707ExperimentForceEnabled = require(root.Flags.GetFFlagWHAM1707ExperimentForceEnabled)
 
@@ -59,6 +53,7 @@ local FStringReportMenuIXPLayer = SharedFlags.FStringReportMenuIXPLayer
 local FStringEARReportMenuIXPLayer = SharedFlags.FStringEARReportMenuIXPLayer
 local IXPField = game:DefineFastString("SelectInSceneIXPField", "EnableSelectInScene")
 local IXPFieldWHAM1707 = game:DefineFastString("WHAM1707IXPField", "EnableWHAM1707")
+local FFlagHideShortcutsOnReportDropdown = require(root.Flags.FFlagHideShortcutsOnReportDropdown)
 
 local isShowSelectInSceneReportMenu = require(root.Utility.isShowSelectInSceneReportMenu)
 
@@ -78,6 +73,7 @@ export type Props = {
 	registerSetNextPlayerToReport: ((player: Player) -> ()) -> (),
 	registerOnMenuWidthChange: ((width: number) -> ()) -> (),
 	onReportComplete: (text: string) -> (),
+	onDropdownMenuOpenChange: (isOpen: boolean) -> (),
 }
 
 local function isInSelectInSceneExperiment(): boolean
@@ -176,13 +172,10 @@ local AbuseReportMenuNew = function(props: Props)
 		if not isReportTabVisible then
 			-- unmount sub menu containers when not on report tab
 			setReportTypeIndex(0)
-
-			if GetFFlagSelectInSceneReportMenu() then
-				-- set report menu type selector back to default report mode when not on report tab
-				setReportModeIndex(1)
-				-- set selector render condition to false so we can do the check on open again
-				setShouldSelectorRender(false)
-			end
+			-- set report menu type selector back to default report mode when not on report tab
+			setReportModeIndex(1)
+			-- set selector render condition to false so we can do the check on open again
+			setShouldSelectorRender(false)
 		else
 			local playerObjects = PlayersService:GetPlayers()
 			if #playerObjects <= 1 then
@@ -232,6 +225,7 @@ local AbuseReportMenuNew = function(props: Props)
 
 	local utilityProps = {
 		onReportComplete = props.onReportComplete,
+		onDropdownMenuOpenChange = if FFlagHideShortcutsOnReportDropdown then props.onDropdownMenuOpenChange else nil,
 		reportAnythingAnalytics = ReportAnythingAnalytics,
 		reportAnythingState = reportAnythingState,
 		reportAnythingDispatch = reportAnythingDispatch,
@@ -258,324 +252,169 @@ local AbuseReportMenuNew = function(props: Props)
 		})
 	end
 
-	if GetFFlagAbuseReportMenuConsoleSupportRefactor() then
-		return React.createElement("Frame", {
-			BackgroundTransparency = 1,
-			AutomaticSize = Enum.AutomaticSize.Y,
-			Size = UDim2.new(1, 0, 0, 0),
-			Position = UDim2.new(0, 0, 0, sizings.TopPadding),
-		}, {
-			FocusNavigationCoreScriptsWrapper = React.createElement(
-				if FFlagCSFocusWrapperRefactor then FocusRoot else FocusNavigationCoreScriptsWrapper,
-				if FFlagCSFocusWrapperRefactor
-					then {
-						surfaceIdentifier = FocusNavigableSurfaceIdentifierEnum.RouterView,
-						frameProps = {
-							Size = UDim2.new(1, 0, 0, 0),
-							AutomaticSize = Enum.AutomaticSize.Y,
-						},
-						isIsolated = true,
-						isAutoFocusRoot = true,
-					}
-					else {
-						selectionGroupName = Constants.AbuseReportMenuRootName,
-						focusNavigableSurfaceIdentifier = FocusNavigableSurfaceIdentifierEnum.RouterView,
-						automaticSize = Enum.AutomaticSize.Y,
-						size = UDim2.new(1, 0, 0, 0),
+	return React.createElement("Frame", {
+		BackgroundTransparency = 1,
+		AutomaticSize = Enum.AutomaticSize.Y,
+		Size = UDim2.new(1, 0, 0, 0),
+		Position = UDim2.new(0, 0, 0, sizings.TopPadding),
+	}, {
+		FocusNavigationCoreScriptsWrapper = React.createElement(
+			if FFlagCSFocusWrapperRefactor then FocusRoot else FocusNavigationCoreScriptsWrapper,
+			if FFlagCSFocusWrapperRefactor
+				then {
+					surfaceIdentifier = FocusNavigableSurfaceIdentifierEnum.RouterView,
+					frameProps = {
+						Size = UDim2.new(1, 0, 0, 0),
+						AutomaticSize = Enum.AutomaticSize.Y,
 					},
-				{
-					-- placeholder frame added to attach our modal selector and screenshot dialog
-					-- necessary for proper selection UI behavior (console)
-					[Constants.AbuseReportMenuPlaceholderFrame] = React.createElement("Frame", {
-						Size = UDim2.fromScale(1, 1),
-						BackgroundTransparency = 1,
-						BorderSizePixel = 0,
-					}, {
-						MenuLayoutFrame = React.createElement("Frame", {
-							BackgroundTransparency = 1,
-							AutomaticSize = Enum.AutomaticSize.Y,
-							Size = UDim2.new(1, 0, 0, 0),
-						}, {
-							Layout = React.createElement("UIListLayout", {
-								FillDirection = Enum.FillDirection.Vertical,
-								SortOrder = Enum.SortOrder.LayoutOrder,
-								HorizontalAlignment = 0,
-								Padding = UDim.new(0, 12),
-							}),
-							SelectInSceneToggleFrame = if shouldSelectorRender
-								then React.createElement("Frame", {
-									BackgroundTransparency = 1,
-									AutomaticSize = Enum.AutomaticSize.XY,
-									Position = UDim2.new(0.5, 0, 0, 0),
-									AnchorPoint = Vector2.new(0.5, 0),
-									LayoutOrder = 0,
-								}, {
-									SelectInSceneToggle = React.createElement(SegmentedControl, {
-										onTabActivated = function(tabIndex)
-											setReportModeIndex(tabIndex)
-										end,
-										selectedTabIndex = reportModeIndex,
-										tabs = {
-											{
-												tabName = localizedText.BuildAReport,
-											},
-											{
-												tabName = localizedText.SelectInScene,
-											},
-										},
-										width = UDim.new(0, menuWidth),
-									}),
-								})
-								else nil,
-							Menu = if reportMode == ReportModes.SelectInScene
-								then React.createElement(
-									SelectInSceneReportMenu,
-									{ hideReportTab = props.hideReportTab }
-								)
-								elseif reportMode == ReportModes.Classic then React.createElement("Frame", {
-									BackgroundTransparency = 1,
-									AutomaticSize = Enum.AutomaticSize.Y,
-									Size = UDim2.new(1, 0, 0, 0),
-									LayoutOrder = 1,
-								}, {
-									Layout = React.createElement("UIListLayout", {
-										FillDirection = Enum.FillDirection.Vertical,
-										SortOrder = Enum.SortOrder.LayoutOrder,
-										Padding = UDim.new(0, sizings.ItemPadding),
-									}),
-									ReportTypeSelector = React.createElement(ReportTypeSelector, {
-										label = localizedText.ReportType,
-										abuseType = localizedText[REPORT_TYPES[reportTypeIndex]],
-										layoutOrder = 0,
-										utilityProps = utilityProps,
-										isSelectionDisabled = isOnlyPlayerInGame,
-										menuWidth = menuWidth,
-										isSmallPortraitViewport = isSmallPortraitViewport,
-										onClickLeft = function()
-											reportAnythingDispatch({
-												type = Constants.ReportAnythingActions.ClearAnnotationFlowProperties,
-											})
-											analyticsDispatch({
-												type = Constants.AnalyticsActions.IncrementExperiencePersonChanged,
-											})
-											-- lua table index starts at 1 so we have to make some adjustents to the mod operations here
-											setReportTypeIndex((reportTypeIndex - 1 - 1) % #REPORT_TYPES + 1)
-										end,
-										onClickRight = function()
-											reportAnythingDispatch({
-												type = Constants.ReportAnythingActions.ClearAnnotationFlowProperties,
-											})
-											analyticsDispatch({
-												type = Constants.AnalyticsActions.IncrementExperiencePersonChanged,
-											})
-											-- lua table index starts at 1 so we have to make some adjustents to the mod operations here
-											setReportTypeIndex((reportTypeIndex - 1 + 1) % #REPORT_TYPES + 1)
-										end,
-									}),
-									MenuItemsContainer = React.createElement("Frame", {
-										BackgroundTransparency = 1,
-										LayoutOrder = 1,
-										AutomaticSize = Enum.AutomaticSize.Y,
-										Size = UDim2.new(1, 0, 0, 0),
-									}, {
-										MenuItems = menuItems,
-									}),
-									DSALinkFrame = if isShowEUDSAIllegalContentReportingLink()
-										then React.createElement("Frame", {
-											BackgroundTransparency = 1,
-											LayoutOrder = 2,
-											AutomaticSize = Enum.AutomaticSize.Y,
-											Size = UDim2.new(1, 0, 0, 0),
-										}, {
-											DSALink = React.createElement(DSAReportLink),
-										})
-										else nil,
-									OSALinkFrame = if isShowUKOSAIllegalContentReportingLink()
-										then React.createElement(View, {
-											tag = "size-full-0 auto-y",
-											LayoutOrder = 2,
-										}, {
-											OSALink = React.createElement(OSAReportLink),
-										})
-										else nil,
-								})
-								else nil,
-						}),
-					}),
+					isIsolated = true,
+					isAutoFocusRoot = true,
 				}
-			),
-		})
-	else
-		return React.createElement("Frame", {
-			BackgroundTransparency = 1,
-			AutomaticSize = Enum.AutomaticSize.Y,
-			Size = UDim2.new(1, 0, 0, 0),
-			Position = UDim2.new(0, 0, 0, sizings.TopPadding),
-		}, {
-			MenuLayoutFrame = React.createElement("Frame", {
-				BackgroundTransparency = 1,
-				AutomaticSize = Enum.AutomaticSize.Y,
-				Size = UDim2.new(1, 0, 0, 0),
-			}, {
-				Layout = React.createElement("UIListLayout", {
-					FillDirection = Enum.FillDirection.Vertical,
-					SortOrder = Enum.SortOrder.LayoutOrder,
-					HorizontalAlignment = 0,
-					Padding = UDim.new(0, 12),
-				}),
-				SelectInSceneToggleFrame = if shouldSelectorRender
-					then React.createElement("Frame", {
-						BackgroundTransparency = 1,
-						AutomaticSize = Enum.AutomaticSize.XY,
-						Position = UDim2.new(0.5, 0, 0, 0),
-						AnchorPoint = Vector2.new(0.5, 0),
-						LayoutOrder = 0,
-					}, {
-						SelectInSceneToggle = React.createElement(SegmentedControl, {
-							onTabActivated = function(tabIndex)
-								setReportModeIndex(tabIndex)
-							end,
-							selectedTabIndex = reportModeIndex,
-							tabs = {
-								{
-									tabName = localizedText.BuildAReport,
-								},
-								{
-									tabName = localizedText.SelectInScene,
-								},
-							},
-							width = UDim.new(0, menuWidth),
-						}),
-					})
-					else nil,
-				Menu = if reportMode == ReportModes.SelectInScene
-					then React.createElement(SelectInSceneReportMenu, { hideReportTab = props.hideReportTab })
-					elseif reportMode == ReportModes.Classic then React.createElement("Frame", {
+				else {
+					selectionGroupName = Constants.AbuseReportMenuRootName,
+					focusNavigableSurfaceIdentifier = FocusNavigableSurfaceIdentifierEnum.RouterView,
+					automaticSize = Enum.AutomaticSize.Y,
+					size = UDim2.new(1, 0, 0, 0),
+				},
+			{
+				-- placeholder frame added to attach our modal selector and screenshot dialog
+				-- necessary for proper selection UI behavior (console)
+				[Constants.AbuseReportMenuPlaceholderFrame] = React.createElement("Frame", {
+					Size = UDim2.fromScale(1, 1),
+					BackgroundTransparency = 1,
+					BorderSizePixel = 0,
+				}, {
+					MenuLayoutFrame = React.createElement("Frame", {
 						BackgroundTransparency = 1,
 						AutomaticSize = Enum.AutomaticSize.Y,
 						Size = UDim2.new(1, 0, 0, 0),
-						LayoutOrder = 1,
 					}, {
 						Layout = React.createElement("UIListLayout", {
 							FillDirection = Enum.FillDirection.Vertical,
 							SortOrder = Enum.SortOrder.LayoutOrder,
-							Padding = UDim.new(0, sizings.ItemPadding),
+							HorizontalAlignment = 0,
+							Padding = UDim.new(0, 12),
 						}),
-						ReportTypeSelector = React.createElement(ReportTypeSelector, {
-							label = localizedText.ReportType,
-							abuseType = localizedText[REPORT_TYPES[reportTypeIndex]],
-							layoutOrder = 0,
-							utilityProps = utilityProps,
-							isSelectionDisabled = isOnlyPlayerInGame,
-							menuWidth = menuWidth,
-							isSmallPortraitViewport = isSmallPortraitViewport,
-							onClickLeft = function()
-								reportAnythingDispatch({
-									type = Constants.ReportAnythingActions.ClearAnnotationFlowProperties,
-								})
-								analyticsDispatch({
-									type = Constants.AnalyticsActions.IncrementExperiencePersonChanged,
-								})
-								-- lua table index starts at 1 so we have to make some adjustents to the mod operations here
-								setReportTypeIndex((reportTypeIndex - 1 - 1) % #REPORT_TYPES + 1)
-							end,
-							onClickRight = function()
-								reportAnythingDispatch({
-									type = Constants.ReportAnythingActions.ClearAnnotationFlowProperties,
-								})
-								analyticsDispatch({
-									type = Constants.AnalyticsActions.IncrementExperiencePersonChanged,
-								})
-								-- lua table index starts at 1 so we have to make some adjustents to the mod operations here
-								setReportTypeIndex((reportTypeIndex - 1 + 1) % #REPORT_TYPES + 1)
-							end,
-						}),
-						MenuItemsContainer = React.createElement("Frame", {
-							BackgroundTransparency = 1,
-							LayoutOrder = 1,
-							AutomaticSize = Enum.AutomaticSize.Y,
-							Size = UDim2.new(1, 0, 0, 0),
-						}, {
-							MenuItems = menuItems,
-						}),
-						DSALinkFrame = if isShowEUDSAIllegalContentReportingLink()
+						SelectInSceneToggleFrame = if shouldSelectorRender
 							then React.createElement("Frame", {
 								BackgroundTransparency = 1,
-								LayoutOrder = 2,
-								AutomaticSize = Enum.AutomaticSize.Y,
-								Size = UDim2.new(1, 0, 0, 0),
+								AutomaticSize = Enum.AutomaticSize.XY,
+								Position = UDim2.new(0.5, 0, 0, 0),
+								AnchorPoint = Vector2.new(0.5, 0),
+								LayoutOrder = 0,
 							}, {
-								DSALink = React.createElement(DSAReportLink),
+								SelectInSceneToggle = React.createElement(SegmentedControl, {
+									onTabActivated = function(tabIndex)
+										setReportModeIndex(tabIndex)
+									end,
+									selectedTabIndex = reportModeIndex,
+									tabs = {
+										{
+											tabName = localizedText.BuildAReport,
+										},
+										{
+											tabName = localizedText.SelectInScene,
+										},
+									},
+									width = UDim.new(0, menuWidth),
+								}),
 							})
 							else nil,
-					})
-					else nil,
-			}),
-		})
-	end
+						Menu = if reportMode == ReportModes.SelectInScene
+							then React.createElement(SelectInSceneReportMenu, { hideReportTab = props.hideReportTab })
+							elseif reportMode == ReportModes.Classic then React.createElement("Frame", {
+								BackgroundTransparency = 1,
+								AutomaticSize = Enum.AutomaticSize.Y,
+								Size = UDim2.new(1, 0, 0, 0),
+								LayoutOrder = 1,
+							}, {
+								Layout = React.createElement("UIListLayout", {
+									FillDirection = Enum.FillDirection.Vertical,
+									SortOrder = Enum.SortOrder.LayoutOrder,
+									Padding = UDim.new(0, sizings.ItemPadding),
+								}),
+								ReportTypeSelector = React.createElement(ReportTypeSelector, {
+									label = localizedText.ReportType,
+									abuseType = localizedText[REPORT_TYPES[reportTypeIndex]],
+									layoutOrder = 0,
+									utilityProps = utilityProps,
+									isSelectionDisabled = isOnlyPlayerInGame,
+									menuWidth = menuWidth,
+									isSmallPortraitViewport = isSmallPortraitViewport,
+									onClickLeft = function()
+										reportAnythingDispatch({
+											type = Constants.ReportAnythingActions.ClearAnnotationFlowProperties,
+										})
+										analyticsDispatch({
+											type = Constants.AnalyticsActions.IncrementExperiencePersonChanged,
+										})
+										-- lua table index starts at 1 so we have to make some adjustents to the mod operations here
+										setReportTypeIndex((reportTypeIndex - 1 - 1) % #REPORT_TYPES + 1)
+									end,
+									onClickRight = function()
+										reportAnythingDispatch({
+											type = Constants.ReportAnythingActions.ClearAnnotationFlowProperties,
+										})
+										analyticsDispatch({
+											type = Constants.AnalyticsActions.IncrementExperiencePersonChanged,
+										})
+										-- lua table index starts at 1 so we have to make some adjustents to the mod operations here
+										setReportTypeIndex((reportTypeIndex - 1 + 1) % #REPORT_TYPES + 1)
+									end,
+								}),
+								MenuItemsContainer = React.createElement("Frame", {
+									BackgroundTransparency = 1,
+									LayoutOrder = 1,
+									AutomaticSize = Enum.AutomaticSize.Y,
+									Size = UDim2.new(1, 0, 0, 0),
+								}, {
+									MenuItems = menuItems,
+								}),
+								DSALinkFrame = if isShowEUDSAIllegalContentReportingLink()
+									then React.createElement("Frame", {
+										BackgroundTransparency = 1,
+										LayoutOrder = 2,
+										AutomaticSize = Enum.AutomaticSize.Y,
+										Size = UDim2.new(1, 0, 0, 0),
+									}, {
+										DSALink = React.createElement(DSAReportLink),
+									})
+									else nil,
+								OSALinkFrame = if isShowUKOSAIllegalContentReportingLink()
+									then React.createElement(View, {
+										tag = "size-full-0 auto-y",
+										LayoutOrder = 2,
+									}, {
+										OSALink = React.createElement(OSAReportLink),
+									})
+									else nil,
+							})
+							else nil,
+					}),
+				}),
+			}
+		),
+	})
 end
 
 local MenuContainer = function(props: Props)
 	local localization = Localization.new(LocalizationService.RobloxLocaleId)
 
-	if GetFFlagAbuseReportMenuConsoleSupportRefactor() then
-		return React.createElement(
-			StyleProviderWithDefaultTheme,
-			{
-				withDarkTheme = true,
-			},
-			if GetFFlagAddAbuseReportMenuCoreScriptsProvider()
-				then {
-					CoreScriptsRootProvider = React.createElement(CoreScriptsRootProvider, {}, {
-						LocalizationProvider = React.createElement(LocalizationProvider, {
-							localization = localization,
-						}, {
-							FoundationProvider = React.createElement(Foundation.FoundationProvider, {
-								theme = Foundation.Enums.Theme.Dark,
-							}, {
-								[Constants.AbuseReportMenuRootName] = React.createElement(AbuseReportMenuNew, props),
-							}),
-						}),
-					}),
-				}
-				else {
-					LocalizationProvider = React.createElement(LocalizationProvider, {
-						localization = localization,
-					}, {
-						FocusNavigationProvider = React.createElement(
-							ReactFocusNavigation.FocusNavigationContext.Provider,
-							{
-								value = focusNavigationService,
-							},
-							{
-								[Constants.AbuseReportMenuRootName] = React.createElement(AbuseReportMenuNew, props),
-							}
-						),
-					}),
-				}
-		)
-	else
-		return React.createElement(StyleProviderWithDefaultTheme, {
-			withDarkTheme = true,
-		}, {
+	return React.createElement(StyleProviderWithDefaultTheme, {
+		withDarkTheme = true,
+	}, {
+		CoreScriptsRootProvider = React.createElement(CoreScriptsRootProvider, {}, {
 			LocalizationProvider = React.createElement(LocalizationProvider, {
 				localization = localization,
 			}, {
-				FocusNavigationProvider = React.createElement(ReactFocusNavigation.FocusNavigationContext.Provider, {
-					value = focusNavigationService,
+				FoundationProvider = React.createElement(Foundation.FoundationProvider, {
+					theme = Foundation.Enums.Theme.Dark,
 				}, {
-					FocusNavigationCoreScriptsWrapper = React.createElement(FocusNavigationCoreScriptsWrapper, {
-						selectionGroupName = Constants.AbuseReportMenuRootName,
-						focusNavigableSurfaceIdentifier = FocusNavigableSurfaceIdentifierEnum.RouterView,
-						automaticSize = Enum.AutomaticSize.Y,
-						size = UDim2.new(1, 0, 0, 0),
-					}, {
-						[Constants.AbuseReportMenuRootName] = React.createElement(AbuseReportMenuNew, props),
-					}),
+					[Constants.AbuseReportMenuRootName] = React.createElement(AbuseReportMenuNew, props),
 				}),
 			}),
-		})
-	end
+		}),
+	})
 end
 
 return MenuContainer

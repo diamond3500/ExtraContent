@@ -20,7 +20,6 @@ local useInputVariants = require(script.Parent.useInputVariants)
 local useInputMotionStates = require(script.Parent.useInputMotionStates)
 
 local useTokens = require(Foundation.Providers.Style.useTokens)
-local useCursor = require(Foundation.Providers.Cursor.useCursor)
 local withCommonProps = require(Foundation.Utility.withCommonProps)
 local withDefaults = require(Foundation.Utility.withDefaults)
 local getInputTextSize = require(Foundation.Utility.getInputTextSize)
@@ -88,17 +87,16 @@ local function InternalInput(inputProps: Props, ref: React.Ref<GuiObject>?)
 	end, { props.isChecked })
 
 	local variantProps = useInputVariants(tokens, props.size)
-	local cursorConfig = React.useMemo(function()
-		local radius = if hasLabel
-			then UDim.new(0, tokens.Radius.Small)
-			else props.customVariantProps.cursorRadius or UDim.new(0, 0)
+
+	local cursor = React.useMemo(function()
 		return {
-			radius = radius,
+			radius = if hasLabel
+				then UDim.new(0, tokens.Radius.Small)
+				else props.customVariantProps.cursorRadius or UDim.new(0, 0),
 			offset = tokens.Size.Size_200,
 			borderWidth = tokens.Stroke.Thicker,
 		}
-	end, { tokens :: any, hasLabel })
-	local cursor = useCursor(cursorConfig)
+	end, { tokens :: unknown, hasLabel, props.customVariantProps.cursorRadius })
 
 	local motionStates = useInputMotionStates(tokens, props.customVariantProps.checkedStyle)
 	local values, animate = useMotion(motionStates.Default)
@@ -135,8 +133,8 @@ local function InternalInput(inputProps: Props, ref: React.Ref<GuiObject>?)
 		stateLayer = { affordance = StateLayerAffordance.None },
 		selection = {
 			Selectable = not props.isDisabled,
-			SelectionImageObject = cursor,
 		},
+		cursor = cursor,
 		isDisabled = props.isDisabled,
 		ref = ref,
 	}
@@ -146,21 +144,20 @@ local function InternalInput(inputProps: Props, ref: React.Ref<GuiObject>?)
 	local inputContainerProps = {
 		tag = props.customVariantProps.tag,
 		Size = props.customVariantProps.size - UDim2.fromOffset(strokeThickness, strokeThickness),
-		backgroundStyle = React.joinBindings({
-			Color3 = values.backgroundColor,
-			Transparency = values.backgroundTransparency,
-		}),
+		backgroundStyle = values.backgroundStyle,
 		-- StateLayer can only be applied to something with an onActivated
 		onActivated = onActivated,
 		stateLayer = { affordance = StateLayerAffordance.Background },
 		stroke = {
-			Color = values.strokeColor,
-			Transparency = values.strokeTransparency:map(function(transparency: number)
+			Color = values.strokeStyle:map(function(value: Types.ColorStyleValue)
+				return value.Color3 :: Color3
+			end),
+			Transparency = values.strokeStyle:map(function(value: Types.ColorStyleValue)
 				-- Stroke transparencies are not affected by GroupTransparency
 				if props.isDisabled and not hasLabel then
 					return DISABLED_TRANSPARENCY
 				else
-					return transparency
+					return value.Transparency :: number
 				end
 			end),
 			Thickness = strokeThickness,
@@ -205,10 +202,7 @@ local function InternalInput(inputProps: Props, ref: React.Ref<GuiObject>?)
 			InputLabel = if typeof(label) == "string"
 				then React.createElement(InputLabel, {
 					Text = label,
-					textStyle = React.joinBindings({
-						Color3 = values.labelColor,
-						Transparency = values.labelTransparency,
-					}),
+					textStyle = values.labelStyle,
 					size = getInputTextSize(props.size, true),
 				})
 				else label,

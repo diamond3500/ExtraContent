@@ -31,6 +31,7 @@ type InputFieldProps = {
 	textBoxRef: React.Ref<TextInputRef>?,
 	-- Hint text below the input, is red on error
 	hint: string?,
+	width: UDim?,
 } & Types.CommonProps
 
 local defaultProps = {
@@ -61,6 +62,7 @@ local function InputField(inputFieldProps: InputFieldProps, ref: React.Ref<GuiOb
 
 		return {
 			focus = textBoxRef.current.focus,
+			releaseFocus = textBoxRef.current.releaseFocus,
 			getIsFocused = textBoxRef.current.getIsFocused,
 		}
 	end, {})
@@ -69,7 +71,6 @@ local function InputField(inputFieldProps: InputFieldProps, ref: React.Ref<GuiOb
 		View,
 		withCommonProps(props, {
 			Size = UDim2.new(props.width, UDim.new(0, 0)),
-
 			tag = "col gap-xsmall auto-y",
 			ref = ref,
 		}),
@@ -100,4 +101,4 @@ local function InputField(inputFieldProps: InputFieldProps, ref: React.Ref<GuiOb
 	)
 end
 
-return React.forwardRef(InputField)
+return React.memo(React.forwardRef(InputField))

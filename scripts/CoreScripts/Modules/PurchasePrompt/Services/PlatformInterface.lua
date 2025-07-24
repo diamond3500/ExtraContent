@@ -14,8 +14,6 @@ pcall(function()
 end)
 
 local GetFStringVNGWebshopUrl = require(CorePackages.Workspace.Packages.SharedFlags).GetFStringVNGWebshopUrl
-local FFlagEnablePreSignedVngShopRedirectUrl =
-	require(CorePackages.Workspace.Packages.SharedFlags).FFlagEnablePreSignedVngShopRedirectUrl
 
 local PurchasePromptDeps = require(CorePackages.Workspace.Packages.PurchasePromptDeps)
 local UrlBuilder = PurchasePromptDeps.UrlBuilder.UrlBuilder
@@ -31,7 +29,11 @@ type BaseContext = {
 local function addContextToUrl(url: string, context: any): string
 	for key, value in context do
 		if value then
-			url = url .. ("&%s=%s"):format(key, value)
+			if url:find("?") then
+				url = url .. ("&%s=%s"):format(key, value)
+			else
+				url = url .. ("?%s=%s"):format(key, value)
+			end
 		end
 	end
 	return url
@@ -104,8 +106,17 @@ function PlatformInterface.new()
 		GuiService:OpenBrowserWindow(("%sUpgrades/Robux.aspx"):format(BASE_URL))
 	end
 
-	function service.openRobuxStoreWithContext(context: BaseContext)
+	function service.openRobuxStoreWithContext(context: BaseContext, productId: string?)
 		local url = ("%sUpgrades/Robux.aspx"):format(BASE_URL)
+		if productId then
+			url = url .. ("?product_id=%s"):format(productId)
+		end
+		url = addContextToUrl(url, context)
+		GuiService:OpenBrowserWindow(url)
+	end
+
+	function service.openPaymentsPageWithContext(context: BaseContext, productId: string)
+		local url = ("%supgrades/paymentmethods?ap=%s"):format(BASE_URL, productId)
 		url = addContextToUrl(url, context)
 		GuiService:OpenBrowserWindow(url)
 	end
@@ -123,14 +134,10 @@ function PlatformInterface.new()
 	end
 
 	function service.openVngStore(vngShopRedirectUrl: string)
-		if FFlagEnablePreSignedVngShopRedirectUrl then
-			if not vngShopRedirectUrl or vngShopRedirectUrl == "" then
-				vngShopRedirectUrl = GetFStringVNGWebshopUrl()
-			end
-			GuiService:OpenBrowserWindow(vngShopRedirectUrl)
-		else
-			GuiService:OpenBrowserWindow(GetFStringVNGWebshopUrl())
+		if not vngShopRedirectUrl or vngShopRedirectUrl == "" then
+			vngShopRedirectUrl = GetFStringVNGWebshopUrl()
 		end
+		GuiService:OpenBrowserWindow(vngShopRedirectUrl)
 	end
 
 	return service

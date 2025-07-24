@@ -9,9 +9,14 @@ local ValidationRulesUtil = require(root.util.ValidationRulesUtil)
 local getFFlagAddUGCValidationForPackage = require(root.flags.getFFlagAddUGCValidationForPackage)
 local getFFlagUGCValidateSurfaceAppearanceAlphaMode = require(root.flags.getFFlagUGCValidateSurfaceAppearanceAlphaMode)
 local getFFlagFixPackageIDFieldName = require(root.flags.getFFlagFixPackageIDFieldName)
-local getFFlagFixValidateTransparencyProperty = require(root.flags.getFFlagFixValidateTransparencyProperty)
 local getFFlagUGCValidateWrapLayersEnabled = require(root.flags.getFFlagUGCValidateWrapLayersEnabled)
-local getFFlagUGCValidatePropertiesRefactor = require(root.flags.getFFlagUGCValidatePropertiesRefactor)
+local getFFlagUGCValidationConsolidateGetMeshInfos = require(root.flags.getFFlagUGCValidationConsolidateGetMeshInfos)
+local getFFlagUGCValidationFixConstantsTypoLeg = require(root.flags.getFFlagUGCValidationFixConstantsTypoLeg)
+local getFFlagUGCValidateEmoteAnimationExtendedTests =
+	require(root.flags.getFFlagUGCValidateEmoteAnimationExtendedTests)
+local getFFlagUGCValidateBindOffset = require(root.flags.getFFlagUGCValidateBindOffset)
+local getFFlagUGCValidateAnimationRequiredFieldsFix = require(root.flags.getFFlagUGCValidateAnimationRequiredFieldsFix)
+local getFFlagUGCValidationFixBannedNamesTypo = require(root.flags.getFFlagUGCValidationFixBannedNamesTypo)
 
 -- switch this to Cryo.List.toSet when available
 local function convertArrayToTable(array)
@@ -49,27 +54,76 @@ Constants.R6_BODY_PARTS = {
 	"Left Arm",
 	"Right Arm",
 }
+if getFFlagUGCValidationFixBannedNamesTypo() then
+	Constants.R15_BODY_PARTS = {
+		"Head",
 
-Constants.R15_BODY_PARTS = {
-	"UpperTorso",
-	"LowerTorso",
+		"UpperTorso",
+		"LowerTorso",
 
-	"LeftUpperLeg",
-	"LeftLowerLeg",
-	"LeftFoot",
+		"LeftUpperLeg",
+		"LeftLowerLeg",
+		"LeftFoot",
 
-	"RightUpperLeg",
-	"RightLowerLeg",
-	"RightFoot",
+		"RightUpperLeg",
+		"RightLowerLeg",
+		"RightFoot",
 
-	"LeftUpperArm",
-	"LeftLowerArm",
-	"LeftHand",
+		"LeftUpperArm",
+		"LeftLowerArm",
+		"LeftHand",
 
-	"RightUpperArm",
-	"RightLowerArm",
-	"RightHand",
+		"RightUpperArm",
+		"RightLowerArm",
+		"RightHand",
+	}
+else
+	Constants.R15_BODY_PARTS = {
+		"UpperTorso",
+		"LowerTorso",
+
+		"LeftUpperLeg",
+		"LeftLowerLeg",
+		"LeftFoot",
+
+		"RightUpperLeg",
+		"RightLowerLeg",
+		"RightFoot",
+
+		"LeftUpperArm",
+		"LeftLowerArm",
+		"LeftHand",
+
+		"RightUpperArm",
+		"RightLowerArm",
+		"RightHand",
+	}
+end
+
+Constants.R15_STANDARD_JOINT_NAMES = {
+	["Root"] = true,
+	["HumanoidRootNode"] = true,
+	["DynamicHead"] = true,
+	["Head"] = true,
+	["UpperTorso"] = true,
+	["LowerTorso"] = true,
+	["LeftUpperLeg"] = true,
+	["LeftLowerLeg"] = true,
+	["LeftFoot"] = true,
+	["RightUpperLeg"] = true,
+	["RightLowerLeg"] = true,
+	["RightFoot"] = true,
+	["LeftUpperArm"] = true,
+	["LeftLowerArm"] = true,
+	["LeftHand"] = true,
+	["RightUpperArm"] = true,
+	["RightLowerArm"] = true,
+	["RightHand"] = true,
 }
+
+for _, bodyPart in Constants.R15_BODY_PARTS do
+	Constants.R15_STANDARD_JOINT_NAMES[bodyPart] = true
+end
 
 Constants.UGC_BODY_PARTS = {
 	"Head",
@@ -144,9 +198,19 @@ for _, name in ipairs(extraBannedNames) do
 	table.insert(Constants.EXTRA_BANNED_NAMES, name)
 end
 
-Constants.BANNED_NAMES = convertArrayToTable(
-	Cryo.Dictionary.join(Constants.R6_BODY_PARTS, Constants.R15_BODY_PARTS, Constants.EXTRA_BANNED_NAMES)
-)
+if getFFlagUGCValidationFixBannedNamesTypo() then
+	Constants.BANNED_NAMES = {}
+	local tables_with_banned_names = { Constants.R6_BODY_PARTS, Constants.R15_BODY_PARTS, Constants.EXTRA_BANNED_NAMES }
+	for _, tab in tables_with_banned_names do
+		for _, name in tab do
+			Constants.BANNED_NAMES[name] = true
+		end
+	end
+else
+	Constants.BANNED_NAMES = convertArrayToTable(
+		Cryo.Dictionary.join(Constants.R6_BODY_PARTS, Constants.R15_BODY_PARTS, Constants.EXTRA_BANNED_NAMES)
+	)
+end
 
 Constants.ASSET_STATUS = {
 	UNKNOWN = "Unknown",
@@ -186,7 +250,6 @@ Constants.BODYPART_TO_PARENT = {
 	-- left leg
 	["LeftUpperLeg"] = nil,
 	["LeftLowerLeg"] = "LeftUpperLeg",
-	["LeftLeg"] = "LeftLowerLeg",
 	-- right arm
 	["RightUpperArm"] = nil,
 	["RightLowerArm"] = "RightUpperArm",
@@ -194,51 +257,49 @@ Constants.BODYPART_TO_PARENT = {
 	-- right leg
 	["RightUpperLeg"] = nil,
 	["RightLowerLeg"] = "RightUpperLeg",
-	["RightLeg"] = "RightLowerLeg",
 }
+if getFFlagUGCValidationFixConstantsTypoLeg() then -- move back to array when cleaning up flag
+	Constants.BODYPART_TO_PARENT["RightFoot"] = "RightLowerLeg"
+	Constants.BODYPART_TO_PARENT["LeftFoot"] = "LeftLowerLeg"
+else
+	Constants.BODYPART_TO_PARENT["RightLeg"] = "RightLowerLeg"
+	Constants.BODYPART_TO_PARENT["LeftLeg"] = "LeftLowerLeg"
+end
 
 Constants.RenderVsWrapMeshMaxDiff = ValidationRulesUtil:getRules().MeshRules.CageMeshMaxDistanceFromRenderMesh
 
-if getFFlagUGCValidatePropertiesRefactor() then
-	Constants.COMPARISON_METHODS = {
-		-- We want [actual] to be [method] compared to [expected]
-		-- Numbers, vector3, and colors are currently supported, and default is FUZZY_EQ. EXACT_EQ is done for anything else.
-		-- Strings can be arbitrary but must be unique and determine the resulting error statement
-		SMALLER = "<",
-		SMALLER_EQ = "<=",
-		FUZZY_EQ = "=",
-		EXACT_EQ = "==",
-		GREATER_EQ = ">=",
-		GREATER = ">",
-	}
+Constants.COMPARISON_METHODS = {
+	-- We want [actual] to be [method] compared to [expected]
+	-- Numbers, vector3, and colors are currently supported, and default is FUZZY_EQ. EXACT_EQ is done for anything else.
+	-- Strings can be arbitrary but must be unique and determine the resulting error statement
+	SMALLER = "<",
+	SMALLER_EQ = "<=",
+	FUZZY_EQ = "=",
+	EXACT_EQ = "==",
+	GREATER_EQ = ">=",
+	GREATER = ">",
+}
 
-	setmetatable(Constants.COMPARISON_METHODS, {
-		__index = function(_, index)
-			return error("Invalid COMPARISON_METHOD " .. tostring(index))
-		end,
-	})
+setmetatable(Constants.COMPARISON_METHODS, {
+	__index = function(_, index)
+		return error("Invalid COMPARISON_METHOD " .. tostring(index))
+	end,
+})
 
-	Constants.INCLUSION_METHODS = {
-		-- We want tests with INCLUSION_LIST to only be run on assetTypeEnums that match
-		-- Tests with EXCLUSION_LIST will run on any assetTypeEnums not in the list
-		-- default value used in validateProperties is RUN_ON_ALL
-		RUN_ON_ALL = "RUN_ON_ALL",
-		INCLUSION_LIST = "INCLUSION_LIST",
-		EXCLUSION_LIST = "EXCLUSION_LIST",
-	}
+Constants.INCLUSION_METHODS = {
+	-- We want tests with INCLUSION_LIST to only be run on assetTypeEnums that match
+	-- Tests with EXCLUSION_LIST will run on any assetTypeEnums not in the list
+	-- default value used in validateProperties is RUN_ON_ALL
+	RUN_ON_ALL = "RUN_ON_ALL",
+	INCLUSION_LIST = "INCLUSION_LIST",
+	EXCLUSION_LIST = "EXCLUSION_LIST",
+}
 
-	setmetatable(Constants.INCLUSION_METHODS, {
-		__index = function(_, index)
-			return error("Invalid INCLUSION_METHOD " .. tostring(index))
-		end,
-	})
-else
-	Constants.PROPERTIES_UNRESTRICTED = {}
-
-	if getFFlagFixValidateTransparencyProperty() then
-		Constants.PROP_PRECISE = {}
-	end
-end
+setmetatable(Constants.INCLUSION_METHODS, {
+	__index = function(_, index)
+		return error("Invalid INCLUSION_METHOD " .. tostring(index))
+	end,
+})
 
 Constants.PROPERTIES = {
 	Instance = {
@@ -295,24 +356,19 @@ Constants.PROPERTIES = {
 
 		-- ====== Extra Context checks ======
 		--Transparency = { [Constants.COMPARISON_METHODS.EXACT_EQ] = 0 },
-		Transparency = if getFFlagUGCValidatePropertiesRefactor()
-			then { [Constants.COMPARISON_METHODS.EXACT_EQ] = 0 }
-			elseif getFFlagFixValidateTransparencyProperty() then { 0, Constants.PROP_PRECISE }
-			else 0,
+		Transparency = { [Constants.COMPARISON_METHODS.EXACT_EQ] = 0 },
 
-		Color = if getFFlagUGCValidatePropertiesRefactor()
-			then {
-				[Constants.COMPARISON_METHODS.FUZZY_EQ] = BrickColor.new("Medium stone grey").Color,
-				[Constants.INCLUSION_METHODS.EXCLUSION_LIST] = {
-					Enum.AssetType.DynamicHead,
-					Enum.AssetType.Torso,
-					Enum.AssetType.LeftArm,
-					Enum.AssetType.RightArm,
-					Enum.AssetType.LeftLeg,
-					Enum.AssetType.RightLeg,
-				},
-			}
-			else BrickColor.new("Medium stone grey").Color,
+		Color = {
+			[Constants.COMPARISON_METHODS.FUZZY_EQ] = BrickColor.new("Medium stone grey").Color,
+			[Constants.INCLUSION_METHODS.EXCLUSION_LIST] = {
+				Enum.AssetType.DynamicHead,
+				Enum.AssetType.Torso,
+				Enum.AssetType.LeftArm,
+				Enum.AssetType.RightArm,
+				Enum.AssetType.LeftLeg,
+				Enum.AssetType.RightLeg,
+			},
+		},
 	},
 	Part = {
 		Shape = Enum.PartType.Block,
@@ -322,75 +378,65 @@ Constants.PROPERTIES = {
 			AlphaMode = Enum.AlphaMode.Overlay,
 		}
 		else nil,
-	WrapLayer = if getFFlagUGCValidatePropertiesRefactor()
-		then {
-			-- ====== Simple checks ======
-			Enabled = if getFFlagUGCValidateWrapLayersEnabled() then true else nil,
+	WrapLayer = {
+		-- ====== Simple checks ======
+		Enabled = if getFFlagUGCValidateWrapLayersEnabled() then true else nil,
 
-			-- ====== Extra Context checks ======
-			CageOrigin = {
-				PositionMagnitude = {
-					[Constants.COMPARISON_METHODS.SMALLER_EQ] = 10,
-				},
-				Orientation = {
-					[Constants.COMPARISON_METHODS.EXACT_EQ] = Vector3.new(0, 0, 0),
-				},
+		-- ====== Extra Context checks ======
+		CageOrigin = {
+			PositionMagnitude = {
+				[Constants.COMPARISON_METHODS.SMALLER_EQ] = 10,
 			},
-			ReferenceOrigin = {
-				PositionMagnitude = {
-					[Constants.COMPARISON_METHODS.SMALLER_EQ] = 10,
-				},
-				Orientation = {
-					[Constants.COMPARISON_METHODS.EXACT_EQ] = Vector3.new(0, 0, 0),
-				},
+			Orientation = {
+				[Constants.COMPARISON_METHODS.EXACT_EQ] = Vector3.new(0, 0, 0),
 			},
-			ImportOrigin = {
-				PositionMagnitude = {
-					[Constants.COMPARISON_METHODS.SMALLER_EQ] = 8,
-				},
-			},
-		}
-		elseif getFFlagUGCValidateWrapLayersEnabled() then { Enabled = true }
-		else nil,
-
-	WrapTarget = if getFFlagUGCValidatePropertiesRefactor()
-		then {
-			-- ====== Simple checks ======
-
-			-- ====== Extra Context checks ======
-			CageOrigin = {
-				PositionMagnitude = {
-					[Constants.COMPARISON_METHODS.SMALLER_EQ] = 10,
-				},
-				Orientation = {
-					[Constants.COMPARISON_METHODS.EXACT_EQ] = Vector3.new(0, 0, 0),
-				},
-			},
-
-			ImportOrigin = {
-				PositionMagnitude = {
-					[Constants.COMPARISON_METHODS.SMALLER_EQ] = 8,
-				},
-			},
-		}
-		else nil,
-}
-
-if not getFFlagUGCValidatePropertiesRefactor() then
-	local bodyPartSpecificProperties = {
-		BasePart = {
-			Color = Constants.PROPERTIES_UNRESTRICTED, -- for body parts, we don't care about the color
 		},
-	}
-	Constants.SPECIFIC_PROPERTIES = {
-		[Enum.AssetType.DynamicHead] = bodyPartSpecificProperties,
-		[Enum.AssetType.Torso] = bodyPartSpecificProperties,
-		[Enum.AssetType.LeftArm] = bodyPartSpecificProperties,
-		[Enum.AssetType.RightArm] = bodyPartSpecificProperties,
-		[Enum.AssetType.LeftLeg] = bodyPartSpecificProperties,
-		[Enum.AssetType.RightLeg] = bodyPartSpecificProperties,
-	}
-end
+		ReferenceOrigin = {
+			PositionMagnitude = {
+				[Constants.COMPARISON_METHODS.SMALLER_EQ] = 10,
+			},
+			Orientation = {
+				[Constants.COMPARISON_METHODS.EXACT_EQ] = Vector3.new(0, 0, 0),
+			},
+		},
+		ImportOrigin = {
+			PositionMagnitude = {
+				[Constants.COMPARISON_METHODS.SMALLER_EQ] = 8,
+			},
+		},
+
+		BindOffset = if getFFlagUGCValidateBindOffset()
+			then {
+				Position = {
+					[Constants.COMPARISON_METHODS.EXACT_EQ] = Vector3.new(0, 0, 0),
+				},
+				Orientation = {
+					[Constants.COMPARISON_METHODS.EXACT_EQ] = Vector3.new(0, 0, 0),
+				},
+			}
+			else nil,
+	},
+
+	WrapTarget = {
+		-- ====== Simple checks ======
+
+		-- ====== Extra Context checks ======
+		CageOrigin = {
+			PositionMagnitude = {
+				[Constants.COMPARISON_METHODS.SMALLER_EQ] = 10,
+			},
+			Orientation = {
+				[Constants.COMPARISON_METHODS.EXACT_EQ] = Vector3.new(0, 0, 0),
+			},
+		},
+
+		ImportOrigin = {
+			PositionMagnitude = {
+				[Constants.COMPARISON_METHODS.SMALLER_EQ] = 8,
+			},
+		},
+	},
+}
 
 Constants.CONTENT_ID_FIELDS = {
 	SpecialMesh = { "MeshId", "TextureId" },
@@ -398,13 +444,20 @@ Constants.CONTENT_ID_FIELDS = {
 	SurfaceAppearance = { "ColorMap", "MetalnessMap", "NormalMap", "RoughnessMap" },
 	WrapLayer = { "CageMeshId", "ReferenceMeshId" },
 	WrapTarget = { "CageMeshId" },
+	Animation = if getFFlagUGCValidateEmoteAnimationExtendedTests() then { "AnimationId" } else nil,
 }
 
 Constants.CONTENT_ID_REQUIRED_FIELDS = {
 	SpecialMesh = { MeshId = true, TextureId = true },
 	MeshPart = { MeshId = true },
 	WrapTarget = { CageMeshId = true },
+	-- when FFlagUGCValidateAnimationRequiredFieldsFix is removed true, this can be changed to { AnimationId = true }
+	Animation = if getFFlagUGCValidateEmoteAnimationExtendedTests() then { "AnimationId" } else nil,
 }
+
+if getFFlagUGCValidateAnimationRequiredFieldsFix() then
+	Constants.CONTENT_ID_REQUIRED_FIELDS.Animation = { AnimationId = true }
+end
 
 Constants.MESH_CONTENT_ID_FIELDS = {
 	SpecialMesh = { "MeshId" },
@@ -495,5 +548,19 @@ if not getEngineFeatureRemoveProxyWrap() then
 	Constants.ProxyWrapAttributeName = "RBX_WRAP_DEFORMER_PROXY"
 end
 Constants.AlternateMeshIdAttributeName = "RBX_ALT_MESH_ID"
+
+if getFFlagUGCValidationConsolidateGetMeshInfos() then
+	Constants.MESH_CONTENT_TYPE = {
+		RENDER_MESH = "RenderMesh",
+		OUTER_CAGE = "OuterCage",
+		INNER_CAGE = "InnerCage",
+	}
+
+	Constants.MESH_CONTENT_TYPE_TO_FIELD_NAME = {
+		[Constants.MESH_CONTENT_TYPE.RENDER_MESH] = "MeshId",
+		[Constants.MESH_CONTENT_TYPE.OUTER_CAGE] = "CageMeshId",
+		[Constants.MESH_CONTENT_TYPE.INNER_CAGE] = "ReferenceMeshId",
+	}
+end
 
 return Constants

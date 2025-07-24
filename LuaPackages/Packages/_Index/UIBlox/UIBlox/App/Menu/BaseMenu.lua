@@ -20,15 +20,11 @@ local VerticalScrollView = require(App.Container.VerticalScrollView)
 local Images = require(App.ImageSet.Images)
 local withSelectionCursorProvider = require(App.SelectionImage.withSelectionCursorProvider)
 local CursorKind = require(App.SelectionImage.CursorKind)
-local withCursor = require(App.SelectionCursor.withCursor)
-local CursorType = require(App.SelectionCursor.CursorType)
 local setDefault = require(UIBlox.Utility.setDefault)
 
 local Cell = require(script.Parent.Cell)
 local RoundedFrame = require(script.Parent.RoundedFrame)
 local StyleDefaults = require(script.Parent.StyleDefaults)
-
-local UIBloxConfig = require(UIBlox.UIBloxConfig)
 
 local DROP_SHADOW_ASSET = Images["component_assets/dropshadow_17_8"]
 
@@ -78,6 +74,9 @@ BaseMenu.validateProps = t.strictInterface({
 	headerHeight = t.optional(t.number),
 	-- Override selection order. This selection order only affects calling GuiService:Select() on an ancestor. This property does not affect directional navigation.
 	selectionOrder = t.optional(t.number),
+
+	-- Whether to enable RoactGamepad functionality
+	isRoactGamepadEnabled = t.optional(t.boolean),
 })
 
 BaseMenu.defaultProps = {
@@ -93,10 +92,11 @@ BaseMenu.defaultProps = {
 	borderCornerRadius = 4,
 	enableTokenOverride = true,
 	headerHeight = 0,
+	isRoactGamepadEnabled = true,
 }
 
 function BaseMenu:init()
-	self.gamepadRefs = RoactGamepad.createRefCache()
+	self.gamepadRefs = self.props.isRoactGamepadEnabled and RoactGamepad.createRefCache() or {}
 end
 
 function BaseMenu:renderFixedHeightMenu(props, stylePalette, children)
@@ -189,79 +189,51 @@ function BaseMenu:render()
 			borderCornerRadius = self.props.borderCornerRadius,
 			background = self.props.background,
 		})
-
-		if UIBloxConfig.migrateToNewSelectionCursor then
-			local cursorType
-			if mergedProps.hasRoundBottom and mergedProps.hasRoundTop then
-				cursorType = CursorType.RoundedRectNoInset
-			elseif mergedProps.hasRoundBottom then
-				cursorType = CursorType.BulletDown
-			elseif mergedProps.hasRoundTop then
-				cursorType = CursorType.BulletUp
-			else
-				cursorType = CursorType.Square
-			end
-
-			children["cell " .. index] = withCursor(function(context)
-				local selectionCursor = context.getCursorByType(cursorType)
-				mergedProps = Cryo.Dictionary.join(mergedProps, {
-					selectionCursor = selectionCursor,
-					selectionOrder = self.props.selectionOrder,
-				})
-				return Roact.createElement(RoactGamepad.Focusable.Frame, {
-					Size = UDim2.new(self.props.width, UDim.new(0, self.props.elementHeight)),
-					BackgroundTransparency = 1,
-					LayoutOrder = index,
-					[Roact.Ref] = self.gamepadRefs[index],
-					NextSelectionUp = index > 1 and self.gamepadRefs[index - 1] or nil,
-					NextSelectionDown = index < #self.props.buttonProps and self.gamepadRefs[index + 1] or nil,
-					inputBindings = {
-						Activated = RoactGamepad.Input.onBegin(Enum.KeyCode.ButtonA, cellProps.onActivated, {
-							key = cellProps.inputBindingKey,
-						}),
-					},
-					SelectionImageObject = selectionCursor,
-				}, {
-					Cell = Roact.createElement(Cell, mergedProps),
-				})
-			end)
-		else
-			local cursorKind
-			if mergedProps.hasRoundBottom and mergedProps.hasRoundTop then
-				cursorKind = CursorKind.RoundedRectNoInset
-			elseif mergedProps.hasRoundBottom then
-				cursorKind = CursorKind.BulletDown
-			elseif mergedProps.hasRoundTop then
-				cursorKind = CursorKind.BulletUp
-			else
-				cursorKind = CursorKind.Square
-			end
-
-			mergedProps = Cryo.Dictionary.join(mergedProps, {
-				cursorKind = cursorKind,
-				selectionOrder = self.props.selectionOrder,
-			})
-
-			children["cell " .. index] = withSelectionCursorProvider(function(getSelectionCursor)
-				return Roact.createElement(RoactGamepad.Focusable.Frame, {
-					Size = UDim2.new(self.props.width, UDim.new(0, self.props.elementHeight)),
-					BackgroundTransparency = 1,
-					LayoutOrder = index,
-
-					[Roact.Ref] = self.gamepadRefs[index],
-					NextSelectionUp = index > 1 and self.gamepadRefs[index - 1] or nil,
-					NextSelectionDown = index < #self.props.buttonProps and self.gamepadRefs[index + 1] or nil,
-					inputBindings = {
-						Activated = RoactGamepad.Input.onBegin(Enum.KeyCode.ButtonA, cellProps.onActivated, {
-							key = cellProps.inputBindingKey,
-						}),
-					},
-					SelectionImageObject = getSelectionCursor(cursorKind),
-				}, {
-					Cell = Roact.createElement(Cell, mergedProps),
-				})
-			end)
+		if not self.props.isRoactGamepadEnabled then
+			self.gamepadRefs[index] = self.gamepadRefs[index] or Roact.createRef()
 		end
+
+		local cursorKind
+		if mergedProps.hasRoundBottom and mergedProps.hasRoundTop then
+			cursorKind = CursorKind.RoundedRectNoInset
+		elseif mergedProps.hasRoundBottom then
+			cursorKind = CursorKind.BulletDown
+		elseif mergedProps.hasRoundTop then
+			cursorKind = CursorKind.BulletUp
+		else
+			cursorKind = CursorKind.Square
+		end
+
+		mergedProps = Cryo.Dictionary.join(mergedProps, {
+			cursorKind = cursorKind,
+			selectionOrder = self.props.selectionOrder,
+		})
+
+		children["cell " .. index] = withSelectionCursorProvider(function(getSelectionCursor)
+			return Roact.createElement(
+				if self.props.isRoactGamepadEnabled then RoactGamepad.Focusable.Frame else "Frame",
+				{
+					Size = UDim2.new(self.props.width, UDim.new(0, self.props.elementHeight)),
+					BackgroundTransparency = 1,
+					LayoutOrder = index,
+
+					[Roact.Ref] = self.gamepadRefs[index],
+					NextSelectionUp = index > 1 and self.gamepadRefs[index - 1] or nil,
+					NextSelectionDown = index < #self.props.buttonProps and self.gamepadRefs[index + 1] or nil,
+					inputBindings = if self.props.isRoactGamepadEnabled
+						then {
+							Activated = RoactGamepad.Input.onBegin(Enum.KeyCode.ButtonA, cellProps.onActivated, {
+								key = cellProps.inputBindingKey,
+							}),
+						}
+						else nil,
+					SelectionImageObject = getSelectionCursor(cursorKind),
+				},
+				{
+					Cell = Roact.createElement(Cell, mergedProps),
+				}
+			)
+		end)
 	end
 
 	children.layout = Roact.createElement("UIListLayout", {

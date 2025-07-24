@@ -11,6 +11,7 @@ local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 local playerInterface = require(RobloxGui.Modules.Interfaces.playerInterface)
 
 local Presentation = script.Parent
+
 local PlayerListDisplay = require(Presentation.PlayerListDisplay)
 
 local PlayerList = Presentation.Parent.Parent
@@ -101,7 +102,7 @@ end
 
 PlayerListSorter.validateProps = t.strictInterface({
 	screenSizeY = t.number,
-	entrySize = t.integer,
+	entrySize = t.number,
 
 	players = t.array(playerInterface),
 	teams = t.array(t.instanceIsA("Team")),

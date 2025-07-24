@@ -16,11 +16,14 @@ local ThumbnailSize = require(Foundation.Enums.ThumbnailSize)
 
 local useAvatarVariants = require(script.Parent.useAvatarVariants)
 local useTokens = require(Foundation.Providers.Style.useTokens)
+local usePresentationContext = require(Foundation.Providers.Style.PresentationContext).usePresentationContext
 
 local InputSize = require(Foundation.Enums.InputSize)
 type InputSize = InputSize.InputSize
 local UserPresence = require(Foundation.Enums.UserPresence)
 type UserPresence = UserPresence.UserPresence
+
+local getAvatarSize = require(script.Parent.getAvatarSize)
 
 export type AvatarProps = {
 	-- Roblox user id
@@ -39,24 +42,28 @@ local defaultProps = {
 local function Avatar(avatarProps: AvatarProps, ref: React.Ref<GuiObject>?)
 	local props = withDefaults(avatarProps, defaultProps)
 	local tokens = useTokens()
+	local presentationContext = usePresentationContext()
 
-	local variantProps = useAvatarVariants(tokens, props.size, props.userPresence, props.backplateStyle)
-	local hasIndicator = props.userPresence == UserPresence.Active or props.userPresence == UserPresence.Away
+	local variantProps =
+		useAvatarVariants(tokens, props.size, props.userPresence, props.backplateStyle, presentationContext.isIconSize)
+	local size = getAvatarSize(tokens, props.size, presentationContext.isIconSize)
 
 	return React.createElement(
 		View,
 		withCommonProps(props, {
 			tag = variantProps.container.tag,
 			ref = ref,
-			backgroundStyle = props.backgroundStyle,
+			backgroundStyle = variantProps.container.backgroundStyle,
 			stroke = variantProps.container.stroke,
+			Size = UDim2.fromOffset(size, size),
 		}),
 		{
 			Image = React.createElement(Image, {
 				Image = getRbxThumb(ThumbnailType.AvatarHeadShot, props.userId, ThumbnailSize.Medium),
 				tag = variantProps.avatar.tag,
+				backgroundStyle = props.backgroundStyle,
 			}),
-			Indicator = if hasIndicator
+			Indicator = if variantProps.indicator.isVisible
 				then React.createElement(
 					View,
 					variantProps.indicatorBackplate :: any,

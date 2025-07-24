@@ -32,6 +32,11 @@ local PageInstance = nil
 RobloxGui:WaitForChild("Modules"):WaitForChild("TenFootInterface")
 local isTenFootInterface = require(RobloxGui.Modules.TenFootInterface):IsEnabled()
 
+local SharedFlags = require(CorePackages.Workspace.Packages.SharedFlags)
+local FFlagIEMSettingsAddPlaySessionID = SharedFlags.FFlagIEMSettingsAddPlaySessionID
+
+local EngineFeatureRbxAnalyticsServiceExposePlaySessionId = game:GetEngineFeature("RbxAnalyticsServiceExposePlaySessionId")
+
 local GetFFlagEnableInGameMenuDurationLogger = require(RobloxGui.Modules.Common.Flags.GetFFlagEnableInGameMenuDurationLogger)
 local FFlagCollectAnalyticsForSystemMenu = settings():GetFFlag("CollectAnalyticsForSystemMenu")
 
@@ -42,11 +47,19 @@ if FFlagCollectAnalyticsForSystemMenu then
   Constants = require(RobloxGui.Modules:WaitForChild("InGameMenu"):WaitForChild("Resources"):WaitForChild("Constants"))
 end
 
+local RobloxTranslator = require(CorePackages.Workspace.Packages.RobloxTranslator)
+local GetFFlagCoreScriptsMigrateFromLegacyCSVLoc = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagCoreScriptsMigrateFromLegacyCSVLoc
+
 ----------- CLASS DECLARATION --------------
 
 local function Initialize()
 	local settingsPageFactory = require(RobloxGui.Modules.Settings.SettingsPageFactory)
 	local this = settingsPageFactory:CreateNewPage()
+
+	this.playsessionid = ""
+	if FFlagIEMSettingsAddPlaySessionID and EngineFeatureRbxAnalyticsServiceExposePlaySessionId then
+		this.playsessionid = AnalyticsService:GetPlaySessionId()
+	end
 
 	this.LeaveFunc = function()
 		if GetFFlagEnableInGameMenuDurationLogger() then
@@ -62,7 +75,8 @@ local function Initialize()
 				{
 					confirmed = Constants.AnalyticsConfirmedName,
 					universeid = tostring(game.GameId),
-					source = Constants.AnalyticsLeaveToHomeSource
+					source = Constants.AnalyticsLeaveToHomeSource,
+					playsessionid = if FFlagIEMSettingsAddPlaySessionID then this.playsessionid else nil,
 				}
 			)
 		end
@@ -92,7 +106,8 @@ local function Initialize()
 				{
 					confirmed = Constants.AnalyticsCancelledName,
 					universeid = tostring(game.GameId),
-					source = Constants.AnalyticsLeaveToHomeSource
+					source = Constants.AnalyticsLeaveToHomeSource,
+					playsessionid = if FFlagIEMSettingsAddPlaySessionID then this.playsessionid else nil,
 				}
 			)								
 		end
@@ -117,7 +132,13 @@ local function Initialize()
 	this.ShouldShowBottomBar = false
 	this.ShouldShowHubBar = false
 
-	local leaveGameConfirmationText = "Are you sure you want to leave the experience?"
+	local leaveGameConfirmationText = if GetFFlagCoreScriptsMigrateFromLegacyCSVLoc() then
+		RobloxTranslator:FormatByKey(
+			if FFlagCollectAnalyticsForSystemMenu then
+				Constants.ConfirmLeaveGameLocalizedKey else
+				"CoreScripts.InGameMenu.Prompt.ConfirmLeaveGame"
+		) else 
+		"Are you sure you want to leave the experience?"
 
 	local leaveGameText =  Create'TextLabel'
 	{
@@ -168,7 +189,14 @@ local function Initialize()
 
 	------------- Init ----------------------------------
 
-	local dontleaveGameButton = utility:MakeStyledButton("DontLeaveGame", "Don't Leave", nil, this.DontLeaveFromButton)
+	local dontleaveGameButton = utility:MakeStyledButton(
+		"DontLeaveGame",
+		if GetFFlagCoreScriptsMigrateFromLegacyCSVLoc() then
+			RobloxTranslator:FormatByKey("Feature.SettingsHub.Label.DontLeaveButton") else
+			"Don't Leave",
+			nil,
+			this.DontLeaveFromButton
+		)
 	dontleaveGameButton.NextSelectionLeft = nil
 	dontleaveGameButton.Parent = leaveButtonContainer
 

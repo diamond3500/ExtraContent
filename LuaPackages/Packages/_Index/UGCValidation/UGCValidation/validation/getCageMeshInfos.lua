@@ -1,12 +1,8 @@
-local UGCValidateCageMeshInfosFix = game:DefineFastFlag("UGCValidateCageMeshInfosFix", false)
-
 local root = script.Parent.Parent
 
 local Types = require(root.util.Types)
 local Analytics = require(root.Analytics)
 local getEditableMeshFromContext = require(root.util.getEditableMeshFromContext)
-
-local getFFlagAllowEditableForCageMeshValidation = require(root.flags.getFFlagAllowEditableForCageMeshValidation)
 
 local CAGE_NAMES: { string } = { "InnerCage", "OuterCage" }
 local CAGE_MESH_NAMES: { string } = { "ReferenceMeshId", "CageMeshId" }
@@ -44,24 +40,15 @@ local function getCageMeshInfos(
 			context = instance.Name,
 		} :: Types.MeshInfo
 
-		local hasCageMeshContent: boolean?
-		if getFFlagAllowEditableForCageMeshValidation() then
-			hasCageMeshContent = (cageMeshInfo.contentId ~= "" and cageMeshInfo.contentId ~= nil)
-				or validationContext.allowEditableInstances
-		else
-			hasCageMeshContent = cageMeshInfo.contentId ~= "" and cageMeshInfo.contentId ~= nil
-		end
+		local hasCageMeshContent: boolean? = (cageMeshInfo.contentId ~= "" and cageMeshInfo.contentId ~= nil)
+			or validationContext.allowEditableInstances
 		if not hasCageMeshContent then
 			Analytics.reportFailure(MISSING_CAGES_ERRORS[ind], nil, validationContext)
 			table.insert(issues, string.format(MESSAGE_MISSING_MESH, CAGE_NAMES[ind], cageMeshName, instance.Name))
 			continue
 		end
 
-		local getMeshSuccess, cageEditableMesh = getEditableMeshFromContext(
-			if UGCValidateCageMeshInfosFix then wrapLayer else handle,
-			cageMeshName,
-			validationContext
-		)
+		local getMeshSuccess, cageEditableMesh = getEditableMeshFromContext(wrapLayer, cageMeshName, validationContext)
 
 		if not getMeshSuccess then
 			table.insert(issues, string.format(MESSAGE_FAILED_MESH, CAGE_NAMES[ind], instance.Name))

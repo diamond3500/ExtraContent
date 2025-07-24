@@ -18,8 +18,8 @@ local ExpandableTextUtils = require(UIBlox.Core.Text.ExpandableText.ExpandableTe
 
 local CursorKind = require(App.SelectionImage.CursorKind)
 local withSelectionCursorProvider = require(App.SelectionImage.withSelectionCursorProvider)
-local useCursorByType = require(App.SelectionCursor.useCursorByType)
 local CursorType = require(App.SelectionCursor.CursorType)
+local useCursorByType = require(App.SelectionCursor.useCursorByType)
 local UIBloxConfig = require(UIBlox.UIBloxConfig)
 
 local DEFAULT_PADDING_TOP = 30
@@ -60,15 +60,17 @@ ExpandableTextArea.validateProps = t.strictInterface({
 	NextSelectionLeft = t.optional(t.table),
 	NextSelectionRight = t.optional(t.table),
 	frameRef = t.optional(t.table),
-	-- Selection cursor
-	selectionCursor = if UIBloxConfig.migrateToNewSelectionCursor then t.optional(t.any) else nil,
+	gradientColor = t.optional(t.Color3),
 
-	gradientColor = if UIBloxConfig.enableExpandableTextAreaGradientFix then t.optional(t.Color3) else nil,
+	selectionCursor = if UIBloxConfig.useFoundationSelectionCursor then t.table else nil,
+	-- Whether to enable RoactGamepad functionality
+	isRoactGamepadEnabled = t.optional(t.boolean),
 })
 
 ExpandableTextArea.defaultProps = {
 	compactNumberOfLines = 2,
 	Text = "",
+	isRoactGamepadEnabled = true,
 }
 
 function ExpandableTextArea:init()
@@ -158,7 +160,9 @@ function ExpandableTextArea:render()
 			local gradientHeight = isExpanded and 0 or GRADIENT_HEIGHT
 
 			local isFocusable = canExpand
-			local frameComponent = isFocusable and RoactGamepad.Focusable.Frame or "Frame"
+			local frameComponent = if self.props.isRoactGamepadEnabled and isFocusable
+				then RoactGamepad.Focusable.Frame
+				else "Frame"
 
 			return Roact.createElement(frameComponent, {
 				BackgroundTransparency = 1,
@@ -167,7 +171,7 @@ function ExpandableTextArea:render()
 				Position = position,
 				Size = width and UDim2.new(width.Scale, width.Offset, 0, 0) or UDim2.new(1, 0, 0, 0),
 				AutomaticSize = Enum.AutomaticSize.Y,
-				SelectionImageObject = if UIBloxConfig.migrateToNewSelectionCursor
+				SelectionImageObject = if UIBloxConfig.useFoundationSelectionCursor
 					then self.props.selectionCursor
 					else getSelectionCursor(CursorKind.RoundedRect),
 				[Roact.Ref] = ref,
@@ -181,14 +185,15 @@ function ExpandableTextArea:render()
 						})
 					end
 				end,
-
 				NextSelectionUp = self.props.NextSelectionUp,
 				NextSelectionDown = self.props.NextSelectionDown,
 				NextSelectionLeft = self.props.NextSelectionLeft,
 				NextSelectionRight = self.props.NextSelectionRight,
-				inputBindings = isFocusable and {
-					Activated = RoactGamepad.Input.onBegin(Enum.KeyCode.ButtonA, self.onClick),
-				} or nil,
+				inputBindings = if self.props.isRoactGamepadEnabled and isFocusable
+					then {
+						Activated = RoactGamepad.Input.onBegin(Enum.KeyCode.ButtonA, self.onClick),
+					}
+					else nil,
 			}, {
 				Layout = Roact.createElement("UIListLayout", {
 					SortOrder = Enum.SortOrder.LayoutOrder,
@@ -246,9 +251,7 @@ function ExpandableTextArea:render()
 							AnchorPoint = Vector2.new(0, 1),
 							BackgroundTransparency = 1,
 							Image = GRADIENT_IMAGE,
-							ImageColor3 = if UIBloxConfig.enableExpandableTextAreaGradientFix
-								then (gradientColor or theme.BackgroundDefault.Color)
-								else theme.BackgroundDefault.Color,
+							ImageColor3 = gradientColor or theme.BackgroundDefault.Color,
 						},
 						springOptions = GRADIENT_ANIMATION_SPRING_SETTINGS,
 					}),
@@ -285,11 +288,11 @@ function ExpandableTextArea:render()
 end
 
 return Roact.forwardRef(function(props, ref)
-	local selectionCursor = useCursorByType(CursorType.RoundedRect)
-	if UIBloxConfig.migrateToNewSelectionCursor then
-		props = Cryo.Dictionary.join({
-			selectionCursor = selectionCursor,
-		}, props)
+	if UIBloxConfig.useFoundationSelectionCursor then
+		local cursor = useCursorByType(CursorType.RoundedRect)
+		props = Cryo.Dictionary.join(props, {
+			selectionCursor = cursor,
+		})
 	end
 	return Roact.createElement(
 		ExpandableTextArea,

@@ -16,6 +16,8 @@ local ShiftLock = require(Fields.ShiftLock)
 local PerformanceStats = require(Fields.PerformanceStats)
 local UINavToggle = require(Fields.UINavToggle)
 local ReducedMotion = require(Fields.ReducedMotion)
+local DeveloperConsole = require(Fields.DeveloperConsole)
+local TranslationFeedback = require(Fields.TranslationFeedback)
 
 -- Core Module 
 
@@ -30,6 +32,8 @@ local settingsPage = SettingsService:registerPage({
 		PerformanceStats,
 		UINavToggle,
 		ReducedMotion,
+		DeveloperConsole,
+		TranslationFeedback
 	}
 })
 

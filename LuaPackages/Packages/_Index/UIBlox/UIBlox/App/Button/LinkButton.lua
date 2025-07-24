@@ -6,7 +6,7 @@ local Packages = UIBlox.Parent
 
 local t = require(Packages.t)
 local Roact = require(Packages.Roact)
-local enumerate = require(Packages.enumerate)
+local Cryo = require(Packages.Cryo)
 
 local Interactable = require(Core.Control.Interactable)
 
@@ -20,7 +20,7 @@ local GenericTextLabel = require(Core.Text.GenericTextLabel.GenericTextLabel)
 local HoverButtonBackground = require(Core.Button.HoverButtonBackground)
 
 local withSelectionCursorProvider = require(App.SelectionImage.withSelectionCursorProvider)
-local withCursor = require(App.SelectionCursor.withCursor)
+local useCursorByType = require(App.SelectionCursor.useCursorByType)
 local CursorType = require(App.SelectionCursor.CursorType)
 local RoactGamepad = require(Packages.RoactGamepad)
 local Focusable = RoactGamepad.Focusable
@@ -30,10 +30,6 @@ local UIBloxConfig = require(UIBlox.UIBloxConfig)
 local UNDERLINED_HOVER_TRANSPARENCY = 0.3
 
 local LinkButton = Roact.PureComponent:extend("LinkButton")
-LinkButton.debugProps = enumerate("debugProps", {
-	"getTextSize",
-	"controlState",
-})
 
 LinkButton.validateProps = t.strictInterface({
 	-- The state change callback for the button
@@ -74,10 +70,10 @@ LinkButton.validateProps = t.strictInterface({
 	-- Custom selection cursor kind
 	selectionCursorKind = t.optional(t.userdata),
 	-- A callback that replaces getTextSize implementation
-	[LinkButton.debugProps.getTextSize] = t.optional(t.callback),
+	debugGetTextSize = t.optional(t.callback),
 
 	-- Override the default controlState
-	[LinkButton.debugProps.controlState] = t.optional(ControlState.isEnumValue),
+	debugControlState = t.optional(ControlState.isEnumValue),
 
 	-- optional parameters for RoactGamepad
 	NextSelectionLeft = t.optional(t.table),
@@ -85,6 +81,9 @@ LinkButton.validateProps = t.strictInterface({
 	NextSelectionUp = t.optional(t.table),
 	NextSelectionDown = t.optional(t.table),
 	buttonRef = t.optional(t.union(t.callback, t.table)),
+
+	-- The selection cursor object
+	cursor = t.optional(t.table),
 })
 
 LinkButton.defaultProps = {
@@ -106,8 +105,8 @@ LinkButton.defaultProps = {
 	minPaddingX = 8,
 	minPaddingY = 11,
 
-	[LinkButton.debugProps.getTextSize] = GetTextSize,
-	[LinkButton.debugProps.controlState] = nil,
+	debugGetTextSize = GetTextSize,
+	debugControlState = nil,
 }
 
 function LinkButton:init()
@@ -130,11 +129,8 @@ function LinkButton:init()
 end
 
 function LinkButton:render()
-	if UIBloxConfig.migrateToNewSelectionCursor then
-		return withCursor(function(context)
-			local cursor = context.getCursorByType(CursorType.RoundedRectNoInset)
-			return self:renderWithSelectionCursorProvider(nil, cursor)
-		end)
+	if UIBloxConfig.useFoundationSelectionCursor then
+		return self:renderWithSelectionCursorProvider(nil, self.props.cursor)
 	else
 		return withSelectionCursorProvider(function(getSelectionCursor)
 			return self:renderWithSelectionCursorProvider(getSelectionCursor)
@@ -144,7 +140,7 @@ end
 
 function LinkButton:renderWithSelectionCursorProvider(getSelectionCursor, cursor)
 	return withStyle(function(style)
-		local currentState = self.props[LinkButton.debugProps.controlState] or self.state.controlState
+		local currentState = self.props.debugControlState or self.state.controlState
 
 		local textStateColorMap = {
 			[ControlState.Default] = self.props.colorStyleDefault,
@@ -160,7 +156,7 @@ function LinkButton:renderWithSelectionCursorProvider(getSelectionCursor, cursor
 		end
 
 		local fontSize = fontStyle.RelativeSize * style.Font.BaseSize
-		local getTextSize = self.props[LinkButton.debugProps.getTextSize]
+		local getTextSize = self.props.debugGetTextSize
 
 		local manipulatedText = cleanRichTextTags(self.props.text)
 		local textWidth = getTextSize(manipulatedText, fontSize, fontStyle.Font, Vector2.new(10000, 0)).X
@@ -180,7 +176,7 @@ function LinkButton:renderWithSelectionCursorProvider(getSelectionCursor, cursor
 		local minSize = Vector2.new(textWidth + minPaddingX * 2, fontSize + minPaddingY * 2)
 
 		local selectionCursor = nil
-		if UIBloxConfig.migrateToNewSelectionCursor then
+		if UIBloxConfig.useFoundationSelectionCursor then
 			selectionCursor = cursor
 		else
 			if self.props.selectionCursorKind ~= nil then
@@ -239,4 +235,19 @@ function LinkButton:renderWithSelectionCursorProvider(getSelectionCursor, cursor
 	end)
 end
 
+if UIBloxConfig.useFoundationSelectionCursor then
+	function LinkButtonFunctionalWrapper(props)
+		local cursor = if UIBloxConfig.useFoundationSelectionCursor
+			then useCursorByType(CursorType.RoundedRectNoInset)
+			else nil
+		return Roact.createElement(
+			LinkButton,
+			Cryo.Dictionary.join(props, {
+				cursor = cursor,
+			})
+		)
+	end
+
+	return LinkButtonFunctionalWrapper
+end
 return LinkButton

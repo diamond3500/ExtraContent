@@ -46,10 +46,12 @@ local PageInstance = nil
 RobloxGui:WaitForChild("Modules"):WaitForChild("TenFootInterface")
 local isTenFootInterface = require(RobloxGui.Modules.TenFootInterface):IsEnabled()
 
+local EngineFeatureRbxAnalyticsServiceExposePlaySessionId = game:GetEngineFeature("RbxAnalyticsServiceExposePlaySessionId")
+
 local SharedFlags = require(CorePackages.Workspace.Packages.SharedFlags)
+local FFlagIEMSettingsAddPlaySessionID = SharedFlags.FFlagIEMSettingsAddPlaySessionID
 local FFlagEnableChromeShortcutBar = SharedFlags.FFlagEnableChromeShortcutBar
 local FFlagChromeShortcutRemoveRespawnOnLeavePage = SharedFlags.FFlagChromeShortcutRemoveRespawnOnLeavePage
-local FFlagAddNextUpContainer = require(RobloxGui.Modules.Settings.Flags.FFlagAddNextUpContainer)
 local FFlagRefactorMenuConfirmationButtons = require(RobloxGui.Modules.Settings.Flags.FFlagRefactorMenuConfirmationButtons)
 
 local Constants = require(RobloxGui.Modules:WaitForChild("InGameMenu"):WaitForChild("Resources"):WaitForChild("Constants"))
@@ -64,6 +66,9 @@ local ButtonVariant = Foundation.Enums.ButtonVariant
 local InputSize = Foundation.Enums.InputSize
 local Text = Foundation.Text
 local View = Foundation.View
+
+local RobloxTranslator = require(CorePackages.Workspace.Packages.RobloxTranslator)
+local GetFFlagCoreScriptsMigrateFromLegacyCSVLoc = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagCoreScriptsMigrateFromLegacyCSVLoc
 
 ----------- CLASS DECLARATION --------------
 
@@ -181,6 +186,11 @@ local function Initialize()
 	local settingsPageFactory = require(RobloxGui.Modules.Settings.SettingsPageFactory)
 	local this = settingsPageFactory:CreateNewPage()
 
+	this.playsessionid = ""
+	if FFlagIEMSettingsAddPlaySessionID and EngineFeatureRbxAnalyticsServiceExposePlaySessionId then
+		this.playsessionid = AnalyticsService:GetPlaySessionId()
+	end
+
 	this.DontLeaveFunc = function(isUsingGamepad)
 		if this.HubRef then
 			this.HubRef:PopMenu(isUsingGamepad, true)
@@ -193,7 +203,8 @@ local function Initialize()
 			{
 				confirmed = Constants.AnalyticsCancelledName,
 				universeid = tostring(game.GameId),
-				source = Constants.AnalyticsLeaveGameSource
+				source = Constants.AnalyticsLeaveGameSource,
+				playsessionid = if FFlagIEMSettingsAddPlaySessionID then this.playsessionid else nil,
 			}
 		)
 	end
@@ -225,7 +236,7 @@ local function Initialize()
 			pageHidden = this.Hidden,
 		}))
 	else
-		local leaveGameConfirmationText = "Are you sure you want to leave the experience?"
+		local leaveGameConfirmationText = if GetFFlagCoreScriptsMigrateFromLegacyCSVLoc() then RobloxTranslator:FormatByKey(Constants.ConfirmLeaveGameLocalizedKey) else "Are you sure you want to leave the experience?"
 
 		local leaveGameText =  Create'TextLabel'
 		{
@@ -276,7 +287,14 @@ local function Initialize()
 
 		------------- Init ----------------------------------
 
-		local dontleaveGameButton = utility:MakeStyledButton("DontLeaveGame", "Don't Leave", nil, this.DontLeaveFromButton)
+		local dontleaveGameButton = utility:MakeStyledButton(
+			"DontLeaveGame",
+			if GetFFlagCoreScriptsMigrateFromLegacyCSVLoc() then
+				RobloxTranslator:FormatByKey("Feature.SettingsHub.Label.DontLeaveButton") else
+				"Don't Leave",
+			nil,
+			this.DontLeaveFromButton
+		)
 		dontleaveGameButton.NextSelectionLeft = nil
 		dontleaveGameButton.Parent = leaveButtonContainer
 
@@ -311,9 +329,4 @@ PageInstance.Hidden.Event:connect(function()
 	ContextActionService:UnbindCoreAction(LEAVE_GAME_ACTION)
 end)
 
-if FFlagAddNextUpContainer then
-	local LeaveGameWithNextupPage = require(script.Parent.LeaveGameWithNextUp)
-	return LeaveGameWithNextupPage
-else
-	return PageInstance
-end
+return PageInstance

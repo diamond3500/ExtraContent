@@ -81,7 +81,6 @@ return {
 	HealthBarKeepOutAreaId = "health-bar",
 	MoreMenuKeepOutAreaId = "more-menu",
 	ChatIconKeepOutAreaId = "chat-icon",
-	ConnectIconKeepOutAreaId = "connect-icon",
 	BackIconKeepOutAreaId = "back-icon",
 	BadgeOver13KeepOutAreaId = "badge-13",
 	VoiceBetaBadgeKeepOutAreaId = "badge-voice-beta",
@@ -91,6 +90,7 @@ return {
 
 	TopBarPadding = topBarPadding,
 
+	InitialHealth = 100,
 	HealthPercentForOverlay = 5 / 100,
 	HealthRedColor = Color3.fromRGB(255, 28, 0),
 	HealthYellowColor = Color3.fromRGB(250, 235, 0),
@@ -115,5 +115,10 @@ return {
 		EmotesButtonName = "emotes",
 		StatusActive = "active",
 		StatusInactive = "inactive",
+	},
+
+	LocalizedKeys = {
+		UILessTooltipTitle = "CoreScripts.TopBar.Label.UILessHintTitle",
+		UILessTooltipDescription = "CoreScripts.TopBar.Label.UILessHintDescription",
 	},
 }

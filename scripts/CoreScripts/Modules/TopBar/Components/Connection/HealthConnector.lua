@@ -1,3 +1,4 @@
+-- Remove with FFlagTopBarSignalizeHealthBar
 --!nonstrict
 local CorePackages = game:GetService("CorePackages")
 local Players = game:GetService("Players")
@@ -8,12 +9,12 @@ local t = require(CorePackages.Packages.t)
 
 local Components = script.Parent.Parent
 local TopBar = Components.Parent
+local FFlagTopBarSignalizeHealthBar = require(TopBar.Flags.FFlagTopBarSignalizeHealthBar)
 
 local SetIsDead = require(TopBar.Actions.SetIsDead)
 local UpdateHealth = require(TopBar.Actions.UpdateHealth)
 
 local EventConnection = require(TopBar.Parent.Common.EventConnection)
-local GetFFlagFixHealthDesync = require(TopBar.Flags.GetFFlagFixHealthDesync)
 
 local LocalPlayer = Players.LocalPlayer
 while not LocalPlayer do
@@ -29,42 +30,23 @@ HealthConnector.validateProps = t.strictInterface({
 })
 
 function HealthConnector:init()
-	if GetFFlagFixHealthDesync() then
-		self:setState({
-			character = nil,
-			humanoid = nil,
-		})
-	else
-		local character = LocalPlayer.Character
-		local humanoid = nil
-		if character then
-			humanoid = character:FindFirstChildOfClass("Humanoid")
-		end
-
-		self:setState({
-			character = character,
-			humanoid = humanoid,
-		})
-	end
+	self:setState({
+		character = nil,
+		humanoid = nil,
+	})
 end
 
 function HealthConnector:didMount()
-	if GetFFlagFixHealthDesync() then
-		local character = LocalPlayer.Character
-		local humanoid = nil
-		if character then
-			humanoid = character:FindFirstChildOfClass("Humanoid")
-		end
-
-		self:setState({
-			character = character,
-			humanoid = humanoid,
-		})
-	else
-		if self.state.humanoid then
-			self.props.updateHealth(self.state.humanoid.Health, self.state.humanoid.MaxHealth)
-		end
+	local character = LocalPlayer.Character
+	local humanoid = nil
+	if character then
+		humanoid = character:FindFirstChildOfClass("Humanoid")
 	end
+
+	self:setState({
+		character = character,
+		humanoid = humanoid,
+	})
 end
 
 function HealthConnector:render()
@@ -151,4 +133,4 @@ local function mapDispatchToProps(dispatch)
 	}
 end
 
-return RoactRodux.UNSTABLE_connect2(nil, mapDispatchToProps)(HealthConnector)
+return if FFlagTopBarSignalizeHealthBar then nil :: never else RoactRodux.UNSTABLE_connect2(nil, mapDispatchToProps)(HealthConnector)

@@ -9,16 +9,18 @@ local CoreGui = game:GetService("CoreGui")
 local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 local CorePackages = game:GetService("CorePackages")
 
-local FFlagEnableLuaAppsShareLinksPackages = require(CorePackages.Workspace.Packages.SharedFlags).FFlagEnableLuaAppsShareLinksPackages
-
 local ShareGame = RobloxGui.Modules.Settings.Pages.ShareGame
 local Constants = require(ShareGame.Constants)
 local dependencies = require(CorePackages.Workspace.Packages.NotificationsCommon).ReducerDependencies
-local RoduxShareLinks = dependencies.RoduxShareLinks
 local ShareLinksRodux = dependencies.ShareLinksRodux
-local ClearShareInviteLink = if FFlagEnableLuaAppsShareLinksPackages then (ShareLinksRodux :: any).Actions.ClearShareInviteLink else RoduxShareLinks.Actions.ClearShareInviteLink -- Remove any cast with FFlagEnableLuaAppsShareLinksPackages
+local ClearShareInviteLink = ShareLinksRodux.Actions.ClearShareInviteLink
 local OpenPage = require(ShareGame.Actions.OpenPage)
 local ClosePage = require(ShareGame.Actions.ClosePage)
+
+local ChromeEnabled = require(RobloxGui.Modules.Chrome.Enabled)()
+
+local SharedFlags = require(CorePackages.Workspace.Packages.SharedFlags)
+local FFlagChromeShortcutBarRemoveOnInviteFriends = SharedFlags.FFlagChromeShortcutBarRemoveOnInviteFriends
 
 local settingsPageFactory = require(RobloxGui.Modules.Settings.SettingsPageFactory)
 local this = settingsPageFactory:CreateNewPage()
@@ -52,6 +54,10 @@ function this:ConnectHubToApp(settingsHub, shareGameApp)
 		if not state.Page.IsOpen then
 			-- Tell Roact app that the page was opened via Settings Hub
 			shareGameApp.store:dispatch(OpenPage(Constants.PageRoute.SETTINGS_HUB))
+			if FFlagChromeShortcutBarRemoveOnInviteFriends and ChromeEnabled then
+				local ChromeService = require(RobloxGui.Modules.Chrome.Service)
+				ChromeService:setHideShortcutBar("ShareGamePlaceholderPage", true)
+			end
 		end
 	end)
 
@@ -62,6 +68,10 @@ function this:ConnectHubToApp(settingsHub, shareGameApp)
 		local state = shareGameApp.store:getState()
 		if state.Page.IsOpen then
 			shareGameApp.store:dispatch(ClosePage(Constants.PageRoute.SETTINGS_HUB))
+			if FFlagChromeShortcutBarRemoveOnInviteFriends and ChromeEnabled then
+				local ChromeService = require(RobloxGui.Modules.Chrome.Service)
+				ChromeService:setHideShortcutBar("ShareGamePlaceholderPage", false)
+			end
 		end
 	end)
 

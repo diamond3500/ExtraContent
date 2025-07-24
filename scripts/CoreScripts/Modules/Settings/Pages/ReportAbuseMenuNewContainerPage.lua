@@ -5,9 +5,21 @@ local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 
 local Roact = require(CorePackages.Packages.Roact)
 local utility = require(RobloxGui.Modules.Settings.Utility)
+local BuilderIcons = require(CorePackages.Packages.BuilderIcons)
+local migrationLookup = BuilderIcons.Migration['uiblox']
 
 local AbuseReportMenu = require(RobloxGui.Modules.AbuseReportMenu).AbuseReportMenu
 local ReportAbuseAnalytics = require(RobloxGui.Modules.AbuseReportMenu).ReportAbuseAnalytics
+
+local Chrome = RobloxGui.Modules.Chrome
+local ChromeEnabled = require(Chrome.Enabled)()
+local ChromeService = if ChromeEnabled then require(Chrome.Service) else nil :: never
+
+local SharedFlags = require(CorePackages.Workspace.Packages.SharedFlags)
+local FFlagBuilderIcons = SharedFlags.UIBlox.FFlagUIBloxMigrateBuilderIcon
+local FFlagInExperienceReportClosingBugfix = SharedFlags.FFlagInExperienceReportClosingBugfix
+
+local FFlagHideShortcutsOnReportDropdown = require(RobloxGui.Modules.AbuseReportMenu.Flags.FFlagHideShortcutsOnReportDropdown)
 
 ------------ Variables -------------------
 local PageInstance = nil
@@ -72,10 +84,17 @@ local function Initialize()
 
 	------ TAB CUSTOMIZATION -------
 	this.TabHeader.Name = "ReportAbuseTab"
-	local icon = Theme.Images["icons/actions/feedback"]
-	this.TabHeader.TabLabel.Icon.ImageRectOffset = icon.ImageRectOffset
-	this.TabHeader.TabLabel.Icon.ImageRectSize = icon.ImageRectSize
-	this.TabHeader.TabLabel.Icon.Image = icon.Image
+
+	if FFlagBuilderIcons then
+		local icon = migrationLookup["icons/actions/feedback"]
+		this.TabHeader.TabLabel.Icon.Text = icon.name
+		this.TabHeader.TabLabel.Icon.FontFace = BuilderIcons.Font[icon.variant]
+	else
+		local icon = Theme.Images["icons/actions/feedback"]
+		this.TabHeader.TabLabel.Icon.ImageRectOffset = icon.ImageRectOffset
+		this.TabHeader.TabLabel.Icon.ImageRectSize = icon.ImageRectSize
+		this.TabHeader.TabLabel.Icon.Image = icon.Image
+	end
 	this.TabHeader.TabLabel.Title.Text = "Report"
 
 	------ PAGE CUSTOMIZATION -------
@@ -109,11 +128,17 @@ local function Initialize()
 			this:showReportSentPage(reportedPlayer)
 		end,
 		onReportComplete = function(text)
+			if FFlagInExperienceReportClosingBugfix and ChromeEnabled then
+				ChromeService:setShortcutBar(nil)
+			end
 			this:showAlert(text, "Ok", function()
 				-- callback function once we click "Ok" in the success screen
 				this:HideMenu()
 			end)
 		end,
+		onDropdownMenuOpenChange = if FFlagHideShortcutsOnReportDropdown and ChromeEnabled then function(isOpen)
+			ChromeService:setHideShortcutBar("InExperienceReportDropdown", isOpen)
+		end else nil,
 	})
 	Roact.mount(abuseReportMenu, this.Page, "AbuseReportMenu")
 

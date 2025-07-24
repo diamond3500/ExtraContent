@@ -36,9 +36,23 @@ local getFFlagUGCValidateUseAnalyticsEntryPoint = require(root.flags.getFFlagUGC
 local getEngineFeatureUGCValidateExtraShoesTests = require(root.flags.getEngineFeatureUGCValidateExtraShoesTests)
 local getEngineFeatureUGCValidateBodyPartCageMeshDistance =
 	require(root.flags.getEngineFeatureUGCValidateBodyPartCageMeshDistance)
+local getEngineFeatureUGCValidateBodyMaxCageMeshDistance =
+	require(root.flags.getEngineFeatureUGCValidateBodyMaxCageMeshDistance)
 local getFFlagUGCValidateIndividualPartBBoxes = require(root.flags.getFFlagUGCValidateIndividualPartBBoxes)
 local getFFlagRefactorBodyAttachmentOrientationsCheck =
 	require(root.flags.getFFlagRefactorBodyAttachmentOrientationsCheck)
+local getFFlagValidateDeformedLayeredClothingIsInBounds =
+	require(root.flags.getFFlagValidateDeformedLayeredClothingIsInBounds)
+local getFFlagReportVisibilityAndIslandTelemetry = require(root.flags.getFFlagReportVisibilityAndIslandTelemetry)
+local getFFlagUGCValidateEmoteAnimationExtendedTests =
+	require(root.flags.getFFlagUGCValidateEmoteAnimationExtendedTests)
+local getFFlagCheckAccessoryMeshSize = require(root.flags.getFFlagCheckAccessoryMeshSize)
+local getFFlagCheckBodyPartMeshSize = require(root.flags.getFFlagCheckBodyPartMeshSize)
+local getFFlagCheckLayeredClothingMeshSize = require(root.flags.getFFlagCheckLayeredClothingMeshSize)
+
+local getEngineFeatureUGCValidationFullBodyFacs = require(root.flags.getEngineFeatureUGCValidationFullBodyFacs)
+local getEngineFeatureEngineUGCValidateBodyPartsSkinnedToR15 =
+	require(root.flags.getEngineFeatureEngineUGCValidateBodyPartsSkinnedToR15)
 
 local function joinTables(...)
 	local result = {}
@@ -55,6 +69,9 @@ local Analytics = {}
 Analytics.ErrorType = {
 	resetPhysicsData_FailedToLoadMesh = "resetPhysicsData_FailedToLoadMesh",
 	validateAccessoryName = "validateAccessoryName",
+	validateAccurateBoundingBox = if getFFlagReportVisibilityAndIslandTelemetry()
+		then "validateAccurateBoundingBox"
+		else nil,
 	validateAssetBounds_AssetSizeTooBig = "validateAssetBounds_AssetSizeTooBig",
 	validateAssetBounds_AssetSizeTooSmall = "validateAssetBounds_AssetSizeTooSmall",
 	validateAssetBounds_InconsistentAvatarPartScaleType = "validateAssetBounds_InconsistentAvatarPartScaleType",
@@ -62,6 +79,9 @@ Analytics.ErrorType = {
 	validateAssetCreator_DependencyNotOwnedByCreator = "validateAssetCreator_DependencyNotOwnedByCreator",
 	validateAssetCreator_FailedToLoad = "validateAssetCreator_FailedToLoad",
 	validateAssetCreator_TooManyDependencies = "validateAssetCreator_TooManyDependencies",
+	validateAssetTransparency_AssetTransparencyThresholds = if getFFlagReportVisibilityAndIslandTelemetry()
+		then "validateAssetTransparency_AssetTransparencyThresholds"
+		else nil,
 	validateAttributes = "validateAttributes",
 	validateBodyPartChildAttachmentBounds_AttachmentRotated = if getFFlagRefactorBodyAttachmentOrientationsCheck()
 		then nil
@@ -175,6 +195,12 @@ Analytics.ErrorType = {
 	validateCoplanarIntersection_CoplanarIntersection = "validateCoplanarIntersection_CoplanarIntersection",
 }
 
+if getEngineFeatureUGCValidationFullBodyFacs() then
+	Analytics.ErrorType.validateEachBodyPartFacsBounds_FailedToExecute =
+		"validateEachBodyPartFacsBounds_FailedToExecute"
+	Analytics.ErrorType.validateEachBodyPartFacsBounds_ExtendedBounds = "validateEachBodyPartFacsBounds_ExtendedBounds"
+end
+
 if getEngineFeatureEngineUGCValidateLCCagesVerticesSimilarity() then
 	Analytics.ErrorType.validateVerticesSimilarity_FailedToExecute = "validateVerticesSimilarity_FailedToExecute"
 	Analytics.ErrorType.validateVerticesSimilarity_MaxSimilarityExceeded =
@@ -213,7 +239,7 @@ if getEngineFeatureUGCValidateExtraShoesTests() then
 		"validateRenderMeshInsideModifiedOuterCageArea_RenderMeshNotPositionedCorrectly"
 end
 
-if getEngineFeatureUGCValidateBodyPartCageMeshDistance() then
+if getEngineFeatureUGCValidateBodyPartCageMeshDistance() or getEngineFeatureUGCValidateBodyMaxCageMeshDistance() then
 	Analytics.ErrorType.validateBodyPartCage_FailedToExecute = "validateBodyPartCage_FailedToExecute"
 	Analytics.ErrorType.validateBodyPartCage_VertsAreTooFarInFrontOfRenderMesh =
 		"validateBodyPartCage_VertsAreTooFarInFrontOfRenderMesh"
@@ -255,6 +281,37 @@ if getFFlagRefactorBodyAttachmentOrientationsCheck() then
 		"validateBodyPartChildAttachmentOrientations_RotatedRig"
 	Analytics.ErrorType.validateBodyPartChildAttachmentOrientations_RotatedGrip =
 		"validateBodyPartChildAttachmentOrientations_RotatedGrip"
+end
+
+if getFFlagValidateDeformedLayeredClothingIsInBounds() then
+	Analytics.ErrorType.validateDeformedLayeredClothingInRenderBounds_FailedToExecute =
+		"validateDeformedLayeredClothingInRenderBounds_FailedToExecute"
+	Analytics.ErrorType.validateDeformedLayeredClothingInRenderBounds_ClothingOutOfBounds =
+		"validateDeformedLayeredClothingInRenderBounds_ClothingOutOfBounds"
+end
+
+if getFFlagUGCValidateEmoteAnimationExtendedTests() then
+	Analytics.ErrorType.validateEmoteAnimation_FailedToDownloadCurveAnimation =
+		"validateEmoteAnimation_FailedToDownloadCurveAnimation"
+	Analytics.ErrorType.validateCurveAnimation_AnimationHierarchyIsIncorrect =
+		"validateCurveAnimation_AnimationHierarchyIsIncorrect"
+	Analytics.ErrorType.validateCurveAnimation_AnimationContainsNoJointManipulation =
+		"validateCurveAnimation_AnimationContainsNoJointManipulation"
+	Analytics.ErrorType.validateCurveAnimation_UnacceptableLength = "validateCurveAnimation_UnacceptableLength"
+	Analytics.ErrorType.validateCurveAnimation_UnacceptableSizeBounds = "validateCurveAnimation_UnacceptableSizeBounds"
+	Analytics.ErrorType.validateCurveAnimation_UnacceptableFrameDelta = "validateCurveAnimation_UnacceptableFrameDelta"
+end
+
+if getFFlagCheckAccessoryMeshSize() or getFFlagCheckBodyPartMeshSize() or getFFlagCheckLayeredClothingMeshSize() then
+	Analytics.ErrorType.validateMeshSizeProperty_FailedToLoadMesh = "validateMeshSizeProperty_FailedToLoadMesh"
+	Analytics.ErrorType.validateMeshSizeProperty_Mismatch = "validateMeshSizeProperty_Mismatch"
+end
+
+if getEngineFeatureEngineUGCValidateBodyPartsSkinnedToR15() then
+	Analytics.ErrorType.validateBodyPartVertsSkinnedToR15_FailedToFetchSkinning =
+		"validateBodyPartVertsSkinnedToR15_FailedToFetchSkinning"
+	Analytics.ErrorType.validateBodyPartVertsSkinnedToR15_BodyIsSkinnedToFakeJoints =
+		"validateBodyPartVertsSkinnedToR15_BodyIsSkinnedToFakeJoints"
 end
 
 setmetatable(Analytics.ErrorType, {

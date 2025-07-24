@@ -20,13 +20,14 @@ local GenericTextLabel = require(UIBlox.Core.Text.GenericTextLabel.GenericTextLa
 local divideTransparency = require(UIBlox.Utility.divideTransparency)
 local validateFontInfo = require(Packages.UIBlox.Core.Style.Validator.validateFontInfo)
 
+local UIBloxConfig = require(UIBlox.UIBloxDefaultConfig)
+
 local ControlState = require(Packages.UIBlox.Core.Control.Enum.ControlState)
 
 local KeyLabel = require(script.Parent.KeyLabel.KeyLabel)
 local RoundedFrame = require(script.Parent.RoundedFrame)
 
 local Interactable = require(UIBlox.Core.Control.Interactable)
-local UIBloxConfig = require(UIBlox.UIBloxConfig)
 
 local CELL_BACKGROUND_ASSET = Images["component_assets/circle_17"]
 
@@ -72,7 +73,7 @@ Cell.validateProps = t.strictInterface({
 	leftPaddingOffset = t.optional(t.number),
 	layoutOrder = t.integer,
 	setButtonRef = t.optional(t.union(t.callback, t.table)),
-	cursorKind = if UIBloxConfig.migrateToNewSelectionCursor then nil else t.optional(CursorKind.isEnumValue),
+	cursorKind = t.optional(CursorKind.isEnumValue),
 	-- If the background asset behind the element is visible or not
 	isElementBackgroundVisible = t.optional(t.boolean),
 	-- Add offset to the left of the divider separating cells
@@ -106,8 +107,9 @@ Cell.validateProps = t.strictInterface({
 	background = t.optional(validateColorInfo),
 
 	selectionOrder = t.optional(t.number),
-	-- Optional selection cursor
-	selectionCursor = if UIBloxConfig.migrateToNewSelectionCursor then t.optional(t.any) else nil,
+
+	-- optional selectionCursor
+	selectionCursor = if UIBloxConfig.useFoundationSelectionCursor then t.optional(t.table) else nil,
 })
 
 Cell.defaultProps = {
@@ -405,7 +407,7 @@ function Cell:renderWithSelectionCursor(getSelectionCursor)
 			LayoutOrder = self.props.layoutOrder,
 			BorderSizePixel = 0,
 			[Roact.Ref] = self.props.setButtonRef,
-			SelectionImageObject = if UIBloxConfig.migrateToNewSelectionCursor
+			SelectionImageObject = if UIBloxConfig.useFoundationSelectionCursor
 				then self.props.selectionCursor
 				else getSelectionCursor(self.props.cursorKind),
 			SelectionOrder = self.props.selectionOrder,

@@ -10,6 +10,7 @@ local RoactRodux = require(CorePackages.Packages.RoactRodux)
 local t = require(CorePackages.Packages.t)
 local Otter = require(CorePackages.Packages.Otter)
 local UIBlox = require(CorePackages.Packages.UIBlox)
+local PlayerListPackage = require(CorePackages.Workspace.Packages.PlayerList)
 
 local Components = script.Parent.Parent
 local Connection = Components.Connection
@@ -25,6 +26,8 @@ local LocalPlayer = Players.LocalPlayer
 local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 local RobloxTranslator = require(CorePackages.Workspace.Packages.RobloxTranslator)
 
+local GetFFlagCoreScriptsMigrateFromLegacyCSVLoc = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagCoreScriptsMigrateFromLegacyCSVLoc
+
 local onBlockButtonActivated = require(RobloxGui.Modules.Settings.onBlockButtonActivated)
 
 local Images = UIBlox.App.ImageSet.Images
@@ -38,6 +41,7 @@ local ClosePlayerDropDown = require(PlayerList.Actions.ClosePlayerDropDown)
 local GetFFlagFixDropDownVisibility = require(PlayerList.Flags.GetFFlagFixDropDownVisibility)
 local FFlagPlayerListReduceRerenders = require(PlayerList.Flags.FFlagPlayerListReduceRerenders)
 local FFlagNavigateToBlockingModal = require(RobloxGui.Modules.Common.Flags.FFlagNavigateToBlockingModal)
+local FFlagUseNewPlayerList = PlayerListPackage.Flags.FFlagUseNewPlayerList
 
 local BlockPlayer = require(PlayerList.Thunks.BlockPlayer)
 local UnblockPlayer = require(PlayerList.Thunks.UnblockPlayer)
@@ -111,8 +115,8 @@ end
 
 function PlayerDropDown:createBlockButton(playerRelationship)
 	local selectedPlayer = self.props.selectedPlayer
-	local blockedText = RobloxTranslator:FormatByKey("PlayerDropDown.Block")
-	local unblockText = RobloxTranslator:FormatByKey("PlayerDropDown.UnBlock")
+	local blockedText = RobloxTranslator:FormatByKey(if GetFFlagCoreScriptsMigrateFromLegacyCSVLoc() then "InGame.PlayerDropDown.Block" else "PlayerDropDown.Block")
+	local unblockText = RobloxTranslator:FormatByKey(if GetFFlagCoreScriptsMigrateFromLegacyCSVLoc() then "InGame.PlayerDropDown.UnBlock" else "PlayerDropDown.UnBlock")
 	local blockIcon = Images["icons/actions/block"]
 
 	return Roact.createElement(DropDownButton, {
@@ -145,7 +149,7 @@ function PlayerDropDown:createReportButton()
 
 	return Roact.createElement(DropDownButton, {
 		layoutOrder = 5,
-		text = RobloxTranslator:FormatByKey("PlayerDropDown.Report"),
+		text = RobloxTranslator:FormatByKey(if GetFFlagCoreScriptsMigrateFromLegacyCSVLoc() then "InGame.PlayerDropDown.Report" else "PlayerDropDown.Report"),
 		icon = reportIcon,
 		lastButton = true,
 		forceShowOptions = false,
@@ -169,7 +173,7 @@ function PlayerDropDown:createInspectButton()
 
 	return Roact.createElement(DropDownButton, {
 		layoutOrder = 3,
-		text = RobloxTranslator:FormatByKey("PlayerDropDown.Examine"),
+		text = RobloxTranslator:FormatByKey(if GetFFlagCoreScriptsMigrateFromLegacyCSVLoc() then "InGame.PlayerDropDown.Examine" else "PlayerDropDown.Examine"),
 		icon = inspectIcon,
 		lastButton = selectedPlayer == LocalPlayer,
 		forceShowOptions = false,
@@ -269,8 +273,12 @@ function PlayerDropDown:didMount()
 end
 
 function PlayerDropDown:willUpdate(nextProps, nextState)
-	if nextProps.selectedPlayer ~= self.props.selectedPlayer then
+	if FFlagUseNewPlayerList then
 		self.dropDownPosition = nextProps.positionY
+	else
+		if nextProps.selectedPlayer ~= self.props.selectedPlayer then
+			self.dropDownPosition = nextProps.positionY
+		end
 	end
 end
 

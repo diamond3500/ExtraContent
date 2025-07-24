@@ -35,6 +35,8 @@ local RobloxTranslator = require(CorePackages.Workspace.Packages.RobloxTranslato
 local CachedPolicyService = require(CorePackages.Workspace.Packages.CachedPolicyService)
 local Theme = require(RobloxGui.Modules.Settings.Theme)
 local Create = require(CorePackages.Workspace.Packages.AppCommonLib).Create
+local BuilderIcons = require(CorePackages.Packages.BuilderIcons)
+local migrationLookup = BuilderIcons.Migration['uiblox']
 
 ------------ Variables -------------------
 local PageInstance = nil
@@ -45,10 +47,11 @@ local isSpatial = require(CorePackages.Workspace.Packages.AppCommonLib).isSpatia
 ------------ FFLAGS -------------------
 local success, result = pcall(function() return settings():GetFFlag('UseNotificationsLocalization') end)
 local FFlagUseNotificationsLocalization = success and result
-local GetFFlagOptimizeHelpMenuInputEvent = require(RobloxGui.Modules.Flags.GetFFlagOptimizeHelpMenuInputEvent)
 local GetFFlagFixIGMBottomBarVisibility = require(RobloxGui.Modules.Settings.Flags.GetFFlagFixIGMBottomBarVisibility)
 local isInExperienceUIVREnabled =
 	require(CorePackages.Workspace.Packages.SharedExperimentDefinition).isInExperienceUIVREnabled
+local FFlagBuilderIcons = require(CorePackages.Workspace.Packages.SharedFlags).UIBlox.FFlagUIBloxMigrateBuilderIcon
+local GetFFlagCoreScriptsMigrateFromLegacyCSVLoc = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagCoreScriptsMigrateFromLegacyCSVLoc
 
 ------------ Localization -------------------
 local locales = nil
@@ -402,7 +405,14 @@ local function Initialize()
 		local cameraOffset = -10
 
 		createGamepadLabel("Switch Tool", UDim2.new(0.5, leftOffset, 0, 15), UDim2.new(0, 100, 0, textVerticalSize), true)
-		createGamepadLabel("Game Menu Toggle", UDim2.new(0.5, leftOffset, 0.15, 10), UDim2.new(0, 164, 0, textVerticalSize), true)
+		createGamepadLabel(
+			if GetFFlagCoreScriptsMigrateFromLegacyCSVLoc() then
+				RobloxTranslator:FormatByKey("InGame.HelpMenu.Controls.ToggleGameMenu") else
+				"Game Menu Toggle",
+			UDim2.new(0.5, leftOffset, 0.15, 10),
+			UDim2.new(0, 164, 0, textVerticalSize),
+			true
+		)
 		createGamepadLabel("Move", UDim2.new(0.5, leftOffset, 0.31, 5), UDim2.new(0, 46, 0, textVerticalSize), true)
 		createGamepadLabel("Menu Navigation", UDim2.new(0.5, leftOffset, 0.46, 0), UDim2.new(0, 164, 0, textVerticalSize), true)
 
@@ -732,26 +742,21 @@ local function Initialize()
 
 	------ TAB CUSTOMIZATION -------
 	this.TabHeader.Name = "HelpTab"
-	this.TabHeader.TabLabel.Icon.Image ="rbxasset://textures/ui/Settings/MenuBarIcons/HelpTab.png"
-
-	local icon = Theme.Images["icons/menu/help"]
-	this.TabHeader.TabLabel.Icon.ImageRectOffset = icon.ImageRectOffset
-	this.TabHeader.TabLabel.Icon.ImageRectSize = icon.ImageRectSize
-	this.TabHeader.TabLabel.Icon.Image = icon.Image
+	if FFlagBuilderIcons then
+		local icon = migrationLookup["icons/menu/help"]
+		this.TabHeader.TabLabel.Icon.FontFace = BuilderIcons.Font[icon.variant]
+		this.TabHeader.TabLabel.Icon.Text = icon.name
+	else
+		this.TabHeader.TabLabel.Icon.Image ="rbxasset://textures/ui/Settings/MenuBarIcons/HelpTab.png"
+		local icon = Theme.Images["icons/menu/help"]
+		this.TabHeader.TabLabel.Icon.ImageRectOffset = icon.ImageRectOffset
+		this.TabHeader.TabLabel.Icon.ImageRectSize = icon.ImageRectSize
+		this.TabHeader.TabLabel.Icon.Image = icon.Image
+	end
 	this.TabHeader.TabLabel.Title.Text = "Help"
 	
 	------ PAGE CUSTOMIZATION -------
 	this.Page.Name = "Help"
-
-	if not GetFFlagOptimizeHelpMenuInputEvent() then
-		UserInputService.InputBegan:connect(function(inputObject)
-			local inputType = inputObject.UserInputType
-			if inputType ~= Enum.UserInputType.Focus and inputType ~= Enum.UserInputType.None then
-				lastInputType = inputObject.UserInputType
-				showTypeOfHelp()
-			end
-		end)
-	end
 
 	utility:OnResized(this, function(newSize, isPortrait)
 		if this.HelpPages[TOUCH_TAG] then
@@ -768,9 +773,7 @@ do
   PageInstance = Initialize()
 
   PageInstance.Displayed.Event:connect(function()
-      if GetFFlagOptimizeHelpMenuInputEvent() then
-        PageInstance:PageDisplayed()
-      end
+      PageInstance:PageDisplayed()
       if not GetFFlagFixIGMBottomBarVisibility() then
         local isPortrait = utility:IsPortrait()
         if PageInstance:GetCurrentInputType() == TOUCH_TAG then
@@ -785,9 +788,7 @@ do
     end)
 
   PageInstance.Hidden.Event:connect(function()
-      if GetFFlagOptimizeHelpMenuInputEvent() then
-        PageInstance:PageHidden()
-      end
+      PageInstance:PageHidden()
       PageInstance.HubRef.PageViewClipper.ClipsDescendants = true
       PageInstance.HubRef.PageView.ClipsDescendants = true
 

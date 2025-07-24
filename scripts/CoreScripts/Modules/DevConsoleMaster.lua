@@ -28,6 +28,7 @@ local MicroProfiler = require(Components.MicroProfiler.MainViewMicroProfiler)
 local ScriptProfiler = require(Components.ScriptProfiler.MainViewScriptProfiler)
 local DebugVisualizations = require(Components.DebugVisualizations.MainViewDebugVisualizations)
 local LuauHeap = require(Components.LuauHeap.MainViewLuauHeap)
+local VoiceChat = require(Components.VoiceChat.MainViewVoiceChat)
 
 local RCCProfilerDataCompleteListener = require(Components.MicroProfiler.RCCProfilerDataCompleteListener)
 local getClientReplicator = require(DevConsole.Util.getClientReplicator)
@@ -46,7 +47,7 @@ local PlayerPermissionsModule = require(CoreGui.RobloxGui.Modules.PlayerPermissi
 
 local ScriptProfilerEngineFeature = game:GetEngineFeature("ScriptProfiler")
 
-local GetFFlagRequestServerStatsFix = require(CoreGui.RobloxGui.Modules.Flags.GetFFlagRequestServerStatsFix)
+local VoiceChatServiceManager = require(CoreGui.RobloxGui.Modules.VoiceChat.VoiceChatServiceManager).default
 
 local DEV_TAB_LIST = {
 	Log = {
@@ -123,6 +124,11 @@ local ADMIN_TAB_LIST = {
 		tab = LuauHeap,
 		layoutOrder = 4,
 	},
+	VoiceChat = if game:GetEngineFeature("VoiceChatDevConsoleTabEnabled") and VoiceChatServiceManager and VoiceChatServiceManager:canUseService()
+	then {
+		tab = VoiceChat,
+		layoutOrder = 5,
+	} else nil,
 }
 
 local PLAYER_TAB_LIST = {
@@ -274,11 +280,8 @@ function DevConsoleMaster:Start()
 
 				self.store:dispatch(SetTabList(DEV_TAB_LIST, "Log", true))
 			end)
-			if GetFFlagRequestServerStatsFix() then
-				self:SetServerStatsConnection(true)
-			else
-				clientReplicator:RequestServerStats(true)
-			end
+			
+			self:SetServerStatsConnection(true)
 		end
 	end
 end
@@ -289,11 +292,7 @@ function DevConsoleMaster:ToggleVisibility()
 	end
 
 	local isVisible = not self.store:getState().DisplayOptions.isVisible
-	if GetFFlagRequestServerStatsFix() then
-		self:SetVisibility(isVisible)
-	else
-		self.store:dispatch(SetDevConsoleVisibility(isVisible))
-	end
+	self:SetVisibility(isVisible)
 end
 
 function DevConsoleMaster:GetVisibility()
@@ -324,9 +323,7 @@ function DevConsoleMaster:SetVisibility(value)
 			master:Start()
 		end
 
-		if GetFFlagRequestServerStatsFix() then
-			self:SetServerStatsConnection(value)
-		end
+		self:SetServerStatsConnection(value)
 
 		self.store:dispatch(SetDevConsoleVisibility(value))
 	end

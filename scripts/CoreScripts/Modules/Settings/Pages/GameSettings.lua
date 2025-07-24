@@ -62,7 +62,6 @@ local GetFFlagSelfViewCameraSettings = SharedFlags.GetFFlagSelfViewCameraSetting
 local GetFFlagAlwaysShowVRToggle = require(RobloxGui.Modules.Flags.GetFFlagAlwaysShowVRToggle)
 local GetFFlagEnableCrossExpVoiceVolumeIXPCheck = SharedFlags.GetFFlagEnableCrossExpVoiceVolumeIXPCheck
 local GetFFlagEnablePreferredTextSizeSettingInMenus = SharedFlags.GetFFlagEnablePreferredTextSizeSettingInMenus
-local FFlagCameraSensitivityPadding = game:DefineFastFlag("CameraSensitivityPadding2", false)
 local GetFFlagDebounceConnectDisconnectButton = require(RobloxGui.Modules.Flags.GetFFlagDebounceConnectDisconnectButton)
 local GetFIntDebounceDisconnectButtonDelay = require(RobloxGui.Modules.Flags.GetFIntDebounceDisconnectButtonDelay)
 local FFlagInExperienceMenuReorderFirstVariant =
@@ -72,7 +71,12 @@ local FFlagOverrideInExperienceMenuReorderFirstVariant =
 local FFlagMicroprofileGameSettingsFix = game:DefineFastFlag("MicroprofileGameSettingsFix", false)
 local GetFFlagFixSeamlessVoiceIntegrationWithPrivateVoice = SharedFlags.GetFFlagFixSeamlessVoiceIntegrationWithPrivateVoice
 local GetFFlagVoiceChatClientRewriteMasterLua = SharedFlags.GetFFlagVoiceChatClientRewriteMasterLua
+local GetFFlagVoiceChatClientRewriteDisableVCSDevice = SharedFlags.GetFFlagVoiceChatClientRewriteDisableVCSDevice
+local GetFFlagAudioDevicesCanDefaultToOSLua = SharedFlags.GetFFlagAudioDevicesCanDefaultToOSLua
 local FFlagIEMFocusNavToButtons = SharedFlags.FFlagIEMFocusNavToButtons
+
+local RobloxTranslator = require(CorePackages.Workspace.Packages.RobloxTranslator)
+local GetFFlagCoreScriptsMigrateFromLegacyCSVLoc = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagCoreScriptsMigrateFromLegacyCSVLoc
 
 local CrossExpVoiceIXPManager = require(CorePackages.Workspace.Packages.CrossExperienceVoice).IXPManager.default
 local isSpatial = require(CorePackages.Workspace.Packages.AppCommonLib).isSpatial
@@ -117,12 +121,25 @@ local VOICE_CHAT_DEVICE_TYPE = {
 
 local MICROPROFILER_SETTINGS_PRESSED = "MicroprofilerSettingsPressed"
 
-local MOVEMENT_MODE_DEFAULT_STRING = UserInputService.TouchEnabled and "Default (Dynamic Thumbstick)"
+local MOVEMENT_MODE_DEFAULT_STRING = UserInputService.TouchEnabled and (
+	if GetFFlagCoreScriptsMigrateFromLegacyCSVLoc() then 
+		RobloxTranslator:FormatByKey("Feature.SettingsHub.Default.DynamicThumbstick") else 
+		"Default (Dynamic Thumbstick)"
+	)
 	or "Default (Keyboard)"
 local MOVEMENT_MODE_KEYBOARDMOUSE_STRING = "Keyboard + Mouse"
 local MOVEMENT_MODE_CLICKTOMOVE_STRING = UserInputService.TouchEnabled and "Tap to Move" or "Click to Move"
 local MOVEMENT_MODE_DYNAMICTHUMBSTICK_STRING = "Dynamic Thumbstick"
-local MOVEMENT_MODE_THUMBSTICK_STRING = "Classic Thumbstick"
+local MOVEMENT_MODE_THUMBSTICK_STRING = if GetFFlagCoreScriptsMigrateFromLegacyCSVLoc() then 
+	RobloxTranslator:FormatByKey("Feature.SettingsHub.TouchMovementMode.ClassicThumbstick") else 
+	"Classic Thumbstick"
+
+local UNAVAILABLE_TEXT
+local GIVE_FEEDBACK_TEXT
+if GetFFlagCoreScriptsMigrateFromLegacyCSVLoc() then
+	UNAVAILABLE_TEXT = RobloxTranslator:FormatByKey("Feature.SettingsHub.LanguageSelection.Unavailable")
+	GIVE_FEEDBACK_TEXT = RobloxTranslator:FormatByKey("CoreScripts.Feedback.EntryPoint.ButtonText")
+end
 
 ----------- VIDEO CAMERA ------------
 
@@ -239,6 +256,8 @@ local Cryo = require(CorePackages.Packages.Cryo)
 local GfxReset = require(script.Parent.Parent.GfxReset)
 local Create = require(CorePackages.Workspace.Packages.AppCommonLib).Create
 local throttle = require(CoreGui.RobloxGui.Modules.Settings.Pages.ShareGame.ThrottleFunctionCall)
+local BuilderIcons = require(CorePackages.Packages.BuilderIcons)
+local migrationLookup = BuilderIcons.Migration
 
 ------------ Variables -------------------
 RobloxGui:WaitForChild("Modules"):WaitForChild("TenFootInterface")
@@ -251,7 +270,6 @@ local CachedPolicyService = require(CorePackages.Workspace.Packages.CachedPolicy
 local VoiceChatServiceManager = require(RobloxGui.Modules.VoiceChat.VoiceChatServiceManager).default
 local CrossExperienceVoice = require(CorePackages.Workspace.Packages.CrossExperienceVoice)
 local CrossExperienceVoiceManager = CrossExperienceVoice.CrossExperienceVoiceManager.default
-local RobloxTranslator = require(CorePackages.Workspace.Packages.RobloxTranslator)
 
 local UniversalAppPolicy = require(CorePackages.Workspace.Packages.UniversalAppPolicy)
 local getAppFeaturePolicies = UniversalAppPolicy.getAppFeaturePolicies
@@ -284,6 +302,7 @@ local GetFFlagFixCyclicFullscreenIndexEvent =
 	require(RobloxGui.Modules.Settings.Flags.GetFFlagFixCyclicFullscreenIndexEvent)
 local FFlagDisableFeedbackSoothsayerCheck = game:DefineFastFlag("DisableFeedbackSoothsayerCheck", false)
 local FFlagUserShowGuiHideToggles = game:DefineFastFlag("UserShowGuiHideToggles", false)
+local FFlagUserFreecamGuiDestabilization = game:DefineFastFlag("UserFreecamGuiDestabilization", false)
 local FFlagFixDeveloperConsoleButtonSizeAndPositioning =
 	game:DefineFastFlag("FixDeveloperConsoleButtonSizeAndPositioning", false)
 local FFlagEnableTFFeedbackModeEntryCheck = game:DefineFastFlag("EnableTFFeedbackModeEntryCheck", false)
@@ -292,6 +311,7 @@ local FFlagFeedbackEntryPointButtonSizeAdjustment =
 local FFlagFeedbackEntryPointImprovedStrictnessCheck =
 	game:DefineFastFlag("FeedbackEntryPointImprovedStrictnessCheck", false)
 local GetFFlagEnableShowVoiceUI = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagEnableShowVoiceUI
+local FFlagBuilderIcon = require(CorePackages.Workspace.Packages.SharedFlags).UIBlox.FFlagUIBloxMigrateBuilderIcon
 
 local function reportSettingsChangeForAnalytics(fieldName, oldValue, newValue, extraData)
 	if
@@ -385,7 +405,6 @@ end
 game:DefineFastInt("V1MenuLanguageSelectionFeaturePerMillageRollout", 0)
 game:DefineFastString("V1MenuLanguageSelectionFeatureForcedUserIds", "")
 local FFlagIGMEnableGFXReset = game:DefineFastFlag("IGMEnableGFXReset", false)
-local FFlagNewLanguageSelectorEndpoint = game:DefineFastFlag("NewLanguageSelectorEndpoint", false)
 
 ----------- CLASS DECLARATION --------------
 
@@ -1678,7 +1697,7 @@ local function Initialize()
 				if FFlagFeedbackEntryPointButtonSizeAdjustment then
 					toggleFeedbackModeButton, toggleFeedbackModeText = utility:MakeStyledButton(
 						"toggleFeedbackModeButton",
-						"Give Feedback",
+						if GetFFlagCoreScriptsMigrateFromLegacyCSVLoc() then GIVE_FEEDBACK_TEXT else "Give Feedback",
 						UDim2.new(1, 0, 1, -20),
 						onToggleFeedbackMode,
 						this
@@ -1690,7 +1709,7 @@ local function Initialize()
 				else
 					toggleFeedbackModeButton, toggleFeedbackModeText = utility:MakeStyledButton(
 						"toggleFeedbackModeButton",
-						"Give Feedback",
+						if GetFFlagCoreScriptsMigrateFromLegacyCSVLoc() then GIVE_FEEDBACK_TEXT else "Give Feedback",
 						UDim2.new(0, 300, 1, -20),
 						onToggleFeedbackMode,
 						this
@@ -1713,10 +1732,24 @@ local function Initialize()
 				if FFlagFeedbackEntryPointButtonSizeAdjustment then
 					-- Nil for spacing param, and true for final param enables automatic sizing of the label, see Utility.lua for implementation
 					local row =
-						utility:AddNewRowObject(this, "Give Translation Feedback", toggleFeedbackModeButton, nil, true)
+						utility:AddNewRowObject(
+							this,
+							if GetFFlagCoreScriptsMigrateFromLegacyCSVLoc() then
+								RobloxTranslator:FormatByKey("CoreScripts.Feedback.EntryPoint.OptionText") else
+								"Give Translation Feedback",
+							toggleFeedbackModeButton,
+							nil,
+							true
+						)
 					row.LayoutOrder = SETTINGS_MENU_LAYOUT_ORDER["FeedbackModeButton"]
 				else
-					local row = utility:AddNewRowObject(this, "Give Translation Feedback", toggleFeedbackModeButton)
+					local row = utility:AddNewRowObject(
+						this,
+						if GetFFlagCoreScriptsMigrateFromLegacyCSVLoc() then
+							RobloxTranslator:FormatByKey("CoreScripts.Feedback.EntryPoint.OptionText") else
+							"Give Translation Feedback",
+						toggleFeedbackModeButton
+					)
 					row.LayoutOrder = SETTINGS_MENU_LAYOUT_ORDER["FeedbackModeButton"]
 				end
 			end
@@ -1812,14 +1845,8 @@ local function Initialize()
 		})
 
 		-- Request to get the supported language codes for the experience
-		local experienceSupportedLanguagesUrl = nil
-		if FFlagNewLanguageSelectorEndpoint then
-			experienceSupportedLanguagesUrl = Url.GAME_INTERNATIONALIZATION_URL
-				.. string.format("v1/supported-languages/games/%d/in-experience-language-selection", game.GameId)
-		else
-			experienceSupportedLanguagesUrl = Url.GAME_INTERNATIONALIZATION_URL
-				.. string.format("v1/supported-languages/games/%d", game.GameId)
-		end
+		local experienceSupportedLanguagesUrl = Url.GAME_INTERNATIONALIZATION_URL
+			.. string.format("v1/supported-languages/games/%d/in-experience-language-selection", game.GameId)
 		local experienceSupportedLanguagesRequest = HttpService:RequestInternal({
 			Url = experienceSupportedLanguagesUrl,
 			Method = "GET",
@@ -1851,7 +1878,15 @@ local function Initialize()
 				-- The feature should remain unavailable and user remains in
 				-- their locale if required start state info isn't captured
 				this.LanguageSelectorFrame, this.LanguageSelectorLabel, this.LanguageSelectorMode =
-					utility:AddNewRow(this, "Experience Language", "DropDown", { "Unavailable" }, 1)
+					utility:AddNewRow(
+						this,
+						if GetFFlagCoreScriptsMigrateFromLegacyCSVLoc() then 
+							RobloxTranslator:FormatByKey("Feature.SettingsHub.LanguageSelection.SettingLabel") else 
+							"Experience Language",
+						"DropDown",
+						{ if GetFFlagCoreScriptsMigrateFromLegacyCSVLoc() then UNAVAILABLE_TEXT else "Unavailable" },
+						1
+					)
 				this.LanguageSelectorMode:SetInteractable(false)
 				this.LanguageSelectorFrame.LayoutOrder = SETTINGS_MENU_LAYOUT_ORDER["LanguageSelectorFrame"]
 			else
@@ -1889,7 +1924,15 @@ local function Initialize()
 				end
 
 				this.LanguageSelectorFrame, this.LanguageSelectorLabel, this.LanguageSelectorMode =
-					utility:AddNewRow(this, "Experience Language", "DropDown", languageOptions, startIndex)
+					utility:AddNewRow(
+						this,
+						if GetFFlagCoreScriptsMigrateFromLegacyCSVLoc() then 
+							RobloxTranslator:FormatByKey("Feature.SettingsHub.LanguageSelection.SettingLabel") else 
+							"Experience Language",
+						"DropDown",
+						languageOptions,
+						startIndex
+					)
 				this.LanguageSelectorFrame.LayoutOrder = SETTINGS_MENU_LAYOUT_ORDER["LanguageSelectorFrame"]
 				-- Perform call to game engine to set the locale to match the
 				-- dropdown selection in the UI
@@ -2453,17 +2496,13 @@ local function Initialize()
 
 		this.MouseAdvancedEntry.SliderFrame.Size = UDim2.new(
 			this.MouseAdvancedEntry.SliderFrame.Size.X.Scale,
-			if FFlagCameraSensitivityPadding
-				then this.MouseAdvancedEntry.SliderFrame.Size.X.Offset - textBoxWidth - textBoxPadding
-				else this.MouseAdvancedEntry.SliderFrame.Size.X.Offset - textBoxWidth,
+			this.MouseAdvancedEntry.SliderFrame.Size.X.Offset - textBoxWidth - textBoxPadding,
 			this.MouseAdvancedEntry.SliderFrame.Size.Y.Scale,
 			this.MouseAdvancedEntry.SliderFrame.Size.Y.Offset - 6
 		)
 		this.MouseAdvancedEntry.SliderFrame.Position = UDim2.new(
 			this.MouseAdvancedEntry.SliderFrame.Position.X.Scale,
-			if FFlagCameraSensitivityPadding
-				then this.MouseAdvancedEntry.SliderFrame.Position.X.Offset - textBoxWidth - textBoxPadding
-				else this.MouseAdvancedEntry.SliderFrame.Size.X.Offset - textBoxWidth,
+			this.MouseAdvancedEntry.SliderFrame.Position.X.Offset - textBoxWidth - textBoxPadding,
 			this.MouseAdvancedEntry.SliderFrame.Position.Y.Scale,
 			this.MouseAdvancedEntry.SliderFrame.Position.Y.Offset
 		)
@@ -2478,7 +2517,7 @@ local function Initialize()
 			Font = Theme.font(Enum.Font.SourceSans),
 			TextSize = Theme.textSize(18),
 			Size = UDim2.new(0, textBoxWidth, 0.8, 0),
-			Position = UDim2.new(1, if FFlagCameraSensitivityPadding then textBoxPadding / 2 else -2, 0.5, 0),
+			Position = UDim2.new(1, textBoxPadding / 2, 0.5, 0),
 			AnchorPoint = Vector2.new(0, 0.5),
 			ZIndex = 3,
 			Selectable = false,
@@ -2729,7 +2768,7 @@ local function Initialize()
 	end
 
 	local function createUiToggleOptions()
-		if FFlagUserShowGuiHideToggles then
+		if FFlagUserFreecamGuiDestabilization or FFlagUserShowGuiHideToggles then
 			local selectorTypes = {
 				{ label = "Custom", type = Enum.GuiType.Custom, layoutOrderKey = "UiToggleRowCustom" },
 				{
@@ -2804,7 +2843,7 @@ local function Initialize()
 	end
 
 	local function updateUiToggleSelection()
-		if FFlagUserShowGuiHideToggles then
+		if FFlagUserFreecamGuiDestabilization or FFlagUserShowGuiHideToggles then
 			-- If the toggle doesn't exist, we probably don't have permission to change this
 			if not this.uiToggleSelectors then
 				return
@@ -2856,6 +2895,11 @@ local function Initialize()
 	end
 
 	local function setVCSOutput(soundServiceOutputName)
+		if GetFFlagVoiceChatClientRewriteDisableVCSDevice() then
+			log:error("setVCSOutput is deprecated")
+			return
+		end
+
 		local VCSSuccess, VCSDeviceNames, VCSDeviceGuids, VCSIndex = pcall(function()
 			return VoiceChatService:GetSpeakerDevices()
 		end)
@@ -2892,6 +2936,11 @@ local function Initialize()
 
 	-- TODO: Remove this when voice chat is unified with sound service.
 	local function syncSoundOutputs()
+		if GetFFlagVoiceChatClientRewriteDisableVCSDevice() then
+			log:error("syncSoundOutputs is deprecated")
+			return
+		end
+
 		local success, deviceNames, deviceGuids, selectedIndex = pcall(function()
 			return SoundService:GetOutputDevices()
 		end)
@@ -3030,21 +3079,44 @@ local function Initialize()
 			return SoundService:GetOutputDevices()
 		end)
 
-		if success and isValidDeviceList(deviceNames, deviceGuids, selectedIndex) then
-			this[deviceType .. "DeviceNames"] = deviceNames
-			this[deviceType .. "VCSDeviceNames"] = deviceNames
-			this[deviceType .. "VCSDeviceGuids"] = deviceGuids
-			this[deviceType .. "DeviceGuids"] = deviceGuids
-			this[deviceType .. "DeviceIndex"] = selectedIndex
-		else
-			if GetFFlagVoiceChatUILogging() then
-				log:warning("Errors in get {} device info", deviceType)
+		if GetFFlagVoiceChatClientRewriteDisableVCSDevice() then
+			if success and isValidDeviceList(deviceNames, deviceGuids, selectedIndex) then
+				if GetFFlagAudioDevicesCanDefaultToOSLua() and deviceGuids[1] == "" then
+					deviceNames[1] = locales:Format("CoreScripts.InGameMenu.GameSettings.Default") .. " (" .. deviceNames[1] .. ")"
+				end
+
+				this[deviceType .. "DeviceNames"] = deviceNames
+				this[deviceType .. "DeviceGuids"] = deviceGuids
+				this[deviceType .. "DeviceIndex"] = selectedIndex
+			else
+				if GetFFlagVoiceChatUILogging() then
+					log:warning("Errors in get {} device info", deviceType)
+				end
+				this[deviceType .. "DeviceNames"] = {}
+				this[deviceType .. "DeviceGuids"] = {}
+				this[deviceType .. "DeviceIndex"] = 0
 			end
-			this[deviceType .. "DeviceNames"] = {}
-			this[deviceType .. "DeviceGuids"] = {}
-			this[deviceType .. "VCSDeviceNames"] = {}
-			this[deviceType .. "VCSDeviceGuids"] = {}
-			this[deviceType .. "DeviceIndex"] = 0
+		else
+			if success and isValidDeviceList(deviceNames, deviceGuids, selectedIndex) then
+				if GetFFlagAudioDevicesCanDefaultToOSLua() and deviceGuids[1] == "" then
+					deviceNames[1] = locales:Format("CoreScripts.InGameMenu.GameSettings.Default") .. " (" .. deviceNames[1] .. ")"
+				end
+				
+				this[deviceType .. "DeviceNames"] = deviceNames
+				this[deviceType .. "VCSDeviceNames"] = deviceNames
+				this[deviceType .. "VCSDeviceGuids"] = deviceGuids
+				this[deviceType .. "DeviceGuids"] = deviceGuids
+				this[deviceType .. "DeviceIndex"] = selectedIndex
+			else
+				if GetFFlagVoiceChatUILogging() then
+					log:warning("Errors in get {} device info", deviceType)
+				end
+				this[deviceType .. "DeviceNames"] = {}
+				this[deviceType .. "DeviceGuids"] = {}
+				this[deviceType .. "VCSDeviceNames"] = {}
+				this[deviceType .. "VCSDeviceGuids"] = {}
+				this[deviceType .. "DeviceIndex"] = 0
+			end
 		end
 
 		if not this[deviceType .. "DeviceSelector"] then
@@ -3070,39 +3142,73 @@ local function Initialize()
 			end
 		end)
 
-		local VCSSuccess, VCSDeviceNames, VCSDeviceGuids, VCSIndex = pcall(function()
-			return VoiceChatService:GetSpeakerDevices()
-		end)
-
-		if
-			success
-			and VCSSuccess
-			and isValidDeviceList(deviceNames, deviceGuids, selectedIndex)
-			and isValidDeviceList(VCSDeviceNames, VCSDeviceGuids, VCSIndex)
-		then
-			this[deviceType .. "DeviceNames"] = deviceNames
-			this[deviceType .. "VCSDeviceNames"] = VCSDeviceNames
-			this[deviceType .. "VCSDeviceGuids"] = VCSDeviceGuids
-			this[deviceType .. "DeviceGuids"] = deviceGuids
-			this[deviceType .. "DeviceIndex"] = selectedIndex
-		else
-			if GetFFlagVoiceChatUILogging() then
-				if #deviceNames > 0 then
-					log:warning(
-						"Errors in get {} device info success: {} VCSSuccess: {}",
-						deviceType,
-						success,
-						VCSSuccess
-					)
-				else
-					log:warning("Empty deviceNames list for {}", deviceType)
+		if GetFFlagVoiceChatClientRewriteDisableVCSDevice() then
+			if
+				success
+				and isValidDeviceList(deviceNames, deviceGuids, selectedIndex)
+			then
+				if GetFFlagAudioDevicesCanDefaultToOSLua() and deviceGuids[1] == "" then
+					deviceNames[1] = locales:Format("CoreScripts.InGameMenu.GameSettings.Default") .. " (" .. deviceNames[1] .. ")"
 				end
+
+				this[deviceType .. "DeviceNames"] = deviceNames
+				this[deviceType .. "DeviceGuids"] = deviceGuids
+				this[deviceType .. "DeviceIndex"] = selectedIndex
+			else
+				if GetFFlagVoiceChatUILogging() then
+					if #deviceNames > 0 then
+						log:warning(
+							"Errors in get {} device info success: {}",
+							deviceType,
+							success
+						)
+					else
+						log:warning("Empty deviceNames list for {}", deviceType)
+					end
+				end
+				this[deviceType .. "DeviceNames"] = {}
+				this[deviceType .. "DeviceGuids"] = {}
+				this[deviceType .. "DeviceIndex"] = 0
 			end
-			this[deviceType .. "DeviceNames"] = {}
-			this[deviceType .. "DeviceGuids"] = {}
-			this[deviceType .. "VCSDeviceNames"] = {}
-			this[deviceType .. "VCSDeviceGuids"] = {}
-			this[deviceType .. "DeviceIndex"] = 0
+		else
+			local VCSSuccess, VCSDeviceNames, VCSDeviceGuids, VCSIndex = pcall(function()
+				return VoiceChatService:GetSpeakerDevices()
+			end)
+
+			if
+				success
+				and VCSSuccess
+				and isValidDeviceList(deviceNames, deviceGuids, selectedIndex)
+				and isValidDeviceList(VCSDeviceNames, VCSDeviceGuids, VCSIndex)
+			then
+				if GetFFlagAudioDevicesCanDefaultToOSLua() and deviceGuids[1] == "" then
+					deviceNames[1] = locales:Format("CoreScripts.InGameMenu.GameSettings.Default") .. " (" .. deviceNames[1] .. ")"
+				end
+
+				this[deviceType .. "DeviceNames"] = deviceNames
+				this[deviceType .. "VCSDeviceNames"] = VCSDeviceNames
+				this[deviceType .. "VCSDeviceGuids"] = VCSDeviceGuids
+				this[deviceType .. "DeviceGuids"] = deviceGuids
+				this[deviceType .. "DeviceIndex"] = selectedIndex
+			else
+				if GetFFlagVoiceChatUILogging() then
+					if #deviceNames > 0 then
+						log:warning(
+							"Errors in get {} device info success: {} VCSSuccess: {}",
+							deviceType,
+							success,
+							VCSSuccess
+						)
+					else
+						log:warning("Empty deviceNames list for {}", deviceType)
+					end
+				end
+				this[deviceType .. "DeviceNames"] = {}
+				this[deviceType .. "DeviceGuids"] = {}
+				this[deviceType .. "VCSDeviceNames"] = {}
+				this[deviceType .. "VCSDeviceGuids"] = {}
+				this[deviceType .. "DeviceIndex"] = 0
+			end
 		end
 
 		if not this[deviceType .. "DeviceSelector"] then
@@ -3804,11 +3910,18 @@ local function Initialize()
 
 	------ TAB CUSTOMIZATION -------
 	this.TabHeader.Name = "GameSettingsTab"
-	local icon = Theme.Images["icons/common/settings"]
-	this.TabHeader.TabLabel.Icon.ImageRectOffset = icon.ImageRectOffset
-	this.TabHeader.TabLabel.Icon.ImageRectSize = icon.ImageRectSize
-	this.TabHeader.TabLabel.Icon.Image = icon.Image
-	this.TabHeader.TabLabel.Title.Text = "Settings"
+	if FFlagBuilderIcon then
+		local icon = migrationLookup['uiblox']["icons/common/settings"]
+		this.TabHeader.TabLabel.Icon.Text = icon.name
+		this.TabHeader.TabLabel.Icon.FontFace = BuilderIcons.Font[icon.variant]
+		this.TabHeader.TabLabel.Title.Text = "Settings"
+	else
+		local icon = Theme.Images["icons/common/settings"]
+		this.TabHeader.TabLabel.Icon.ImageRectOffset = icon.ImageRectOffset
+		this.TabHeader.TabLabel.Icon.ImageRectSize = icon.ImageRectSize
+		this.TabHeader.TabLabel.Icon.Image = icon.Image
+		this.TabHeader.TabLabel.Title.Text = "Settings"
+	end
 
 	------ PAGE CUSTOMIZATION -------
 	this.Page.ZIndex = 5
@@ -3879,13 +3992,13 @@ local function Initialize()
 				-- Matches with adjustbutton in settings menu for consistency
 				this.toggleFeedbackModeButton.Active = true
 				this.toggleFeedbackModeButton.Enabled.Value = true
-				this.toggleFeedbackModeText.Text = "Give Feedback"
+				this.toggleFeedbackModeText.Text = if GetFFlagCoreScriptsMigrateFromLegacyCSVLoc() then GIVE_FEEDBACK_TEXT else "Give Feedback"
 			else
 				this.toggleFeedbackModeButton.Active = false
 				this.toggleFeedbackModeButton.Enabled.Value = false
 				this.toggleFeedbackModeText.TextColor3 =
 					Theme.color("ButtonNonInteractable", Color3.fromRGB(100, 100, 100))
-				this.toggleFeedbackModeText.Text = "Unavailable"
+				this.toggleFeedbackModeText.Text = if GetFFlagCoreScriptsMigrateFromLegacyCSVLoc() then UNAVAILABLE_TEXT else "Unavailable"
 			end
 		end
 

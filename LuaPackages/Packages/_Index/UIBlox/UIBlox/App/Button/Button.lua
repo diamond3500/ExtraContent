@@ -144,6 +144,7 @@ Button.validateProps = t.strictInterface({
 	feedbackType = t.optional(t.string),
 
 	-- Gamepad Support props
+	Selectable = t.optional(t.boolean),
 	NextSelectionDown = t.optional(t.table),
 	NextSelectionUp = t.optional(t.table),
 	NextSelectionLeft = t.optional(t.table),
@@ -203,6 +204,7 @@ function Button:render()
 				contentStateColorMap = CONTENT_STATE_COLOR[self.props.buttonType],
 				buttonTextOverride = self.props.buttonTextOverride,
 
+				Selectable = self.props.Selectable,
 				NextSelectionUp = self.props.NextSelectionUp,
 				NextSelectionDown = self.props.NextSelectionDown,
 				NextSelectionLeft = self.props.NextSelectionLeft,
@@ -251,12 +253,13 @@ local ButtonForwardRef = React.forwardRef(function(buttonProps, ref)
 					else nil,
 				onActivated = props.onActivated,
 				testId = FoundationButtonUtils.getTestId(props[React.Tag]),
-				ref = ref or props.buttonRef,
+				ref = if UIBloxConfig.useProvidedRefForButton then props.buttonRef or ref else ref or props.buttonRef,
 
 				AnchorPoint = props.anchorPoint,
 				Position = props.position,
 				LayoutOrder = props.layoutOrder,
 
+				Selectable = props.Selectable,
 				NextSelectionUp = props.NextSelectionUp,
 				NextSelectionDown = props.NextSelectionDown,
 				NextSelectionLeft = props.NextSelectionLeft,
@@ -265,9 +268,9 @@ local ButtonForwardRef = React.forwardRef(function(buttonProps, ref)
 		)
 	else
 		return React.createElement(
-			if UIBloxConfig.useNewSelectionCursor then ButtonFunctionalWrapper else Button,
+			ButtonFunctionalWrapper,
 			Cryo.Dictionary.join(buttonProps, {
-				buttonRef = ref,
+				buttonRef = if UIBloxConfig.useProvidedRefForButton then buttonProps.buttonRef or ref else ref,
 			})
 		)
 	end

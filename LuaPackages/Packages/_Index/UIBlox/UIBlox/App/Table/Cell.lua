@@ -12,10 +12,10 @@ local bindingValidator = require(Core.Utility.bindingValidator)
 
 local withStyle = require(Core.Style.withStyle)
 local withSelectionCursorProvider = require(App.SelectionImage.withSelectionCursorProvider)
+local useCursorByType = require(App.SelectionCursor.useCursorByType)
 local CursorKind = require(App.SelectionImage.CursorKind)
 local Interactable = require(Core.Control.Interactable)
 local ControlState = require(Core.Control.Enum.ControlState)
-local useCursorByType = require(App.SelectionCursor.useCursorByType)
 local CursorType = require(App.SelectionCursor.CursorType)
 local UIBloxConfig = require(UIBlox.UIBloxConfig)
 
@@ -69,7 +69,7 @@ Cell.validateProps = t.strictInterface({
 	[Roact.Ref] = t.optional(t.union(t.callback, t.table)),
 	forwardRef = t.optional(t.union(t.callback, t.table)),
 	-- Selection cursor
-	selectionCursor = if UIBloxConfig.migrateToNewSelectionCursor then t.optional(t.any) else nil,
+	selectionCursor = if UIBloxConfig.useFoundationSelectionCursor then t.optional(t.any) else nil,
 })
 
 Cell.defaultProps = {
@@ -160,7 +160,7 @@ function Cell:renderWithProviders(style, getSelectionCursor)
 		BackgroundTransparency = 1,
 		AutoButtonColor = false,
 		Selectable = self.props.selectable,
-		SelectionImageObject = if UIBloxConfig.migrateToNewSelectionCursor
+		SelectionImageObject = if UIBloxConfig.useFoundationSelectionCursor
 			then self.props.selectionCursor
 			else (getSelectionCursor and getSelectionCursor(CursorKind.RoundedRectNoInset)),
 
@@ -235,8 +235,8 @@ function Cell:renderWithProviders(style, getSelectionCursor)
 end
 
 return Roact.forwardRef(function(props, ref)
-	local selectionCursor = useCursorByType(CursorType.RoundedRectNoInset)
-	if UIBloxConfig.migrateToNewSelectionCursor then
+	if UIBloxConfig.useFoundationSelectionCursor then
+		local selectionCursor = useCursorByType(CursorType.RoundedRectNoInset)
 		props = Cryo.Dictionary.join({
 			selectionCursor = selectionCursor,
 		}, props)

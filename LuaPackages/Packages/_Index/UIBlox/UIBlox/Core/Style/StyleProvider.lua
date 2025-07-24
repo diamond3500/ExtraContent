@@ -10,7 +10,7 @@ local getTextSizeOffset = require(UIBlox.Utility.getTextSizeOffset)
 local StyleTypes = require(AppStyle.StyleTypes)
 local Themes = require(AppStyle.Themes)
 local Constants = require(AppStyle.Constants)
-local Gotham = require(AppStyle.Fonts.Gotham)
+local getFontFromName = require(AppStyle.Fonts.getFontFromName)
 local Tokens = require(AppStyle.Tokens)
 
 local getTokens = Tokens.getTokens
@@ -37,11 +37,11 @@ StyleProvider.validateProps = t.strictInterface({
 -- To ensure values for each of these we need to do a join / assign in the render.
 local DEFAULT_STYLE = {
 	Theme = Themes.DarkTheme,
-	Font = Gotham,
 	Settings = {
 		PreferredTransparency = 1,
 		ReducedMotion = false,
 		PreferredTextSize = if EngineFeaturedPreferredTextSizeExists then Enum.PreferredTextSize.Medium else nil,
+		Scale = 1,
 	},
 }
 
@@ -86,8 +86,13 @@ function StyleProvider:render()
 		-- If tokens were not passed in, fetch them with the style object now that defaults are applied.
 		style.Tokens = getTokens(
 			Constants.DefaultDeviceType :: DeviceType,
-			if style.Theme == Themes.LightTheme then Constants.ThemeName.Light else Constants.ThemeName.Dark
+			if style.Theme == Themes.LightTheme then Constants.ThemeName.Light else Constants.ThemeName.Dark,
+			(style.Settings :: any).Scale
 		)
+	end
+
+	if style.Font == nil then
+		style.Font = getFontFromName(Constants.FontName.Gotham, style.Tokens)
 	end
 
 	local styleObject = {

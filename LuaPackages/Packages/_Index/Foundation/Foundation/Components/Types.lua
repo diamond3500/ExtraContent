@@ -7,6 +7,9 @@ type StateLayerAffordance = StateLayerAffordance.StateLayerAffordance
 local StateLayerMode = require(Foundation.Enums.StateLayerMode)
 type StateLayerMode = StateLayerMode.StateLayerMode
 
+local CursorType = require(Foundation.Enums.CursorType)
+type CursorType = CursorType.CursorType
+
 local ControlState = require(Foundation.Enums.ControlState)
 type ControlState = ControlState.ControlState
 export type StateChangedCallback = (newState: ControlState) -> ()
@@ -27,9 +30,9 @@ export type NativeCallbackProps = {
 	onAbsolutePositionChanged: (instance: GuiObject) -> ()?,
 }
 
-export type CommonProps = NativeCallbackProps & NativeCommonProps & {
+export type CommonProps = {
 	testId: string?,
-}
+} & NativeCallbackProps & NativeCommonProps
 
 export type FlexItem = {
 	FlexMode: Bindable<Enum.UIFlexMode>?,
@@ -75,6 +78,7 @@ export type StateLayer = {
 -- SelectionProps are broken out such that any Foundation component that is selectable
 -- can have these properties without needing to include the entire Selection type
 export type SelectionProps = {
+	Selectable: Bindable<boolean>?,
 	NextSelectionUp: Bindable<React.Ref<GuiObject>>?,
 	NextSelectionDown: Bindable<React.Ref<GuiObject>>?,
 	NextSelectionLeft: Bindable<React.Ref<GuiObject>>?,
@@ -82,15 +86,18 @@ export type SelectionProps = {
 }
 
 -- Unfortunately SelectionProps can't be unioned with Selection
--- without anlyze becoming incredibly umhappy, so we jsut duplicate them.
+-- without anlyze becoming incredibly unhappy, so we jsut duplicate them.
 export type Selection = {
-	Selectable: Bindable<boolean>,
-	SelectionImageObject: Bindable<React.Ref<GuiObject>>?,
-	SelectionOrder: Bindable<number>?,
+	-- SelectionProps
+	Selectable: Bindable<boolean>?,
 	NextSelectionUp: Bindable<React.Ref<GuiObject>>?,
 	NextSelectionDown: Bindable<React.Ref<GuiObject>>?,
 	NextSelectionLeft: Bindable<React.Ref<GuiObject>>?,
 	NextSelectionRight: Bindable<React.Ref<GuiObject>>?,
+
+	-- Additional Selection properties
+	SelectionImageObject: Bindable<React.Ref<GuiObject>>?,
+	SelectionOrder: Bindable<number>?,
 }
 
 export type SelectionGroup = {
@@ -114,11 +121,13 @@ export type GuiObjectProps = {
 
 	backgroundStyle: ColorStyle?,
 	selection: Selection?,
+	cursor: Cursor?,
 	selectionGroup: Bindable<boolean>? | SelectionGroup?,
 
 	AutoLocalize: Bindable<boolean>?,
 	AutomaticSize: Bindable<Enum.AutomaticSize>?,
 	BorderSizePixel: Bindable<number>?,
+	BorderColor3: Bindable<Color3>?,
 	ClipsDescendants: Bindable<boolean>?,
 	Rotation: Bindable<number>?,
 	Size: Bindable<UDim2>?,
@@ -179,12 +188,22 @@ export type FontStyle = {
 export type InternalTextInputRef = {
 	getIsFocused: () -> boolean,
 	focus: () -> (),
+	releaseFocus: () -> (),
 	setHover: (isHovering: boolean) -> (),
 }
 
 export type TextInputRef = {
 	getIsFocused: () -> boolean,
 	focus: () -> (),
+	releaseFocus: () -> (),
 }
+
+export type CursorConfig = {
+	radius: UDim?,
+	offset: number?,
+	borderWidth: number?,
+}
+
+export type Cursor = CursorType | CursorConfig
 
 return {}

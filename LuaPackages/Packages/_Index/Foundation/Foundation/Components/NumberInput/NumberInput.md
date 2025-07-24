@@ -6,7 +6,9 @@ category: Inputs
 
 `NumberInput` is a single line number input with optional label, helper text.
 
-## How to Use
+---
+
+## Usage
 
 `NumberInput` has a default width of 400px unless `width` is specified. The height is static and will depend on whether a label and helper text are provided.
 
@@ -27,7 +29,6 @@ local NumberInput = Foundation.NumberInput
 ...
 local value, setValue = React.useState(0)
 React.createElement(NumberInput, {
-	text = text,
 	isRequired = true,
 	label = "Padding",
 	onChanged = function(v)
