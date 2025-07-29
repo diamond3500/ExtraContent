@@ -20,6 +20,8 @@ local CommonIcon = require(Chrome.Integrations.CommonIcon)
 local GameSettings = UserSettings().GameSettings
 local GuiService = game:GetService("GuiService")
 local isSpatial = require(CorePackages.Workspace.Packages.AppCommonLib).isSpatial
+local ChatIconVisibleSignals = require(script.Parent.ChatIconVisibleSignals).default
+local SignalsRoblox = require(CorePackages.Packages.SignalsRoblox)
 
 local SharedFlags = require(CorePackages.Workspace.Packages.SharedFlags)
 local FFlagConsoleChatOnExpControls = SharedFlags.FFlagConsoleChatOnExpControls
@@ -37,7 +39,7 @@ local getFFlagExpChatGetLabelAndIconFromUtil = SharedFlags.getFFlagExpChatGetLab
 local getExperienceChatVisualConfig = require(CorePackages.Workspace.Packages.ExpChat).getExperienceChatVisualConfig
 local GetFFlagSimpleChatUnreadMessageCount = SharedFlags.GetFFlagSimpleChatUnreadMessageCount
 local GetFFlagDisableLegacyChatSimpleUnreadMessageCount = SharedFlags.GetFFlagDisableLegacyChatSimpleUnreadMessageCount
-
+local FFlagExpChatUnibarAvailabilityRefactor = game:DefineFastFlag("ExpChatUnibarAvailabilityRefactor", false)
 local FFlagHideChatButtonForChatDisabledUsers = game:DefineFastFlag("HideChatButtonForChatDisabledUsers", false)
 local isInExperienceUIVREnabled =
 	require(CorePackages.Workspace.Packages.SharedExperimentDefinition).isInExperienceUIVREnabled
@@ -68,15 +70,23 @@ end
 -- MappedSignal doesn't seem to fire in the event where the in-experience menu is closed, but does when it's opened, causing
 -- the chat button to be hidden when the window is open. Using the signal directly fixes this issue
 chatSelectorVisibilitySignal:connect(function(visible)
-	if visible then
-		chatChromeIntegration.availability:pinned()
+	if FFlagExpChatUnibarAvailabilityRefactor then
+		ChatIconVisibleSignals.setVisibleViaChatSelector(visible)
+	else
+		if visible then
+			chatChromeIntegration.availability:pinned()
+		end
 	end
 end)
 
 local chatWindowToggled = ChatSelector.ChatWindowToggled
 chatWindowToggled:connect(function(visible)
-	if visible then
-		chatChromeIntegration.availability:pinned()
+	if FFlagExpChatUnibarAvailabilityRefactor then
+		ChatIconVisibleSignals.setVisibleViaChatSelector(visible)
+	else
+		if visible then
+			chatChromeIntegration.availability:pinned()
+		end
 	end
 end)
 
@@ -86,9 +96,11 @@ end, function(visibility)
 	-- TODO: On flag removal, remove visibility as a param
 	local isVisible = if GetFFlagFixMappedSignalRaceCondition() then ChatSelector.GetVisibility() else visibility
 
-	-- Is there a less imperative way to do this?
-	if FFlagHideChatButtonForChatDisabledUsers and not isVisible and not localUserCanChat() then
-		chatChromeIntegration.availability:unavailable()
+	if not FFlagExpChatUnibarAvailabilityRefactor then
+		-- Is there a less imperative way to do this?
+		if FFlagHideChatButtonForChatDisabledUsers and not isVisible and not localUserCanChat() then
+			chatChromeIntegration.availability:unavailable()
+		end
 	end
 
 	if not GuiService.MenuIsOpen then
@@ -189,6 +201,24 @@ chatChromeIntegration = ChromeService:register({
 	},
 })
 
+if FFlagExpChatUnibarAvailabilityRefactor then
+	-- We are using a detached effect here because we don't have a great
+	-- place to keep our weak reference alive. This is because chrome registration
+	-- doesn't have a end-lifecycle well defined.
+	SignalsRoblox.createDetachedEffect(function(scope)
+		local isAvailable = ChatIconVisibleSignals.getIsChatIconVisible(scope)
+		if isAvailable then
+			chatChromeIntegration.availability:available()
+		else
+			chatChromeIntegration.availability:unavailable()
+		end
+	end)
+
+	ChromeUtils.setCoreGuiAvailability(chatChromeIntegration, Enum.CoreGuiType.Chat, function(enabled)
+		ChatIconVisibleSignals.setCoreGuiEnabled(enabled)
+	end)
+end
+
 if GetFFlagSimpleChatUnreadMessageCount() then
 	-- TextChatService
 	TextChatService.MessageReceived:Connect(function()
@@ -224,13 +254,27 @@ else
 end
 
 ChatSelector.ChatActiveChanged:connect(function(visible: boolean)
-	if visible then
-		local canLocalUserChat = localUserCanChat()
-		if not canLocalUserChat then
-			chatChromeIntegration.availability:available()
+	if FFlagExpChatUnibarAvailabilityRefactor then
+		ChatIconVisibleSignals.setChatActiveCalledByDeveloper(visible)
+	else
+		if visible then
+			local canLocalUserChat = localUserCanChat()
+			if not canLocalUserChat then
+				chatChromeIntegration.availability:available()
+			end
 		end
 	end
 end)
+
+local function setChatVisibilityOnLoad()
+	-- clone of ChatConnector.lua didMount()
+	local willEnableChat = GameSettings.ChatVisible
+	if ViewportUtil.isSmallTouchScreen() then
+		willEnableChat = false
+	end
+	chatVisibility = willEnableChat
+	ChatSelector:SetVisible(willEnableChat)
+end
 
 coroutine.wrap(function()
 	local LocalPlayer = Players.LocalPlayer
@@ -240,21 +284,29 @@ coroutine.wrap(function()
 	end
 
 	local canChat = localUserCanChat()
-	if canChat and chatChromeIntegration.availability then
-		ChromeUtils.setCoreGuiAvailability(chatChromeIntegration, Enum.CoreGuiType.Chat, function(enabled)
-			if enabled then
-				chatChromeIntegration.availability:pinned()
-			else
-				chatChromeIntegration.availability:unavailable()
-			end
-		end)
-		-- clone of ChatConnector.lua didMount()
-		local willEnableChat = GameSettings.ChatVisible
-		if ViewportUtil.isSmallTouchScreen() then
-			willEnableChat = false
+	if FFlagExpChatUnibarAvailabilityRefactor then
+		ChatIconVisibleSignals.setLocalUserChat(canChat)
+		if canChat then
+			setChatVisibilityOnLoad()
 		end
-		chatVisibility = willEnableChat
-		ChatSelector:SetVisible(willEnableChat)
+	else
+		if canChat and chatChromeIntegration.availability then
+			ChromeUtils.setCoreGuiAvailability(chatChromeIntegration, Enum.CoreGuiType.Chat, function(enabled)
+				if enabled then
+					chatChromeIntegration.availability:pinned()
+				else
+					chatChromeIntegration.availability:unavailable()
+				end
+			end)
+
+			-- clone of ChatConnector.lua didMount()
+			local willEnableChat = GameSettings.ChatVisible
+			if ViewportUtil.isSmallTouchScreen() then
+				willEnableChat = false
+			end
+			chatVisibility = willEnableChat
+			ChatSelector:SetVisible(willEnableChat)
+		end
 	end
 end)()
 
@@ -271,7 +323,11 @@ if FFlagConsoleChatOnExpControls then
 			FFlagChromeChatGamepadSupportFix and not TenFootInterfaceExpChatExperimentation.getIsEnabled()
 			or TextChatService.ChatVersion ~= Enum.ChatVersion.TextChatService and chatIsAvailable
 		then
-			chatChromeIntegration.availability:unavailable()
+			if FFlagExpChatUnibarAvailabilityRefactor then
+				ChatIconVisibleSignals.setForceDisableForConsoleUsecase(true)
+			else
+				chatChromeIntegration.availability:unavailable()
+			end
 		end
 	end
 
