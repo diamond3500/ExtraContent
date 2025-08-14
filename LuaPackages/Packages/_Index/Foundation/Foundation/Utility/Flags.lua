@@ -13,7 +13,7 @@ return {
 		"FoundationFixScrollViewBackgroundForStylingV2"
 	)(),
 	FoundationStandardizeInputLabelSizes = SafeFlags.createGetFFlag("FoundationStandardizeInputLabelSizes")(),
-	FoundationWarnOnMultipleStyleLinks = SafeFlags.createGetFFlag("FoundationWarnOnMultipleStyleLinks")(),
+	FoundationWarnOnMultipleStyleLinks = SafeFlags.createGetFFlag("DebugFoundationWarnOnMultipleStyleLinks")(),
 	FoundationMigrateIconNames = SafeFlags.createGetFFlag("FoundationMigrateIconNames")(),
 	FoundationDisableDragPositionAdjustmentForGuiInsets = SafeFlags.createGetFFlag(
 		"FoundationDisableDragPositionAdjustmentForGuiInsets"
@@ -25,6 +25,8 @@ return {
 	FoundationFixDropdownValueTuncation = SafeFlags.createGetFFlag("FoundationFixDropdownValueTuncation")(),
 	FoundationSelectionCursorMigration = SafeFlags.createGetFFlag("FoundationSelectionCursorMigration")(),
 	FoundationFixCursorStyling = SafeFlags.createGetFFlag("FoundationFixCursorStyling")(),
+	FoundationStyleTagsStyleSheetAttributes = SafeFlags.createGetFFlag("FoundationStyleTagsStyleSheetAttributes")(),
 	FoundationSliderDirectionalInputSupport = SafeFlags.createGetFFlag("FoundationSliderDirectionalInputSupport"),
 	FoundationUpdateIconButtonSizes = SafeFlags.createGetFFlag("FoundationUpdateIconButtonSizes")(),
+	FoundationFallbackCoreGuiSelectionCursor = SafeFlags.createGetFFlag("FoundationFallbackCoreGuiSelectionCursor")(),
 }

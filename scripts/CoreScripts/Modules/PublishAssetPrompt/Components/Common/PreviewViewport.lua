@@ -26,7 +26,7 @@ local InputType = UIBlox.Core.Enums.InputType
 local getInputGroup = require(CorePackages.Workspace.Packages.InputType).getInputGroup
 local ExternalEventConnection = require(CorePackages.Workspace.Packages.RoactUtils).ExternalEventConnection
 local InputTypeConstants = require(CorePackages.Workspace.Packages.InputType).InputTypeConstants
-local GamepadUtils = require(CorePackages.Workspace.Packages.AppCommonLib).Utils.GamepadUtils
+local GamepadUtils = require(CorePackages.Workspace.Packages.InputUi).Gamepad.GamepadUtils
 
 local RobloxTranslator = require(CorePackages.Workspace.Packages.RobloxTranslator)
 local InteractionFrame = require(script.Parent.InteractionFrame)
@@ -35,8 +35,6 @@ local Constants = require(script.Parent.Parent.Parent.Constants)
 local Images = UIBlox.App.ImageSet.Images
 local PreviewShrinkIcon = Images["icons/actions/previewShrink"]
 local ResetViewIcon = Images["icons/actions/reset"]
-
-local FFlagFixPublishAvatarVRViewports = require(script.Parent.Parent.Parent.FFlagFixPublishAvatarVRViewports)
 
 local CAMERA_FOV = 30
 local INITIAL_ZOOM_FACTOR = 0.8
@@ -541,8 +539,8 @@ function PreviewViewport:render()
 					CameraType = Enum.CameraType.Scriptable,
 					FieldOfView = CAMERA_FOV,
 
-					HeadLocked = if FFlagFixPublishAvatarVRViewports then true else nil,
-					VRTiltAndRollEnabled = if FFlagFixPublishAvatarVRViewports then true else nil,
+					HeadLocked = true,
+					VRTiltAndRollEnabled = true,
 
 					CFrame = self.cameraCFrameBinding,
 					Focus = self.cameraFocusBinding,

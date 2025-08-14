@@ -10,6 +10,7 @@ local HttpRbxApiService = game:GetService("HttpRbxApiService")
 local HttpService = game:GetService("HttpService")
 local VRService = game:GetService("VRService")
 local CorePackages = game:GetService("CorePackages")
+local TelemetryService = game:GetService("TelemetryService")
 
 CorePackages:WaitForChild("Workspace"):WaitForChild("Packages") -- WaitForChild used here because Workspace is not available on startup
 local Create = require(CorePackages.Workspace.Packages.AppCommonLib).Create
@@ -17,9 +18,44 @@ local ErrorPrompt = require(RobloxGui.Modules.ErrorPrompt)
 local Localization = require(CorePackages.Workspace.Packages.InExperienceLocales).Localization
 local Logging = require(CorePackages.Workspace.Packages.AppCommonLib).Logging
 local Url = require(CorePackages.Workspace.Packages.CoreScriptsCommon).Url
+local mutedError = require(CorePackages.Workspace.Packages.Loggers).mutedError
 
 local fflagDebugEnableErrorStringTesting = game:DefineFastFlag("DebugEnableErrorStringTesting", false)
 local fflagShouldMuteUnlocalizedError = game:DefineFastFlag("ShouldMuteUnlocalizedError", false)
+local fflagUpdateConnectionErrorLoc = game:DefineFastFlag("UpdateConnectionErrorLoc", false)
+
+local fflagConnectionEventMetrics = game:DefineFastFlag("ConnectionEventMetrics", false)
+local fflagUseConfigurableReconnectWait = game:DefineFastFlag("UseConfigurableReconnectWait", false)
+local FIntConfigurableReconnectWaitMs = game:DefineFastInt("ConfigurableReconnectWaitMs", 0)
+
+local connectionEventConfig = {
+	eventName = "ConnectionEvent",
+	backends = { "RobloxTelemetryCounter" },
+	lastUpdated = { 2025, 7, 31 },
+	description = [[Counter to track connection events.]],
+	links = "https://roblox.atlassian.net/browse/CSC-585"
+}
+local timeTakenToFetchStarterPlaceIdConfig = {
+	eventName = "TimeTakenToFetchStarterPlaceId",
+	backends = { "RobloxTelemetryStat" },
+	lastUpdated = { 2025, 7, 31 },
+	description = [[Stat for time taken to fetch starter place ID.]],
+	links = "https://roblox.atlassian.net/browse/CSC-585"
+}
+local GraceTimeoutWaitConfig = {
+	eventName = "GraceTimeoutWait",
+	backends = { "RobloxTelemetryStat" },
+	lastUpdated = { 2025, 7, 31 },
+	description = [[Stat for time waited for legacy or configurable grace timeout.]],
+	links = "https://roblox.atlassian.net/browse/CSC-585"
+}
+local timeUntilStartTeleportConfig = {
+	eventName = "TimeUntilTeleportStartProfiler",
+	backends = { "RobloxTelemetryStat" },
+	lastUpdated = { 2025, 7, 31 },
+	description = [[Stat for time until teleport starts.]],
+	links = "https://roblox.atlassian.net/browse/CSC-585"
+}
 
 -- After 2 hours, disable reconnect after the failure of first try
 local fIntPotentialClientTimeout = game:DefineFastInt("PotentialClientTimeoutSeconds", 7200)
@@ -180,10 +216,18 @@ end)()
 
 -- Button Callbacks --
 local reconnectFunction = function()
+	local startTime = tick()
 	if connectionPromptState == ConnectionPromptState.IS_RECONNECTING then
+		if fflagConnectionEventMetrics then
+			TelemetryService:LogCounter(connectionEventConfig, {customFields = {selectedItem = "UserClickWhileReconnecting"}}, 1.0)
+		end
 		return
 	end
 
+	if fflagConnectionEventMetrics then
+		TelemetryService:LogCounter(connectionEventConfig, {customFields = {selectedItem = "ReconnectInitiated"}}, 1.0)
+	end
+	-- Remove old report counters once TelemetryV2 flag is enabled
 	AnalyticsService:ReportCounter("ReconnectPrompt-ReconnectActivated")
 	connectionPromptState = ConnectionPromptState.IS_RECONNECTING
 	errorPrompt:primaryShimmerPlay()
@@ -192,14 +236,40 @@ local reconnectFunction = function()
 	if game.GameId > 0 then
 		fetchStarterPlaceSuccess, starterPlaceId = fetchStarterPlaceId(game.GameId)
 	end
-	-- Wait for the remaining time (if there is any)
-	local currentTime = tick()
-	if currentTime < graceTimeout then
-		wait(graceTimeout - currentTime)
+
+	if fflagConnectionEventMetrics then
+		TelemetryService:LogStat(timeTakenToFetchStarterPlaceIdConfig, {}, tick() - startTime)
+	end
+	
+	if fflagUseConfigurableReconnectWait then
+		local waitTimeInSeconds = FIntConfigurableReconnectWaitMs / 1000
+		wait(waitTimeInSeconds)
+		if fflagConnectionEventMetrics then
+			TelemetryService:LogStat(GraceTimeoutWaitConfig, {}, waitTimeInSeconds)
+		end
+	else
+		-- Wait for the remaining time (if there is any)
+		local currentTime = tick()
+		if currentTime < graceTimeout then
+			if fflagConnectionEventMetrics then
+				TelemetryService:LogStat(GraceTimeoutWaitConfig, {}, graceTimeout - currentTime)
+			end
+			wait(graceTimeout - currentTime)
+		end
+	end
+
+	if fflagConnectionEventMetrics then
+		TelemetryService:LogStat(timeUntilStartTeleportConfig, {}, tick() - startTime)
 	end
 	if fetchStarterPlaceSuccess and starterPlaceId > 0 then
+		if fflagConnectionEventMetrics then
+			TelemetryService:LogCounter(connectionEventConfig, {customFields = {selectedItem = "ReconnectToStarterPlaceId"}}, 1.0)
+		end
 		TeleportService:Teleport(starterPlaceId)
 	else
+		if fflagConnectionEventMetrics then
+			TelemetryService:LogCounter(connectionEventConfig, {customFields = {selectedItem = "ReconnectToGamePlaceId"}}, 1.0)
+		end
 		TeleportService:Teleport(game.PlaceId)
 	end
 
@@ -213,6 +283,9 @@ local reconnectFunction = function()
 end
 
 local leaveFunction = function()
+	if fflagConnectionEventMetrics then
+		TelemetryService:LogCounter(connectionEventConfig, {customFields = {selectedItem = "LeaveInitiated"}}, 1.0)
+	end
 	GuiService.SelectedCoreObject = nil
 	for i = 1, LEAVE_GAME_FRAME_WAITS do
 		RunService.RenderStepped:wait()
@@ -455,6 +528,9 @@ local function stateTransit(errorType, errorCode, oldState)
 			if reconnectDisabledList[errorCode] then
 				return ConnectionPromptState.RECONNECT_DISABLED_DISCONNECT
 			end
+			if fflagConnectionEventMetrics then
+				TelemetryService:LogCounter(connectionEventConfig, {customFields = {selectedItem = "Disconnected"}}, 1.0)
+			end
 			AnalyticsService:ReportCounter("ReconnectPrompt-Disconnect")
 			return ConnectionPromptState.RECONNECT_DISCONNECT
 		elseif errorType == Enum.ConnectionError.PlacelaunchErrors then
@@ -462,9 +538,15 @@ local function stateTransit(errorType, errorCode, oldState)
 			if reconnectDisabledList[errorCode] then
 				return ConnectionPromptState.RECONNECT_DISABLED_PLACELAUNCH
 			end
+			if fflagConnectionEventMetrics then
+				TelemetryService:LogCounter(connectionEventConfig, {customFields = {selectedItem = "PlaceLaunchError"}}, 1.0)
+			end
 			AnalyticsService:ReportCounter("ReconnectPrompt-PlaceLaunch")
 			return ConnectionPromptState.RECONNECT_PLACELAUNCH
 		elseif errorType == Enum.ConnectionError.TeleportErrors then
+			if fflagConnectionEventMetrics then
+				TelemetryService:LogCounter(connectionEventConfig, {customFields = {selectedItem = "TeleportError"}}, 1.0)
+			end
 			AnalyticsService:ReportCounter("ReconnectPrompt-TeleportFailed")
 			return ConnectionPromptState.TELEPORT_FAILED
 		end
@@ -472,11 +554,17 @@ local function stateTransit(errorType, errorCode, oldState)
 
 	if oldState == ConnectionPromptState.IS_RECONNECTING then
 		-- if is reconnecting, then it is the reconnect failure
+		if fflagConnectionEventMetrics then
+			TelemetryService:LogCounter(connectionEventConfig, {customFields = {selectedItem = "ReconnectFailed"}}, 1.0)
+		end
 		AnalyticsService:ReportCounter("ReconnectPrompt-ReconnectFailed")
 
 		if errorType == Enum.ConnectionError.TeleportErrors then
 			-- disable reconnect at second try after a long period of time since last error pops up.
 			if tick() > lastErrorTimeStamp + fIntPotentialClientTimeout then
+				if fflagConnectionEventMetrics then
+					TelemetryService:LogCounter(connectionEventConfig, {customFields = {selectedItem = "ReconnectTimedOut"}}, 1.0)
+				end
 				if errorForReconnect == Enum.ConnectionError.PlacelaunchErrors then
 					return ConnectionPromptState.RECONNECT_DISABLED_PLACELAUNCH
 				else
@@ -485,8 +573,14 @@ local function stateTransit(errorType, errorCode, oldState)
 			end
 
 			if errorForReconnect == Enum.ConnectionError.PlacelaunchErrors then
+				if fflagConnectionEventMetrics then
+					TelemetryService:LogCounter(connectionEventConfig, {customFields = {selectedItem = "PlaceLaunchReconnectFailed"}}, 1.0)
+				end
 				return ConnectionPromptState.RECONNECT_PLACELAUNCH
 			elseif errorForReconnect == Enum.ConnectionError.DisconnectErrors then
+				if fflagConnectionEventMetrics then
+					TelemetryService:LogCounter(connectionEventConfig, {customFields = {selectedItem = "DisconnectReconnectFailed"}}, 1.0)
+				end
 				return ConnectionPromptState.RECONNECT_DISCONNECT
 			end
 		end
@@ -563,6 +657,82 @@ local function getCreatorBanString(errorMsg: string)
 	return errorMsg
 end
 
+local enumToLocalizationKey = {
+	[Enum.ConnectionError.DisconnectErrors] = "InGame.ConnectionError.DisconnectErrors",
+	[Enum.ConnectionError.DisconnectBadhash] = "InGame.ConnectionError.DisconnectBadhash",
+	[Enum.ConnectionError.DisconnectSecurityKeyMismatch] = "InGame.ConnectionError.DisconnectSecurityKeyMismatch",
+	[Enum.ConnectionError.DisconnectProtocolMismatch] = "InGame.ConnectionError.DisconnectProtocolMismatch",
+	[Enum.ConnectionError.DisconnectReceivePacketError] = "InGame.ConnectionError.DisconnectReceivePacketError",
+	[Enum.ConnectionError.DisconnectReceivePacketStreamError] = "InGame.ConnectionError.DisconnectReceivePacketStreamError",
+	[Enum.ConnectionError.DisconnectSendPacketError] = "InGame.ConnectionError.DisconnectSendPacketError",
+	[Enum.ConnectionError.DisconnectIllegalTeleport] = "InGame.ConnectionError.DisconnectIllegalTeleport",
+	[Enum.ConnectionError.DisconnectDuplicatePlayer] = "InGame.ConnectionError.DisconnectDuplicatePlayer",
+	[Enum.ConnectionError.DisconnectDuplicateTicket] = "InGame.ConnectionError.DisconnectDuplicateTicket",
+	[Enum.ConnectionError.DisconnectTimeout] = "InGame.ConnectionError.DisconnectTimeout",
+	[Enum.ConnectionError.DisconnectLuaKick] = "InGame.ConnectionError.DisconnectLuaKick",
+	[Enum.ConnectionError.DisconnectOnRemoteSysStats] = "InGame.ConnectionError.DisconnectOnRemoteSysStats",
+	[Enum.ConnectionError.DisconnectHashTimeout] = "InGame.ConnectionError.DisconnectHashTimeout",
+	[Enum.ConnectionError.DisconnectCloudEditKick] = "InGame.ConnectionError.DisconnectCloudEditKick",
+	[Enum.ConnectionError.DisconnectPlayerless] = "InGame.ConnectionError.DisconnectPlayerless",
+	[Enum.ConnectionError.DisconnectNewSecurityKeyMismatch] = "InGame.ConnectionError.DisconnectNewSecurityKeyMismatch",
+	[Enum.ConnectionError.DisconnectEvicted] = "InGame.ConnectionError.DisconnectEvicted",
+	[Enum.ConnectionError.DisconnectDevMaintenance] = "InGame.ConnectionError.DisconnectDevMaintenance",
+	[Enum.ConnectionError.DisconnectRobloxMaintenance] = "InGame.ConnectionError.DisconnectRobloxMaintenance",
+	[Enum.ConnectionError.DisconnectRejoin] = "InGame.ConnectionError.DisconnectRejoin",
+	[Enum.ConnectionError.DisconnectConnectionLost] = "InGame.ConnectionError.DisconnectConnectionLost",
+	[Enum.ConnectionError.DisconnectIdle] = "InGame.ConnectionError.DisconnectIdle",
+	[Enum.ConnectionError.DisconnectRaknetErrors] = "InGame.ConnectionError.DisconnectRaknetErrors",
+	[Enum.ConnectionError.DisconnectWrongVersion] = "InGame.ConnectionError.DisconnectWrongVersion",
+	[Enum.ConnectionError.DisconnectBySecurityPolicy] = "InGame.ConnectionError.DisconnectBySecurityPolicy",
+	[Enum.ConnectionError.DisconnectBlockedIP] = "InGame.ConnectionError.DisconnectBlockedIP",
+	[Enum.ConnectionError.DisconnectClientFailure] = "InGame.ConnectionError.DisconnectClientFailure",
+	[Enum.ConnectionError.DisconnectClientRequest] = "InGame.ConnectionError.DisconnectClientRequest",
+	[Enum.ConnectionError.DisconnectPrivateServerKickout] = "InGame.ConnectionError.DisconnectPrivateServerKickout",
+	[Enum.ConnectionError.DisconnectModeratedGame] = "InGame.ConnectionError.DisconnectModeratedGame",
+	[Enum.ConnectionError.ServerShutdown] = "InGame.ConnectionError.ServerShutdown",
+	[Enum.ConnectionError.ReplicatorTimeout] = "InGame.ConnectionError.ReplicatorTimeout",
+	[Enum.ConnectionError.PlayerRemoved] = "InGame.ConnectionError.PlayerRemoved",
+	[Enum.ConnectionError.DisconnectOutOfMemoryKeepPlayingLeave] = "InGame.ConnectionError.DisconnectOutOfMemoryKeepPlayingLeave",
+	[Enum.ConnectionError.DisconnectRomarkEndOfTest] = "InGame.ConnectionError.DisconnectRomarkEndOfTest",
+	[Enum.ConnectionError.DisconnectCollaboratorPermissionRevoked] = "InGame.ConnectionError.DisconnectCollaboratorPermissionRevoked",
+	[Enum.ConnectionError.DisconnectCollaboratorUnderage] = "InGame.ConnectionError.DisconnectCollaboratorUnderage",
+	[Enum.ConnectionError.NetworkInternal] = "InGame.ConnectionError.NetworkInternal",
+	[Enum.ConnectionError.NetworkSend] = "InGame.ConnectionError.NetworkSend",
+	[Enum.ConnectionError.NetworkTimeout] = "InGame.ConnectionError.NetworkTimeout",
+	[Enum.ConnectionError.NetworkMisbehavior] = "InGame.ConnectionError.NetworkMisbehavior",
+	[Enum.ConnectionError.NetworkSecurity] = "InGame.ConnectionError.NetworkSecurity",
+	[Enum.ConnectionError.ReplacementReady] = "InGame.ConnectionError.ReplacementReady",
+	[Enum.ConnectionError.ServerEmpty] = "InGame.ConnectionError.ServerEmpty",
+	[Enum.ConnectionError.PhantomFreeze] = "InGame.ConnectionError.PhantomFreeze",
+	[Enum.ConnectionError.AndroidAnticheatKick] = "InGame.ConnectionError.AndroidAnticheatKick",
+	[Enum.ConnectionError.AndroidEmulatorKick] = "InGame.ConnectionError.AndroidEmulatorKick",
+	[Enum.ConnectionError.PlacelaunchErrors] = "InGame.ConnectionError.PlacelaunchErrors",
+	[Enum.ConnectionError.PlacelaunchDisabled] = "InGame.ConnectionError.PlacelaunchDisabled",
+	[Enum.ConnectionError.PlacelaunchError] = "InGame.ConnectionError.PlacelaunchError",
+	[Enum.ConnectionError.PlacelaunchGameEnded] = "InGame.ConnectionError.PlacelaunchGameEnded",
+	[Enum.ConnectionError.PlacelaunchGameFull] = "InGame.ConnectionError.PlacelaunchGameFull",
+	[Enum.ConnectionError.PlacelaunchUserLeft] = "InGame.ConnectionError.PlacelaunchUserLeft",
+	[Enum.ConnectionError.PlacelaunchRestricted] = "InGame.ConnectionError.PlacelaunchRestricted",
+	[Enum.ConnectionError.PlacelaunchUnauthorized] = "InGame.ConnectionError.PlacelaunchUnauthorized",
+	[Enum.ConnectionError.PlacelaunchFlooded] = "InGame.ConnectionError.PlacelaunchFlooded",
+	[Enum.ConnectionError.PlacelaunchHashExpired] = "InGame.ConnectionError.PlacelaunchHashExpired",
+	[Enum.ConnectionError.PlacelaunchHashException] = "InGame.ConnectionError.PlacelaunchHashException",
+	[Enum.ConnectionError.PlacelaunchPartyCannotFit] = "InGame.ConnectionError.PlacelaunchPartyCannotFit",
+	[Enum.ConnectionError.PlacelaunchHttpError] = "InGame.ConnectionError.PlacelaunchHttpError",
+	[Enum.ConnectionError.PlacelaunchUserPrivacyUnauthorized] = "InGame.ConnectionError.PlacelaunchUserPrivacyUnauthorized",
+	[Enum.ConnectionError.PlacelaunchCreatorBan] = "InGame.ConnectionError.PlacelaunchCreatorBan",
+	[Enum.ConnectionError.PlacelaunchCustomMessage] = "InGame.ConnectionError.PlacelaunchCustomMessage",
+	[Enum.ConnectionError.PlacelaunchOtherError] = "InGame.ConnectionError.PlacelaunchOtherError",
+	[Enum.ConnectionError.TeleportErrors] = "InGame.ConnectionError.TeleportErrors",
+	[Enum.ConnectionError.TeleportFailure] = "InGame.ConnectionError.TeleportFailure",
+	[Enum.ConnectionError.TeleportGameNotFound] = "InGame.ConnectionError.TeleportGameNotFound",
+	[Enum.ConnectionError.TeleportGameEnded] = "InGame.ConnectionError.TeleportGameEnded",
+	[Enum.ConnectionError.TeleportGameFull] = "InGame.ConnectionError.TeleportGameFull",
+	[Enum.ConnectionError.TeleportUnauthorized] = "InGame.ConnectionError.TeleportUnauthorized",
+	[Enum.ConnectionError.TeleportFlooded] = "InGame.ConnectionError.TeleportFlooded",
+	[Enum.ConnectionError.TeleportIsTeleporting] = "InGame.ConnectionError.TeleportIsTeleporting",
+}
+
 -- Localize the error string, with a fallback to the original string upon failure.
 -- If it is a teleport error but not TELEPORT_FAILED, use general string "Reconnect failed."
 local function getErrorString(errorMsg: string, errorCode, reconnectError)
@@ -590,7 +760,16 @@ local function getErrorString(errorMsg: string, errorCode, reconnectError)
 		return errorMsg
 	end
 
-	local key = string.gsub(tostring(errorCode), "Enum", "InGame")
+	local key
+	if fflagUpdateConnectionErrorLoc then
+		key = enumToLocalizationKey[errorCode]
+		if not key then
+			mutedError("Cannot find localization key for " .. tostring(errorCode))
+			key = "InGame.ConnectionError.UnknownError"
+		end
+	else
+		key = string.gsub(tostring(errorCode), "Enum", "InGame")
+	end
 
 	local attemptTranslation
 	if errorCode == Enum.ConnectionError.DisconnectIdle then

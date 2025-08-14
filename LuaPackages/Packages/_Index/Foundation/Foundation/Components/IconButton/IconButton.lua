@@ -16,6 +16,16 @@ type IconSize = IconSize.IconSize
 local ButtonVariant = require(Foundation.Enums.ButtonVariant)
 type ButtonVariant = ButtonVariant.ButtonVariant
 
+-- IconButton and Button variants are not currently aligned, but eventually it should be.
+-- For now we don't want to create a new variant enum for IconButton, so we'll use the Button variant enum
+-- and extract only the supported variants.
+type SupportedIconButtonVariant =
+	typeof(ButtonVariant.Standard)
+	| typeof(ButtonVariant.Emphasis)
+	| typeof(ButtonVariant.Utility)
+	| typeof(ButtonVariant.OverMedia)
+	| typeof(ButtonVariant.Alert)
+
 local Radius = require(Foundation.Enums.Radius)
 type Radius = Radius.Radius
 
@@ -31,6 +41,8 @@ local iconMigrationUtils = require(Foundation.Utility.iconMigrationUtils)
 local isMigrated = iconMigrationUtils.isMigrated
 local isBuilderOrMigratedIcon = iconMigrationUtils.isBuilderOrMigratedIcon
 
+local Constants = require(Foundation.Constants)
+
 local Icon = require(Foundation.Components.Icon)
 local View = require(Foundation.Components.View)
 local Text = require(Foundation.Components.Text)
@@ -44,7 +56,7 @@ type IconButtonProps = {
 	-- Size of IconButton. `IconSize` is deprecated - use `InputSize`.
 	-- `Large` and `XLarge` `IconSize`s map to `InputSize.Large` and are not supported.
 	size: (InputSize | IconSize)?,
-	variant: ButtonVariant?,
+	variant: SupportedIconButtonVariant?,
 	icon: string | {
 		name: string,
 		variant: BuilderIcons.IconVariant?,
@@ -57,8 +69,6 @@ local defaultProps = {
 	isCircular = false,
 	variant = ButtonVariant.Utility,
 }
-
-local DISABLED_TRANSPARENCY = 0.5
 
 local function IconButton(iconButtonProps: IconButtonProps, ref: React.Ref<GuiObject>?)
 	local props = withDefaults(iconButtonProps, defaultProps)
@@ -118,7 +128,7 @@ local function IconButton(iconButtonProps: IconButtonProps, ref: React.Ref<GuiOb
 			stroke = variantProps.container.stroke,
 			cursor = cursor,
 			tag = if Flags.FoundationUpdateIconButtonSizes then variantProps.container.tag else nil,
-			GroupTransparency = if props.isDisabled then DISABLED_TRANSPARENCY else nil,
+			GroupTransparency = if props.isDisabled then Constants.DISABLED_TRANSPARENCY else nil,
 			ref = ref,
 		}),
 		{

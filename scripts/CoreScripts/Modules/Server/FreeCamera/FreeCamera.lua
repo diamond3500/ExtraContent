@@ -2,6 +2,37 @@
 ------------------------------------------------------------------------
 -- Freecam
 -- Cinematic free camera for spectating and video production.
+--
+-- Camera Positioning:
+-- WASD / UHJK / Thumbstick1 to move camera forward, left, backward, right
+-- MouseButton2 / Thumbstick2 to rotate camera (full 360 degree rotation in all axes)
+-- Q,E / Y,I / L2,R2 to to move camera up, down
+-- Z,C / L1,R1 to tilt camera left, right (double-tap Z,C,L1,R1 to reset to 0 degree tilt)
+-- Down,Up / DpadDown,DpadUp to adjust movement speed
+-- Left,Right / DpadLeft,DpadRight to adjust zoom speed
+-- , and . to adjust tilt speed
+-- 
+-- Smoothness:
+-- [ , ] - movement
+-- ; , ' - panning
+-- V , B - zoom
+-- N , M - tilt
+-- 
+-- Depth Of Field: (this setting will disable all existing depth of field effects set by the game creators and enable you to manually control your own depth of field effect in the freecam)
+-- \ - toggle
+-- Shift and [ or ] : Increase/Decrease FarIntensity
+-- Ctrl and [ or ] : Increase/Decrease NearIntensity
+-- - or + : Increase/Decrease FocusDistance
+-- Shift and - or + : Increase/Decrease InFocusRadius
+--
+-- Player Lock: (this setting centers focus around a selected player)
+-- / - toggle
+-- R, T - cycle between players
+--
+-- Custom GUI:
+-- G - toggle custom Freecam GUI
+-- X - toggle visible game UI
+-- L - toggle player list
 ------------------------------------------------------------------------
 
 local pi    = math.pi
@@ -29,6 +60,9 @@ if not LocalPlayer then
 	LocalPlayer = Players.LocalPlayer
 end
 
+local playerGui = nil
+local freecamGui = nil
+
 local Camera = Workspace.CurrentCamera
 Workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(function()
 	local newCamera = Workspace.CurrentCamera
@@ -38,6 +72,8 @@ Workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(function()
 end)
 
 local FreecamDepthOfField = nil
+local customGui = nil
+local PlayerState = nil 
 
 local FFlagUserExitFreecamBreaksWithShiftlock
 do
@@ -106,9 +142,25 @@ end
 local FFlagUserFreecamDepthOfFieldEffect
 do
 	local success, result = pcall(function()
-		return UserSettings():IsUserFeatureEnabled("UserFreecamDepthOfFieldEffect2")
+		return UserSettings():IsUserFeatureEnabled("UserFreecamDepthOfFieldEffect3")
 	end)
 	FFlagUserFreecamDepthOfFieldEffect = success and result
+end
+
+local FFlagUserFreecamPlayerLock
+do
+	local success, result = pcall(function()
+		return UserSettings():IsUserFeatureEnabled("UserFreecamPlayerLock")
+	end)
+	FFlagUserFreecamPlayerLock = success and result
+end
+
+local FFlagUserFreecamCustomGui
+do
+	local success, result = pcall(function()
+		return UserSettings():IsUserFeatureEnabled("UserFreecamCustomGui")
+	end)
+	FFlagUserFreecamCustomGui = success and result
 end
 
 ------------------------------------------------------------------------
@@ -127,6 +179,22 @@ local FREECAM_TILT_RESET_GP = {
 }
 local FREECAM_DOF_TOGGLE = {
 	[Enum.KeyCode.BackSlash] = true
+}
+local FREECAM_PLAYER_LOCK_TOGGLE = {[Enum.KeyCode.Slash] = true}
+local FREECAM_PLAYER_LOCK_SWITCH = {
+	[Enum.KeyCode.R] = true,
+	[Enum.KeyCode.T] = true
+}
+local FREECAM_CUSTOM_GUI_TOGGLE = {
+	[Enum.KeyCode.G] = true
+}
+
+local FREECAM_PLAYER_GUI_TOGGLE = {
+	[Enum.KeyCode.X] = true
+}
+
+local FREECAM_LEADERBOARD_TOGGLE = {
+	[Enum.KeyCode.L] = true
 }
 
 local NAV_GAIN = Vector3.new(1, 1, 1)*64
@@ -166,6 +234,20 @@ local postEffects = {}
 local playerGuiConnection = nil
 local cameraConnection = nil
 local lightingConnection = nil
+local playerAddedConnection = nil
+local playerRemovingConnection = nil
+
+local PLAYER_LOCK_DEFAULT_ZOOM = 20
+local PLAYER_LOCK_MIN_ZOOM = 5
+local PLAYER_LOCK_MAX_ZOOM = 50
+local playerLockEnabled = false
+local playerLockZoom = 20
+local playerList = {}
+local currentTargetIndex = 1
+local rootPart = nil
+
+local screenGuisEnabled = false
+local leaderboardEnabled = false
 ------------------------------------------------------------------------
 
 local Spring = {} do
@@ -290,7 +372,13 @@ local Input = {} do
 		M = 0,
 		BackSlash = 0,
 		Minus = 0,
-		Equals = 0
+		Equals = 0,
+		Slash = 0,
+		R = 0,
+		T = 0,
+		G = 0,
+		X = 0,
+		L = 0
 	}
 
 	local mouse = {
@@ -499,6 +587,20 @@ local Input = {} do
 			lastPressTime[keyCode] = currentTime
 		end
 
+		local function findPlayerLockRootPart()
+			if not playerList or #playerList < 1 then 
+				return nil
+			end
+			local targetPlayer = playerList[currentTargetIndex]
+			local targetCharacter = targetPlayer and targetPlayer.Character
+			return targetCharacter and (
+				targetCharacter:FindFirstChild("HumanoidRootPart") or  -- R15 center
+				targetCharacter:FindFirstChild("Torso") or             -- R6 center
+				targetCharacter:FindFirstChild("UpperTorso") or        -- R15 Torso
+				targetCharacter:FindFirstChild("Head")                 -- Last resort if player doesn't have HRP / Torso
+			)
+		end
+
 		local function Keypress(action, state, input)
 			keyboard[input.KeyCode.Name] = state == Enum.UserInputState.Begin and 1 or 0
 
@@ -556,6 +658,52 @@ local Input = {} do
 					end
 					FreecamDepthOfField.Enabled = not FreecamDepthOfField.Enabled
 					resetKeys(FREECAM_DOF_TOGGLE, keyboard)
+				end
+			end
+
+			if FFlagUserFreecamPlayerLock then
+				if FREECAM_PLAYER_LOCK_TOGGLE[input.KeyCode] and input.UserInputState == Enum.UserInputState.Begin then
+					playerLockEnabled = not playerLockEnabled
+					if playerLockEnabled then
+						playerLockZoom = PLAYER_LOCK_DEFAULT_ZOOM
+						rootPart = findPlayerLockRootPart()
+					end
+					resetKeys(FREECAM_PLAYER_LOCK_TOGGLE, keyboard)
+				end
+				if FREECAM_PLAYER_LOCK_SWITCH[input.KeyCode] and input.UserInputState == Enum.UserInputState.Begin then 
+					if playerLockEnabled and #playerList > 0 then
+						currentTargetIndex = ((currentTargetIndex - 1) + (keyboard.T - keyboard.R)) % #playerList + 1
+						rootPart = findPlayerLockRootPart()
+					end
+					resetKeys(FREECAM_PLAYER_LOCK_SWITCH, keyboard)
+				end
+			end
+
+			if FFlagUserFreecamCustomGui then
+				if FREECAM_CUSTOM_GUI_TOGGLE[input.keyCode] and input.UserInputState == Enum.UserInputState.Begin then
+					if freecamGui and freecamGui.Parent then
+						freecamGui.Enabled = not freecamGui.Enabled
+					end
+					resetKeys(FREECAM_CUSTOM_GUI_TOGGLE, keyboard)
+				end
+
+				if FREECAM_PLAYER_GUI_TOGGLE[input.keyCode] and input.UserInputState == Enum.UserInputState.Begin then 
+					screenGuisEnabled = not screenGuisEnabled
+					if PlayerState then
+						local screenGuis = PlayerState.getScreenGuis()
+						for _, gui in pairs(screenGuis) do
+							if gui.Parent and gui ~= freecamGui then
+								gui.Enabled = screenGuisEnabled
+							end
+						end
+					end
+					resetKeys(FREECAM_PLAYER_GUI_TOGGLE, keyboard)
+				end
+
+				if FREECAM_LEADERBOARD_TOGGLE[input.keyCode] and input.UserInputState == Enum.UserInputState.Begin then 
+					leaderboardEnabled = not leaderboardEnabled
+					StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.PlayerList, leaderboardEnabled)
+					resetKeys(FREECAM_LEADERBOARD_TOGGLE, keyboard)
 				end
 			end
 
@@ -656,6 +804,25 @@ local Input = {} do
 					Enum.KeyCode.Minus, Enum.KeyCode.Equals
 				)
 			end
+			if FFlagUserFreecamPlayerLock then 
+				ContextActionService:BindActionAtPriority("FreecamKeyboardPlayerLockToggle", Keypress, false, INPUT_PRIORITY, 
+					Enum.KeyCode.Slash
+				)
+				ContextActionService:BindActionAtPriority("FreecamKeyboardPlayerLockSwitch", Keypress, false, INPUT_PRIORITY, 
+					Enum.KeyCode.R, Enum.KeyCode.T
+				)
+			end
+			if FFlagUserFreecamCustomGui then 
+				ContextActionService:BindActionAtPriority("FreecamKeyboardCustomGuiToggle", Keypress, false, INPUT_PRIORITY,
+					Enum.KeyCode.G
+				)
+				ContextActionService:BindActionAtPriority("FreecamKeyboardPlayerGuiToggle", Keypress, false, INPUT_PRIORITY, 
+					Enum.KeyCode.X
+				)
+				ContextActionService:BindActionAtPriority("FreecamKeyboardLeaderboardToggle", Keypress, false, INPUT_PRIORITY,
+					Enum.KeyCode.L
+				)
+			end
 			ContextActionService:BindActionAtPriority("FreecamMousePan",          MousePan,   false, INPUT_PRIORITY, Enum.UserInputType.MouseMovement)
 			ContextActionService:BindActionAtPriority("FreecamMouseWheel",        MouseWheel, false, INPUT_PRIORITY, Enum.UserInputType.MouseWheel)
 			ContextActionService:BindActionAtPriority("FreecamGamepadButton",     GpButton,   false, INPUT_PRIORITY, Enum.KeyCode.ButtonX, Enum.KeyCode.ButtonY)
@@ -664,12 +831,14 @@ local Input = {} do
 		end
 
 		function Input.StopCapture()
-			navSpeed = 1
-			if FFlagUserFreecamControlSpeed then
-				fovSpeed = 1
-			end
-			if FFlagUserFreecamTiltControl then
-				rollSpeed = 1
+			if not FFlagUserFreecamCustomGui then 
+				navSpeed = 1
+				if FFlagUserFreecamControlSpeed then
+					fovSpeed = 1
+				end
+				if FFlagUserFreecamTiltControl then
+					rollSpeed = 1
+				end
 			end
 			Zero(gamepad)
 			Zero(keyboard)
@@ -691,11 +860,32 @@ local Input = {} do
 				ContextActionService:UnbindAction("FreecamKeyboardDoFToggle")
 				ContextActionService:UnbindAction("FreecamKeyboardDoFControls")
 			end
+			if FFlagUserFreecamPlayerLock then 
+				ContextActionService:UnbindAction("FreecamKeyboardPlayerLockToggle")
+				ContextActionService:UnbindAction("FreecamKeyboardPlayerLockSwitch")
+			end
+			if FFlagUserFreecamCustomGui then 
+				ContextActionService:UnbindAction("FreecamKeyboardCustomGuiToggle")
+				ContextActionService:UnbindAction("FreecamKeyboardPlayerGuiToggle")
+				ContextActionService:UnbindAction("FreecamKeyboardLeaderboardToggle")
+			end
 			ContextActionService:UnbindAction("FreecamMousePan")
 			ContextActionService:UnbindAction("FreecamMouseWheel")
 			ContextActionService:UnbindAction("FreecamGamepadButton")
 			ContextActionService:UnbindAction("FreecamGamepadTrigger")
 			ContextActionService:UnbindAction("FreecamGamepadThumbstick")
+		end
+
+		function Input.getNavSpeed()
+			return navSpeed
+		end
+
+		function Input.getFovSpeed()
+			return fovSpeed
+		end
+
+		function Input.getRollSpeed()
+			return rollSpeed
 		end
 	end
 end
@@ -742,6 +932,73 @@ local function StepFreecam(dt)
 		cameraCFrame = CFrame.new(cameraPos)*CFrame.fromOrientation(cameraRot.x, cameraRot.y, 0)*CFrame.new(vel*NAV_GAIN*dt)
 	end
 
+	if FFlagUserFreecamPlayerLock then
+		if playerLockEnabled and rootPart then
+			local zoomDelta = vel.Z * NAV_GAIN.Z * dt
+			playerLockZoom = clamp(playerLockZoom + zoomDelta, PLAYER_LOCK_MIN_ZOOM, PLAYER_LOCK_MAX_ZOOM)
+			local targetCFrame = CFrame.new(rootPart.Position)
+			local rotationCFrame
+			if FFlagUserFreecamTiltControl then
+				rotationCFrame = CFrame.fromOrientation(cameraRot.x, cameraRot.y, cameraRot.z)
+			else
+				rotationCFrame = CFrame.fromOrientation(cameraRot.x, cameraRot.y, 0)
+			end
+			cameraCFrame = targetCFrame * rotationCFrame * CFrame.new(0, 0, playerLockZoom)
+		end
+	end
+
+	if FFlagUserFreecamCustomGui then 
+		if customGui and customGui.Parent and freecamGui and freecamGui.Parent and freecamGui.Enabled then
+			local displayText = ""
+
+			if dt > 0 then 
+				local velocity = (cameraCFrame.p - cameraPos) / dt
+				displayText = displayText .. string.format("Velocity: (%.1f, %.1f, %.1f)\n", velocity.X, velocity.Y, velocity.Z)
+			end
+
+			displayText = displayText .. string.format("FOV: %.1f\n", cameraFov)
+
+			if FFlagUserFreecamTiltControl then
+				displayText = displayText .. string.format("Tilt: %.1f°\n", math.deg(cameraRot.z))
+			end
+
+			if FFlagUserFreecamSmoothnessControl then
+				displayText = displayText .. string.format("Stiffness (Vel): %.1f\n", VEL_STIFFNESS)
+				displayText = displayText .. string.format("Stiffness (Pan): %.1f\n", PAN_STIFFNESS)
+				displayText = displayText .. string.format("Stiffness (FOV): %.1f\n", FOV_STIFFNESS)
+				displayText = displayText .. string.format("Stiffness (Roll): %.1f\n", ROLL_STIFFNESS)
+			end
+
+			if FFlagUserFreecamControlSpeed then 
+				displayText = displayText .. string.format("Movement Speed: %.1f\n", Input.getNavSpeed())
+				displayText = displayText .. string.format("Zoom Speed: %.1f\n", Input.getFovSpeed())
+				displayText = displayText .. string.format("Tilt Speed: %.1f\n", Input.getRollSpeed())
+			end
+
+			if FFlagUserFreecamDepthOfFieldEffect then 
+				if FreecamDepthOfField and FreecamDepthOfField.Parent and FreecamDepthOfField.Enabled then
+					displayText = displayText .. string.format("Custom Depth Of Field: On\n")
+					displayText = displayText .. string.format("Custom Depth Of Field Near Intensity: %.1f\n", FreecamDepthOfField.NearIntensity)
+					displayText = displayText .. string.format("Custom Depth Of Field Far Intensity: %.1f\n", FreecamDepthOfField.FarIntensity)
+					displayText = displayText .. string.format("Custom Depth Of Field Focus Distance: %.1f\n", FreecamDepthOfField.FocusDistance)
+					displayText = displayText .. string.format("Custom Depth Of Field Focus Radius: %.1f\n", FreecamDepthOfField.InFocusRadius)
+				else
+					displayText = displayText .. string.format("Custom Depth Of Field: Off\n")
+				end
+			end
+
+			if FFlagUserFreecamPlayerLock then 
+				if playerLockEnabled and #playerList > 0 then 
+					displayText = displayText .. string.format("Player Lock: %s\n", playerList[currentTargetIndex].Name)
+				else 
+					displayText = displayText .. string.format("Player Lock: Off\n")
+				end
+			end
+
+			customGui.Text = displayText
+		end
+	end
+
 	cameraPos = cameraCFrame.p
 
 	Camera.CFrame = cameraCFrame
@@ -761,7 +1018,8 @@ end
 
 ------------------------------------------------------------------------
 
-local PlayerState = {} do
+PlayerState = {}
+do
 	local mouseBehavior
 	local mouseIconEnabled
 	local cameraType
@@ -802,7 +1060,11 @@ local PlayerState = {} do
 				playerGuiConnection = playergui.ChildAdded:Connect(function(child)
 					if child:IsA("ScreenGui") and child.Enabled then
 						screenGuis[#screenGuis + 1] = child
-						child.Enabled = false
+						if FFlagUserFreecamCustomGui then 
+							child.Enabled = screenGuisEnabled
+						else
+							child.Enabled = false
+						end
 					end
 				end)
 			end
@@ -837,8 +1099,14 @@ local PlayerState = {} do
 			StarterGui:SetCore(name, isEnabled)
 		end
 		for _, gui in pairs(screenGuis) do
-			if gui.Parent then
-				gui.Enabled = true
+			if FFlagUserFreecamCustomGui then 
+				if gui.Parent and gui ~= freecamGui then
+					gui.Enabled = true
+				end
+			else 
+				if gui.Parent then
+					gui.Enabled = true
+				end
 			end
 		end
 		if FFlagUserFixFreecamGuiChangeVisibility then
@@ -868,9 +1136,58 @@ local PlayerState = {} do
 		UserInputService.MouseBehavior = mouseBehavior
 		mouseBehavior = nil
 	end
+
+	function PlayerState.getScreenGuis() 
+		return screenGuis
+	end
+end
+
+local function removePlayerFromList(player)
+	for i, p in ipairs(playerList) do
+		if p == player then
+			table.remove(playerList, i)
+			
+			if currentTargetIndex == i and playerLockEnabled then 
+				-- If the player removed is the current target index, disable player lock and turn it back to freecam. 
+				playerLockEnabled = false
+				currentTargetIndex = 1
+			end
+
+			if currentTargetIndex > i then
+				-- If the player removed is before the current target index, table.remove() will move all subsequent indices back.
+				currentTargetIndex = currentTargetIndex - 1 
+			end
+
+			if currentTargetIndex > #playerList or currentTargetIndex < 1 then
+				currentTargetIndex = 1
+			end
+			break
+		end
+	end
+end
+
+local function initializePlayerList()
+	playerList = Players:GetPlayers()
+
+	for i, p in ipairs(playerList) do
+		if p == LocalPlayer then
+			currentTargetIndex = i
+			break
+		end
+	end
+
+	playerAddedConnection = Players.PlayerAdded:Connect(function(player)
+		table.insert(playerList, player)
+	end)
+
+	playerRemovingConnection = Players.PlayerRemoving:Connect(removePlayerFromList)
 end
 
 local function StartFreecam()
+	if FFlagUserFreecamPlayerLock then 
+		initializePlayerList()
+	end
+
 	if not FFlagUserFreecamGuiDestabilization then
 		if FFlagUserShowGuiHideToggles then
 			script:SetAttribute(FREECAM_ENABLED_ATTRIBUTE_NAME, true)
@@ -893,11 +1210,34 @@ local function StartFreecam()
 		rollSpring:Reset(0)
 	end
 
-	if FFlagUserFreecamSmoothnessControl then
-		VEL_STIFFNESS = 1.5
-		PAN_STIFFNESS = 1.0
-		FOV_STIFFNESS = 4.0
-		ROLL_STIFFNESS = 1.0
+	if not FFlagUserFreecamCustomGui then 
+		if FFlagUserFreecamSmoothnessControl then
+			VEL_STIFFNESS = 1.5
+			PAN_STIFFNESS = 1.0
+			FOV_STIFFNESS = 4.0
+			ROLL_STIFFNESS = 1.0
+		end
+	end
+
+	if FFlagUserFreecamCustomGui then 
+		playerGui = LocalPlayer:WaitForChild("PlayerGui")
+		freecamGui = playerGui:WaitForChild("Freecam")
+		if not customGui or not customGui.Parent then 
+			customGui = Instance.new("TextLabel")
+			customGui.Name = "FreecamCustomGui"
+			customGui.TextColor3 = Color3.new(1, 1, 1)
+			customGui.Font = Enum.Font.SourceSansBold
+			customGui.TextSize = 20
+			customGui.TextStrokeTransparency = 0
+			customGui.BackgroundTransparency = 1
+			customGui.TextWrapped = true
+			customGui.TextXAlignment = Enum.TextXAlignment.Right
+			customGui.AutomaticSize = Enum.AutomaticSize.Y 
+			customGui.AnchorPoint = Vector2.new(1, 1) 
+			customGui.Position = UDim2.new(1, -10, 1, -10) 
+			customGui.Size = UDim2.new(0, 400, 0, 0) 
+			customGui.Parent = freecamGui
+		end
 	end
 
 	PlayerState.Push()
@@ -922,6 +1262,20 @@ local function StopFreecam()
 		end
 	end
 
+	if FFlagUserFreecamPlayerLock then 
+		if playerAddedConnection then 
+			playerAddedConnection:Disconnect()
+			playerAddedConnection = nil
+		end
+		if playerRemovingConnection then
+			playerRemovingConnection:Disconnect()
+			playerRemovingConnection = nil
+		end
+		playerLockEnabled = false
+		currentTargetIndex = 1
+		playerList = {}
+	end
+	
 	if FFlagUserFreecamDepthOfFieldEffect then
 		if FreecamDepthOfField and FreecamDepthOfField.Parent then
 			if FreecamDepthOfField.Enabled then 
@@ -930,10 +1284,26 @@ local function StopFreecam()
 						effect.Enabled = true
 					end
 				end
+				if cameraConnection then
+					cameraConnection:Disconnect()
+					cameraConnection = nil
+				end
+				if lightingConnection then
+					lightingConnection:Disconnect()
+					lightingConnection = nil
+				end
 				postEffects = {}
 			end
 			FreecamDepthOfField.Enabled = false
 		end
+	end
+
+	if FFlagUserFreecamCustomGui then 
+		if freecamGui and freecamGui.Parent then
+			freecamGui.Enabled = false
+		end
+		screenGuisEnabled = false
+		leaderboardEnabled = false
 	end
 
 	Input.StopCapture()
@@ -1002,3 +1372,5 @@ do
 		end)
 	end
 end
+
+return {}

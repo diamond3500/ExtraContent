@@ -25,6 +25,7 @@ local validateScaleType = require(root.validation.validateScaleType)
 local validateTotalSurfaceArea = require(root.validation.validateTotalSurfaceArea)
 local validateRigidMeshNotSkinned = require(root.validation.validateRigidMeshNotSkinned)
 local ValidateMeshSizeProperty = require(root.validation.ValidateMeshSizeProperty)
+local validateDependencies = require(root.validation.validateDependencies)
 
 local createMeshPartAccessorySchema = require(root.util.createMeshPartAccessorySchema)
 local getAttachment = require(root.util.getAttachment)
@@ -34,15 +35,21 @@ local getEditableMeshFromContext = require(root.util.getEditableMeshFromContext)
 local getEditableImageFromContext = require(root.util.getEditableImageFromContext)
 local getExpectedPartSize = require(root.util.getExpectedPartSize)
 local pcallDeferred = require(root.util.pcallDeferred)
+local RigidOrLayeredAllowed = require(root.util.RigidOrLayeredAllowed)
 
 local getFFlagMeshPartAccessoryPBRSupport = require(root.flags.getFFlagMeshPartAccessoryPBRSupport)
 local getFFlagUGCValidateMeshVertColors = require(root.flags.getFFlagUGCValidateMeshVertColors)
 local getFFlagUGCValidateThumbnailConfiguration = require(root.flags.getFFlagUGCValidateThumbnailConfiguration)
 local getFFlagUGCValidationNameCheck = require(root.flags.getFFlagUGCValidationNameCheck)
 local getFFlagCheckAccessoryMeshSize = require(root.flags.getFFlagCheckAccessoryMeshSize)
+local FFlagUGCValidationValidateMeshPartDoubleSided =
+	game:DefineFastFlag("UGCValidationValidateMeshPartDoubleSided", false)
+local FFlagUGCValidationValidateRigidAccessoryAllowed =
+	game:DefineFastFlag("UGCValidationValidateRigidAccessoryAllowed", false)
 
 local getEngineFeatureEngineUGCValidateRigidNonSkinned =
 	require(root.flags.getEngineFeatureEngineUGCValidateRigidNonSkinned)
+local getFFlagUGCValidateAccessoriesRCCOwnership = require(root.flags.getFFlagUGCValidateAccessoriesRCCOwnership)
 
 local function validateMeshPartAccessory(validationContext: Types.ValidationContext): (boolean, { string }?)
 	assert(
@@ -53,6 +60,23 @@ local function validateMeshPartAccessory(validationContext: Types.ValidationCont
 	local assetTypeEnum = validationContext.assetTypeEnum :: Enum.AssetType
 	local isServer = validationContext.isServer
 	local allowUnreviewedAssets = validationContext.allowUnreviewedAssets
+
+	if FFlagUGCValidationValidateRigidAccessoryAllowed then
+		if not RigidOrLayeredAllowed.isRigidAccessoryAllowed(assetTypeEnum) then
+			Analytics.reportFailure(
+				Analytics.ErrorType.validateLegacyAccessory_AssetTypeNotAllowedAsRigidAccessory,
+				nil,
+				validationContext
+			)
+			return false,
+				{
+					string.format(
+						"Asset type '%s' is not a rigid accessory category. It can only be used with layered clothing.",
+						assetTypeEnum.Name
+					),
+				}
+		end
+	end
 
 	local assetInfo = Constants.ASSET_TYPE_INFO[assetTypeEnum]
 
@@ -79,6 +103,13 @@ local function validateMeshPartAccessory(validationContext: Types.ValidationCont
 		end
 	end
 
+	if getFFlagUGCValidateAccessoriesRCCOwnership() then
+		success, reasons = validateDependencies(instance, validationContext)
+		if not success then
+			return false, reasons
+		end
+	end
+
 	local handle = instance:FindFirstChild("Handle") :: MeshPart
 	local meshInfo = {
 		fullName = handle:GetFullName(),
@@ -88,6 +119,18 @@ local function validateMeshPartAccessory(validationContext: Types.ValidationCont
 	} :: Types.MeshInfo
 
 	local reasonsAccumulator = FailureReasonsAccumulator.new()
+
+	if FFlagUGCValidationValidateMeshPartDoubleSided then
+		if handle.DoubleSided then
+			reasonsAccumulator:updateReasons(false, {
+				string.format(
+					"MeshPart '%s' is double-sided. Double-sided meshes are not allowed in rigid accessories.",
+					handle:GetFullName()
+				),
+			})
+			Analytics.reportFailure(Analytics.ErrorType.validateMeshPartAccessory_DoubleSided, nil, validationContext)
+		end
+	end
 
 	local hasMeshContent = meshInfo.contentId ~= nil and meshInfo.contentId ~= ""
 	local getEditableMeshSuccess, editableMesh = getEditableMeshFromContext(handle, "MeshId", validationContext)

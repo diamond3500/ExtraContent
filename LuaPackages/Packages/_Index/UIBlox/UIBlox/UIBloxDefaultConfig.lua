@@ -51,9 +51,6 @@ return {
 	-- Defer loading component’s code until it is rendered for the first time
 	enableCreateLazyComponent = false,
 
-	-- Add the option to pass in callbacks for AccordionView that run on expansion and collapse
-	addCallbacksToAccordionView = false,
-
 	-- Indicate whether the fix for the additional NavigationBar#onSelectionChanged call is enabled
 	enableNavigationBarSelectionChangeFix = false,
 
@@ -122,4 +119,7 @@ return {
 
 	-- Fix PlayerContext text width to not exceed it's frame
 	fixPlayerContextTextWidth = false,
+
+	-- Use the foundation selection cursor for AlertTitle close button
+	fixAlertCloseCursor = false,
 }

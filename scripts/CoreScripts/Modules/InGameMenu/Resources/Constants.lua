@@ -1,7 +1,8 @@
 local CorePackages = game:GetService("CorePackages")
 local t = require(CorePackages.Packages.t)
 local MessageBus = require(CorePackages.Workspace.Packages.MessageBus).MessageBus
-
+local SharedFlags = require(CorePackages.Workspace.Packages.SharedFlags)
+local FFlagEnableGameLeftMessage = SharedFlags.FFlagEnableGameLeftMessage
 local InputTypes = {
 	MouseAndKeyboard = "MouseAndKeyboard",
 	Touch = "Touch",
@@ -28,6 +29,9 @@ local Constants = {
 	MainPagePageKey = "MainPage",
 	InitalPageKey = "InitalPage",
 	ReportDialogKey = "ReportDialog",
+	PeoplePageKey = "peoplepage",
+
+	PeoplePageScrollBuffer = 5,
 
 	AnalyticsTargetName = "client",
 	AnalyticsInGameMenuName = "ingame_menu",
@@ -131,6 +135,13 @@ local Constants = {
 		144,
 		240, -- Anything higher than this will cause weird issues with physics events, as the physics engine runs at 240Hz (CREATORBUG-5874)
 	},
+
+	OnAppRatingPromptEventDescriptor = if FFlagEnableGameLeftMessage then {
+		mid = MessageBus.getMessageId("AppRatingPrompt", "leftGame"),
+		validateParams = t.strictInterface({
+			gameTime = t.number
+		}),
+	} else nil,
 
 	OnSurveyEventDescriptor = {
 		mid = MessageBus.getMessageId("Game", "openSurvey"),

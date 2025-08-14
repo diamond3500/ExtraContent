@@ -8,23 +8,46 @@ local HttpService = game:GetService("HttpService")
 local Promise = require(CorePackages.Packages.Promise)
 local AnalyticsService = game:GetService("RbxAnalyticsService")
 
+local CEVLogsToEventIngest = game:GetEngineFeature("CEVLogsToEventIngest") 
+
+local CrossExperience = require(CorePackages.Workspace.Packages.CrossExperience)
 local FFlagEnableCEVErrorRCCTimeoutLogs =
 	require(CorePackages.Workspace.Packages.SharedFlags).FFlagEnableCEVErrorRCCTimeoutLogs
 local FFlagRecordTimestampforCEVEvents =
 	require(CorePackages.Workspace.Packages.SharedFlags).FFlagRecordTimestampforCEVEvents
-local function sendAnalyticsEvent(eventName: string, args: { [string]: any }?)
-	AnalyticsService:SendEventDeferred("client", "partyVoice", eventName, args or {})
-end
+
+local getMemStorageKey = CrossExperience.Utils.getMemStorageKey
 
 local localUserId
-if FFlagEnableCEVErrorRCCTimeoutLogs then
+if CEVLogsToEventIngest then
+	localUserId = (Players.LocalPlayer and Players.LocalPlayer.UserId) or -1
+end
+
+local CEV_JOIN_ATTEMPT_ID_KEY = "cevJoinAttemptId"
+local function sendAnalyticsEvent(eventName: string, args: { [string]: any }?)
+	local analyticsPayload = args or {}
+
+	-- Automatically include cevJoinAttemptId in all analytics events
+	if CEVLogsToEventIngest then
+		local cevJoinAttemptId = getMemStorageKey(CEV_JOIN_ATTEMPT_ID_KEY)
+		analyticsPayload.cevJoinAttemptId = cevJoinAttemptId
+		analyticsPayload.clientTimeStamp = os.time()
+		analyticsPayload.userId = localUserId
+	end
+
+	AnalyticsService:SendEventDeferred("client", "partyVoice", eventName, analyticsPayload)
+end
+
+if not CEVLogsToEventIngest and FFlagEnableCEVErrorRCCTimeoutLogs then
 	localUserId = (Players.LocalPlayer and Players.LocalPlayer.UserId) or -1
 end
 
 if FFlagEnableCEVErrorRCCTimeoutLogs then
 	sendAnalyticsEvent("partyVoiceCEVChannelFileLoaded", {
-		userId = localUserId,
-		clientTimeStamp = if FFlagRecordTimestampforCEVEvents then os.time() else nil :: never,
+		userId = if not CEVLogsToEventIngest then localUserId else nil,
+		clientTimeStamp = if not CEVLogsToEventIngest and FFlagRecordTimestampforCEVEvents
+			then os.time()
+			else nil :: never,
 	})
 end
 
@@ -32,8 +55,10 @@ local PlayerAudioFocusChanged = ReplicatedStorage:WaitForChild("PlayerAudioFocus
 
 if FFlagEnableCEVErrorRCCTimeoutLogs then
 	sendAnalyticsEvent("partyVoicePlayerAudioFocusChangedLoaded", {
-		userId = localUserId,
-		clientTimeStamp = if FFlagRecordTimestampforCEVEvents then os.time() else nil :: never,
+		userId = if not CEVLogsToEventIngest then localUserId else nil,
+		clientTimeStamp = if not CEVLogsToEventIngest and FFlagRecordTimestampforCEVEvents
+			then os.time()
+			else nil :: never,
 	})
 end
 
@@ -41,7 +66,6 @@ local VoiceChatCore = require(CorePackages.Workspace.Packages.VoiceChatCore)
 local PermissionsProtocol = require(CorePackages.Workspace.Packages.PermissionsProtocol).PermissionsProtocol.default
 local Rodux = require(CorePackages.Packages.Rodux)
 local Cryo = require(CorePackages.Packages.Cryo)
-local CrossExperience = require(CorePackages.Workspace.Packages.CrossExperience)
 local CoreVoiceManager = VoiceChatCore.CoreVoiceManager.default
 local createPersistenceMiddleware = CrossExperience.Middlewares.createPersistenceMiddleware
 
@@ -97,6 +121,7 @@ local VOICE_STATUS = Constants.VOICE_STATUS
 
 local FFlagFixPartyVoiceGetPermissions = SharedFlags.GetFFlagFixPartyVoiceGetPermissions()
 local FFlagEnableCoreVoiceManagerPassErrorInReject = SharedFlags.FFlagEnableCoreVoiceManagerPassErrorInReject
+local FFlagEnablePartyVoiceChangersInLua = SharedFlags.FFlagEnablePartyVoiceChangersInLua
 
 if GetFFlagFixSeamlessVoiceIntegrationWithPrivateVoice() then
 	CoreVoiceManager:setOptions({
@@ -112,7 +137,7 @@ local PersistenceMiddleware = createPersistenceMiddleware({
 
 if FFlagEnableCEVErrorRCCTimeoutLogs then
 	sendAnalyticsEvent("partyVoicePersistenceMiddlewareCreated", {
-		userId = localUserId,
+		userId = if not CEVLogsToEventIngest then localUserId else nil,
 	})
 end
 
@@ -129,8 +154,10 @@ end
 
 if FFlagEnableCEVErrorRCCTimeoutLogs then
 	sendAnalyticsEvent("partyVoiceCrossExperienceReducerLoaded", {
-		userId = localUserId,
-		clientTimeStamp = if FFlagRecordTimestampforCEVEvents then os.time() else nil :: never,
+		userId = if not CEVLogsToEventIngest then localUserId else nil,
+		clientTimeStamp = if not CEVLogsToEventIngest and FFlagRecordTimestampforCEVEvents
+			then os.time()
+			else nil :: never,
 	})
 end
 
@@ -179,7 +206,7 @@ local store = Rodux.Store.new(createReducers(), nil, {
 
 if FFlagEnableCEVErrorRCCTimeoutLogs then
 	sendAnalyticsEvent("partyVoicePersistenceMiddlewareReducerLoaded", {
-		userId = localUserId,
+		userId = if not CEVLogsToEventIngest then localUserId else nil,
 	})
 end
 
@@ -193,12 +220,18 @@ end
 
 if FFlagEnableCEVErrorRCCTimeoutLogs then
 	sendAnalyticsEvent("partyVoiceGameLoaded", {
-		userId = localUserId,
-		clientTimeStamp = if FFlagRecordTimestampforCEVEvents then os.time() else nil :: never,
+		userId = if not CEVLogsToEventIngest then localUserId else nil,
+		clientTimeStamp = if not CEVLogsToEventIngest and FFlagRecordTimestampforCEVEvents
+			then os.time()
+			else nil :: never,
 	})
 end
 
 notifyVoiceStatusChange(Constants.VOICE_STATUS.RCC_CONNECTED)
+
+if CEVLogsToEventIngest then
+	sendAnalyticsEvent("partyVoiceRCCConnectedSignalFired")
+end
 
 cevEventManager:notify(CrossExperience.Constants.EVENTS.PARTY_VOICE_EXPERIENCE_JOINED, {
 	jobId = if game.JobId == "" or game.JobId == nil then HttpService:GenerateGUID(true) else game.JobId,
@@ -228,6 +261,14 @@ local onPlayerAdded = function(player)
 		isLocalUser = player.UserId == localUserId,
 		username = player.Name,
 		displayname = player.DisplayName,
+		isVoiceChangerActive = if FFlagEnablePartyVoiceChangersInLua then false else nil,
+		-- TODO:
+		-- Check to see if setting new participants' selected voice pack to None might cause desync issues
+		-- with the participant updating their voice pack before things are fully initialized.
+		-- Make sure that the local user can only set their voice pack after the participant is fully set up and added to the
+		-- list of participants, or if the user can set the property beforehand, then make the value be set to that selected
+		-- voice pack instead of defaulting it to None.
+		selectedVoicePack = if FFlagEnablePartyVoiceChangersInLua then "None" else nil,
 	})
 end
 
@@ -270,10 +311,24 @@ local onLocalPlayerMuteChanged = function(isMuted)
 	end
 end
 
+local function onLocalVoiceChangerChanged(isVoiceChangerActive)
+	local eventName = if isVoiceChangerActive
+		then CrossExperience.Constants.EVENTS.PARTY_VOICE_CHANGER_WAS_ENABLED
+		else CrossExperience.Constants.EVENTS.PARTY_VOICE_CHANGER_WAS_DISABLED
+
+	cevEventManager:notify(eventName, {
+		userId = localUserId,
+		isLocalUser = true,
+	})
+end
+
 local onParticipantsUpdated = function(participants)
 	for userId, participantState in pairs(participants) do
 		local isActive = participantState.isSignalActive
 		local isMuted = participantState.isMuted
+		local isVoiceChangerActive = if FFlagEnablePartyVoiceChangersInLua
+			then participantState.isVoiceChangerActive
+			else nil
 
 		local activeEventName = if isActive
 			then CrossExperience.Constants.EVENTS.PARTY_VOICE_PARTICIPANT_IS_ACTIVE
@@ -281,6 +336,11 @@ local onParticipantsUpdated = function(participants)
 		local mutedEventName = if isMuted
 			then CrossExperience.Constants.EVENTS.PARTY_VOICE_PARTICIPANT_WAS_MUTED
 			else CrossExperience.Constants.EVENTS.PARTY_VOICE_PARTICIPANT_WAS_UNMUTED
+		local voiceChangerEventName = if FFlagEnablePartyVoiceChangersInLua
+			then if isVoiceChangerActive
+				then CrossExperience.Constants.EVENTS.PARTY_VOICE_CHANGER_WAS_ENABLED
+				else CrossExperience.Constants.EVENTS.PARTY_VOICE_CHANGER_WAS_DISABLED
+			else nil
 
 		local eventPayload = {
 			userId = userId,
@@ -289,6 +349,9 @@ local onParticipantsUpdated = function(participants)
 
 		cevEventManager:notify(mutedEventName, eventPayload)
 		cevEventManager:notify(activeEventName, eventPayload)
+		if FFlagEnablePartyVoiceChangersInLua then
+			cevEventManager:notify(voiceChangerEventName, eventPayload)
+		end
 	end
 end
 
@@ -313,6 +376,27 @@ local toggleMutePlayer = function(params)
 	end
 end
 
+local function setVoicePack(params)
+	local voicePackName = params.voicePackName
+	CoreVoiceManager:SetVoicePack(voicePackName)
+	cevEventManager:notify(CrossExperience.Constants.EVENTS.PARTY_VOICE_PACK_WAS_SET, {
+		userId = localUserId,
+		isLocalUser = true,
+		voicePackName = voicePackName,
+	})
+end
+
+local function toggleVoiceChanger(params)
+	local userId = tonumber(params.userId)
+	local isLocalPlayer = localUserId == userId
+
+	if isLocalPlayer then
+		CoreVoiceManager:ToggleVoiceChanger("Squads")
+	else
+		CoreVoiceManager:ToggleVoiceChanger(userId)
+	end
+end
+
 function handleParticipants()
 	Players.PlayerAdded:Connect(function(player)
 		onPlayerAdded(player)
@@ -334,6 +418,13 @@ function handleMicrophone()
 	CoreVoiceManager.muteChanged.Event:Connect(onLocalPlayerMuteChanged)
 	cevEventManager:addObserver(CrossExperience.Constants.EVENTS.MUTE_PARTY_VOICE_PARTICIPANT, toggleMutePlayer)
 	cevEventManager:addObserver(CrossExperience.Constants.EVENTS.UNMUTE_PARTY_VOICE_PARTICIPANT, toggleMutePlayer)
+end
+
+function handleVoiceChanger()
+	CoreVoiceManager.voiceChangerChanged.Event:Connect(onLocalVoiceChangerChanged)
+	cevEventManager:addObserver(CrossExperience.Constants.EVENTS.ENABLE_PARTY_VOICE_CHANGER, toggleVoiceChanger)
+	cevEventManager:addObserver(CrossExperience.Constants.EVENTS.DISABLE_PARTY_VOICE_CHANGER, toggleVoiceChanger)
+	cevEventManager:addObserver(CrossExperience.Constants.EVENTS.SET_PARTY_VOICE_PACK, setVoicePack)
 end
 
 local handleBlockedParticipant = function(params: { userId: number })
@@ -530,7 +621,6 @@ local function getPermissions(permissions): Promise<PermissionResult>
 	end)
 end
 
-
 local setupListenersInitialized = false
 
 local function setupListeners()
@@ -558,6 +648,11 @@ local function setupListeners()
 	-- setup listeners
 	handleParticipants()
 	handleMicrophone()
+
+	if FFlagEnablePartyVoiceChangersInLua then
+		handleVoiceChanger()
+	end
+
 	if FFlagPartyVoiceBlockSync then
 		initializeParticipantBlockListener()
 	end
@@ -646,6 +741,7 @@ local function setupListeners()
 				voicePlaySessionId = AnalyticsService:GetPlaySessionId(),
 				participants = playerUserIds,
 				numberActive = #Players:GetPlayers(),
+				cevJoinAttemptId = if CEVLogsToEventIngest then getMemStorageKey(CEV_JOIN_ATTEMPT_ID_KEY) else nil,
 			})
 			coreVoiceManagerState.previousGroupId = CoreVoiceManager.service:GetGroupId()
 		elseif newState == Enum.VoiceChatState.Failed then
@@ -852,6 +948,10 @@ local function doStartVoice()
 	startVoice()
 end
 
+if CEVLogsToEventIngest then
+	sendAnalyticsEvent("startingVoiceFromCEVDefaultChannel")
+end
+
 if CevReadinessSync then
 	if foregroundIsReady then
 		log:info("Foreground was ready before setup finished. Starting voice now.")
@@ -879,9 +979,11 @@ if CevReadinessSync then
 				sendAnalyticsEvent(
 					"partyVoiceInitTimedOut",
 					{
-						userId = localUserId,
+						userId = if not CEVLogsToEventIngest then localUserId else nil,
 						timeout = FIntVoiceJoinTimeoutInSeconds,
-						clientTimeStamp = if FFlagRecordTimestampforCEVEvents then os.time() else nil :: never,
+						clientTimeStamp = if not CEVLogsToEventIngest and FFlagRecordTimestampforCEVEvents
+							then os.time()
+							else nil :: never,
 					}
 				)
 			end

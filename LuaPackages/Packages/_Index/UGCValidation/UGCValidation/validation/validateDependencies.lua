@@ -7,8 +7,6 @@ local root = script.Parent.Parent
 
 local RunService = game:GetService("RunService")
 
-local getFFlagUGCValidationAnalytics = require(root.flags.getFFlagUGCValidationAnalytics)
-local FFlagValidateUserAndUniverseNoModeration = game:DefineFastFlag("ValidateUserAndUniverseNoModeration", false)
 local FFlagNoStudioOwnershipCheck = game:DefineFastFlag("NoStudioOwnershipCheck", false)
 
 local Analytics = require(root.Analytics)
@@ -118,40 +116,19 @@ local function validateModerationRCC(
 
 		local creatorTable = response.creationContext.creator
 		local creatorId = if creatorTable.userId then creatorTable.userId else creatorTable.groupId
-		if getFFlagUGCValidationAnalytics() then
-			reasonsAccumulator:updateReasons(
-				validateCreatorId(idsHashTable, creatorId, data.instance, data.fieldName, id, validationContext)
-			)
+		reasonsAccumulator:updateReasons(
+			validateCreatorId(idsHashTable, creatorId, data.instance, data.fieldName, id, validationContext)
+		)
 
-			reasonsAccumulator:updateReasons(
-				validateModerationState(
-					response.moderationResult.moderationState,
-					data.instance,
-					data.fieldName,
-					id,
-					validationContext
-				)
-			)
-		else
-			local failureMessage = string.format(
-				"%s.%s ( %s ) is not owned by the developer",
-				data.instance:GetFullName(),
+		reasonsAccumulator:updateReasons(
+			validateModerationState(
+				response.moderationResult.moderationState,
+				data.instance,
 				data.fieldName,
-				id
+				id,
+				validationContext
 			)
-
-			reasonsAccumulator:updateReasons(idsHashTable[tonumber(creatorId)], { failureMessage })
-
-			local isReviewing = ASSET_STATUS_RCC.MODERATION_STATE_REVIEWING[response.moderationResult.moderationState]
-			if isReviewing then
-				-- throw an error here, which means that the validation of this asset will be run again, rather than returning false. This is because we can't
-				-- conclusively say it failed. It's inconclusive / in-progress, so we need to try again later
-				error("Asset is under review")
-			end
-
-			local isApproved = ASSET_STATUS_RCC.MODERATION_STATE_APPROVED[response.moderationResult.moderationState]
-			reasonsAccumulator:updateReasons(isApproved, { failureMessage })
-		end
+		)
 	end
 	return reasonsAccumulator:getFinalResults()
 end
@@ -198,7 +175,7 @@ local function validateDependencies(
 		if isServer then
 			-- This block will check user and universe permissions without considering moderation
 			-- This is from in experience creation, assets may not be moderated yet
-			if FFlagValidateUserAndUniverseNoModeration and universeId then
+			if universeId then
 				reasonsAccumulator:updateReasons(
 					validateAssetCreatorsRCC(contentIdMap, validationContext :: Types.ValidationContext)
 				)

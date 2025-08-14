@@ -28,7 +28,7 @@ local FFlagUnibarMenuOpenSubmenu = require(ChromeFlags.FFlagUnibarMenuOpenSubmen
 local React = require(CorePackages.Packages.React)
 local UIBlox = require(CorePackages.Packages.UIBlox)
 local GamepadUtils = if FFlagFocusNavOutOfSubmenu
-	then require(CorePackages.Workspace.Packages.AppCommonLib).Utils.GamepadUtils
+	then require(CorePackages.Workspace.Packages.InputUi).Gamepad.GamepadUtils
 	else nil :: never
 local LocalStore = require(Root.Service.LocalStore)
 local StyledTextLabel = UIBlox.App.Text.StyledTextLabel
@@ -66,6 +66,7 @@ local useMappedObservableValue = require(Root.Hooks.useMappedObservableValue)
 
 local FFlagFixChromeIntegrationLayoutBug = game:DefineFastFlag("FixChromeIntegrationLayoutBug", false)
 local FFlagSubmenuFixInvisibleButtons = game:DefineFastFlag("SubmenuFixInvisibleButtons", false)
+local FFlagSubmenuFixVectorConversion = game:DefineFastFlag("SubmenuFixVectorConversion", false)
 
 local isSpatial = require(CorePackages.Workspace.Packages.AppCommonLib).isSpatial
 local isInExperienceUIVREnabled =
@@ -449,7 +450,12 @@ function SubMenu(props: SubMenuProps)
 				for _, input in gamepadState do
 					local key = input.KeyCode
 					if key == Enum.KeyCode.Thumbstick1 then
-						local thumbstickVector = GamepadUtils.normalizeStickByDeadzone(input.Position)
+						-- Never is meant to work around a typing issue.
+						local thumbstickVector = GamepadUtils.normalizeStickByDeadzone(
+							if FFlagSubmenuFixVectorConversion
+								then Vector2.new(input.Position.X, input.Position.Y)
+								else input.Position :: never
+						)
 						local SENSITIVITY = 0.5
 						local LEFT_SENSITIVITY = -SENSITIVITY
 						local RIGHT_SENSITIVITY = SENSITIVITY
