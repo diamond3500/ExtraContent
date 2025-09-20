@@ -15,8 +15,10 @@ type Radius = Radius.Radius
 
 local useTokens = require(Foundation.Providers.Style.useTokens)
 local usePreferences = require(Foundation.Providers.Preferences.usePreferences)
+local usePulseBinding = require(Foundation.Utility.usePulseBinding)
 local withDefaults = require(Foundation.Utility.withDefaults)
 local withCommonProps = require(Foundation.Utility.withCommonProps)
+local Flags = require(Foundation.Utility.Flags)
 
 local lerp = require(Foundation.Utility.lerp)
 
@@ -24,7 +26,7 @@ local TRANSPARENCY_DELTA = 0.1
 local GRADIENT_OFFSET = 3
 local ANIMATION_SPEED = 2
 
-type Props = {
+export type SkeletonProps = {
 	radius: Radius?,
 	Size: Bindable<UDim2>?,
 } & Types.CommonProps
@@ -34,9 +36,10 @@ local defaultProps = {
 	Size = UDim2.fromScale(1, 1),
 }
 
-local function Skeleton(skeletonProps: Props, ref: React.Ref<GuiObject>?)
+local function Skeleton(skeletonProps: SkeletonProps, ref: React.Ref<GuiObject>?)
 	local props = withDefaults(skeletonProps, defaultProps)
 	local clockBinding = useClock()
+	local pulseBinding = usePulseBinding(ANIMATION_SPEED)
 	local tokens = useTokens()
 	local preferences = usePreferences()
 
@@ -47,17 +50,22 @@ local function Skeleton(skeletonProps: Props, ref: React.Ref<GuiObject>?)
 		withCommonProps(props, {
 			cornerRadius = cornerRadius,
 			backgroundStyle = if preferences.reducedMotion
-				then clockBinding:map(function(value: number)
-					local alpha = (1 + math.sin(value * ANIMATION_SPEED)) / 2
-					return {
-						Color3 = tokens.Semantic.Color.Common.Placeholder.Color3,
-						Transparency = lerp(
-							tokens.Color.Extended.White.White_10.Transparency,
-							tokens.Color.Extended.White.White_10.Transparency - TRANSPARENCY_DELTA,
-							alpha
-						),
-					}
-				end)
+				then (if Flags.FoundationSkeletonNewReducedTransparencyPulse then pulseBinding else clockBinding):map(
+					function(value: number)
+						local alpha = if Flags.FoundationSkeletonNewReducedTransparencyPulse
+							then value
+							else (1 + math.sin(value * ANIMATION_SPEED)) / 2
+
+						return {
+							Color3 = tokens.Semantic.Color.Common.Placeholder.Color3,
+							Transparency = lerp(
+								tokens.Color.Extended.White.White_10.Transparency,
+								tokens.Color.Extended.White.White_10.Transparency - TRANSPARENCY_DELTA,
+								alpha
+							),
+						}
+					end
+				)
 				-- Full opacity background lets the gradients transparency take accurate effect
 				else tokens.Color.Extended.White.White_100,
 			Size = props.Size,

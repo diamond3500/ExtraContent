@@ -6,6 +6,7 @@ local Text = require(Foundation.Components.Text)
 local Translator = require(Foundation.Utility.Localization.Translator)
 local React = require(Packages.React)
 
+local Flags = require(Foundation.Utility.Flags)
 local Types = require(Foundation.Components.Types)
 local StateLayerAffordance = require(Foundation.Enums.StateLayerAffordance)
 local withCommonProps = require(Foundation.Utility.withCommonProps)
@@ -16,9 +17,11 @@ type ControlState = ControlState.ControlState
 local InputLabelSize = require(Foundation.Enums.InputLabelSize)
 type InputLabelSize = InputLabelSize.InputLabelSize
 
+local FoundationInputLabelBoldTypography = Flags.FoundationInputLabelBoldTypography
+
 local REQUIRED_INDICATOR = "*"
 
-type InputLabelProps = {
+export type InputLabelProps = {
 	-- Optional text style override
 	textStyle: Types.ColorStyle?,
 	-- Whether the input is required or not. Leave nil for the majority case
@@ -37,14 +40,14 @@ type InputLabelProps = {
 	Text: string,
 } & Types.CommonProps
 
-local function labelText(Text: string, isRequired: boolean?): string
+local function labelText(text: string, isRequired: boolean?): string
 	if isRequired == nil or isRequired == React.None then
-		return Text
+		return text
 	end
 
 	return if isRequired
-		then Text .. REQUIRED_INDICATOR
-		else Translator:FormatByKey("CommonUI.Controls.Input.Optional", { inputLabel = Text })
+		then text .. REQUIRED_INDICATOR
+		else Translator:FormatByKey("CommonUI.Controls.Input.Optional", { inputLabel = text })
 end
 
 local function InputLabel(props: InputLabelProps, ref: React.Ref<GuiObject>?)
@@ -75,9 +78,16 @@ local function InputLabel(props: InputLabelProps, ref: React.Ref<GuiObject>?)
 			textStyle = props.textStyle,
 			tag = {
 				["size-0 auto-xy content-default text-align-x-left text-align-y-top text-wrap"] = true,
-				["text-body-small"] = props.size == InputLabelSize.Small,
-				["text-body-medium"] = props.size == InputLabelSize.Medium,
-				["text-body-large"] = props.size == InputLabelSize.Large,
+
+				[`text-{if FoundationInputLabelBoldTypography then "title" else "body"}-small`] = (
+					props.size == InputLabelSize.Small
+				),
+				[`text-{if FoundationInputLabelBoldTypography then "title" else "body"}-medium`] = (
+					props.size == InputLabelSize.Medium
+				),
+				[`text-{if FoundationInputLabelBoldTypography then "title" else "body"}-large`] = (
+					props.size == InputLabelSize.Large
+				),
 			},
 			ref = ref,
 		})

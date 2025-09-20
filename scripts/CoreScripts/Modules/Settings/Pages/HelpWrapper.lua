@@ -29,7 +29,6 @@ local SignalsReact = require(CorePackages.Packages.SignalsReact)
 
 -- Flags
 local FFlagRefactorHelpPage = HelpPage.Flags.FFlagRefactorHelpPage
-local FFlagHelpPageTouch = HelpPage.Flags.FFlagHelpPageTouch
 local FFlagBuilderIcons = require(CorePackages.Workspace.Packages.SharedFlags).UIBlox.FFlagUIBloxMigrateBuilderIcon
 
 local Integrations = nil
@@ -73,18 +72,18 @@ local function createHelpPage()
         local HelpConditionalView = function()
             local displayed = SignalsReact.useSignalState(getDisplayed)
 
-            local Help = if displayed then React.createElement(FoundationProvider, {
+            local Child = if displayed then React.createElement(FoundationProvider, {
                 theme = Foundation.Enums.Theme.Dark,
                 device = Utils.getDeviceType(),
             }, {
                 Child = React.createElement(LocalizationProvider, {
                     localization = locales,
                 }, {
-                    Child = React.createElement(HelpReactView)
+                    Root = React.createElement(HelpReactView)
                 })
             }) else nil
 
-            return Help
+            return Child
         end
 
         tree = ReactRoblox.createRoot(HelpPage.Page)
@@ -96,16 +95,22 @@ local function createHelpPage()
     HelpPage.Displayed.Event:Connect(function()
         createReactTree()
         setDisplayed(true)
+
+        if HelpPage.HubRef.VersionContainer then
+            HelpPage.HubRef.VersionContainer.Visible = true
+        end
     end)
 
     HelpPage.Hidden.Event:Connect(function()
         setDisplayed(false)
+        
+        if HelpPage.HubRef.VersionContainer then
+            HelpPage.HubRef.VersionContainer.Visible = false
+        end
     end)
 
-    if FFlagHelpPageTouch then
-        HelpPage.Page.Size = UDim2.fromScale(1, 0)
-        HelpPage.Page.AutomaticSize = Enum.AutomaticSize.Y
-    end
+    HelpPage.Page.Size = UDim2.fromScale(1, 0)
+    HelpPage.Page.AutomaticSize = Enum.AutomaticSize.Y    
 
     return HelpPage
 end

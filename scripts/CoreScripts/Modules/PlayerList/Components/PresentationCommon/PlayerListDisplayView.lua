@@ -15,6 +15,7 @@ local Otter = require(CorePackages.Packages.Otter)
 local ReactFocusNavigation = require(CorePackages.Packages.ReactFocusNavigation)
 local LeaderboardStore = require(CorePackages.Workspace.Packages.LeaderboardStore)
 local PlayerListPackage = require(CorePackages.Workspace.Packages.PlayerList)
+local SharedFlags = require(CorePackages.Workspace.Packages.SharedFlags)
 
 local ChromeEnabled = require(RobloxGui.Modules.Chrome.Enabled)
 
@@ -38,6 +39,9 @@ local PlayerDropDown = require(Components.Presentation.PlayerDropDown)
 local FFlagPlayerListFixMobileScrolling = require(PlayerList.Flags.FFlagPlayerListFixMobileScrolling)
 local FFlagDisablePlayerListDisplayCloseBtn = game:DefineFastFlag("DisablePlayerListDisplayCloseBtn", false)
 local FFlagAddNewPlayerListFocusNav = PlayerListPackage.Flags.FFlagAddNewPlayerListFocusNav
+local FFlagAddNewPlayerListMobileFocusNav = PlayerListPackage.Flags.FFlagAddNewPlayerListMobileFocusNav
+local FFlagMoveNewPlayerListDividers = SharedFlags.FFlagMoveNewPlayerListDividers
+
 local EnableCloseButton = ChromeEnabled() and not FFlagDisablePlayerListDisplayCloseBtn
 
 local TOP_BOTTOM_CORNER_RADIUS = 7
@@ -240,6 +244,7 @@ local function PlayerListDisplayView(props: PlayerListDisplayViewProps): React.R
 		if FFlagAddNewPlayerListFocusNav then
 			if props.isVisible and scrollingFrameRef.current then
 				if props.isDirectionalPreferred and props.isUsingGamepad then
+					-- Focus the first player in the list
 					focusGuiObject(nil)
 					focusGuiObject(scrollingFrameRef.current)
 					UserInputService.OverrideMouseIconBehavior = Enum.OverrideMouseIconBehavior.ForceHide
@@ -254,17 +259,43 @@ local function PlayerListDisplayView(props: PlayerListDisplayViewProps): React.R
 			end
 		end
 	end, { focusGuiObject, props.isVisible, props.isSmallTouchDevice, props.isDirectionalPreferred, props.isUsingGamepad, scrollingFrameRef.current } :: { any })
+
+	React.useEffect(function()
+		if FFlagAddNewPlayerListMobileFocusNav then
+			if props.isVisible and props.isSmallTouchDevice and props.isUsingGamepad and scrollingFrameRef.current then
+				local focusedPlayer = false
+				if props.dropDownPlayer and not props.dropDownVisible then
+					-- For mobile, refocus the player that was selected when the dropdown closes
+					local playerEntry = nil
+					if LocalPlayer and props.dropDownPlayer.UserId == LocalPlayer.UserId then
+						playerEntry = scrollingFrameRef.current:FindFirstChild("TitlePlayer", true)
+					else
+						playerEntry = scrollingFrameRef.current:FindFirstChild("PlayerEntry_" .. props.dropDownPlayer.UserId, true)
+					end
+					if playerEntry and playerEntry:IsA("GuiObject") then
+						focusGuiObject(playerEntry)
+						focusedPlayer = true
+					end
+				end
+				if not focusedPlayer then
+					-- Focus the first player in the list
+					focusGuiObject(nil)
+					focusGuiObject(scrollingFrameRef.current)
+				end
+			end
+		end
+	end, { focusGuiObject, props.isVisible, props.dropDownVisible, props.dropDownPlayer, props.isSmallTouchDevice, props.isUsingGamepad, scrollingFrameRef.current } :: { any })
 	
 	React.useEffect(function()
 		if FFlagAddNewPlayerListFocusNav then
 			if not props.isVisible and scrollingFrameRef.current then
-				if props.isDirectionalPreferred and props.isUsingGamepad then
+				if ((FFlagAddNewPlayerListMobileFocusNav and props.isSmallTouchDevice) or props.isDirectionalPreferred) and props.isUsingGamepad then
 					UserInputService.OverrideMouseIconBehavior = Enum.OverrideMouseIconBehavior.None
 				end
 				if focusedGuiObject and focusedGuiObject:IsDescendantOf(scrollingFrameRef.current) then
 					focusGuiObject(nil)
 				end
-				if not props.isSmallTouchDevice then
+				if FFlagAddNewPlayerListMobileFocusNav or not props.isSmallTouchDevice then
 					scrollingFrameRef.current.SelectionGroup = false
 				end
 			end
@@ -304,7 +335,7 @@ local function PlayerListDisplayView(props: PlayerListDisplayViewProps): React.R
 	if LocalPlayer and props.isSmallTouchDevice and getShowTitlePlayer() then
 		childElements.TitlePlayer = React.createElement(PlayerEntryContainer, {
 			entrySizeX = props.entrySizeX,
-			layoutOrder = -2,
+			layoutOrder = if FFlagMoveNewPlayerListDividers then -3 else -2,
 			titlePlayerEntry = true,
 			player = LocalPlayer,
 			playerIconInfo = props.playerIconInfo[LocalPlayer.UserId] or { isPlaceOwner = false },
@@ -316,6 +347,16 @@ local function PlayerListDisplayView(props: PlayerListDisplayViewProps): React.R
 			},
 			setDropDownPlayerDimensionY = setDropDownPlayerDimensionY,
 		})
+		if FFlagMoveNewPlayerListDividers then
+			childElements.BottomDiv = React.createElement("Frame", {
+				Size = UDim2.new(1, 0, 0, 1),
+				Position = UDim2.new(0, 0, 0, 0),
+				AnchorPoint = Vector2.new(0, 0),
+				BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+				BackgroundTransparency = 0.8,
+				LayoutOrder = -2,
+			})
+		end
 	end
 
 	if props.isSmallTouchDevice then
@@ -341,7 +382,7 @@ local function PlayerListDisplayView(props: PlayerListDisplayViewProps): React.R
 			end
 
 			childElements["TeamList_" .. tostring(teamName)] = React.createElement(TeamListContainer, {
-				size = UDim2.new(1, 0, 0, layoutValues.TeamEntrySizeY),
+				size = if FFlagMoveNewPlayerListDividers then nil else UDim2.new(1, 0, 0, layoutValues.TeamEntrySizeY),
 				entrySizeX = props.entrySizeX,
 				teamData = teamData,
 				playerIconInfos = props.playerIconInfo,
@@ -379,6 +420,12 @@ local function PlayerListDisplayView(props: PlayerListDisplayViewProps): React.R
 			ElasticBehavior = Enum.ElasticBehavior.Never,
 			Selectable = false,
 			ScrollingDirection = Enum.ScrollingDirection.Y,
+			SelectionGroup = if FFlagAddNewPlayerListMobileFocusNav then true else nil,
+			SelectionBehaviorUp = if FFlagAddNewPlayerListMobileFocusNav then Enum.SelectionBehavior.Stop else nil,
+			SelectionBehaviorDown = if FFlagAddNewPlayerListMobileFocusNav then Enum.SelectionBehavior.Stop else nil,
+			SelectionBehaviorLeft = if FFlagAddNewPlayerListMobileFocusNav then Enum.SelectionBehavior.Stop else nil,
+			SelectionBehaviorRight = if FFlagAddNewPlayerListMobileFocusNav then Enum.SelectionBehavior.Stop else nil,
+			ref = if FFlagAddNewPlayerListMobileFocusNav then scrollingFrameRef else nil,
 
 			[React.Change.CanvasPosition] = canvasPositionChanged,
 			[React.Change.AbsoluteSize] = absoluteSizeChanged,

@@ -13,11 +13,9 @@ local bindingValidator = require(Core.Utility.bindingValidator)
 local withStyle = require(Core.Style.withStyle)
 local withSelectionCursorProvider = require(App.SelectionImage.withSelectionCursorProvider)
 local useCursorByType = require(App.SelectionCursor.useCursorByType)
-local CursorKind = require(App.SelectionImage.CursorKind)
 local Interactable = require(Core.Control.Interactable)
 local ControlState = require(Core.Control.Enum.ControlState)
 local CursorType = require(App.SelectionCursor.CursorType)
-local UIBloxConfig = require(UIBlox.UIBloxConfig)
 
 local DISABLED_TRANSPARENCY = 0.5
 
@@ -69,7 +67,7 @@ Cell.validateProps = t.strictInterface({
 	[Roact.Ref] = t.optional(t.union(t.callback, t.table)),
 	forwardRef = t.optional(t.union(t.callback, t.table)),
 	-- Selection cursor
-	selectionCursor = if UIBloxConfig.useFoundationSelectionCursor then t.optional(t.any) else nil,
+	selectionCursor = t.optional(t.any),
 })
 
 Cell.defaultProps = {
@@ -139,7 +137,7 @@ function Cell:renderWithProviders(style, getSelectionCursor)
 	local userInteractionEnabled = self.props.userInteractionEnabled
 	local interactionEnabled = (tail and userInteractionEnabled) and true or false
 	local isDisabled = self.props.isDisabled
-	local onActivated = if UIBloxConfig.useFoundationInteractable and self.props.onActivated
+	local onActivated = if self.props.onActivated
 		then function(...)
 			if interactionEnabled then
 				self.props.onActivated(...)
@@ -160,13 +158,10 @@ function Cell:renderWithProviders(style, getSelectionCursor)
 		BackgroundTransparency = 1,
 		AutoButtonColor = false,
 		Selectable = self.props.selectable,
-		SelectionImageObject = if UIBloxConfig.useFoundationSelectionCursor
-			then self.props.selectionCursor
-			else (getSelectionCursor and getSelectionCursor(CursorKind.RoundedRectNoInset)),
+		SelectionImageObject = self.props.selectionCursor,
 
 		isDisabled = isDisabled,
 		onStateChanged = self.onStateChanged,
-		userInteractionEnabled = if not UIBloxConfig.useFoundationInteractable then interactionEnabled else nil,
 		[Roact.Event.Activated] = onActivated,
 		[Roact.Event.TouchTap] = onTouchTapped,
 
@@ -235,12 +230,10 @@ function Cell:renderWithProviders(style, getSelectionCursor)
 end
 
 return Roact.forwardRef(function(props, ref)
-	if UIBloxConfig.useFoundationSelectionCursor then
-		local selectionCursor = useCursorByType(CursorType.RoundedRectNoInset)
-		props = Cryo.Dictionary.join({
-			selectionCursor = selectionCursor,
-		}, props)
-	end
+	local selectionCursor = useCursorByType(CursorType.RoundedRectNoInset)
+	props = Cryo.Dictionary.join({
+		selectionCursor = selectionCursor,
+	}, props)
 	return Roact.createElement(
 		Cell,
 		Cryo.Dictionary.join(props, {

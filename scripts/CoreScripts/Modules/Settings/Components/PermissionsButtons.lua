@@ -43,7 +43,6 @@ local GetFFlagInvertMuteAllPermissionButton = require(RobloxGui.Modules.Flags.Ge
 local FFlagAvatarChatCoreScriptSupport =
 	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagAvatarChatCoreScriptSupport()
 local GetFFlagUpdateSelfieViewOnBan = require(RobloxGui.Modules.Flags.GetFFlagUpdateSelfieViewOnBan)
-local FFlagMuteNonFriendsEvent = require(RobloxGui.Modules.Flags.FFlagMuteNonFriendsEvent)
 local GetFFlagRemoveInGameChatBubbleChatReferences =
 	require(RobloxGui.Modules.Flags.GetFFlagRemoveInGameChatBubbleChatReferences)
 local GetFFlagJoinWithoutMicPermissions =
@@ -62,7 +61,6 @@ local GetFFlagUseMicPermForEnrollment =
 	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagUseMicPermForEnrollment
 local GetFFlagEnableInExpPhoneVoiceUpsellEntrypoints =
 	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagEnableInExpPhoneVoiceUpsellEntrypoints
-local GetFFlagEnableShowVoiceUI = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagEnableShowVoiceUI
 local GetFFlagEnableSeamlessVoiceConnectDisconnectButton =
 	require(RobloxGui.Modules.Flags.GetFFlagEnableSeamlessVoiceConnectDisconnectButton)
 local GetFFlagEnableConnectDisconnectInSettingsAndChrome =
@@ -224,24 +222,22 @@ function PermissionsButtons:init()
 	end
 
 	-- voice UI visibility
-	if GetFFlagEnableShowVoiceUI() then
-		self:setState({
-			isVoiceUIVisible = if VoiceChatServiceManager.voiceUIVisible ~= nil
-				then VoiceChatServiceManager.voiceUIVisible
-				else false,
-		})
+	self:setState({
+		isVoiceUIVisible = if VoiceChatServiceManager.voiceUIVisible ~= nil
+			then VoiceChatServiceManager.voiceUIVisible
+			else false,
+	})
 
-		VoiceChatServiceManager.showVoiceUI.Event:Connect(function()
-			self:setState({
-				isVoiceUIVisible = true,
-			})
-		end)
-		VoiceChatServiceManager.hideVoiceUI.Event:Connect(function()
-			self:setState({
-				isVoiceUIVisible = false,
-			})
-		end)
-	end
+	VoiceChatServiceManager.showVoiceUI.Event:Connect(function()
+		self:setState({
+			isVoiceUIVisible = true,
+		})
+	end)
+	VoiceChatServiceManager.hideVoiceUI.Event:Connect(function()
+		self:setState({
+			isVoiceUIVisible = false,
+		})
+	end)
 
 	-- toggle video permissions
 	self.toggleVideo = function()
@@ -540,7 +536,7 @@ function PermissionsButtons:didUpdate(prevProps, prevState)
 	if
 		self.state.hasCameraPermissions ~= prevState.hasCameraPermissions
 		or self.state.hasMicPermissions ~= prevState.hasMicPermissions
-		or (GetFFlagEnableShowVoiceUI() and self.state.isVoiceUIVisible ~= prevState.isVoiceUIVisible)
+		or self.state.isVoiceUIVisible ~= prevState.isVoiceUIVisible
 	then
 		local showSelfView = FFlagAvatarChatCoreScriptSupport
 			and StarterGui:GetCoreGuiEnabled(Enum.CoreGuiType.SelfView)
@@ -559,7 +555,7 @@ function PermissionsButtons:didMount()
 end
 
 function PermissionsButtons:isShowingPermissionButtons()
-	if GetFFlagEnableShowVoiceUI() and GetFFlagJoinWithoutMicPermissions() then
+	if GetFFlagJoinWithoutMicPermissions() then
 		return (
 			self.state.voiceServiceInitialized
 			and not VoiceChatServiceManager:VoiceChatEnded()
@@ -595,12 +591,11 @@ function PermissionsButtons:render()
 		shouldShowMicButtons = self.state.voiceServiceInitialized
 	end
 
-	if GetFFlagEnableShowVoiceUI() then
-		-- Mic button should only show if voice UI is visible and it is not a new user's first time joining voice
-		shouldShowMicButtons = shouldShowMicButtons
-			and self.state.isVoiceUIVisible
-			and not VoiceChatServiceManager.isShowingFTUX
-	end
+	-- Mic button should only show if voice UI is visible and it is not a new user's first time joining voice
+	shouldShowMicButtons = shouldShowMicButtons
+		and self.state.isVoiceUIVisible
+		and not VoiceChatServiceManager.isShowingFTUX
+
 	-- Show the camera button if the camera is enabled + eligible in user settings and camera is enabled in experience
 	local shouldShowCameraButtons = self:getCameraButtonVisibleAtMount()
 	-- Show join voice button in voice enabled experiences, for voice eligible users who haven't enabled voice and voice enabled users with denied mic permissions
@@ -742,14 +737,12 @@ function PermissionsButtons:render()
 						callback = self.onVoiceStateChange,
 					})
 					else nil,
-				MuteNonFriendsEvent = if FFlagMuteNonFriendsEvent
-					then Roact.createElement(ExternalEventConnection, {
+				MuteNonFriendsEvent = Roact.createElement(ExternalEventConnection, {
 						event = VoiceChatServiceManager.mutedNonFriends.Event,
 						callback = function()
 							self.toggleMuteAllIcon(false)
 						end,
-					})
-					else nil,
+					}),
 				VoiceJoinProgressChanged = if GetFFlagEnableInExpVoiceUpsell()
 					then Roact.createElement(ExternalEventConnection, {
 						event = VoiceChatServiceManager.VoiceJoinProgressChanged.Event,
@@ -865,14 +858,12 @@ function PermissionsButtons:render()
 						callback = self.onVoiceStateChange,
 					})
 					else nil,
-				MuteNonFriendsEvent = if FFlagMuteNonFriendsEvent
-					then Roact.createElement(ExternalEventConnection, {
+				MuteNonFriendsEvent = Roact.createElement(ExternalEventConnection, {
 						event = VoiceChatServiceManager.mutedNonFriends.Event,
 						callback = function()
 							self.toggleMuteAllIcon(false)
 						end,
-					})
-					else nil,
+					}),
 				VoiceJoinProgressChanged = if GetFFlagEnableInExpVoiceUpsell()
 					then Roact.createElement(ExternalEventConnection, {
 						event = VoiceChatServiceManager.VoiceJoinProgressChanged.Event,

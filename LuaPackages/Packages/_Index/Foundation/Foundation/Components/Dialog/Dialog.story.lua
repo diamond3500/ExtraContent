@@ -12,6 +12,7 @@ local RadioGroup = require(Foundation.Components.RadioGroup)
 local InputSize = require(Foundation.Enums.InputSize)
 local ButtonVariant = require(Foundation.Enums.ButtonVariant)
 local DialogSize = require(Foundation.Enums.DialogSize)
+local Orientation = require(Foundation.Enums.Orientation)
 local OverlayProvider = require(Foundation.Providers.Overlay.OverlayProvider)
 local useTokens = require(Foundation.Providers.Style.useTokens)
 
@@ -22,7 +23,10 @@ type StoryProps = {
 	controls: {
 		title: string,
 		hasActions: boolean,
+		hasBackdrop: boolean,
+		disablePortal: boolean,
 		actionsLabel: string,
+		actionsOrientation: Orientation.Orientation?,
 		content: string?,
 		media: string?,
 		mediaSizeScaleX: number?,
@@ -72,6 +76,8 @@ local function Story(props: StoryProps)
 				then React.createElement(Dialog.Root, {
 					size = controls.size,
 					onClose = toggleDialog,
+					hasBackdrop = controls.hasBackdrop,
+					disablePortal = controls.disablePortal,
 				}, {
 					DialogMedia = children.DialogMedia,
 					DialogTitle = children.DialogTitle,
@@ -79,6 +85,7 @@ local function Story(props: StoryProps)
 					DialogActions = if controls.hasActions
 						then React.createElement(Dialog.Actions, {
 							LayoutOrder = 3,
+							orientation = controls.actionsOrientation,
 							actions = {
 								{
 									text = "Join",
@@ -220,7 +227,7 @@ return {
 						LayoutOrder = 2,
 					}),
 					RadioGroup = React.createElement(RadioGroup.Root, {
-						onValueChanged = function(value: string) end,
+						onValueChanged = function() end,
 						LayoutOrder = 3,
 					}, contentItems),
 					DialogText = React.createElement(Dialog.Text, {
@@ -292,7 +299,10 @@ return {
 		title = "Welcome Dialog",
 		content = "This is a dialog with a very, very long description that spans multiple lines. Now, I'm not joking when I say that it has a lot to say. Really, a lot of things have a lot to say if you're willing to listen. Do you hear that? That's the sound of the universe vibrating. It's beautiful, but you really have to listen. This may be the most important decision of your life. You need to decide: are you willing to listen?",
 		actionsLabel = "Actions Label",
+		actionsOrientation = Dash.values(Orientation),
 		hasActions = true,
+		disablePortal = true,
+		hasBackdrop = false,
 		media = "component_assets/avatarBG_dark",
 		mediaSizeScaleX = 1,
 		mediaSizeScaleY = 0,

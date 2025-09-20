@@ -128,6 +128,7 @@ return {
 				local startColor = tokens.Color.Extended.Blue.Blue_1400
 				local endColor = tokens.Color.Extended.Blue.Blue_100
 
+				-- selene: allow(shadowing)
 				local knobStyle = value:map(function(value)
 					return {
 						Color3 = startColor.Color3:Lerp(endColor.Color3, value),
@@ -157,7 +158,7 @@ return {
 							stroke = {
 								Color = tokens.Color.System.Neutral.Color3,
 								Transparency = tokens.Color.System.Neutral.Transparency,
-								Thickness = tokens.Stroke.Thick,
+								Thickness = math.round(tokens.Stroke.Thick),
 							},
 							hasShadow = true,
 						}),
@@ -166,6 +167,37 @@ return {
 						width = UDim.new(1, 0),
 					}),
 				})
+			end,
+		},
+		{
+			name = "Rotated",
+			summary = "Sliders in containers rotated",
+			story = function()
+				local value, setValue = React.useBinding(0.5)
+
+				local sliders = {}
+				local numSliders = 7
+				for i = 0, 360, 360 / numSliders do
+					sliders[`Slider_{i}`] = React.createElement(View, {
+						Size = UDim2.fromScale(1 / numSliders, 0),
+					}, {
+						Folder = React.createElement("Folder", {}, {
+							React.createElement(View, {
+								tag = "size-full",
+								Rotation = i,
+							}, {
+								Slider = React.createElement(Slider, {
+									value = value,
+									onValueChanged = setValue,
+								}),
+							}),
+						}),
+					}) :: React.ReactNode
+				end
+
+				return React.createElement(View, {
+					tag = "size-full-3000 row align-y-center",
+				}, sliders)
 			end,
 		},
 	} :: { unknown },

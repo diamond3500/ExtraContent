@@ -15,11 +15,13 @@ local InExperienceAppChatModal = require(CorePackages.Workspace.Packages.AppChat
 local FFlagMountCoreGuiBackpack = require(Modules.Flags.FFlagMountCoreGuiBackpack)
 local isInExperienceUIVREnabled =
 	require(CorePackages.Workspace.Packages.SharedExperimentDefinition).isInExperienceUIVREnabled
+local InExperienceUIVRIXP =
+	require(CorePackages.Workspace.Packages.SharedExperimentDefinition).InExperienceUIVRIXP
+
 local FFlagTopBarSignalizeSetCores = CoreGuiCommon.Flags.FFlagTopBarSignalizeSetCores
 
 local RobloxTranslator = require(CorePackages.Workspace.Packages.RobloxTranslator)
 
-local GetFFlagCoreScriptsMigrateFromLegacyCSVLoc = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagCoreScriptsMigrateFromLegacyCSVLoc
 
 local BackpackScript = {}
 BackpackScript.OpenClose = nil -- Function to toggle open/close
@@ -112,16 +114,7 @@ local Create = require(CorePackages.Workspace.Packages.AppCommonLib).Create
 local GameTranslator = require(Modules.GameTranslator)
 
 pcall(function()
-	if GetFFlagCoreScriptsMigrateFromLegacyCSVLoc() then
-		SEARCH_TEXT = RobloxTranslator:FormatByKey("InGame.UnknownNamespace.BACKPACK_SEARCH")
-	else
-		local LocalizationService = game:GetService("LocalizationService")
-		local CorescriptLocalization = LocalizationService:GetCorescriptLocalizations()[1]
-		SEARCH_TEXT = CorescriptLocalization:GetString(
-			LocalizationService.RobloxLocaleId,
-			"BACKPACK_SEARCH"
-		)
-	end
+	SEARCH_TEXT = RobloxTranslator:FormatByKey("InGame.UnknownNamespace.BACKPACK_SEARCH")
 end)
 
 local TopbarEnabled = true
@@ -1889,7 +1882,10 @@ OnCoreGuiChanged(backpackType, StarterGui:GetCoreGuiEnabled(backpackType))
 OnCoreGuiChanged(healthType, StarterGui:GetCoreGuiEnabled(healthType))
 
 GuiService.MenuOpened:Connect(function()
-	if BackpackScript.IsOpen and (if isInExperienceUIVREnabled then not VRService.VREnabled else true) then
+	if
+		BackpackScript.IsOpen
+		and (if isInExperienceUIVREnabled and not InExperienceUIVRIXP:isMovePanelToCenter() then not VRService.VREnabled else true)
+	then
 		BackpackScript.OpenClose()
 	end
 end)

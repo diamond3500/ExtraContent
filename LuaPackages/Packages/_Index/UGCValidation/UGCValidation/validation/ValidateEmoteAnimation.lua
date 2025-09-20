@@ -21,10 +21,13 @@ local validateAttributes = require(validation.validateAttributes)
 local validateDependencies = require(validation.validateDependencies)
 local validateModeration = require(validation.validateModeration)
 local ValidateCurveAnimation = require(validation.ValidateCurveAnimation)
+local ValidatePropertiesSensible = require(validation.ValidatePropertiesSensible)
 
 local flags = root.flags
 local getFFlagUGCValidateEmoteAnimationExtendedTests = require(flags.getFFlagUGCValidateEmoteAnimationExtendedTests)
-local getFFlagUGCValidateAccurateCurveFrames = require(flags.getFFlagUGCValidateAccurateCurveFrames)
+local getFFlagUGCValidateNoDoubleRoots = require(flags.getFFlagUGCValidateNoDoubleRoots)
+local getEngineFeatureEngineUGCValidatePropertiesSensible =
+	require(root.flags.getEngineFeatureEngineUGCValidatePropertiesSensible)
 
 local ValidateEmoteAnimation = {}
 
@@ -75,18 +78,15 @@ function ValidateEmoteAnimation.validate(validationContext: Types.ValidationCont
 			instance = instOpt :: Instance
 		end
 
-		do
-			local success, reasons = validateDependencies(instance, validationContext)
+		if getEngineFeatureEngineUGCValidatePropertiesSensible() then
+			local success, reasons = ValidatePropertiesSensible.validate(instance, validationContext)
 			if not success then
 				return false, reasons
 			end
 		end
 
-		-- if we're validating accurate curve frames, then we need to exit early if we don't own the animation else
-		-- the call to ValidateCurveAnimation.validate() will hang forever as it's calling ContentProvider:PreloadAsync()
-		if getFFlagUGCValidateAccurateCurveFrames() then
-			local success, reasons =
-				validateModeration(instance, validationContext.restrictedUserIds, validationContext)
+		do
+			local success, reasons = validateDependencies(instance, validationContext)
 			if not success then
 				return false, reasons
 			end
@@ -96,7 +96,11 @@ function ValidateEmoteAnimation.validate(validationContext: Types.ValidationCont
 		do
 			local successfullyExecuted, animOpt = pcallDeferred(function()
 				local resultTab = game:GetObjectsAllOrNone((instance :: Animation).AnimationId)
-				return if resultTab and #resultTab > 0 then resultTab[1] else nil
+				if getFFlagUGCValidateNoDoubleRoots() then
+					return resultTab
+				else
+					return if resultTab and #resultTab > 0 then resultTab[1] else nil
+				end
 			end, validationContext)
 
 			if not successfullyExecuted or not animOpt then
@@ -106,21 +110,33 @@ function ValidateEmoteAnimation.validate(validationContext: Types.ValidationCont
 					validationContext
 				)
 			end
-			anim = animOpt :: Instance
+
+			if getFFlagUGCValidateNoDoubleRoots() then
+				if #animOpt == 1 then
+					anim = animOpt[1]
+				else
+					Analytics.reportFailure(
+						Analytics.ErrorType.validateCurveAnimation_AnimationHierarchyIsIncorrect,
+						nil,
+						validationContext
+					)
+					return false,
+						{ "Downloaded Curve animation did not have exactly one root. Please fix the animation." }
+				end
+			else
+				anim = animOpt :: Instance
+			end
 		end
 
 		local reasonsAccumulator = FailureReasonsAccumulator.new()
 		reasonsAccumulator:updateReasons(validateTags(instance, validationContext))
 		reasonsAccumulator:updateReasons(validateAttributes(instance, validationContext))
+		reasonsAccumulator:updateReasons(ValidateCurveAnimation.validate(anim, validationContext))
+
 		reasonsAccumulator:updateReasons(
-			ValidateCurveAnimation.validate(anim, (instance :: Animation).AnimationId, validationContext)
+			validateModeration(instance, validationContext.restrictedUserIds, validationContext)
 		)
 
-		if not getFFlagUGCValidateAccurateCurveFrames() then
-			reasonsAccumulator:updateReasons(
-				validateModeration(instance, validationContext.restrictedUserIds, validationContext)
-			)
-		end
 		return reasonsAccumulator:getFinalResults()
 	else
 		local reasonsAccumulator = FailureReasonsAccumulator.new()

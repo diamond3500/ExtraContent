@@ -9,12 +9,22 @@ local GetFFlagFixSeamlessVoiceIntegrationWithPrivateVoice =
 local VoiceConstants = require(RobloxGui.Modules.VoiceChat.Constants)
 local VoiceChatServiceManager = require(RobloxGui.Modules.VoiceChat.VoiceChatServiceManager).default
 local CrossExperience = require(CorePackages.Workspace.Packages.CrossExperience)
+local SharedFlags = require(CorePackages.Workspace.Packages.SharedFlags)
 local Constants = CrossExperience.Constants
+
+local FIntPartyVoiceUndeafenDelayMS = SharedFlags.FIntPartyVoiceUndeafenDelayMS
+local GetFFlagPartyVoiceMuteScopeFix = SharedFlags.GetFFlagPartyVoiceMuteScopeFix
+
+local FFlagFixJoinVoiceDelayedAFMInit = game:DefineFastFlag("FixJoinVoiceDelayedAFMInit", false)
 
 local wasVoiceEverSuspended = false
 local voiceChatState = nil
+local wasAFMInitialized = false
 local muteWasHandled = false
+local didCanUseServiceAsyncFail = false
 local wasInitialFocusRequestHandled = false
+
+local undeafenTimerHandle: thread? = nil
 
 if GetFFlagFixSeamlessVoiceIntegrationWithPrivateVoice() then
 	VoiceChatServiceManager:subscribe("OnStateChanged", function(oldState, newState)
@@ -40,38 +50,63 @@ if GetFFlagFixSeamlessVoiceIntegrationWithPrivateVoice() then
 	end
 
 	function isConnectedToPublicVoice()
-		return not VoiceChatServiceManager:ShouldShowJoinVoice() or voiceChatState == (Enum :: any).VoiceChatState.Joined
+		return not VoiceChatServiceManager:ShouldShowJoinVoice()
+			or voiceChatState == (Enum :: any).VoiceChatState.Joined
 	end
 
 	function initializeAFM()
+		if FFlagFixJoinVoiceDelayedAFMInit and wasAFMInitialized then
+			log:info("VCSM was already initialized [CEV ExperienceAudioFocusBinder]")
+			return
+		end
+		if FFlagFixJoinVoiceDelayedAFMInit then
+			wasAFMInitialized = true
+		end
 		local success, AudioFocusService = pcall(function()
 			return game:GetService("AudioFocusService")
 		end)
 		if success and AudioFocusService then
 			local contextId = Constants.AUDIO_FOCUS_MANAGEMENT.UGC.CONTEXT_ID
 			local focusPriority = Constants.AUDIO_FOCUS_MANAGEMENT.UGC.FOCUS_PRIORITY
-	
+
 			AudioFocusService:RegisterContextIdFromLua(contextId)
 
 			local deafenAll = function()
 				if isConnectedToPublicVoice() then
+					if FIntPartyVoiceUndeafenDelayMS > 0 and undeafenTimerHandle then
+						task.cancel(undeafenTimerHandle)
+						undeafenTimerHandle = nil
+					end
+
 					VoiceChatServiceManager:MuteAll(true, "AudioFocusManagement UGC")
 					if not VoiceChatServiceManager.localMuted then
-						VoiceChatServiceManager:ToggleMic()
+						if GetFFlagPartyVoiceMuteScopeFix() then
+							VoiceChatServiceManager:ToggleMic("AudioFocusManagement - UGC deafenAll")
+						else
+							VoiceChatServiceManager:ToggleMic()
+						end
 					end
-	
+
 					-- Hide the in-exp voice UI when the user is deafened
 					VoiceChatServiceManager:HideVoiceUI()
 				end
 			end
-	
+
 			local undeafenAll = function()
 				if isConnectedToPublicVoice() then
+					if FIntPartyVoiceUndeafenDelayMS > 0 and undeafenTimerHandle then
+						task.cancel(undeafenTimerHandle)
+						undeafenTimerHandle = nil
+					end
 					VoiceChatServiceManager:MuteAll(false, "AudioFocusManagement UGC")
 					if not VoiceChatServiceManager.localMuted then
-						VoiceChatServiceManager:ToggleMic()
+						if GetFFlagPartyVoiceMuteScopeFix() then
+							VoiceChatServiceManager:ToggleMic("AudioFocusManagement - UGC undeafenAll")
+						else
+							VoiceChatServiceManager:ToggleMic()
+						end
 					end
-					
+
 					-- Show the in-exp voice UI when the user is deafened
 					VoiceChatServiceManager:ShowVoiceUI()
 				end
@@ -79,25 +114,49 @@ if GetFFlagFixSeamlessVoiceIntegrationWithPrivateVoice() then
 
 			AudioFocusService.OnDeafenVoiceAudio:Connect(function(serviceContextId)
 				if serviceContextId == contextId then
+					if FIntPartyVoiceUndeafenDelayMS > 0 and undeafenTimerHandle then
+						task.cancel(undeafenTimerHandle)
+						undeafenTimerHandle = nil
+					end
 					log:info("UGC OnDeafenVoiceAudio fired" .. serviceContextId)
 					performVoiceOperationWhenReady(deafenAll)
 				end
 			end)
-	
+
 			AudioFocusService.OnUndeafenVoiceAudio:Connect(function(serviceContextId)
 				if serviceContextId == contextId then
-					log:info("UGC OnUndeafenVoiceAudio fired" .. serviceContextId)
-					performVoiceOperationWhenReady(undeafenAll)
+					if FIntPartyVoiceUndeafenDelayMS > 0 then
+						if undeafenTimerHandle then
+							task.cancel(undeafenTimerHandle)
+						end
+						undeafenTimerHandle = task.delay(FIntPartyVoiceUndeafenDelayMS / 1000, function()
+							undeafenTimerHandle = nil
+							log:info("UGC OnUndeafenVoiceAudio fired delayed" .. serviceContextId)
+							performVoiceOperationWhenReady(undeafenAll)
+						end)
+					else
+						log:info("UGC OnUndeafenVoiceAudio fired" .. serviceContextId)
+						performVoiceOperationWhenReady(undeafenAll)
+					end
 				end
 			end)
-	
+
 			local requestAudioFocusWithPromise = function(id, prio)
+				if GetFFlagPartyVoiceMuteScopeFix() then
+					log:info("UGC requestAudioFocusWithPromise - id: {} - priority: {}", id, prio)
+				end
 				return Promise.new(function(resolve, reject)
 					local requestSuccess, focusGranted =
 						pcall(AudioFocusService.RequestFocus, AudioFocusService, id, prio)
 					if requestSuccess then
+						if GetFFlagPartyVoiceMuteScopeFix() then
+							log:info("UGC requestAudioFocusWithPromise - focusGranted: {}", focusGranted)
+						end
 						resolve(focusGranted) -- Still resolve, but indicate failure to grant focus
 					else
+						if GetFFlagPartyVoiceMuteScopeFix() then
+							log:info("UGC requestAudioFocusWithPromise - rejected")
+						end
 						reject("Failed to call RequestFocus due to an error") -- Reject the promise in case of an error
 					end
 				end)
@@ -149,17 +208,28 @@ if GetFFlagFixSeamlessVoiceIntegrationWithPrivateVoice() then
 	if canUseService then
 		initializeAFM()
 	elseif canUseService == nil then
+		if FFlagFixJoinVoiceDelayedAFMInit then
+			VoiceChatServiceManager:subscribe("OnVoiceChatServiceInitialized", function()
+				if didCanUseServiceAsyncFail then
+					initializeAFM()
+					didCanUseServiceAsyncFail = false
+				end
+			end)
+		end
+
 		VoiceChatServiceManager:subscribe("OnCanUseServiceResult", function(result)
 			if result then
 				initializeAFM()
 			else
+				if FFlagFixJoinVoiceDelayedAFMInit then
+					didCanUseServiceAsyncFail = true
+				end
 				log:info("VCSM cannot be used [CEV ExperienceAudioFocusBinder]")
 			end
 		end)
 	else
 		log:info("VCSM cannot be used [CEV ExperienceAudioFocusBinder]")
 	end
-
 else
 	VoiceChatServiceManager:asyncInit()
 		:andThen(function()
@@ -175,7 +245,11 @@ else
 				local deafenAll = function()
 					VoiceChatServiceManager:MuteAll(true, "AudioFocusManagement UGC")
 					if not VoiceChatServiceManager.localMuted then
-						VoiceChatServiceManager:ToggleMic()
+						if GetFFlagPartyVoiceMuteScopeFix() then
+							VoiceChatServiceManager:ToggleMic("AudioFocusManagement - UGC deafenAll")
+						else
+							VoiceChatServiceManager:ToggleMic()
+						end
 					end
 
 					-- Hide the in-exp voice UI when the user is deafened
@@ -185,7 +259,11 @@ else
 				local undeafenAll = function()
 					VoiceChatServiceManager:MuteAll(false, "AudioFocusManagement UGC")
 					if not VoiceChatServiceManager.localMuted then
-						VoiceChatServiceManager:ToggleMic()
+						if GetFFlagPartyVoiceMuteScopeFix() then
+							VoiceChatServiceManager:ToggleMic("AudioFocusManagement - UGC undeafenAll")
+						else
+							VoiceChatServiceManager:ToggleMic()
+						end
 					end
 
 					-- Show the in-exp voice UI when the user is deafened

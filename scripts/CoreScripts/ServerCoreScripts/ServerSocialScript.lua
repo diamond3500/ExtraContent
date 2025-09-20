@@ -25,6 +25,11 @@ game:DefineFastFlag("EnableSetUserBlocklistInitialized", false)
 local FFlagInExperienceUserProfileSettingsEnabled = require(RobloxGui.Modules.Common.Flags.FFlagInExperienceUserProfileSettingsEnabled)
 local FStringRccInExperienceNameEnabledAllowList = require(RobloxGui.Modules.Common.Flags.FStringRccInExperienceNameEnabledAllowList)
 local FFlagUseNewDirectChatAPI = game:DefineFastFlag("UseNewDirectChatAPI", false)
+local FFlagEnableCreatePartyNudge = game:DefineFastFlag("EnableCreatePartyNudge", false)
+local FFlagEnableCreatePartyNudgeWithVersion = game:DefineFastFlag("EnableCreatePartyNudgeWithVersion", false)
+local FFlagEnablePartyNudgeAfterJoin = require(CorePackages.Workspace.Packages.SharedFlags).FFlagEnablePartyNudgeAfterJoin
+local FFlagBadgeVisibilitySettingEnabled = require(CorePackages.Workspace.Packages.SharedFlags).FFlagBadgeVisibilitySettingEnabled
+local FFlagEnablePartyNudgeNotification = require(CorePackages.Workspace.Packages.SharedFlags).FFlagEnablePartyNudgeNotification
 
 local GET_MULTI_FOLLOW = "user/multi-following-exists"
 
@@ -91,6 +96,32 @@ RemoteEvent_UpdateLocalPlayerBlockList.Parent = RobloxReplicatedStorage
 local RemoteEvent_SendPlayerProfileSettings = Instance.new("RemoteEvent")
 RemoteEvent_SendPlayerProfileSettings.Name = "SendPlayerProfileSettings"
 RemoteEvent_SendPlayerProfileSettings.Parent = RobloxReplicatedStorage
+
+local RemoteEvent_UpdatePlayerProfileSettings
+if FFlagBadgeVisibilitySettingEnabled then
+	RemoteEvent_UpdatePlayerProfileSettings = Instance.new("RemoteEvent")
+	RemoteEvent_UpdatePlayerProfileSettings.Name = "UpdatePlayerProfileSettings"
+	RemoteEvent_UpdatePlayerProfileSettings.Parent = RobloxReplicatedStorage
+end
+
+local RemoteEvent_ShowFriendJoinedPlayerToast
+local RemoteEvent_ShowPlayerJoinedFriendsToast
+if FFlagEnablePartyNudgeAfterJoin then
+	RemoteEvent_ShowPlayerJoinedFriendsToast = Instance.new("RemoteEvent")
+	RemoteEvent_ShowPlayerJoinedFriendsToast.Name = "ShowPlayerJoinedFriendsToast"
+	RemoteEvent_ShowPlayerJoinedFriendsToast.Parent = RobloxReplicatedStorage
+
+	RemoteEvent_ShowFriendJoinedPlayerToast = Instance.new("RemoteEvent")
+	RemoteEvent_ShowFriendJoinedPlayerToast.Name = "ShowFriendJoinedPlayerToast"
+	RemoteEvent_ShowFriendJoinedPlayerToast.Parent = RobloxReplicatedStorage
+end
+
+local RemoteEvent_CreateOrJoinParty
+if FFlagEnablePartyNudgeNotification then
+	RemoteEvent_CreateOrJoinParty = Instance.new("RemoteEvent")
+	RemoteEvent_CreateOrJoinParty.Name = "CreateOrJoinParty"
+	RemoteEvent_CreateOrJoinParty.Parent = RobloxReplicatedStorage
+end
 
 -- Map: { UserId -> { UserId -> NumberOfNotificationsSent } }
 local FollowNotificationsBetweenMap = {}
@@ -304,6 +335,88 @@ local sendPlayerProfileSettings = function(player)
 	RemoteEvent_SendPlayerProfileSettings:FireAllClients(userIdStr, { isInExperienceNameEnabled = isInExperienceNameEnabled })
 end
 
+local createPartyNudge = function(inviterUserId, inviteeUserId, nudgeType)
+	return pcall(function()
+		local apiPath = "group-up/v1/create-party-nudge"
+		local url = string.format(Url.APIS_URL..apiPath)
+
+		local request = HttpService:JSONEncode(
+			{
+				inviterId = inviterUserId,
+				inviteeId = inviteeUserId,
+				nudgeType = nudgeType,
+				placeId = game.PlaceId,
+				gameInstanceId = game.JobId,
+				universeId = game.GameId,
+				version = if FFlagEnableCreatePartyNudgeWithVersion then 1 else nil,
+			}
+		)
+
+		local response = HttpRbxApiService:PostAsyncFullUrl(url, request)
+		return HttpService:JSONDecode(response)
+	end)
+end
+
+local function canCreatePartyNudge(player)
+	if not player then
+		return false
+	end
+
+	local partyAllowedOsPlatforms = {
+		["Windows"] = true,
+		["iOS"] = true,
+		["Android"] = true,
+		["OSX"] = true,
+		["Win32"] = true,
+		["Windows_Universal"] = true,
+	}
+
+	-- Gate party nudge for players that are not in a party
+	-- and for players who are on non party supported platforms
+	return player.PartyId == ""
+		and player.VRDevice == ""
+		and typeof(player.OsPlatform) == "string"
+		and partyAllowedOsPlatforms[player.OsPlatform]
+end
+
+local sendFriendExperienceJoinToast = function(newPlayer)
+	local followedPlayer
+	local players = Players:GetPlayers()
+	for _, player in players do
+		if player.UserId == newPlayer.FollowUserId then
+			followedPlayer = player
+			break
+		end
+	end
+
+	local createPartyNudgeSuccess = false
+	if
+		FFlagEnableCreatePartyNudge
+		and canCreatePartyNudge(followedPlayer)
+		and canCreatePartyNudge(newPlayer)
+	then
+		local response
+		createPartyNudgeSuccess, response = createPartyNudge(newPlayer.UserId, followedPlayer.UserId, "OneToOneNudgeInExperience")
+		if
+			FFlagEnablePartyNudgeNotification
+			and createPartyNudgeSuccess
+			and response
+			and response.shouldAutoCreateOrJoinGroupUp
+		then
+			RemoteEvent_CreateOrJoinParty:FireClient(newPlayer, "PartyNudge", response.nudge)
+		end
+	end
+
+	if not createPartyNudgeSuccess and #players > 0 then
+		-- Both follower and followee are in the same server
+		if followedPlayer then
+			RemoteEvent_ShowFriendJoinedPlayerToast:FireClient(followedPlayer, newPlayer)
+		end
+
+		RemoteEvent_ShowPlayerJoinedFriendsToast:FireClient(newPlayer)
+	end
+end
+
 local function onPlayerAdded(newPlayer)
 	coroutine.wrap(sendPlayerBlockList)(newPlayer)
 	sendPlayerAllGroupDetails(newPlayer)
@@ -319,6 +432,10 @@ local function onPlayerAdded(newPlayer)
 	coroutine.wrap(getPlayerCanManage)(newPlayer)
 
 	sendCanChatWith(newPlayer)
+
+	if FFlagEnablePartyNudgeAfterJoin then
+		coroutine.wrap(sendFriendExperienceJoinToast)(newPlayer)
+	end
 end
 
 RemoteEvent_SetPlayerBlockList.OnServerEvent:Connect(function(player, blockList)
@@ -339,6 +456,14 @@ RemoteEvent_UpdatePlayerBlockList.OnServerEvent:Connect(function(player, userId,
 		end
 	end
 end)
+
+if FFlagBadgeVisibilitySettingEnabled then
+	RemoteEvent_UpdatePlayerProfileSettings.OnServerEvent:Connect(function(player, profileSettings)
+		local userIdStr = tostring(player.UserId)
+		PlayerToInExperienceNameEnabledMap[userIdStr] = profileSettings.isInExperienceNameEnabled
+		RemoteEvent_SendPlayerProfileSettings:FireAllClients(userIdStr, profileSettings)
+	end)
+end
 
 Players.PlayerAdded:connect(onPlayerAdded)
 for _,player in pairs(Players:GetPlayers()) do

@@ -58,7 +58,6 @@ local FStringReactSchedulingContext =
 
 local FFlagLuaAppEnableToastNotificationsCoreScripts =
 	game:DefineFastFlag("LuaAppEnableToastNotificationsCoreScripts4", false)
-local FFlagAdPortalTeleportPromptLua = game:DefineFastFlag("AdPortalTeleportPromptLua", false)
 
 local GetFFlagVoiceUserAgency3 = require(RobloxGui.Modules.Flags.GetFFlagVoiceUserAgency3)
 local GetFFlagLuaInExperienceCoreScriptsGameInviteUnification =
@@ -81,11 +80,18 @@ local FFlagEnableExperienceGenericChallengeRenderingOnLoadingScript =
 	game:DefineFastFlag("EnableExperienceGenericChallengeRenderingOnLoadingScript", false)
 local FFlagEnableRobloxCommerce = game:GetEngineFeature("EnableRobloxCommerce")
 local FFlagEnableLinkSharingEvent = game:DefineFastFlag("EnableLinkSharingEvent", false)
-local FFlagUseAppCommonVirtualCursorWithFixes = require(CorePackages.Workspace.Packages.SharedFlags).FFlagUseAppCommonVirtualCursorWithFixes
 
 local UIBlox = require(CorePackages.Packages.UIBlox)
 local uiBloxConfig = require(CorePackages.Workspace.Packages.CoreScriptsInitializer).UIBloxInGameConfig
 UIBlox.init(uiBloxConfig)
+
+-- Add a label for internal React telemetry
+local FFlagReactTelemetryEnabled =
+	require(CorePackages.Workspace.Packages.SharedFlags).FFlagReactTelemetryEnabled
+if FFlagReactTelemetryEnabled then
+	local ReactTelemetry = require(CorePackages.Packages.ReactTelemetry)
+	ReactTelemetry.customFields.context = "in_experience"
+end
 
 -- Set up React Scheduler experiment
 
@@ -285,7 +291,7 @@ end
 
 -- Purchase Prompt Script
 coroutine.wrap(function()
-	local PurchasePrompt = safeRequire(CoreGuiModules.PurchasePrompt)
+	local PurchasePrompt = safeRequire(CorePackages.Workspace.Packages.PurchasePrompt)
 
 	if PurchasePrompt then
 		PurchasePrompt.mountPurchasePrompt()
@@ -297,13 +303,9 @@ if FFlagAddPublishAssetPrompt then
 	coroutine.wrap(safeRequire)(CoreGuiModules.PublishAssetPrompt)
 end
 
-if game:GetEngineFeature("ExperienceEventsEngineAPIEnabled") then
-	coroutine.wrap(safeRequire)(CoreGuiModules.ExperienceEvents.ExperienceEventsApp)
-end
+coroutine.wrap(safeRequire)(CoreGuiModules.ExperienceEvents.ExperienceEventsApp)
 
-if game:GetEngineFeature("AvatarGenerationSelfieConsentEnabled") then
-	coroutine.wrap(safeRequire)(CoreGuiModules.AvatarGeneration.SelfieConsent)
-end
+coroutine.wrap(safeRequire)(CoreGuiModules.AvatarGeneration.SelfieConsent)
 
 -- Prompt Block Player Script
 ScriptContext:AddCoreScriptLocal("CoreScripts/BlockPlayerPrompt", RobloxGui)
@@ -327,12 +329,7 @@ coroutine.wrap(safeRequire)(RobloxGui.Modules.Captures.CapturesApp)
 coroutine.wrap(safeRequire)(CoreGuiModules.AvatarEditorPrompts)
 
 -- GamepadVirtualCursor
-if FFlagUseAppCommonVirtualCursorWithFixes then
-	-- due to init already requiring VC instance, no longer need to access VirtualCursorMain
-	coroutine.wrap(safeRequire)(CorePackages.Workspace.Packages.VirtualCursor) 
-else
-	coroutine.wrap(safeRequire)(RobloxGui.Modules.VirtualCursor.VirtualCursorMain)
-end
+coroutine.wrap(safeRequire)(CorePackages.Workspace.Packages.VirtualCursor)
 
 ScriptContext:AddCoreScriptLocal("CoreScripts/VehicleHud", RobloxGui)
 ScriptContext:AddCoreScriptLocal("CoreScripts/InviteToGamePrompt", RobloxGui)
@@ -414,12 +411,6 @@ if game:GetEngineFeature("NewMoodAnimationTypeApiEnabled") and game:GetFastFlag(
 end
 
 ScriptContext:AddCoreScriptLocal("CoreScripts/PortalTeleportGUI", RobloxGui)
-
-if game:GetEngineFeature("PortalAdPrompt") then
-	if FFlagAdPortalTeleportPromptLua then
-		ScriptContext:AddCoreScriptLocal("CoreScripts/AdTeleportPrompt", RobloxGui)
-	end
-end
 
 coroutine.wrap(function()
 	local AdsEudsaInit = safeRequire(CorePackages.Workspace.Packages.AdsEudsa)

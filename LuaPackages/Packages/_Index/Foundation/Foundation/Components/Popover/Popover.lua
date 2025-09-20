@@ -5,14 +5,17 @@ local React = require(Packages.React)
 
 local PopoverContext = require(script.Parent.PopoverContext)
 
-type PopoverProps = {
+local Types = require(Foundation.Components.Types)
+type PopoverAnchor = Types.PopoverAnchor
+
+export type PopoverProps = {
 	-- Whether the popover is open
 	isOpen: boolean,
 	children: React.ReactNode,
 }
 
-local function Popover(props: PopoverProps, ref: React.Ref<GuiObject>?)
-	local anchor, setAnchor = React.useState(nil :: GuiObject?)
+local function Popover(props: PopoverProps)
+	local anchor, setAnchor = React.useState(nil :: PopoverAnchor?)
 
 	return React.createElement(PopoverContext.Provider, {
 		value = {
@@ -23,4 +26,4 @@ local function Popover(props: PopoverProps, ref: React.Ref<GuiObject>?)
 	}, props.children)
 end
 
-return React.forwardRef(Popover)
+return Popover

@@ -12,9 +12,11 @@ local validateAccessoryName = require(root.validation.validateAccessoryName)
 local validateSurfaceAppearances = require(root.validation.validateSurfaceAppearances)
 local validateSurfaceAppearanceTextureSize = require(root.validation.validateSurfaceAppearanceTextureSize)
 local validateSurfaceAppearanceTransparency = require(root.validation.validateSurfaceAppearanceTransparency)
+local ValidatePropertiesSensible = require(root.validation.ValidatePropertiesSensible)
 
-local getFFlagMeshPartAccessoryPBRSupport = require(root.flags.getFFlagMeshPartAccessoryPBRSupport)
 local getFFlagUGCValidationNameCheck = require(root.flags.getFFlagUGCValidationNameCheck)
+local getEngineFeatureEngineUGCValidatePropertiesSensible =
+	require(root.flags.getEngineFeatureEngineUGCValidatePropertiesSensible)
 
 local function validateLegacyAccessoryMeshPartAssetFormat(
 	specialMeshAssetFormatAccessory: Instance,
@@ -46,19 +48,24 @@ local function validateLegacyAccessoryMeshPartAssetFormat(
 		return false, reasons
 	end
 
-	if getFFlagMeshPartAccessoryPBRSupport() then
-		success, reasons = validateSurfaceAppearances(meshPartAssetFormatAccessory, validationContext)
+	if getEngineFeatureEngineUGCValidatePropertiesSensible() then
+		success, reasons = ValidatePropertiesSensible.validate(meshPartAssetFormatAccessory, validationContext)
 		if not success then
 			return false, reasons
 		end
-		success, reasons = validateSurfaceAppearanceTextureSize(meshPartAssetFormatAccessory, validationContext)
-		if not success then
-			return false, reasons
-		end
-		success, reasons = validateSurfaceAppearanceTransparency(meshPartAssetFormatAccessory, validationContext)
-		if not success then
-			return false, reasons
-		end
+	end
+
+	success, reasons = validateSurfaceAppearances(meshPartAssetFormatAccessory, validationContext)
+	if not success then
+		return false, reasons
+	end
+	success, reasons = validateSurfaceAppearanceTextureSize(meshPartAssetFormatAccessory, validationContext)
+	if not success then
+		return false, reasons
+	end
+	success, reasons = validateSurfaceAppearanceTransparency(meshPartAssetFormatAccessory, validationContext)
+	if not success then
+		return false, reasons
 	end
 
 	if getFFlagUGCValidationNameCheck() and isServer then

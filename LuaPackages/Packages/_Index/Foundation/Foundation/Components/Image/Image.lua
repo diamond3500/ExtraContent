@@ -33,7 +33,7 @@ export type ImageRect = {
 	size: Bindable<Vector2>?,
 }
 
-type ImageProps = {
+export type ImageProps = {
 	slice: Slice?,
 	imageRect: ImageRect?,
 	imageStyle: ColorStyle?,
@@ -65,11 +65,14 @@ local function Image(imageProps: ImageProps, ref: React.Ref<GuiObject>?)
 			) :: typeof(defaultProps)
 	)
 
-	local isInteractable = props.onStateChanged ~= nil or props.onActivated ~= nil
+	local isInteractable = props.onStateChanged ~= nil or props.onActivated ~= nil or props.onSecondaryActivated ~= nil
 
 	local image, imageRectOffset, imageRectSize = React.useMemo(function(): ...any
+		-- selene: allow(shadowing)
 		local image = props.Image
+		-- selene: allow(shadowing)
 		local imageRectOffset = if props.imageRect then props.imageRect.offset else nil
+		-- selene: allow(shadowing)
 		local imageRectSize = if props.imageRect then props.imageRect.size else nil
 
 		if ReactIs.isBinding(props.Image) then
@@ -121,10 +124,14 @@ local function Image(imageProps: ImageProps, ref: React.Ref<GuiObject>?)
 			sliceScale = slice:map(function(value: Slice)
 				return value.scale
 			end)
-		elseif typeof(props.Image) == "string" and isFoundationImage(props.Image) then
-			local slice = getScaledSlice(props.slice.center, props.slice.scale)
-			sliceCenter = slice.center
-			sliceScale = slice.scale
+		elseif typeof(props.Image) == "string" then
+			if isFoundationImage(props.Image) then
+				local slice = getScaledSlice(props.slice.center, props.slice.scale)
+				sliceCenter = slice.center
+				sliceScale = slice.scale
+			elseif Flags.FoundationFixImageSlice then
+				sliceCenter, sliceScale = props.slice.center, props.slice.scale
+			end
 		end
 		scaleType = Enum.ScaleType.Slice
 	end
@@ -159,6 +166,7 @@ local function Image(imageProps: ImageProps, ref: React.Ref<GuiObject>?)
 		then Cryo.Dictionary.union(engineComponentProps, {
 			component = engineComponent,
 			onActivated = props.onActivated,
+			onSecondaryActivated = props.onSecondaryActivated,
 			onStateChanged = props.onStateChanged,
 			stateLayer = props.stateLayer,
 			isDisabled = props.isDisabled,

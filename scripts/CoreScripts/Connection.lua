@@ -20,6 +20,8 @@ local Logging = require(CorePackages.Workspace.Packages.AppCommonLib).Logging
 local Url = require(CorePackages.Workspace.Packages.CoreScriptsCommon).Url
 local mutedError = require(CorePackages.Workspace.Packages.Loggers).mutedError
 
+local FFlagDisableReconnectsForRootedKicks = game:DefineFastFlag("DisableReconnectsForRootedKicks", false)
+
 local fflagDebugEnableErrorStringTesting = game:DefineFastFlag("DebugEnableErrorStringTesting", false)
 local fflagShouldMuteUnlocalizedError = game:DefineFastFlag("ShouldMuteUnlocalizedError", false)
 local fflagUpdateConnectionErrorLoc = game:DefineFastFlag("UpdateConnectionErrorLoc", false)
@@ -27,6 +29,9 @@ local fflagUpdateConnectionErrorLoc = game:DefineFastFlag("UpdateConnectionError
 local fflagConnectionEventMetrics = game:DefineFastFlag("ConnectionEventMetrics", false)
 local fflagUseConfigurableReconnectWait = game:DefineFastFlag("UseConfigurableReconnectWait", false)
 local FIntConfigurableReconnectWaitMs = game:DefineFastInt("ConfigurableReconnectWaitMs", 0)
+
+local fflagReconnectToSameServer = game:DefineFastFlag("ReconnectToSameServer", false)
+local fflagShowScreentimeLockoutKickMessage = game:DefineFastFlag("ShowScreentimeLockoutKickMessage", false)
 
 local connectionEventConfig = {
 	eventName = "ConnectionEvent",
@@ -74,7 +79,7 @@ local FFlagCoreScriptShowTeleportPrompt = require(RobloxGui.Modules.Flags.FFlagC
 
 local FFlagAllowDisconnectGuiForOkUnknown = require(RobloxGui.Modules.Flags.FFlagAllowDisconnectGuiForOkUnknown)
 
-local FFlagEnableExperienceGenericChallengeRenderingConnection = game:DefineFastFlag("EnableExperienceGenericChallengeRenderingConnection", false)
+local FFlagEnableExperienceGenericChallengeRenderingConnection = game:DefineFastFlag("EnableExperienceGenericChallengeRenderingConnection2", false)
 
 local GetFFlagDisplayChannelNameOnErrorPrompt = require(RobloxGui.Modules.Flags.GetFFlagDisplayChannelNameOnErrorPrompt)
 
@@ -208,7 +213,7 @@ local promptOverlay = Create("Frame")({
 -- Update promptOverlay height after ChromeService fully loads
 coroutine.wrap(function()
 	local TopBarConstant = require(RobloxGui.Modules.TopBar.Constants)
-	local updatedInGameGlobalGuiInset = TopBarConstant.TopBarHeight
+	local updatedInGameGlobalGuiInset = TopBarConstant.ApplyDisplayScale(TopBarConstant.TopBarHeight)
 
 	promptOverlay.Size = UDim2.new(1, 0, 1, updatedInGameGlobalGuiInset)
 	promptOverlay.Position = UDim2.new(0, 0, 0, -updatedInGameGlobalGuiInset)
@@ -232,45 +237,51 @@ local reconnectFunction = function()
 	connectionPromptState = ConnectionPromptState.IS_RECONNECTING
 	errorPrompt:primaryShimmerPlay()
 
-	local fetchStarterPlaceSuccess, starterPlaceId
-	if game.GameId > 0 then
-		fetchStarterPlaceSuccess, starterPlaceId = fetchStarterPlaceId(game.GameId)
-	end
-
-	if fflagConnectionEventMetrics then
-		TelemetryService:LogStat(timeTakenToFetchStarterPlaceIdConfig, {}, tick() - startTime)
-	end
-	
-	if fflagUseConfigurableReconnectWait then
-		local waitTimeInSeconds = FIntConfigurableReconnectWaitMs / 1000
-		wait(waitTimeInSeconds)
-		if fflagConnectionEventMetrics then
-			TelemetryService:LogStat(GraceTimeoutWaitConfig, {}, waitTimeInSeconds)
-		end
+	if fflagReconnectToSameServer then
+		TelemetryService:LogCounter(connectionEventConfig, {customFields = {selectedItem = "ReconnectSameServer"}}, 1.0)
+		TeleportService:TeleportReconnect()
 	else
-		-- Wait for the remaining time (if there is any)
-		local currentTime = tick()
-		if currentTime < graceTimeout then
+		local fetchStarterPlaceSuccess, starterPlaceId
+		if game.GameId > 0 then
+			fetchStarterPlaceSuccess, starterPlaceId = fetchStarterPlaceId(game.GameId)
+		end
+
+		if fflagConnectionEventMetrics then
+			TelemetryService:LogStat(timeTakenToFetchStarterPlaceIdConfig, {}, tick() - startTime)
+		end
+
+		if fflagUseConfigurableReconnectWait then
+			local waitTimeInSeconds = FIntConfigurableReconnectWaitMs / 1000
+			wait(waitTimeInSeconds)
 			if fflagConnectionEventMetrics then
-				TelemetryService:LogStat(GraceTimeoutWaitConfig, {}, graceTimeout - currentTime)
+				TelemetryService:LogStat(GraceTimeoutWaitConfig, {}, waitTimeInSeconds)
 			end
-			wait(graceTimeout - currentTime)
+		else
+			-- Wait for the remaining time (if there is any)
+			local currentTime = tick()
+			if currentTime < graceTimeout then
+				if fflagConnectionEventMetrics then
+					TelemetryService:LogStat(GraceTimeoutWaitConfig, {}, graceTimeout - currentTime)
+				end
+				wait(graceTimeout - currentTime)
+			end
 		end
-	end
 
-	if fflagConnectionEventMetrics then
-		TelemetryService:LogStat(timeUntilStartTeleportConfig, {}, tick() - startTime)
-	end
-	if fetchStarterPlaceSuccess and starterPlaceId > 0 then
 		if fflagConnectionEventMetrics then
-			TelemetryService:LogCounter(connectionEventConfig, {customFields = {selectedItem = "ReconnectToStarterPlaceId"}}, 1.0)
+			TelemetryService:LogStat(timeUntilStartTeleportConfig, {}, tick() - startTime)
 		end
-		TeleportService:Teleport(starterPlaceId)
-	else
-		if fflagConnectionEventMetrics then
-			TelemetryService:LogCounter(connectionEventConfig, {customFields = {selectedItem = "ReconnectToGamePlaceId"}}, 1.0)
+
+		if fetchStarterPlaceSuccess and starterPlaceId > 0 then
+			if fflagConnectionEventMetrics then
+				TelemetryService:LogCounter(connectionEventConfig, {customFields = {selectedItem = "ReconnectToStarterPlaceId"}}, 1.0)
+			end
+			TeleportService:Teleport(starterPlaceId)
+		else
+			if fflagConnectionEventMetrics then
+				TelemetryService:LogCounter(connectionEventConfig, {customFields = {selectedItem = "ReconnectToGamePlaceId"}}, 1.0)
+			end
+			TeleportService:Teleport(game.PlaceId)
 		end
-		TeleportService:Teleport(game.PlaceId)
 	end
 
 	if FFlagCoreScriptShowTeleportPrompt then
@@ -323,12 +334,17 @@ local reconnectDisabledList = {
 	[Enum.ConnectionError.PlacelaunchCreatorBan] = true,
 	[Enum.ConnectionError.AndroidAnticheatKick] = true,
 	[Enum.ConnectionError.AndroidEmulatorKick] = true,
+	[Enum.ConnectionError.AndroidRootedKick] = FFlagDisableReconnectsForRootedKicks,
 }
 -- When removing engine feature CoreGuiOverflowDetection, move this into the above list.
 if coreGuiOverflowDetection then
 	-- Older versions of the engine don't have this variant, using subscript
 	-- syntax instead avoids a possible type error.
 	reconnectDisabledList[Enum.ConnectionError["DisconnectClientFailure"]] = true
+end
+
+if fflagShowScreentimeLockoutKickMessage then
+	reconnectDisabledList[Enum.ConnectionError.ScreentimeLockoutKick] = true
 end
 
 local ButtonList = {
@@ -604,21 +620,21 @@ local function getCreatorBanString(errorMsg: string)
 			if minutes == 1 then
 				minutesString = translateString("InGame.ConnectionError.CreatorBanMinutesSingular")
 			else
-				minutesString = translateString("InGame.ConnectionError.CreatorBanMinutesPlural", { ["RBX_TIME_MINUTES:int"] = minutes })
+				minutesString = translateString("InGame.ConnectionError.CreatorBanMinutesPlural", { RBX_TIME_MINUTES = minutes })
 			end
 
 			local hoursString
 			if hours == 1 then
 				hoursString = translateString("InGame.ConnectionError.CreatorBanHoursSingular")
 			else
-				hoursString = translateString("InGame.ConnectionError.CreatorBanHoursPlural", { ["RBX_TIME_HOURS:int"] = hours })
+				hoursString = translateString("InGame.ConnectionError.CreatorBanHoursPlural", { RBX_TIME_HOURS = hours })
 			end
 
 			local daysString
 			if days == 1 then
 				daysString = translateString("InGame.ConnectionError.CreatorBanDaysSingular")
 			else
-				daysString = translateString("InGame.ConnectionError.CreatorBanDaysPlural", { ["RBX_TIME_DAYS:int"] = days })
+				daysString = translateString("InGame.ConnectionError.CreatorBanDaysPlural", { RBX_TIME_DAYS = days })
 			end
 
 			if minutesString ~= "" and hoursString ~= "" and daysString ~= "" then
@@ -732,6 +748,10 @@ local enumToLocalizationKey = {
 	[Enum.ConnectionError.TeleportFlooded] = "InGame.ConnectionError.TeleportFlooded",
 	[Enum.ConnectionError.TeleportIsTeleporting] = "InGame.ConnectionError.TeleportIsTeleporting",
 }
+
+if fflagShowScreentimeLockoutKickMessage then
+	enumToLocalizationKey[Enum.ConnectionError.ScreentimeLockoutKick] = "Feature.Screentime.Content.ScreentimeLimitDialog"
+end
 
 -- Localize the error string, with a fallback to the original string upon failure.
 -- If it is a teleport error but not TELEPORT_FAILED, use general string "Reconnect failed."

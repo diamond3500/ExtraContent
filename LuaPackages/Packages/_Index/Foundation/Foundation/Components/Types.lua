@@ -136,6 +136,7 @@ export type GuiObjectProps = {
 
 	stateLayer: StateLayer?, -- Can this be bindable?
 	onActivated: ((self: GuiObject, inputObject: InputObject, clickCount: number) -> ())?,
+	onSecondaryActivated: ((self: GuiObject, inputObject: InputObject) -> ())?,
 	onStateChanged: StateChangedCallback?,
 	isDisabled: boolean?, -- This can't be a bindable due to handling state updates
 
@@ -198,6 +199,28 @@ export type TextInputRef = {
 	focus: () -> (),
 	releaseFocus: () -> (),
 }
+
+export type PopoverAnchor = GuiObject | MeasurableObject
+
+type MeasurableObjectImpl = {
+	__index: MeasurableObjectImpl,
+	GetPropertyChangedSignal: (self: MeasurableObject, propertyName: string) -> MeasurableObjectSignal<any>,
+	SetPosition: (self: MeasurableObject, position: Vector2) -> (),
+	SetSize: (self: MeasurableObject, size: Vector2) -> (),
+}
+
+type MeasurableObjectSignalConnection = {
+	Disconnect: (self: MeasurableObjectSignalConnection) -> (),
+}
+
+export type MeasurableObjectSignal<T> = {
+	Connect: (self: MeasurableObjectSignal<T>, callback: (value: T) -> ()) -> MeasurableObjectSignalConnection,
+}
+
+export type MeasurableObject = typeof(setmetatable(
+	{} :: { AbsolutePosition: Vector2, AbsoluteSize: Vector2 },
+	{} :: MeasurableObjectImpl
+))
 
 export type CursorConfig = {
 	radius: UDim?,

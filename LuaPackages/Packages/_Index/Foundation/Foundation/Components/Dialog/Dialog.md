@@ -6,6 +6,12 @@ category: Layout
 
 `Dialogs` create a temporary, purposeful exchange (or dialog) between a user and our platform, helping surface important information or require user input without disrupting the larger experience.
 
+By default, Dialog renders in the center of its parent component without portaling to the root. If you need to portal the Dialog to the root (for example, to ensure it's always on top of other UI elements), you can set `disablePortal = false`.
+
+The Dialog component does not include a backdrop by default. You can add a backdrop by setting `hasBackdrop = true` if you want to visually separate the dialog from the rest of the UI.
+
+If your application has its own modal window management system, you can render Dialog directly within it instead of using the built-in portal functionality.
+
 ## Sizing Behavior
 
 The Dialog component supports 3 fixed sizes:
@@ -23,6 +29,37 @@ The `onClose` callback is called when the dialog should be closed. It receives a
 - `OnCloseCallbackReason.BackdropClick`: User clicked the backdrop (overlay) behind the dialog
 
 This allows you to handle different close scenarios appropriately, such as showing a confirmation prompt when closing via backdrop click.
+
+## Dialog.Actions Behavior
+
+The Dialog.Actions component handles the layout and behavior of action buttons in a dialog. Actions can be arranged either horizontally or vertically based on the dialog's size and the specified orientation.
+
+### Orientation Behavior
+
+The orientation of action buttons is determined by two factors:
+1. The `orientation` prop (defaults to `Orientation.Horizontal`)
+2. The dialog's size
+
+The following rules apply:
+- For `DialogSize.Medium` and `DialogSize.Large`, actions are always arranged horizontally (row layout with wrapping)
+- For `DialogSize.Small`:
+  - If `orientation = Orientation.Horizontal`, actions are arranged horizontally
+  - If `orientation = Orientation.Vertical`, actions are arranged vertically with full width
+
+This responsive behavior ensures optimal button layout across different dialog sizes and screen widths.
+
+### Action Button Properties
+
+Each action in the `actions` array can have the following properties:
+- `text`: The button text
+- `variant`: Button style variant (e.g., ButtonVariant.Standard, ButtonVariant.Emphasis)
+- `icon`: Optional icon to display
+- `onActivated`: Callback function when button is clicked
+- `inputDelay`: Optional delay before the button can be clicked (in seconds)
+
+### Optional Label
+
+You can provide a descriptive label below the action buttons using the `label` prop. This is useful for providing additional context about the actions.
 
 ---
 
@@ -89,6 +126,7 @@ local ButtonVariant = Foundation.Enums.ButtonVariant
 local function ConfirmDialog(props)
     return React.createElement(Dialog.Root, {
         size = DialogSize.Small,
+		hasBackdrop = true,
         onClose = function(reason)
             if reason == OnCloseCallbackReason.BackdropClick then
                 -- Optionally prevent closing on backdrop click

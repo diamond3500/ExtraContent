@@ -33,6 +33,11 @@ local InspectAndBuyFolder = script.Parent.Parent
 
 local MockId = require(InspectAndBuyFolder.MockId)
 local Constants = require(InspectAndBuyFolder.Constants)
+local AvatarExperienceInspectAndBuy = require(CorePackages.Workspace.Packages.AvatarExperienceInspectAndBuy)
+type AvatarPreviewItem = AvatarExperienceInspectAndBuy.AvatarPreviewItem
+type AssetInfo = AvatarExperienceInspectAndBuy.AssetInfo
+type BundleInfo = AvatarExperienceInspectAndBuy.BundleInfo
+type BulkPurchaseResultItem = AvatarExperienceInspectAndBuy.BulkPurchaseResultItem
 
 local FFlagEnableRestrictedAssetSaleLocationInspectAndBuy =
 	require(CoreGui.RobloxGui.Modules.Flags.FFlagEnableRestrictedAssetSaleLocationInspectAndBuy)
@@ -40,7 +45,15 @@ local FFlagEnableRestrictedAssetSaleLocationInspectAndBuy =
 local GetFFlagIBEnableCollectiblesSystemSupport =
 	require(InspectAndBuyFolder.Flags.GetFFlagIBEnableCollectiblesSystemSupport)
 
+local FFlagAXParseAdditionalItemDetailsFromCatalog =
+	require(InspectAndBuyFolder.Flags.FFlagAXParseAdditionalItemDetailsFromCatalog)
+
 local AssetInfo = {}
+
+-- helper function to round value to 2 decimal places (for meta field)
+local roundValue = function(value)
+	return math.round(value * 100) / 100
+end
 
 function AssetInfo.new()
 	local self = {}
@@ -85,6 +98,51 @@ function AssetInfo.mock()
 	self.creatingUniverseId = nil
 
 	return self
+end
+
+--[[
+    Used to process ownership of an asset based on the bulk purchase result
+]]
+function AssetInfo.fromBulkPurchaseResult(bulkPurchaseResult: BulkPurchaseResultItem): AssetInfo
+	local newAsset = AssetInfo.new()
+	if
+		bulkPurchaseResult.status == Enum.MarketplaceItemPurchaseStatus.Success
+		and bulkPurchaseResult.type == Enum.MarketplaceProductType.AvatarAsset
+	then
+		newAsset.owned = true
+	end
+	return newAsset
+end
+
+function AssetInfo.fromAvatarPreviewItem(avatarPreviewItem: AvatarPreviewItem): AssetInfo
+	local newAsset: AssetInfo = AssetInfo.new()
+
+	newAsset.name = avatarPreviewItem.name
+	newAsset.description = avatarPreviewItem.description
+	newAsset.price = avatarPreviewItem.priceInRobux
+	newAsset.productId = tostring(avatarPreviewItem.productId)
+	newAsset.collectibleItemId = avatarPreviewItem.collectibleItemId
+	newAsset.owned = avatarPreviewItem.quantityOwned > 0
+	newAsset.resellableCount = avatarPreviewItem.quantityOwned
+	newAsset.creatorId = tostring(avatarPreviewItem.creator.id)
+	newAsset.creatorName = avatarPreviewItem.creator.name
+	newAsset.creatorHasVerifiedBadge = avatarPreviewItem.creator.hasVerifiedBadge
+	newAsset.assetId = tostring(avatarPreviewItem.id)
+	newAsset.assetTypeId = tostring(avatarPreviewItem.assetType)
+	newAsset.productId = tostring(avatarPreviewItem.productId)
+	newAsset.isForSale = avatarPreviewItem.isPurchasable
+	newAsset.noPriceStatus = avatarPreviewItem.noPriceStatus
+	newAsset.meta = avatarPreviewItem.meta
+
+	-- parse item restrictions
+	if avatarPreviewItem.itemRestrictions then
+		local itemRestrictions = {}
+		for _, value in avatarPreviewItem.itemRestrictions do
+			itemRestrictions[value] = true
+		end
+		newAsset.itemRestrictions = itemRestrictions
+	end
+	return newAsset
 end
 
 function AssetInfo.fromGetProductInfo(assetInfo)
@@ -136,6 +194,36 @@ function AssetInfo.fromHumanoidDescription(assetId)
 	local newAsset = AssetInfo.new()
 
 	newAsset.assetId = tostring(assetId)
+
+	return newAsset
+end
+
+function AssetInfo.fromHumanoidDescriptionAccessory(accessory): AssetInfo
+	local newAsset = AssetInfo.new()
+	newAsset.assetId = tostring(accessory.AssetId)
+
+	-- build the meta object
+	newAsset.meta = {}
+	newAsset.meta.position = {
+		x = roundValue(accessory.Position.X),
+		y = roundValue(accessory.Position.Y),
+		z = roundValue(accessory.Position.Z),
+	}
+	newAsset.meta.rotation = {
+		x = roundValue(accessory.Rotation.X),
+		y = roundValue(accessory.Rotation.Y),
+		z = roundValue(accessory.Rotation.Z),
+	}
+	newAsset.meta.scale = {
+		x = roundValue(accessory.Scale.X),
+		y = roundValue(accessory.Scale.Y),
+		z = roundValue(accessory.Scale.Z),
+	}
+
+	-- if the item is layered, update the order field as well
+	if accessory.IsLayered then
+		newAsset.meta.order = accessory.Order
+	end
 
 	return newAsset
 end
@@ -221,6 +309,23 @@ function AssetInfo.fromGetItemDetails(itemDetails)
 	newAsset.price = itemDetails.Price or 0
 	newAsset.hasResellers = itemDetails.HasResellers
 	newAsset.collectibleItemId = itemDetails.CollectibleItemId
+
+	if FFlagAXParseAdditionalItemDetailsFromCatalog then
+		local itemRestrictions = {}
+		if itemDetails.ItemRestrictions then
+			for _, value in itemDetails.ItemRestrictions do
+				itemRestrictions[value] = true
+			end
+			newAsset.itemRestrictions = itemRestrictions
+		end
+
+		newAsset.saleLocationType = itemDetails.SaleLocationType
+		newAsset.remaining = itemDetails.UnitsAvailableForConsumption
+		newAsset.collectibleTotalQuantity = itemDetails.TotalQuantity
+		newAsset.collectibleLowestResalePrice = itemDetails.LowestResalePrice
+		newAsset.isOffSale = itemDetails.IsOffSale
+		newAsset.saleLocationType = itemDetails.SaleLocationType
+	end
 
 	return newAsset
 end

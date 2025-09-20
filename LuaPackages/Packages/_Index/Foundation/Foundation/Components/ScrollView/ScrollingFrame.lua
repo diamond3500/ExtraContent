@@ -1,6 +1,5 @@
 local Foundation = script:FindFirstAncestor("Foundation")
 local Packages = Foundation.Parent
-local Flags = require(Foundation.Utility.Flags)
 
 local React = require(Packages.React)
 local ReactOtter = require(Packages.ReactOtter)
@@ -8,6 +7,7 @@ local ReactOtter = require(Packages.ReactOtter)
 local Types = require(Foundation.Components.Types)
 local withDefaults = require(Foundation.Utility.withDefaults)
 
+local useStyleTags = require(Foundation.Providers.Style.useStyleTags)
 local useTokens = require(Foundation.Providers.Style.useTokens)
 local useCursor = require(Foundation.Providers.Cursor.useCursor)
 
@@ -30,6 +30,7 @@ export type ScrollingFrameProps = {
 	onAbsoluteCanvasSizeChanged: ((instance: ScrollingFrame) -> ())?,
 	onAbsoluteWindowSizeChanged: ((instance: ScrollingFrame) -> ())?,
 	children: React.Node?,
+	tag: string?,
 
 	AutomaticSize: Enum.AutomaticSize?,
 	AutomaticCanvasSize: Bindable<Enum.AutomaticSize>?,
@@ -46,16 +47,15 @@ local defaultProps = {
 local function ScrollingFrame(scrollingFrameProps: ScrollingFrameProps, ref: React.Ref<GuiObject>?)
 	local props = withDefaults(scrollingFrameProps, defaultProps)
 	local tokens = useTokens()
+	local tag = useStyleTags(scrollingFrameProps.tag)
 	local scrollBarStyle = tokens.Semantic.Color.Common.Placeholder
-	local scrollBarThickness = if Flags.FoundationFixVisibleNoneScrollBarThickness
-		then React.useMemo(function()
-			if props.scrollBarVisibility == Visibility.None then
-				return 0
-			else
-				return tokens.Size.Size_300
-			end
-		end, { props.scrollBarVisibility })
-		else tokens.Size.Size_300
+	local scrollBarThickness = React.useMemo(function()
+		if props.scrollBarVisibility == Visibility.None then
+			return 0
+		else
+			return tokens.Size.Size_300
+		end
+	end, { props.scrollBarVisibility })
 	local cursor = useCursor()
 
 	local delayRef = React.useRef(nil :: thread?)
@@ -112,18 +112,19 @@ local function ScrollingFrame(scrollingFrameProps: ScrollingFrameProps, ref: Rea
 		Size = UDim2.fromScale(1, 1),
 		SelectionImageObject = cursor,
 
-		[React.Change.CanvasPosition] = if props.scrollBarVisibility == "Auto"
+		[React.Change.CanvasPosition] = (if props.scrollBarVisibility == "Auto"
 			then function(rbx)
 				setIsScrollBarVisible(true, HIDE_SCROLLBAR_DELAY)
 				if props.onCanvasPositionChanged then
 					props.onCanvasPositionChanged(rbx)
 				end
 			end
-			else props.onCanvasPositionChanged,
+			else props.onCanvasPositionChanged) :: unknown,
 		[React.Change.AbsoluteCanvasSize] = props.onAbsoluteCanvasSizeChanged,
 		[React.Change.AbsoluteWindowSize] = props.onAbsoluteWindowSizeChanged,
 
 		ref = ref,
+		[React.Tag] = tag,
 	}, props.children)
 end
 

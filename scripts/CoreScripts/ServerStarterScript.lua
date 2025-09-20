@@ -21,9 +21,9 @@ local ScriptContext = game:GetService("ScriptContext")
 local CoreGui = game:GetService("CoreGui")
 local GetFFlagDisplayServerChannel = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagDisplayServerChannel
 local getFFlagExpChatAlwaysRunTCS = require(CorePackages.Workspace.Packages.SharedFlags).getFFlagExpChatAlwaysRunTCS
-local getFFlagExpChatMigrationSetup = require(CorePackages.Workspace.Packages.SharedFlags).getFFlagExpChatMigrationSetup
 local GetFFlagEnableReferredPlayerJoinRemoteEvent = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagEnableReferredPlayerJoinRemoteEvent
 local FFlagDebugLogExpchatMigration = game:DefineFastFlag("DebugLogExpchatMigration", false)
+local FFlagAXEnableInspectAndBuyBulkPurchase = require(CorePackages.Workspace.Packages.SharedFlags).FFlagAXEnableInspectAndBuyBulkPurchase
 
 local RobloxGui = CoreGui:WaitForChild("RobloxGui", math.huge)
 assert(RobloxGui ~= nil, "RobloxGui should exist")
@@ -56,6 +56,11 @@ ScriptContext:AddCoreScriptLocal("ServerCoreScripts/PlayerRagdollRigCreator", sc
 
 -- FFlag for admin freecam (for easy disabling in case of security breach)
 game:DefineFastFlag("DebugFreeCameraForAdmins", true)
+
+-- Bulk purchase (for Inspect and Buy)
+if FFlagAXEnableInspectAndBuyBulkPurchase then
+	ScriptContext:AddCoreScriptLocal("ServerCoreScripts/ServerBulkPurchaseEvent", script.Parent)
+end
 
 local SendChatAnalytics
 local FFlagEnableForkedChatAnalytics = require(RobloxGui.Modules.Common.Flags.FFlagEnableForkedChatAnalytics)
@@ -139,7 +144,7 @@ local chatVersion = TextChatService.ChatVersion
 if getFFlagExpChatAlwaysRunTCS() or chatVersion == Enum.ChatVersion.TextChatService then
 	local ExperienceChatServer = require(CorePackages.Workspace.Packages.ExpChatServer)
 	ExperienceChatServer.mountServerApp({})
-elseif getFFlagExpChatMigrationSetup() and chatVersion == Enum.ChatVersion.LegacyChatService then
+elseif chatVersion == Enum.ChatVersion.LegacyChatService then
 	local Chat = game:GetService("Chat")
 	Chat:GetPropertyChangedSignal("IsAutoMigrated"):Connect(function()
 		if Chat.IsAutoMigrated then

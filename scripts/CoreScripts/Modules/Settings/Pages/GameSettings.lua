@@ -75,12 +75,16 @@ local GetFFlagVoiceChatClientRewriteMasterLua = SharedFlags.GetFFlagVoiceChatCli
 local GetFFlagVoiceChatClientRewriteDisableVCSDevice = SharedFlags.GetFFlagVoiceChatClientRewriteDisableVCSDevice
 local GetFFlagAudioDevicesCanDefaultToOSLua = SharedFlags.GetFFlagAudioDevicesCanDefaultToOSLua
 local FFlagIEMFocusNavToButtons = SharedFlags.FFlagIEMFocusNavToButtons
-
+local FFlagShowAntiHarassmentSettings = game:DefineFastFlag("ShowAntiHarassmentSettings", false)
+local GetFFlagEnablePlayerNamesEnabledSetting = require(RobloxGui.Modules.Settings.Flags.GetFFlagEnablePlayerNamesEnabledSetting)
+local FFlagUpdatePeopleNamesSettingCopy = require(RobloxGui.Modules.Settings.Flags.FFlagUpdatePeopleNamesSettingCopy)
+local FFlagBadgeVisibilitySettingEnabled = SharedFlags.FFlagBadgeVisibilitySettingEnabled
 local SettingsFlags = require(RobloxGui.Modules.Settings.Flags)
 local FFlagGameSettingsUsePreferredInputMovement = SettingsFlags.FFlagGameSettingsUsePreferredInputMovement
+local FFlagGameSettingsRefactorMovementModeLogic = SettingsFlags.FFlagGameSettingsRefactorMovementModeLogic
+local FFlagGameSettingsRespectDevModes = SettingsFlags.FFlagGameSettingsRespectDevModes
 
 local RobloxTranslator = require(CorePackages.Workspace.Packages.RobloxTranslator)
-local GetFFlagCoreScriptsMigrateFromLegacyCSVLoc = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagCoreScriptsMigrateFromLegacyCSVLoc
 
 local CrossExpVoiceIXPManager = require(CorePackages.Workspace.Packages.CrossExperienceVoice).IXPManager.default
 local isSpatial = require(CorePackages.Workspace.Packages.AppCommonLib).isSpatial
@@ -139,25 +143,21 @@ local MOVEMENT_MODE_VALUE_ENUM = {
 	TAP_TO_MOVE = "Tap to Move",
 	CLICK_TO_MOVE = "Click to Move",
 }
-local MOVEMENT_MODE_DEFAULT_STRING = UserInputService.TouchEnabled and (
-	if GetFFlagCoreScriptsMigrateFromLegacyCSVLoc() then
-		RobloxTranslator:FormatByKey(Constants.MovementModeDynamicThumbstickKey) else
-		MOVEMENT_MODE_VALUE_ENUM.DEFAULT_THUMBSTICK
-	)
+local MOVEMENT_MODE_DEFAULT_STRING = UserInputService.TouchEnabled and 
+	RobloxTranslator:FormatByKey(Constants.MovementModeDynamicThumbstickKey)
 	or MOVEMENT_MODE_VALUE_ENUM.DEFAULT_KEYBOARD
 local MOVEMENT_MODE_KEYBOARDMOUSE_STRING = "Keyboard + Mouse"
 local MOVEMENT_MODE_CLICKTOMOVE_STRING = UserInputService.TouchEnabled and MOVEMENT_MODE_VALUE_ENUM.TAP_TO_MOVE or MOVEMENT_MODE_VALUE_ENUM.CLICK_TO_MOVE
 local MOVEMENT_MODE_DYNAMICTHUMBSTICK_STRING = "Dynamic Thumbstick"
-local MOVEMENT_MODE_THUMBSTICK_STRING = if GetFFlagCoreScriptsMigrateFromLegacyCSVLoc() then 
-	RobloxTranslator:FormatByKey("Feature.SettingsHub.TouchMovementMode.ClassicThumbstick") else 
-	"Classic Thumbstick"
+local MOVEMENT_MODE_THUMBSTICK_STRING = RobloxTranslator:FormatByKey("Feature.SettingsHub.TouchMovementMode.ClassicThumbstick")
 
-local UNAVAILABLE_TEXT
-local GIVE_FEEDBACK_TEXT
-if GetFFlagCoreScriptsMigrateFromLegacyCSVLoc() then
-	UNAVAILABLE_TEXT = RobloxTranslator:FormatByKey("Feature.SettingsHub.LanguageSelection.Unavailable")
-	GIVE_FEEDBACK_TEXT = RobloxTranslator:FormatByKey("CoreScripts.Feedback.EntryPoint.ButtonText")
-end
+local UNAVAILABLE_TEXT = RobloxTranslator:FormatByKey("Feature.SettingsHub.LanguageSelection.Unavailable")
+local GIVE_FEEDBACK_TEXT = RobloxTranslator:FormatByKey("CoreScripts.Feedback.EntryPoint.ButtonText")
+
+local PLAYER_NAMES_ENABLED_VALUES = {
+	On = 1,
+	Off = 2,
+}
 
 local function getDefaultCameraMode()
 	local isPreferredInputTouch = if FFlagGameSettingsUsePreferredInputMovement then 
@@ -173,11 +173,7 @@ local function getDefaultMovementMode()
 	local isPreferredInputTouch = if FFlagGameSettingsUsePreferredInputMovement then 
 		UserInputService.PreferredInput == Enum.PreferredInput.Touch else UserInputService.TouchEnabled
 	if isPreferredInputTouch then
-		return (
-			if GetFFlagCoreScriptsMigrateFromLegacyCSVLoc() then 
-				RobloxTranslator:FormatByKey(Constants.MovementModeDynamicThumbstickKey) else
-				MOVEMENT_MODE_VALUE_ENUM.DEFAULT_THUMBSTICK
-		)
+		return RobloxTranslator:FormatByKey(Constants.MovementModeDynamicThumbstickKey)
 	else
 		return MOVEMENT_MODE_VALUE_ENUM.DEFAULT_KEYBOARD
 	end
@@ -263,6 +259,9 @@ else
 		-- VR, Dev Console, Special
 		["VREnabledFrame"] = 100,
 		["DeveloperConsoleButton"] = 101,
+		-- AntiHarassment Settings
+		["PlayerNamesEnabledFrame"] = if GetFFlagEnablePlayerNamesEnabledSetting() then 105 else nil,
+		["BadgeVisibilityFrame"] = if FFlagBadgeVisibilitySettingEnabled then 106 else nil,
 		["UiToggleRow"] = 200,
 		["UiToggleRowCustom"] = 200, -- Replaces "UiToggleRow" when FFlagUserShowGuiHideToggles == true
 		["UiToggleRowBillboards"] = 201,
@@ -359,8 +358,11 @@ local FFlagFeedbackEntryPointButtonSizeAdjustment =
 	game:DefineFastFlag("FeedbackEntryPointButtonSizeAdjustment2", false)
 local FFlagFeedbackEntryPointImprovedStrictnessCheck =
 	game:DefineFastFlag("FeedbackEntryPointImprovedStrictnessCheck", false)
-local GetFFlagEnableShowVoiceUI = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagEnableShowVoiceUI
 local FFlagBuilderIcon = require(CorePackages.Workspace.Packages.SharedFlags).UIBlox.FFlagUIBloxMigrateBuilderIcon
+local GetFFlagEnableLocalesForExperienceLanguageSwitcher = require(RobloxGui.Modules.Settings.Flags.GetFFlagEnableLocalesForExperienceLanguageSwitcher)
+local CreateExperienceLanguageSwitcher = require(
+	RobloxGui.Modules.Settings.Pages.GameSettingsRowInitializers.ExperienceLanguageSwitcherInitializer
+)
 
 local function reportSettingsChangeForAnalytics(fieldName, oldValue, newValue, extraData)
 	if
@@ -444,6 +446,9 @@ local function reportSettingsForAnalytics()
 	stringTable["ui_navigation_key_bind_enabled"] = tostring(GameSettings.UiNavigationKeyBindEnabled)
 
 	stringTable["universeid"] = tostring(game.GameId)
+	if GetFFlagEnablePlayerNamesEnabledSetting() then
+		stringTable["player_names_enabled"] = tostring(GameSettings.PlayerNamesEnabled)
+	end
 	AnalyticsService:SetRBXEventStream(
 		Constants.AnalyticsTargetName,
 		Constants.AnalyticsInGameMenuName,
@@ -793,6 +798,36 @@ local function Initialize()
 			if GetFFlagEnableExplicitSettingsChangeAnalytics() then
 				reportSettingsChangeForAnalytics("reduced_motion", oldValue, GameSettings.ReducedMotion)
 			end
+			reportSettingsForAnalytics()
+		end)
+	end
+
+	local function createPlayerNamesEnabledOptions()
+		local playerNamesEnabledLabel = if FFlagUpdatePeopleNamesSettingCopy then RobloxTranslator:FormatByKey("Feature.SettingsHub.GameSettings.PeopleNames") else RobloxTranslator:FormatByKey("Feature.SettingsHub.GameSettings.PlayerNames")
+		local playerNamesEnabledDescription = if FFlagUpdatePeopleNamesSettingCopy then RobloxTranslator:FormatByKey("Feature.SettingsHub.GameSettings.PeopleNames.Description") else nil
+
+		local function GetPlayerNamesEnabledStartIndex()
+			if GameSettings.PlayerNamesEnabled then
+				return PLAYER_NAMES_ENABLED_VALUES.On
+			else
+				return PLAYER_NAMES_ENABLED_VALUES.Off
+			end
+		end
+
+		local startIndex = GetPlayerNamesEnabledStartIndex()
+
+		local onLabel = RobloxTranslator:FormatByKey("InGame.CommonUI.Label.On")
+		local offLabel = RobloxTranslator:FormatByKey("InGame.CommonUI.Label.Off")
+
+		this.PlayerNamesEnabledFrame, this.playerNamesEnabledLabel, this.playerNamesEnabledMode = utility:AddNewRow(this, playerNamesEnabledLabel, "Selector", { onLabel, offLabel }, startIndex, nil, playerNamesEnabledDescription)
+
+		this.PlayerNamesEnabledFrame.LayoutOrder = SETTINGS_MENU_LAYOUT_ORDER.PlayerNamesEnabledFrame
+
+		this.playerNamesEnabledMode.IndexChanged:connect(function(newIndex)
+			local oldValue = GameSettings.PlayerNamesEnabled
+			GameSettings.PlayerNamesEnabled = newIndex == PLAYER_NAMES_ENABLED_VALUES.On
+
+			reportSettingsChangeForAnalytics("player_names_enabled", oldValue, GameSettings.PlayerNamesEnabled)
 			reportSettingsForAnalytics()
 		end)
 	end
@@ -1241,11 +1276,35 @@ local function Initialize()
 			end
 		end
 
+		local function setShiftLockSelectorVisible(visible: boolean)
+			local enableShiftLock
+			if FFlagGameSettingsUsePreferredInputMovement then
+				enableShiftLock = visible and LocalPlayer.DevEnableMouseLock
+			else
+				enableShiftLock = visible
+			end
+			if this.ShiftLockMode then
+				this.ShiftLockMode.SelectorFrame.Visible = enableShiftLock
+				this.ShiftLockMode:SetInteractable(enableShiftLock)
+			end
+		end
+
+		local function applyDevOverrideShiftLockSelector()
+			local enableDevOverride = not LocalPlayer.DevEnableMouseLock
+			if this.ShiftLockOverrideText then
+				this.ShiftLockOverrideText.Visible = enableDevOverride
+				setShiftLockSelectorVisible(not enableDevOverride)
+			end
+		end
+
 		if FFlagGameSettingsUsePreferredInputMovement then
 			local function updateShiftLockVisibility()
 				local enableShiftLock = UserInputService.MouseEnabled and UserInputService.KeyboardEnabled
 				if this.ShiftLockFrame then
 					this.ShiftLockFrame.Visible = enableShiftLock
+				end
+				if FFlagGameSettingsRespectDevModes then
+					applyDevOverrideShiftLockSelector()
 				end
 			end
 
@@ -1344,10 +1403,12 @@ local function Initialize()
 					return
 				end
 
-				if GetFFlagGameSettingsCameraModeFixEnabled() then
-					setCameraModeVisible(cameraModeIsUserChoice())
-				else
-					setCameraModeVisible(true)
+				if not FFlagGameSettingsRespectDevModes then
+					if GetFFlagGameSettingsCameraModeFixEnabled() then
+						setCameraModeVisible(cameraModeIsUserChoice())
+					else
+						setCameraModeVisible(true)
+					end
 				end
 
 				for i = 1, #enumsToAdd do
@@ -1393,7 +1454,10 @@ local function Initialize()
 					end
 					updateCurrentCameraMovementIndex(currentSavedMode)
 					this.CameraMode:SetSelectionIndex(currentSavedMode)
-			end
+				end
+				if FFlagGameSettingsRespectDevModes then
+					setCameraModeVisible(cameraModeIsUserChoice())
+				end
 			end
 
 			this.CameraModeFrame, this.CameraModeLabel, this.CameraMode =
@@ -1511,8 +1575,15 @@ local function Initialize()
 		------------------
 		------------------ Movement Mode ---------------------
 		local movementModes = {}
+		local movementEnumToIndex = {}
+		local movementIndexToEnum = {}
+		local movementIndexToDisplayName = {}
 
-		function setMovementModeVisible(visible)
+		local applyDevOverrideMovementModeSelector: (isTouch: boolean) -> () = function(isTouch: boolean)
+			-- dummy func, gets set later but we need the reference now
+		end
+
+		local function setMovementModeVisible(visible)
 			if this.MovementMode then
 				local shouldBeVisible = visible and (#movementModes > 0)
 				this.MovementMode.SelectorFrame.Visible = shouldBeVisible
@@ -1577,6 +1648,9 @@ local function Initialize()
 			})
 
 			local function setMovementModeToIndex(index)
+				if FFlagGameSettingsRefactorMovementModeLogic then
+					return
+				end
 				local newEnumSetting = nil
 				local success = pcall(function()
 					newEnumSetting = movementEnumNameToItem[movementEnumNames[index]]
@@ -1606,10 +1680,42 @@ local function Initialize()
 				end
 			end
 
+			local function setMovementMode(movementMode: Enum.TouchMovementMode | Enum.ComputerMovementMode)
+				local oldMovementMode: Enum.TouchMovementMode | Enum.ComputerMovementMode
+				if movementMode.EnumType == Enum.TouchMovementMode then
+					if GetFFlagEnableExplicitSettingsChangeAnalytics() then
+						oldMovementMode = GameSettings.TouchMovementMode
+					end
+					GameSettings.TouchMovementMode = movementMode
+				else
+					if GetFFlagEnableExplicitSettingsChangeAnalytics() then
+						oldMovementMode = GameSettings.ComputerMovementMode
+					end
+					GameSettings.ComputerMovementMode = movementMode
+				end
+				if GetFFlagEnableExplicitSettingsChangeAnalytics() then
+					reportSettingsChangeForAnalytics("movement_mode", oldMovementMode, movementMode)
+				end
+			end
+
+			if FFlagGameSettingsRespectDevModes then
+				applyDevOverrideMovementModeSelector = function(isTouch: boolean)
+					local isUserChoice
+					if isTouch then
+						isUserChoice = LocalPlayer.DevTouchMovementMode == Enum.DevTouchMovementMode.UserChoice
+					else
+						isUserChoice = LocalPlayer.DevComputerMovementMode == Enum.DevComputerMovementMode.UserChoice
+					end
+					setMovementModeVisible(isUserChoice)
+					if this.MovementModeOverrideText then
+						this.MovementModeOverrideText.Visible = not isUserChoice
+					end
+				end
+			end
 			local function updateMovementModes()
+				local isTouchInput = if FFlagGameSettingsUsePreferredInputMovement then 
+					UserInputService.PreferredInput == Enum.PreferredInput.Touch else UserInputService.TouchEnabled
 				if PlayerScripts then
-					local isTouchInput = if FFlagGameSettingsUsePreferredInputMovement then 
-						UserInputService.PreferredInput == Enum.PreferredInput.Touch else UserInputService.TouchEnabled
 					if isTouchInput then
 						movementModes = PlayerScripts:GetRegisteredTouchMovementModes()
 					else
@@ -1617,49 +1723,88 @@ local function Initialize()
 					end
 				end
 
-				movementEnumNames = {}
-				movementEnumNameToItem = {}
-
-				if #movementModes <= 0 then
-					setMovementModeVisible(false)
-					return
-				end
-
-				setMovementModeVisible(true)
-
-				for i = 1, #movementModes do
-					local movementMode = movementModes[i]
-
-					local displayName = getDisplayName(movementMode.Name)
-
-					movementEnumNames[#movementEnumNames + 1] = displayName
-					movementEnumNameToItem[displayName] = movementMode
-				end
-
-				if this.MovementMode then
-					this.MovementMode:UpdateOptions(movementEnumNames)
-				end
-
-				local currentSavedMode = -1
-
-				local isTouchInput = if FFlagGameSettingsUsePreferredInputMovement then 
-					UserInputService.PreferredInput == Enum.PreferredInput.Touch else UserInputService.TouchEnabled
-				if isTouchInput then
-					currentSavedMode = GameSettings.TouchMovementMode.Value
-				else
-					currentSavedMode = GameSettings.ComputerMovementMode.Value
-				end
-
-				if currentSavedMode > -1 then
-					currentSavedMode = currentSavedMode + 1
-					local savedEnum = nil
-					local exists = pcall(function()
-						savedEnum = movementEnumNameToItem[movementEnumNames[currentSavedMode]]
-					end)
-					if exists and savedEnum then
-						setMovementModeToIndex(savedEnum.Value + 1)
-						this.MovementMode:SetSelectionIndex(savedEnum.Value + 1)
+				if FFlagGameSettingsRefactorMovementModeLogic then
+					movementEnumToIndex = {}
+					movementIndexToEnum = {}
+					movementIndexToDisplayName = {}
+					if #movementModes <= 0 then
+						setMovementModeVisible(false)
+						return
 					end
+					setMovementModeVisible(true)
+					for index, movementEnum in movementModes do
+						movementIndexToEnum[index] = movementEnum
+						movementIndexToDisplayName[index] = getDisplayName(movementEnum.Name)
+						movementEnumToIndex[movementEnum] = index
+					end
+
+					if this.MovementMode then
+						this.MovementMode:UpdateOptions(movementIndexToDisplayName)
+					end
+
+					local currentMovementMode: Enum.TouchMovementMode | Enum.ComputerMovementMode
+					if isTouchInput then
+						currentMovementMode = GameSettings.TouchMovementMode
+					else
+						currentMovementMode = GameSettings.ComputerMovementMode
+					end
+
+					if currentMovementMode then
+						setMovementMode(currentMovementMode)
+						this.MovementMode:SetSelectionIndex(movementEnumToIndex[currentMovementMode])
+					end
+				else
+					movementEnumNames = {}
+					movementEnumNameToItem = {}
+
+					if #movementModes <= 0 then
+						setMovementModeVisible(false)
+						return
+					end
+
+					setMovementModeVisible(true)
+
+					for i = 1, #movementModes do
+						local movementMode = movementModes[i]
+
+						local displayName = getDisplayName(movementMode.Name)
+
+						movementEnumNames[#movementEnumNames + 1] = displayName
+						movementEnumNameToItem[displayName] = movementMode
+					end
+
+					if this.MovementMode then
+						this.MovementMode:UpdateOptions(movementEnumNames)
+					end
+
+					local currentSavedMode = -1
+
+					local isTouchInput
+					if not FFlagGameSettingsRespectDevModes then
+						isTouchInput = if FFlagGameSettingsUsePreferredInputMovement then 
+							UserInputService.PreferredInput == Enum.PreferredInput.Touch else UserInputService.TouchEnabled
+					end
+					if isTouchInput then
+						currentSavedMode = GameSettings.TouchMovementMode.Value
+					else
+						currentSavedMode = GameSettings.ComputerMovementMode.Value
+					end
+
+					if currentSavedMode > -1 then
+						currentSavedMode = currentSavedMode + 1
+						local savedEnum = nil
+						local exists = pcall(function()
+							savedEnum = movementEnumNameToItem[movementEnumNames[currentSavedMode]]
+						end)
+						if exists and savedEnum then
+							setMovementModeToIndex(savedEnum.Value + 1)
+							this.MovementMode:SetSelectionIndex(savedEnum.Value + 1)
+						end
+					end
+				end
+
+				if FFlagGameSettingsRespectDevModes then
+					applyDevOverrideMovementModeSelector(isTouchInput)
 				end
 			end
 
@@ -1686,7 +1831,11 @@ local function Initialize()
 			end
 
 			this.MovementMode.IndexChanged:connect(function(newIndex)
-				setMovementModeToIndex(newIndex)
+				if FFlagGameSettingsRefactorMovementModeLogic then
+					setMovementMode(movementIndexToEnum[newIndex])
+				else
+					setMovementModeToIndex(newIndex)
+				end
 				reportSettingsForAnalytics()
 			end)
 		end
@@ -1694,18 +1843,6 @@ local function Initialize()
 		------------------------------------------------------
 		------------------
 		------------------------- Connection Setup -----------
-		function setShiftLockSelectorVisible(visible: boolean)
-			local enableShiftLock
-			if FFlagGameSettingsUsePreferredInputMovement then
-				enableShiftLock = visible and LocalPlayer.DevEnableMouseLock
-			else
-				enableShiftLock = visible
-			end
-			if this.ShiftLockMode then
-				this.ShiftLockMode.SelectorFrame.Visible = enableShiftLock
-				this.ShiftLockMode:SetInteractable(enableShiftLock)
-			end
-		end
 
 		do -- initial set of dev vs user choice for guis
 			local isUserChoiceCamera = false
@@ -1742,32 +1879,48 @@ local function Initialize()
 				end
 			end
 
-			if this.ShiftLockOverrideText then
-				this.ShiftLockOverrideText.Visible = not LocalPlayer.DevEnableMouseLock
-				setShiftLockSelectorVisible(LocalPlayer.DevEnableMouseLock)
+			if FFlagGameSettingsRespectDevModes then
+				applyDevOverrideShiftLockSelector()
+			else
+				if this.ShiftLockOverrideText then
+					this.ShiftLockOverrideText.Visible = not LocalPlayer.DevEnableMouseLock
+					setShiftLockSelectorVisible(LocalPlayer.DevEnableMouseLock)
+				end
 			end
 		end
 
 		local function updateUserSettingsMenu(property)
-			if this.ShiftLockOverrideText and property == "DevEnableMouseLock" then
-				this.ShiftLockOverrideText.Visible = not LocalPlayer.DevEnableMouseLock
-				setShiftLockSelectorVisible(LocalPlayer.DevEnableMouseLock)
+			if (FFlagGameSettingsRespectDevModes or this.ShiftLockOverrideText) and property == "DevEnableMouseLock" then
+				if FFlagGameSettingsRespectDevModes then
+					applyDevOverrideShiftLockSelector()
+				else
+					this.ShiftLockOverrideText.Visible = not LocalPlayer.DevEnableMouseLock
+					setShiftLockSelectorVisible(LocalPlayer.DevEnableMouseLock)
+				end
 			elseif property == "DevComputerCameraMode" then
 				local isUserChoice = LocalPlayer.DevComputerCameraMode == Enum.DevComputerCameraMovementMode.UserChoice
 				setCameraModeVisible(isUserChoice)
 				this.CameraModeOverrideText.Visible = not isUserChoice
 			elseif property == "DevComputerMovementMode" then
-				-- TOUCH
-				local isUserChoice = LocalPlayer.DevComputerMovementMode == Enum.DevComputerMovementMode.UserChoice
-				setMovementModeVisible(isUserChoice)
-				if this.MovementModeOverrideText then
-					this.MovementModeOverrideText.Visible = not isUserChoice
+				if FFlagGameSettingsRespectDevModes and applyDevOverrideMovementModeSelector ~= nil then
+					applyDevOverrideMovementModeSelector(false)
+				else
+					-- TOUCH
+					local isUserChoice = LocalPlayer.DevComputerMovementMode == Enum.DevComputerMovementMode.UserChoice
+					setMovementModeVisible(isUserChoice)
+					if this.MovementModeOverrideText then
+						this.MovementModeOverrideText.Visible = not isUserChoice
+					end
 				end
 			elseif property == "DevTouchMovementMode" then
-				local isUserChoice = LocalPlayer.DevTouchMovementMode == Enum.DevTouchMovementMode.UserChoice
-				setMovementModeVisible(isUserChoice)
-				if this.MovementModeOverrideText then
-					this.MovementModeOverrideText.Visible = not isUserChoice
+				if FFlagGameSettingsRespectDevModes and applyDevOverrideMovementModeSelector ~= nil then
+					applyDevOverrideMovementModeSelector(true)
+				else
+					local isUserChoice = LocalPlayer.DevTouchMovementMode == Enum.DevTouchMovementMode.UserChoice
+					setMovementModeVisible(isUserChoice)
+					if this.MovementModeOverrideText then
+						this.MovementModeOverrideText.Visible = not isUserChoice
+					end
 				end
 			elseif property == "DevTouchCameraMode" then
 				local isUserChoice = LocalPlayer.DevTouchCameraMode == Enum.DevTouchCameraMovementMode.UserChoice
@@ -1777,12 +1930,12 @@ local function Initialize()
 		end
 
 		LocalPlayer.Changed:connect(function(property)
-			if UserInputService.TouchEnabled then
+			if FFlagGameSettingsRespectDevModes or UserInputService.TouchEnabled then
 				if TOUCH_CHANGED_PROPS[property] then
 					updateUserSettingsMenu(property)
 				end
 			end
-			if UserInputService.KeyboardEnabled then
+			if FFlagGameSettingsRespectDevModes or UserInputService.KeyboardEnabled then
 				if PC_CHANGED_PROPS[property] then
 					updateUserSettingsMenu(property)
 				end
@@ -1838,7 +1991,7 @@ local function Initialize()
 				if FFlagFeedbackEntryPointButtonSizeAdjustment then
 					toggleFeedbackModeButton, toggleFeedbackModeText = utility:MakeStyledButton(
 						"toggleFeedbackModeButton",
-						if GetFFlagCoreScriptsMigrateFromLegacyCSVLoc() then GIVE_FEEDBACK_TEXT else "Give Feedback",
+						GIVE_FEEDBACK_TEXT,
 						UDim2.new(1, 0, 1, -20),
 						onToggleFeedbackMode,
 						this
@@ -1850,7 +2003,7 @@ local function Initialize()
 				else
 					toggleFeedbackModeButton, toggleFeedbackModeText = utility:MakeStyledButton(
 						"toggleFeedbackModeButton",
-						if GetFFlagCoreScriptsMigrateFromLegacyCSVLoc() then GIVE_FEEDBACK_TEXT else "Give Feedback",
+						GIVE_FEEDBACK_TEXT,
 						UDim2.new(0, 300, 1, -20),
 						onToggleFeedbackMode,
 						this
@@ -1875,9 +2028,7 @@ local function Initialize()
 					local row =
 						utility:AddNewRowObject(
 							this,
-							if GetFFlagCoreScriptsMigrateFromLegacyCSVLoc() then
-								RobloxTranslator:FormatByKey("CoreScripts.Feedback.EntryPoint.OptionText") else
-								"Give Translation Feedback",
+							RobloxTranslator:FormatByKey("CoreScripts.Feedback.EntryPoint.OptionText"),
 							toggleFeedbackModeButton,
 							nil,
 							true
@@ -1886,9 +2037,7 @@ local function Initialize()
 				else
 					local row = utility:AddNewRowObject(
 						this,
-						if GetFFlagCoreScriptsMigrateFromLegacyCSVLoc() then
-							RobloxTranslator:FormatByKey("CoreScripts.Feedback.EntryPoint.OptionText") else
-							"Give Translation Feedback",
+						RobloxTranslator:FormatByKey("CoreScripts.Feedback.EntryPoint.OptionText"),
 						toggleFeedbackModeButton
 					)
 					row.LayoutOrder = SETTINGS_MENU_LAYOUT_ORDER["FeedbackModeButton"]
@@ -2021,11 +2170,9 @@ local function Initialize()
 				this.LanguageSelectorFrame, this.LanguageSelectorLabel, this.LanguageSelectorMode =
 					utility:AddNewRow(
 						this,
-						if GetFFlagCoreScriptsMigrateFromLegacyCSVLoc() then 
-							RobloxTranslator:FormatByKey("Feature.SettingsHub.LanguageSelection.SettingLabel") else 
-							"Experience Language",
+						RobloxTranslator:FormatByKey("Feature.SettingsHub.LanguageSelection.SettingLabel"),
 						"DropDown",
-						{ if GetFFlagCoreScriptsMigrateFromLegacyCSVLoc() then UNAVAILABLE_TEXT else "Unavailable" },
+						{ UNAVAILABLE_TEXT },
 						1
 					)
 				this.LanguageSelectorMode:SetInteractable(false)
@@ -2067,9 +2214,7 @@ local function Initialize()
 				this.LanguageSelectorFrame, this.LanguageSelectorLabel, this.LanguageSelectorMode =
 					utility:AddNewRow(
 						this,
-						if GetFFlagCoreScriptsMigrateFromLegacyCSVLoc() then 
-							RobloxTranslator:FormatByKey("Feature.SettingsHub.LanguageSelection.SettingLabel") else 
-							"Experience Language",
+						RobloxTranslator:FormatByKey("Feature.SettingsHub.LanguageSelection.SettingLabel"),
 						"DropDown",
 						languageOptions,
 						startIndex
@@ -3177,6 +3322,27 @@ local function Initialize()
 		end)
 	end
 
+	local function createBadgeVisibilityOptions()
+		spawn(function()
+			local isInExperienceNameEnabled = 2
+			if PlayerPermissionsModule.IsPlayerInExperienceNameEnabledAsync(LocalPlayer) then
+				isInExperienceNameEnabled = 1
+			end
+			local onLabel = RobloxTranslator:FormatByKey("InGame.CommonUI.Label.On")
+			local offLabel = RobloxTranslator:FormatByKey("InGame.CommonUI.Label.Off")
+			local badgeDisplayLabel = RobloxTranslator:FormatByKey("Feature.SettingsHub.GameSettings.DisplayBadges")
+			local badgeDisplayDescription = RobloxTranslator:FormatByKey("Feature.SettingsHub.Description.DisplayBadges")
+			this.badgeVisibleRow, this.badgeVisibleFrame, this.badgeVisibleSelector =
+				utility:AddNewRow(this, badgeDisplayLabel, "Selector", { offLabel, onLabel }, isInExperienceNameEnabled, nil, badgeDisplayDescription)
+			this.badgeVisibleRow.LayoutOrder = SETTINGS_MENU_LAYOUT_ORDER["BadgeVisibilityFrame"]
+	
+			this.badgeVisibleSelector.IndexChanged:connect(function(newIndex)
+				GameSettings.BadgeVisible = newIndex == 2
+				PlayerPermissionsModule.SetPlayerInExperienceNameEnabled(LocalPlayer, newIndex == 1)
+			end)
+		end)
+	end
+
 	------------------------------------------------------
 	------------------
 	------------------ Video Camera Device ---------------
@@ -3807,44 +3973,42 @@ local function Initialize()
 						end
 					end
 
-					if GetFFlagEnableShowVoiceUI() then
-						VoiceChatServiceManager.showVoiceUI.Event:Connect(function()
-							if GetFFlagFixSeamlessVoiceIntegrationWithPrivateVoice() and isCurrentlyVoiceFocused then
-								return
-							end
-							this.VoiceChatOptionsEnabled = true
-							updateInputDeviceVisibility()
-							if
-								GetFFlagEnableConnectDisconnectInSettingsAndChrome() and this[VOICE_CONNECT_FRAME_KEY]
-							then
-								this[VOICE_CONNECT_FRAME_KEY].Visible = false
-							end
-							if
-								GetFFlagEnableConnectDisconnectInSettingsAndChrome()
-								and this[VOICE_DISCONNECT_FRAME_KEY]
-							then
-								this[VOICE_DISCONNECT_FRAME_KEY].Visible = true
-							end
-						end)
-						VoiceChatServiceManager.hideVoiceUI.Event:Connect(function()
-							if GetFFlagFixSeamlessVoiceIntegrationWithPrivateVoice() and isCurrentlyVoiceFocused then
-								return
-							end
-							this.VoiceChatOptionsEnabled = false
-							updateInputDeviceVisibility()
-							if
-								GetFFlagEnableConnectDisconnectInSettingsAndChrome() and this[VOICE_CONNECT_FRAME_KEY]
-							then
-								this[VOICE_CONNECT_FRAME_KEY].Visible = true
-							end
-							if
-								GetFFlagEnableConnectDisconnectInSettingsAndChrome()
-								and this[VOICE_DISCONNECT_FRAME_KEY]
-							then
-								this[VOICE_DISCONNECT_FRAME_KEY].Visible = false
-							end
-						end)
-					end
+					VoiceChatServiceManager.showVoiceUI.Event:Connect(function()
+						if GetFFlagFixSeamlessVoiceIntegrationWithPrivateVoice() and isCurrentlyVoiceFocused then
+							return
+						end
+						this.VoiceChatOptionsEnabled = true
+						updateInputDeviceVisibility()
+						if
+							GetFFlagEnableConnectDisconnectInSettingsAndChrome() and this[VOICE_CONNECT_FRAME_KEY]
+						then
+							this[VOICE_CONNECT_FRAME_KEY].Visible = false
+						end
+						if
+							GetFFlagEnableConnectDisconnectInSettingsAndChrome()
+							and this[VOICE_DISCONNECT_FRAME_KEY]
+						then
+							this[VOICE_DISCONNECT_FRAME_KEY].Visible = true
+						end
+					end)
+					VoiceChatServiceManager.hideVoiceUI.Event:Connect(function()
+						if GetFFlagFixSeamlessVoiceIntegrationWithPrivateVoice() and isCurrentlyVoiceFocused then
+							return
+						end
+						this.VoiceChatOptionsEnabled = false
+						updateInputDeviceVisibility()
+						if
+							GetFFlagEnableConnectDisconnectInSettingsAndChrome() and this[VOICE_CONNECT_FRAME_KEY]
+						then
+							this[VOICE_CONNECT_FRAME_KEY].Visible = true
+						end
+						if
+							GetFFlagEnableConnectDisconnectInSettingsAndChrome()
+							and this[VOICE_DISCONNECT_FRAME_KEY]
+						then
+							this[VOICE_DISCONNECT_FRAME_KEY].Visible = false
+						end
+					end)
 				end)
 				:catch(function()
 					if GetFFlagVoiceChatUILogging() then
@@ -4012,6 +4176,9 @@ local function Initialize()
 
 	createHapticsToggle()
 	createGraphicsOptions()
+	if FFlagShowAntiHarassmentSettings and GetFFlagEnablePlayerNamesEnabledSetting() then
+		createPlayerNamesEnabledOptions()
+	end
 
 	if not isInExperienceUIVREnabled then
 		createReducedMotionOptions()
@@ -4039,6 +4206,10 @@ local function Initialize()
 
 	if isTenFootInterface and getAppFeaturePolicies().getSupportsOverscan() then
 		createOverscanOption()
+	end
+
+	if FFlagShowAntiHarassmentSettings and FFlagBadgeVisibilitySettingEnabled then
+		createBadgeVisibilityOptions()
 	end
 
 	-- dev console option only shows for place/group place owners
@@ -4143,13 +4314,13 @@ local function Initialize()
 				-- Matches with adjustbutton in settings menu for consistency
 				this.toggleFeedbackModeButton.Active = true
 				this.toggleFeedbackModeButton.Enabled.Value = true
-				this.toggleFeedbackModeText.Text = if GetFFlagCoreScriptsMigrateFromLegacyCSVLoc() then GIVE_FEEDBACK_TEXT else "Give Feedback"
+				this.toggleFeedbackModeText.Text = GIVE_FEEDBACK_TEXT
 			else
 				this.toggleFeedbackModeButton.Active = false
 				this.toggleFeedbackModeButton.Enabled.Value = false
 				this.toggleFeedbackModeText.TextColor3 =
 					Theme.color("ButtonNonInteractable", Color3.fromRGB(100, 100, 100))
-				this.toggleFeedbackModeText.Text = if GetFFlagCoreScriptsMigrateFromLegacyCSVLoc() then UNAVAILABLE_TEXT else "Unavailable"
+				this.toggleFeedbackModeText.Text = UNAVAILABLE_TEXT
 			end
 		end
 
@@ -4227,7 +4398,11 @@ local function Initialize()
 		end
 
 		if isLangaugeSelectionDropdownEnabled() then
-			createTranslationOptions()
+			if GetFFlagEnableLocalesForExperienceLanguageSwitcher() then
+				CreateExperienceLanguageSwitcher(this, SETTINGS_MENU_LAYOUT_ORDER, reportSettingsChangeForAnalytics)
+			else
+				createTranslationOptions()
+			end
 		end
 
 		-- Chat translation setting uses dropdowns, which require the hub reference to exist

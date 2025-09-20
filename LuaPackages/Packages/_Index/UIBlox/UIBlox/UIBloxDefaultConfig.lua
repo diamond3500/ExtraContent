@@ -18,9 +18,6 @@ return {
 	-- Use SurfaceGuiWithAdornee for Panel3D
 	refactorPanel3D = false,
 
-	-- use new refactored interactable
-	refactorInteractable = false,
-
 	-- Support ControlState.Selected in the hover controller for TooltipV2
 	supportControlStateSelectedForTooltipHover = false,
 
@@ -87,12 +84,6 @@ return {
 	-- Uses engine rich text support for GetTextBoundsAsync
 	useEngineRichTextBounds = false,
 
-	-- Uses the Foundation Interactable component instead
-	useFoundationInteractable = false,
-
-	-- Uses the Foundation selectionCursor instead
-	useFoundationSelectionCursor = false,
-
 	-- Adds BuilderIcon migration to createImageSetComponent,
 	migrateBuilderIcon = false,
 
@@ -117,9 +108,9 @@ return {
 	-- Enable icon scaling for some icons used by experience details
 	enableScalingForSomeEdpIcons = false,
 
-	-- Fix PlayerContext text width to not exceed it's frame
-	fixPlayerContextTextWidth = false,
+	-- Disable selectable for certain elements in ModalBottomSheet
+	fixModalBottomSheetSelectable = false,
 
-	-- Use the foundation selection cursor for AlertTitle close button
-	fixAlertCloseCursor = false,
+	-- Add truncation to ExperienceTileMetadata's TextFooter
+	truncateExperienceTileMetadataTextFooter = false,
 }

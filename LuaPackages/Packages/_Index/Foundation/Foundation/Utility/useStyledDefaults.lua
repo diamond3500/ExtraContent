@@ -79,6 +79,16 @@ local function applyRules(
 	attributesCache: AttributesCache,
 	scale: number?
 )
+	if not rules then
+		if Flags.FoundationShowErrorAboutFoundationProvider then
+			error("applyRules: rules is nil - make sure FoundationProvider is used to wrap your component")
+			return
+		else
+			warn("applyRules: rules is nil - make sure FoundationProvider is used to wrap your component")
+			return
+		end
+	end
+
 	if tags then
 		for str in string.gmatch(tags, "%S+") do
 			if rules[str] then
@@ -91,7 +101,7 @@ end
 local function applyDefaults(props, defaults)
 	for key, value in defaults do
 		if typeof(value) == "table" and typeof(props[key]) == "table" then
-			for k, v in pairs(value) do
+			for k, _v in pairs(value) do
 				props[key][k] = value[k]
 			end
 		else

@@ -16,14 +16,14 @@ local isConnectDropdownEnabled = require(Chrome.Integrations.Connect.isConnectDr
 local isInExperienceUIVREnabled =
 	require(CorePackages.Workspace.Packages.SharedExperimentDefinition).isInExperienceUIVREnabled
 local ConfigureShortcuts = require(Chrome.ChromeShared.Shortcuts.ConfigureShortcuts)
+local Constants = require(Chrome.ChromeShared.Unibar.Constants)
 
 local SharedFlags = require(CorePackages.Workspace.Packages.SharedFlags)
 local GetFFlagDebugEnableUnibarDummyIntegrations = SharedFlags.GetFFlagDebugEnableUnibarDummyIntegrations
 local GetFFlagEnableChromePinIntegrations = SharedFlags.GetFFlagEnableChromePinIntegrations
-local GetFFlagEnableSongbirdInChrome = require(Chrome.Flags.GetFFlagEnableSongbirdInChrome)
 local GetFFlagEnableJoinVoiceOnUnibar = SharedFlags.GetFFlagEnableJoinVoiceOnUnibar
 local FFlagChromeCentralizedShortcutConfig = SharedFlags.FFlagChromeCentralizedShortcutConfig
-local GetFFlagSongbirdCleanupExperiment = SharedFlags.GetFFlagSongbirdCleanupExperiment
+local FFlagEnableInExperienceAvatarSwitcher = SharedFlags.FFlagEnableInExperienceAvatarSwitcher
 
 local isSpatial = require(CorePackages.Workspace.Packages.AppCommonLib).isSpatial
 
@@ -94,17 +94,15 @@ local function configureUnibar()
 		table.insert(nineDot, 2, "selfie_view")
 	end
 
+	if FFlagEnableInExperienceAvatarSwitcher then
+		table.insert(nineDot, 3, Constants.AVATAR_SWITCHER_ID)
+	end
+
 	-- TO-DO: Replace GuiService:IsTenFootInterface() once APPEXP-2014 has been merged
 	-- selene: allow(denylist_filter)
 	local isNotVROrConsole = not isSpatial() and not GuiService:IsTenFootInterface()
-	if GetFFlagSongbirdCleanupExperiment() then
-		if isNotVROrConsole then
-			table.insert(nineDot, 4, "music_entrypoint")
-		end
-	else
-		if GetFFlagEnableSongbirdInChrome() and isNotVROrConsole then
-			table.insert(nineDot, 4, "music_entrypoint")
-		end
+	if isNotVROrConsole then
+		table.insert(nineDot, 4, "music_entrypoint")
 	end
 
 	ChromeService:configureSubMenu("nine_dot", nineDot)

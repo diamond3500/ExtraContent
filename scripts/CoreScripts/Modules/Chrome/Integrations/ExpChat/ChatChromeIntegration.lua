@@ -9,14 +9,16 @@ local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 
+local ChromeConstants = require(Chrome.ChromeShared.Unibar.Constants)
+local ChromeIntegrationUtils = require(Chrome.Integrations.ChromeIntegrationUtils)
 local ChromeService = require(Chrome.Service)
 local ChromeUtils = require(Chrome.ChromeShared.Service.ChromeUtils)
-local ChromeIntegrationUtils = require(Chrome.Integrations.ChromeIntegrationUtils)
+local CommonIcon = require(Chrome.Integrations.CommonIcon)
+local FFlagChatIntegrationFixShortcut = require(Chrome.Flags.FFlagChatIntegrationFixShortcut)
 local FocusSelectExpChat = require(Chrome.ChromeShared.Utility.FocusSelectExpChat)
 local ViewportUtil = require(Chrome.ChromeShared.Service.ViewportUtil)
-local MappedSignal = ChromeUtils.MappedSignal
 local AvailabilitySignalState = ChromeUtils.AvailabilitySignalState
-local CommonIcon = require(Chrome.Integrations.CommonIcon)
+local MappedSignal = ChromeUtils.MappedSignal
 local GameSettings = UserSettings().GameSettings
 local GuiService = game:GetService("GuiService")
 local GamepadUtils = require(CorePackages.Workspace.Packages.InputUi).Gamepad.GamepadUtils
@@ -24,9 +26,12 @@ local isSpatial = require(CorePackages.Workspace.Packages.AppCommonLib).isSpatia
 local ChatIconVisibleSignals = require(script.Parent.ChatIconVisibleSignals).default
 local SignalsRoblox = require(CorePackages.Packages.SignalsRoblox)
 
+local ExpChat = require(CorePackages.Workspace.Packages.ExpChat)
+local ExpChatFocusNavigationStore = ExpChat.Stores.GetFocusNavigationStore(false)
+
 local SharedFlags = require(CorePackages.Workspace.Packages.SharedFlags)
 local FFlagConsoleChatOnExpControls = SharedFlags.FFlagConsoleChatOnExpControls
-local FFlagChromeChatGamepadSupportFix = SharedFlags.FFlagChromeChatGamepadSupportFix
+local FFlagEnableChromeShortcutBar = SharedFlags.FFlagEnableChromeShortcutBar
 
 local AppChat = require(CorePackages.Workspace.Packages.AppChat)
 local InExperienceAppChatExperimentation = AppChat.App.InExperienceAppChatExperimentation
@@ -44,13 +49,7 @@ local FFlagExpChatUnibarAvailabilityRefactor = game:DefineFastFlag("ExpChatUniba
 local FFlagHideChatButtonForChatDisabledUsers = game:DefineFastFlag("HideChatButtonForChatDisabledUsers", false)
 local isInExperienceUIVREnabled =
 	require(CorePackages.Workspace.Packages.SharedExperimentDefinition).isInExperienceUIVREnabled
-
-local SocialExperiments
-local TenFootInterfaceExpChatExperimentation
-if FFlagConsoleChatOnExpControls then
-	SocialExperiments = require(CorePackages.Workspace.Packages.SocialExperiments)
-	TenFootInterfaceExpChatExperimentation = SocialExperiments.TenFootInterfaceExpChatExperimentation
-end
+local InExperienceUIVRIXP = require(CorePackages.Workspace.Packages.SharedExperimentDefinition).InExperienceUIVRIXP
 
 local unreadMessages = 0
 -- note: do not rely on ChatSelector:GetVisibility after startup; it's state is incorrect if user opens via keyboard shortcut
@@ -129,10 +128,7 @@ local dismissCallback = function()
 
 	ChatSelector:SetVisible(true)
 
-	if
-		FFlagConsoleChatOnExpControls
-		and (FFlagChromeChatGamepadSupportFix or TenFootInterfaceExpChatExperimentation.getIsEnabled())
-	then
+	if FFlagConsoleChatOnExpControls then
 		FocusSelectExpChat(chatChromeIntegration.id)
 	end
 end
@@ -144,7 +140,7 @@ chatChromeIntegration = ChromeService:register({
 		if chatVisibility then
 			ChatSelector:SetVisible(false)
 		else
-			if isInExperienceUIVREnabled and isSpatial() then
+			if (isInExperienceUIVREnabled and isSpatial()) and not InExperienceUIVRIXP:isMovePanelToCenter() then
 				ChatSelector:SetVisible(true)
 			else
 				ChromeIntegrationUtils.dismissRobloxMenuAndRun(function()
@@ -236,6 +232,17 @@ if FFlagExpChatUnibarAvailabilityRefactor then
 
 	ChromeUtils.setCoreGuiAvailability(chatChromeIntegration, Enum.CoreGuiType.Chat, function(enabled)
 		ChatIconVisibleSignals.setCoreGuiEnabled(enabled)
+	end)
+end
+
+if FFlagChatIntegrationFixShortcut and FFlagEnableChromeShortcutBar then
+	SignalsRoblox.createDetachedEffect(function(scope)
+		local isChatInputBarFocused = ExpChatFocusNavigationStore.getChatInputBarFocused(scope)
+		if isChatInputBarFocused then
+			ChromeService:setShortcutBar(ChromeConstants.UNIBAR_SHORTCUTBAR_ID)
+		else
+			ChromeService:setShortcutBar(nil)
+		end
 	end)
 end
 
@@ -339,10 +346,7 @@ if FFlagConsoleChatOnExpControls then
 
 		local chatIsAvailable = chatChromeIntegration.availability:get() ~= AvailabilitySignalState.Unavailable
 
-		if
-			FFlagChromeChatGamepadSupportFix and not TenFootInterfaceExpChatExperimentation.getIsEnabled()
-			or TextChatService.ChatVersion ~= Enum.ChatVersion.TextChatService and chatIsAvailable
-		then
+		if TextChatService.ChatVersion ~= Enum.ChatVersion.TextChatService and chatIsAvailable then
 			if FFlagExpChatUnibarAvailabilityRefactor then
 				ChatIconVisibleSignals.setForceDisableForConsoleUsecase(true)
 			else

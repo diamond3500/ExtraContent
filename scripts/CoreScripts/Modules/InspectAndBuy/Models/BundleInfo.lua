@@ -23,6 +23,13 @@ local Dash = require(CorePackages.Packages.Dash)
 local InspectAndBuyFolder = script.Parent.Parent
 
 local Constants = require(InspectAndBuyFolder.Constants)
+local AvatarExperienceInspectAndBuy = require(CorePackages.Workspace.Packages.AvatarExperienceInspectAndBuy)
+type AvatarPreviewItem = AvatarExperienceInspectAndBuy.AvatarPreviewItem
+type BundleInfo = AvatarExperienceInspectAndBuy.BundleInfo
+type BulkPurchaseResultItem = AvatarExperienceInspectAndBuy.BulkPurchaseResultItem
+
+local FFlagAXParseAdditionalItemDetailsFromCatalog =
+	require(InspectAndBuyFolder.Flags.FFlagAXParseAdditionalItemDetailsFromCatalog)
 
 local MockId = require(script.Parent.Parent.MockId)
 local BundleInfo = {}
@@ -61,6 +68,54 @@ function BundleInfo.mock()
 	self.productType = ""
 
 	return self
+end
+
+--[[
+    Used to process ownership of a bundle based on the PromptBulkPurchaseFinished result
+]]
+function BundleInfo.fromBulkPurchaseResult(bulkPurchaseResult: BulkPurchaseResultItem): BundleInfo
+	local newBundle = BundleInfo.new()
+	if
+		bulkPurchaseResult.status == Enum.MarketplaceItemPurchaseStatus.Success
+		and bulkPurchaseResult.type == Enum.MarketplaceProductType.AvatarBundle
+	then
+		newBundle.owned = true
+	end
+	return newBundle
+end
+
+function BundleInfo.fromAvatarPreviewItem(avatarPreviewItem: AvatarPreviewItem): BundleInfo
+	local newBundle: BundleInfo = BundleInfo.new()
+
+	newBundle.name = avatarPreviewItem.name
+	newBundle.description = avatarPreviewItem.description
+	newBundle.price = avatarPreviewItem.priceInRobux
+	newBundle.isForSale = avatarPreviewItem.isPurchasable
+	newBundle.productId = tostring(avatarPreviewItem.productId)
+	newBundle.collectibleItemId = avatarPreviewItem.collectibleItemId
+	newBundle.collectibleProductId = avatarPreviewItem.collectibleProductId
+	newBundle.owned = avatarPreviewItem.quantityOwned > 0
+	newBundle.resellableCount = avatarPreviewItem.quantityOwned
+	newBundle.creatorId = tostring(avatarPreviewItem.creator.id)
+	newBundle.creatorName = avatarPreviewItem.creator.name
+	newBundle.creatorHasVerifiedBadge = avatarPreviewItem.creator.hasVerifiedBadge
+	newBundle.bundleId = tostring(avatarPreviewItem.id)
+	newBundle.bundleType = tostring(avatarPreviewItem.bundleType)
+	newBundle.noPriceStatus = avatarPreviewItem.noPriceStatus
+
+	-- parse assetsInBundle field
+	newBundle.assetsInBundle = avatarPreviewItem.assetsInBundle
+
+	-- parse item restrictions for bundle
+	if avatarPreviewItem.itemRestrictions then
+		local itemRestrictions = {}
+		for _, value in avatarPreviewItem.itemRestrictions do
+			itemRestrictions[value] = true
+		end
+		newBundle.itemRestrictions = itemRestrictions
+	end
+
+	return newBundle
 end
 
 function BundleInfo.fromGetAssetBundles(bundleInfo)
@@ -119,6 +174,14 @@ function BundleInfo.fromGetItemDetails(itemDetails)
 	newBundle.price = itemDetails.Price or 0
 	newBundle.hasResellers = itemDetails.HasResellers
 	newBundle.collectibleItemId = itemDetails.CollectibleItemId
+
+	if FFlagAXParseAdditionalItemDetailsFromCatalog then
+		newBundle.remaining = itemDetails.UnitsAvailableForConsumption
+		newBundle.collectibleTotalQuantity = itemDetails.TotalQuantity
+		newBundle.collectibleLowestResalePrice = itemDetails.LowestResalePrice
+		newBundle.isOffSale = itemDetails.IsOffSale
+		newBundle.saleLocationType = itemDetails.SaleLocationType
+	end
 
 	return newBundle
 end

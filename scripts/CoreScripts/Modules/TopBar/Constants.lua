@@ -1,14 +1,19 @@
 local CorePackages = game:GetService("CorePackages")
 
+local Signals = require(CorePackages.Packages.Signals)
+local SignalsReact = require(CorePackages.Packages.SignalsReact)
+local Display = require(CorePackages.Workspace.Packages.Display)
+local getUIScale = Display.GetDisplayStore(false).getUIScale
+
 local SharedFlags = require(CorePackages.Workspace.Packages.SharedFlags)
 local FFlagAdaptUnibarAndTiltSizing = SharedFlags.GetFFlagAdaptUnibarAndTiltSizing()
+local FFlagTopBarStyleUseDisplayUIScale = SharedFlags.FFlagTopBarStyleUseDisplayUIScale
 
 local Modules = script.Parent.Parent
 local TenFootInterface = require(Modules.TenFootInterface)
 local ChromeEnabled = require(Modules.Chrome.Enabled)
 local ChromeShared = Modules.Chrome.ChromeShared
 local isNewTiltIconEnabled = require(Modules.isNewTiltIconEnabled)
-local GetFFlagChangeTopbarHeightCalculation = require(script.Parent.Flags.GetFFlagChangeTopbarHeightCalculation)
 local FFlagUnibarMenuIconLayoutFix = require(script.Parent.Flags.FFlagUnibarMenuIconLayoutFix)
 
 local StyleTokens = if ChromeEnabled() and FFlagAdaptUnibarAndTiltSizing
@@ -38,15 +43,11 @@ local function getTopbarHeight()
 	return DEFAULT_TOPBAR_HEIGHT
 end
 
-local topbarHeight = if ChromeEnabled() then if FFlagAdaptUnibarAndTiltSizing then StyleTokens.Size.Size_1200 else 48 else 36
+local topbarHeight = getTopbarHeight()
 local topbarButtonHeight = if ChromeEnabled() then DEFAULT_CHROME_TOPBAR_BUTTON_HEIGHT else DEFAULT_TOPBAR_BUTTON_HEIGHT
 local topbarButtonPadding = if ChromeEnabled() and FFlagAdaptUnibarAndTiltSizing then StyleTokens.Padding.XXSmall else 2
 local screenSideOffset = if ChromeEnabled() and FFlagAdaptUnibarAndTiltSizing then StyleTokens.Gap.Large else 16
 local topBarPadding = if ChromeEnabled() then if FFlagAdaptUnibarAndTiltSizing then StyleTokens.Padding.Small else 8 else 12
-
-if GetFFlagChangeTopbarHeightCalculation() then
-	topbarHeight = getTopbarHeight()
-end
 
 
 local GAMEPAD_INPUT_TYPES = {
@@ -61,6 +62,17 @@ local GAMEPAD_INPUT_TYPES = {
 }
 
 return {
+	ApplyDisplayScale = function(value: number)
+		return if FFlagTopBarStyleUseDisplayUIScale then getUIScale(false) * value else value
+	end,
+	useDisplayScaleState = function(value: number)
+		return if FFlagTopBarStyleUseDisplayUIScale 
+			then SignalsReact.useSignalState(Signals.createComputed(function(scope) 
+				local UiScale = Display.GetDisplayStore(scope).getUIScale
+				return value * UiScale(scope)
+			end)) 
+		else value
+	end,
 	TopBarHeight = topbarHeight,
 	TopBarHeightTenFoot = if FFlagUnibarMenuIconLayoutFix and ChromeEnabled() then nil else 72,
 	TopBarButtonHeight = topbarButtonHeight,
