@@ -6,18 +6,16 @@ local Text = require(Foundation.Components.Text)
 local Translator = require(Foundation.Utility.Localization.Translator)
 local React = require(Packages.React)
 
-local Flags = require(Foundation.Utility.Flags)
 local Types = require(Foundation.Components.Types)
 local StateLayerAffordance = require(Foundation.Enums.StateLayerAffordance)
 local withCommonProps = require(Foundation.Utility.withCommonProps)
+local withDefaults = require(Foundation.Utility.withDefaults)
 
 local ControlState = require(Foundation.Enums.ControlState)
 type ControlState = ControlState.ControlState
 
 local InputLabelSize = require(Foundation.Enums.InputLabelSize)
 type InputLabelSize = InputLabelSize.InputLabelSize
-
-local FoundationInputLabelBoldTypography = Flags.FoundationInputLabelBoldTypography
 
 local REQUIRED_INDICATOR = "*"
 
@@ -50,7 +48,12 @@ local function labelText(text: string, isRequired: boolean?): string
 		else Translator:FormatByKey("CommonUI.Controls.Input.Optional", { inputLabel = text })
 end
 
-local function InputLabel(props: InputLabelProps, ref: React.Ref<GuiObject>?)
+local defaultProps = {
+	testId = "--foundation-input-label",
+}
+
+local function InputLabel(inputLabelProps: InputLabelProps, ref: React.Ref<GuiObject>?)
+	local props = withDefaults(inputLabelProps, defaultProps)
 	local onStateChanged = React.useMemo(function(): ((ControlState) -> ())?
 		if props.onHover ~= nil then
 			return function(newState: ControlState)
@@ -78,16 +81,9 @@ local function InputLabel(props: InputLabelProps, ref: React.Ref<GuiObject>?)
 			textStyle = props.textStyle,
 			tag = {
 				["size-0 auto-xy content-default text-align-x-left text-align-y-top text-wrap"] = true,
-
-				[`text-{if FoundationInputLabelBoldTypography then "title" else "body"}-small`] = (
-					props.size == InputLabelSize.Small
-				),
-				[`text-{if FoundationInputLabelBoldTypography then "title" else "body"}-medium`] = (
-					props.size == InputLabelSize.Medium
-				),
-				[`text-{if FoundationInputLabelBoldTypography then "title" else "body"}-large`] = (
-					props.size == InputLabelSize.Large
-				),
+				["text-title-small"] = props.size == InputLabelSize.Small,
+				["text-title-medium"] = props.size == InputLabelSize.Medium,
+				["text-title-large"] = props.size == InputLabelSize.Large,
 			},
 			ref = ref,
 		})

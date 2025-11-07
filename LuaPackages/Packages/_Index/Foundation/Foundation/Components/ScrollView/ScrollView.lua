@@ -28,10 +28,11 @@ type GuiObjectProps = Types.GuiObjectProps
 type CommonProps = Types.CommonProps
 
 export type Scroll = {
-	AutomaticSize: Enum.AutomaticSize?,
+	AutomaticSize: Bindable<Enum.AutomaticSize>?,
 	AutomaticCanvasSize: Bindable<Enum.AutomaticSize>?,
 	CanvasSize: Bindable<UDim2>?,
 	ScrollingDirection: Bindable<Enum.ScrollingDirection>?,
+	ScrollingEnabled: Bindable<boolean>?,
 	VerticalScrollBarInset: Bindable<Enum.ScrollBarInset>?,
 	HorizontalScrollBarInset: Bindable<Enum.ScrollBarInset>?,
 	scrollBarVisibility: Bindable<Visibility>?,
@@ -54,7 +55,9 @@ local defaultProps = {
 	} :: Scroll,
 	AutoLocalize = false,
 	BorderSizePixel = 0,
+	ClipsDescendants = if Flags.FoundationScrollViewMoveClipOutside then true else nil,
 	isDisabled = false,
+	testId = "--foundation-scroll-view",
 }
 
 -- TODO: Remove when FoundationFixScrollViewTags is removed
@@ -116,6 +119,7 @@ local function ScrollView(scrollViewProps: ScrollViewProps, ref: React.Ref<GuiOb
 			ScrollingFrame,
 			{
 				controlState = controlState,
+				selection = props.selection,
 				scrollBarVisibility = props.scroll.scrollBarVisibility,
 				onCanvasPositionChanged = props.onCanvasPositionChanged,
 				onAbsoluteCanvasSizeChanged = props.onAbsoluteCanvasSizeChanged,
@@ -125,7 +129,9 @@ local function ScrollView(scrollViewProps: ScrollViewProps, ref: React.Ref<GuiOb
 				AutomaticSize = props.scroll.AutomaticSize,
 				AutomaticCanvasSize = props.scroll.AutomaticCanvasSize,
 				CanvasSize = props.scroll.CanvasSize,
+				ClipsDescendants = if Flags.FoundationScrollViewMoveClipOutside then false else nil,
 				ScrollingDirection = props.scroll.ScrollingDirection,
+				ScrollingEnabled = props.scroll.ScrollingEnabled,
 				VerticalScrollBarInset = props.scroll.VerticalScrollBarInset,
 				HorizontalScrollBarInset = props.scroll.HorizontalScrollBarInset,
 				ref = props.scrollingFrameRef,

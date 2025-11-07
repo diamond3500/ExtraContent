@@ -19,6 +19,9 @@ local ClosePlayerDropDown = require(PlayerList.Actions.ClosePlayerDropDown)
 
 local FFlagPlayerListReduceRerenders = require(PlayerList.Flags.FFlagPlayerListReduceRerenders)
 local FFlagAddNewPlayerListMobileFocusNav = PlayerListPackage.Flags.FFlagAddNewPlayerListMobileFocusNav
+local FFlagModalPlayerListCloseUnfocused = PlayerListPackage.Flags.FFlagModalPlayerListCloseUnfocused
+local FFlagCheckPlayerListFocusNavSupported = game:DefineFastFlag("CheckPlayerListFocusNavSupported", false)
+local FFlagPlayerListUseMobileOnSmallDisplay = PlayerListPackage.Flags.FFlagPlayerListUseMobileOnSmallDisplay
 
 local ContextActionsBinder = Roact.PureComponent:extend("ContextActionsBinder")
 
@@ -39,6 +42,12 @@ end
 
 function ContextActionsBinder:bindActions()
 	ContextActionService:BindCoreAction(TOGGLE_CONTEXT_ACTION_NAME, function(actionName, inputState, inputObject)
+		if FFlagPlayerListUseMobileOnSmallDisplay then
+			if self.props.displayOptions.isSmallTouchDevice then
+				return Enum.ContextActionResult.Pass
+			end
+		end
+
 		if GuiService.MenuIsOpen then
 			return Enum.ContextActionResult.Pass
 		end
@@ -50,6 +59,7 @@ function ContextActionsBinder:bindActions()
 		return Enum.ContextActionResult.Sink
 	end, false, Enum.KeyCode.Tab)
 	ContextActionService:BindCoreAction(GAMEPAD_STOP_MOVEMENT_ACTION_NAME, function(actionName, inputState, inputObject)
+		-- TODO: Remove, this core action is no longer needed, we disable dev ui with GuiService:SetMenuIsOpen
 		if self.props.displayOptions.isVisible and self.props.displayOptions.isTenFootInterface then
 			return Enum.ContextActionResult.Sink
 		end
@@ -59,18 +69,34 @@ function ContextActionsBinder:bindActions()
 		if inputState ~= Enum.UserInputState.Begin then
 			return Enum.ContextActionResult.Pass
 		end
+
+		-- Pass input if focus nav is not supported
+		if FFlagCheckPlayerListFocusNavSupported and not (self.props.displayOptions.isTenFootInterface or (FFlagAddNewPlayerListMobileFocusNav and self.props.displayOptions.isSmallTouchDevice)) then
+			return Enum.ContextActionResult.Pass
+		end
+
 		if FFlagAddNewPlayerListMobileFocusNav then
 			if self.props.playerDropDown.isVisible then
 				self.props.closePlayerDropDown()
 				return Enum.ContextActionResult.Sink
 			end
 		end
-		if self.props.displayOptions.isVisible then
-			self.props.setVisibility(false)
-			return Enum.ContextActionResult.Sink
+
+		if FFlagAddNewPlayerListMobileFocusNav then
+			if self.props.displayOptions.isVisible then
+				self.props.setVisibility(false)
+				return Enum.ContextActionResult.Sink
+			end
+		else
+			if self.props.displayOptions.isVisible and self.props.displayOptions.isTenFootInterface then
+				self.props.setVisibility(false)
+				return Enum.ContextActionResult.Sink
+			end
 		end
+
 		return Enum.ContextActionResult.Pass
-	end, false, Enum.KeyCode.ButtonB, Enum.KeyCode.ButtonStart)
+		-- TODO: Remove Enum.KeyCode.ButtonStart and duplicate Enum.KeyCode.ButtonB when FFlagModalPlayerListCloseUnfocused is enabled
+	end, false, Enum.KeyCode.ButtonB, if FFlagModalPlayerListCloseUnfocused then Enum.KeyCode.ButtonB else Enum.KeyCode.ButtonStart)
 	self.boundPlayerListActions = true
 end
 

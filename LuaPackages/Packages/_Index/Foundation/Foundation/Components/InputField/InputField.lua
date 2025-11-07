@@ -1,5 +1,6 @@
 local Foundation = script:FindFirstAncestor("Foundation")
 local Packages = Foundation.Parent
+local Flags = require(Foundation.Utility.Flags)
 
 local React = require(Packages.React)
 
@@ -37,6 +38,7 @@ type InputFieldProps = {
 local defaultProps = {
 	width = UDim.new(0, 400),
 	size = InputLabelSize.Small,
+	testId = "--foundation-input-field",
 }
 
 local function InputField(inputFieldProps: InputFieldProps, ref: React.Ref<GuiObject>?)
@@ -64,6 +66,18 @@ local function InputField(inputFieldProps: InputFieldProps, ref: React.Ref<GuiOb
 			focus = textBoxRef.current.focus,
 			releaseFocus = textBoxRef.current.releaseFocus,
 			getIsFocused = textBoxRef.current.getIsFocused,
+			getCursorPosition = if Flags.FoundationNumberInputRefAndCallbacks
+				then textBoxRef.current.getCursorPosition
+				else nil,
+			getSelectionStart = if Flags.FoundationNumberInputRefAndCallbacks
+				then textBoxRef.current.getSelectionStart
+				else nil,
+			setCursorPosition = if Flags.FoundationNumberInputRefAndCallbacks
+				then textBoxRef.current.setCursorPosition
+				else nil,
+			setSelectionStart = if Flags.FoundationNumberInputRefAndCallbacks
+				then textBoxRef.current.setSelectionStart
+				else nil,
 		}
 	end, {})
 
@@ -71,7 +85,7 @@ local function InputField(inputFieldProps: InputFieldProps, ref: React.Ref<GuiOb
 		View,
 		withCommonProps(props, {
 			Size = UDim2.new(props.width, UDim.new(0, 0)),
-			tag = "col gap-xsmall auto-y",
+			tag = "col gap-small auto-y",
 			ref = ref,
 		}),
 		{
@@ -83,11 +97,13 @@ local function InputField(inputFieldProps: InputFieldProps, ref: React.Ref<GuiOb
 					onActivated = focusTextBox,
 					onHover = onLabelHover,
 					LayoutOrder = 1,
+					testId = `{props.testId}--label`,
 				})
 				else nil,
 			InputWrapper = React.createElement(View, {
 				tag = "size-full-0 auto-y",
 				LayoutOrder = 2,
+				testId = `{props.testId}--input-wrapper`,
 			}, {
 				Input = props.input(textBoxRef),
 			}),
@@ -96,6 +112,7 @@ local function InputField(inputFieldProps: InputFieldProps, ref: React.Ref<GuiOb
 					text = props.hint,
 					hasError = props.hasError,
 					LayoutOrder = 3,
+					testId = `{props.testId}--hint`,
 				})
 				else nil,
 		}

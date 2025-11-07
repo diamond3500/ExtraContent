@@ -21,6 +21,8 @@ local FFlagFocusNavOutOfSubmenu = SharedFlags.FFlagFocusNavOutOfSubmenu
 local FFlagSubmenuFocusNavFixes = SharedFlags.FFlagSubmenuFocusNavFixes
 local FFlagChromeFixStopFocusBeforeMenuRowActive = SharedFlags.FFlagChromeFixStopFocusBeforeMenuRowActive
 local FFlagEnableChromeShortcutBar = SharedFlags.FFlagEnableChromeShortcutBar
+local FFlagAvatarSwitcherHamburgerExposure = game:DefineFastFlag("AvatarSwitcherHamburgerExposure", false)
+local FStringAvatarSwitcherIXPLayer = game:DefineFastString("AvatarSwitcherIXPLayer", "UIEcosystem.User.Migration")
 
 local ChromeFlags = require(script.Parent.Parent.Parent.Flags)
 local FFlagUnibarMenuOpenSubmenu = ChromeFlags.FFlagUnibarMenuOpenSubmenu
@@ -46,6 +48,7 @@ local Badge = UIBlox.App.Indicator.Badge
 local VerticalScrollView = UIBlox.App.Container.VerticalScrollView
 local ScrollBarType = UIBlox.App.Container.Enum.ScrollBarType
 local ReactOtter = require(CorePackages.Packages.ReactOtter)
+local IXPServiceWrapper = require(CorePackages.Workspace.Packages.IxpServiceWrapper).IXPServiceWrapper
 
 local Foundation = if FFlagAdaptUnibarAndTiltSizing then require(CorePackages.Packages.Foundation) else nil :: never
 local useCursor = if FFlagAdaptUnibarAndTiltSizing then Foundation.Hooks.useCursor else nil :: never
@@ -70,7 +73,6 @@ local useMappedObservableValue = require(Root.Hooks.useMappedObservableValue)
 
 local FFlagFixChromeIntegrationLayoutBug = game:DefineFastFlag("FixChromeIntegrationLayoutBug", false)
 local FFlagSubmenuFixInvisibleButtons = game:DefineFastFlag("SubmenuFixInvisibleButtons", false)
-local FFlagSubmenuFixVectorConversion = game:DefineFastFlag("SubmenuFixVectorConversion", false)
 
 local isSpatial = require(CorePackages.Workspace.Packages.AppCommonLib).isSpatial
 local isInExperienceUIVREnabled =
@@ -504,11 +506,8 @@ function SubMenu(props: SubMenuProps)
 					local key = input.KeyCode
 					if key == Enum.KeyCode.Thumbstick1 then
 						-- Never is meant to work around a typing issue.
-						local thumbstickVector = GamepadUtils.normalizeStickByDeadzone(
-							if FFlagSubmenuFixVectorConversion
-								then Vector2.new(input.Position.X, input.Position.Y)
-								else input.Position :: never
-						)
+						local thumbstickVector =
+							GamepadUtils.normalizeStickByDeadzone(Vector2.new(input.Position.X, input.Position.Y))
 						local SENSITIVITY = 0.5
 						local LEFT_SENSITIVITY = -SENSITIVITY
 						local RIGHT_SENSITIVITY = SENSITIVITY
@@ -539,6 +538,13 @@ function SubMenu(props: SubMenuProps)
 			conn:Disconnect()
 		end
 	end, {})
+
+	-- Avatar Switcher IXP exposure: fire exposure event when the hamburger submenu is opened
+	if FFlagAvatarSwitcherHamburgerExposure then
+		React.useEffect(function()
+			IXPServiceWrapper:LogFlagLinkedUserLayerExposure(FStringAvatarSwitcherIXPLayer)
+		end, {})
+	end
 
 	local topBuffer = topbarInsetHeight + iconCellWidth
 	local canvasSize = if props and props.items then rowHeight * #props.items else 0

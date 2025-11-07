@@ -6,12 +6,15 @@ local React = require(Packages.React)
 
 local Components = Foundation.Components
 local Input = require(Components.InternalInput)
+local useUncontrolledState = require(Components.InternalInput.useUncontrolledState)
 local Types = require(Components.Types)
 local Knob = require(Components.Knob)
+local PresentationContext = require(Foundation.Providers.Style.PresentationContext)
 
 local useTokens = require(Foundation.Providers.Style.useTokens)
 local withCommonProps = require(Foundation.Utility.withCommonProps)
 local withDefaults = require(Foundation.Utility.withDefaults)
+local Flags = require(Foundation.Utility.Flags)
 
 local ControlState = require(Foundation.Enums.ControlState)
 type ControlState = ControlState.ControlState
@@ -46,14 +49,24 @@ export type ToggleProps = {
 local defaultProps = {
 	size = InputSize.Medium,
 	Selectable = true,
+	testId = "--foundation-toggle",
 }
+
+local IS_INVERSE = { isInverse = false }
 
 local function Toggle(toggleProps: ToggleProps, ref: React.Ref<GuiObject>?)
 	local props = withDefaults(toggleProps, defaultProps)
 	local tokens = useTokens()
 	local variantProps = useToggleVariants(tokens, props.size)
+	local isChecked, onActivated = useUncontrolledState(props.isChecked, props.onActivated)
 
-	local initialProgress = props.isChecked and 1 or 0
+	local knobSize: InputSize = if Flags.FoundationUpdateKnobComponent
+		then if toggleProps.size == InputSize.Large then InputSize.Medium else props.size
+		else props.size
+
+	local hasShadow = if Flags.FoundationUpdateKnobComponent then false else true
+
+	local initialProgress = isChecked and 1 or 0
 	local progress, setProgress = React.useBinding(initialProgress)
 	local progressMotorRef = React.useRef(nil :: Otter.SingleMotor?)
 
@@ -76,18 +89,18 @@ local function Toggle(toggleProps: ToggleProps, ref: React.Ref<GuiObject>?)
 	end, {})
 
 	React.useEffect(function()
-		local newProgress = if props.isChecked then 1 else 0
+		local newProgress = if isChecked then 1 else 0
 		if progressMotorRef.current then
 			progressMotorRef.current:setGoal(Otter.spring(newProgress, SPRING_PARAMETERS))
 		end
-	end, { props.isChecked })
+	end, { isChecked })
 
 	return React.createElement(
 		Input,
 		withCommonProps(props, {
-			isChecked = props.isChecked,
+			isChecked = isChecked,
 			isDisabled = props.isDisabled,
-			onActivated = props.onActivated,
+			onActivated = onActivated,
 			label = {
 				text = props.label,
 				position = Enum.HorizontalAlignment.Left,
@@ -101,14 +114,14 @@ local function Toggle(toggleProps: ToggleProps, ref: React.Ref<GuiObject>?)
 			NextSelectionRight = props.NextSelectionRight,
 			ref = ref,
 		}),
-		{
+		React.createElement(PresentationContext.Provider, { value = IS_INVERSE }, {
 			Knob = React.createElement(Knob, {
-				size = props.size,
-				isDisabled = props.isDisabled,
+				size = knobSize,
+				hasShadow = hasShadow,
 				AnchorPoint = Vector2.new(0, 0.5),
 				Position = knobPosition,
 			}),
-		}
+		})
 	)
 end
 

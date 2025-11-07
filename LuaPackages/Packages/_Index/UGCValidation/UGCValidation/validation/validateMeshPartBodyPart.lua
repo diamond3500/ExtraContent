@@ -7,18 +7,22 @@ local root = script.Parent.Parent
 local Analytics = require(root.Analytics)
 
 local getFFlagDebugUGCDisableSurfaceAppearanceTests = require(root.flags.getFFlagDebugUGCDisableSurfaceAppearanceTests)
-local getFFlagUGCValidateMeshMin = require(root.flags.getFFlagUGCValidateMeshMin)
 local getFFlagUGCValidateIndividualPartBBoxes = require(root.flags.getFFlagUGCValidateIndividualPartBBoxes)
 local getEngineFeatureUGCValidateBodyPartCageMeshDistance =
 	require(root.flags.getEngineFeatureUGCValidateBodyPartCageMeshDistance)
 local getFFlagRefactorBodyAttachmentOrientationsCheck =
 	require(root.flags.getFFlagRefactorBodyAttachmentOrientationsCheck)
 local getFFlagUGCValidateBoundsManipulation = require(root.flags.getFFlagUGCValidateBoundsManipulation)
-local getFFlagCheckBodyPartMeshSize = require(root.flags.getFFlagCheckBodyPartMeshSize)
+local getFFlagUGCValidateAccurateBoundingBoxRasterMethod =
+	require(root.flags.getFFlagUGCValidateAccurateBoundingBoxRasterMethod)
 
 local validateBodyPartMeshBounds = require(root.validation.validateBodyPartMeshBounds)
 local validateAssetBounds = require(root.validation.validateAssetBounds)
 local validateAccurateBoundingBox = require(root.validation.validateAccurateBoundingBox)
+local validateAccurateBoundingBoxRasterMethod = nil
+if getFFlagUGCValidateAccurateBoundingBoxRasterMethod() then
+	validateAccurateBoundingBoxRasterMethod = require(root.validation.validateAccurateBoundingBoxRasterMethod)
+end
 local validateBodyPartChildAttachmentBounds = require(root.validation.validateBodyPartChildAttachmentBounds)
 local validateBodyPartChildAttachmentOrientations = require(root.validation.validateBodyPartChildAttachmentOrientations)
 local validateBodyPartExtentsRelativeToParent = require(root.validation.validateBodyPartExtentsRelativeToParent)
@@ -43,6 +47,7 @@ local ValidatePropertiesSensible = require(root.validation.ValidatePropertiesSen
 local validateWithSchema = require(root.util.validateWithSchema)
 local FailureReasonsAccumulator = require(root.util.FailureReasonsAccumulator)
 local validateBodyPartVertsSkinnedToR15 = require(root.validation.validateBodyPartVertsSkinnedToR15)
+local BodyAssetMasksRenderer = require(root.util.bodyAssetMasksRenderer)
 local getEngineFeatureEngineUGCValidateBodyPartsSkinnedToR15 =
 	require(root.flags.getEngineFeatureEngineUGCValidateBodyPartsSkinnedToR15)
 local getEngineFeatureEngineUGCValidatePropertiesSensible =
@@ -50,6 +55,8 @@ local getEngineFeatureEngineUGCValidatePropertiesSensible =
 
 local resetPhysicsData = require(root.util.resetPhysicsData)
 local Types = require(root.util.Types)
+
+type BodyAssetMasksRenderer = BodyAssetMasksRenderer.BodyAssetMasksRenderer
 
 local function validateMeshPartBodyPart(
 	inst: Instance,
@@ -101,7 +108,7 @@ local function validateMeshPartBodyPart(
 		end
 	end
 
-	if getFFlagUGCValidateMeshMin() then
+	do
 		-- anything which would cause a crash later on, we check in here and exit early
 		local successBlocking, errorMessageBlocking = ValidateBodyBlockingTests.validate(inst, validationContext)
 		if not successBlocking then
@@ -109,7 +116,7 @@ local function validateMeshPartBodyPart(
 		end
 	end
 
-	if getFFlagCheckBodyPartMeshSize() then
+	do
 		local successValidateMeshSizeProperty, errors =
 			ValidateMeshSizeProperty.validateBodyAsset(inst, validationContext)
 		if not successValidateMeshSizeProperty then
@@ -139,8 +146,22 @@ local function validateMeshPartBodyPart(
 
 	reasonsAccumulator:updateReasons(validateAssetBounds(nil, inst, validationContext))
 
-	if getFFlagUGCValidateBoundsManipulation() then
-		reasonsAccumulator:updateReasons(validateAccurateBoundingBox(inst, validationContext))
+	if getFFlagUGCValidateAccurateBoundingBoxRasterMethod() then
+		local viewsForAsset = validateAccurateBoundingBoxRasterMethod.getBoundsViewsForAssetType(assetTypeEnum)
+		local result = nil
+		success, result = BodyAssetMasksRenderer.new(inst, viewsForAsset, validationContext)
+		if success then
+			local bodyAssetMasksWrapper = result :: BodyAssetMasksRenderer
+			reasonsAccumulator:updateReasons(
+				validateAccurateBoundingBoxRasterMethod.validate(inst, bodyAssetMasksWrapper, validationContext)
+			)
+		else
+			reasonsAccumulator:updateReasons(success, result)
+		end
+	else
+		if getFFlagUGCValidateBoundsManipulation() then
+			reasonsAccumulator:updateReasons(validateAccurateBoundingBox(inst, validationContext))
+		end
 	end
 
 	reasonsAccumulator:updateReasons(validateDescendantMeshMetrics(inst, validationContext))
@@ -150,6 +171,7 @@ local function validateMeshPartBodyPart(
 	reasonsAccumulator:updateReasons(validateHSR(inst, validationContext))
 
 	local startTime = tick()
+
 	reasonsAccumulator:updateReasons(validateAssetTransparency(inst, validationContext))
 	Analytics.recordScriptTime("validateAssetTransparency", startTime, validationContext)
 

@@ -51,15 +51,16 @@ local function DefaultSizeRules(type: TextStyle, nominalScale: number): { StyleR
 	return {
 		{
 			tag = "text-size-defaults",
-			priority = 0,
+			priority = -1,
 			properties = {
 				TextSize = "$TextSizeBodyLarge",
 				LineHeight = type.LineHeight,
 			},
 			children = {
 				{
-					tag = `text-size-defaults`,
+					tag = "text-size-defaults",
 					pseudo = "UIPadding",
+					priority = -1,
 					properties = {
 						PaddingTop = `$TextPaddingBodyLarge`,
 						PaddingBottom = `$TextPaddingBodyLarge`,
@@ -209,6 +210,7 @@ local function TypographyRules(typography: Typography, nominalScale: number): { 
 				{
 					tag = `text-{name}`,
 					pseudo = "UIPadding",
+					priority = 0,
 					properties = {
 						PaddingTop = `$TextPadding{pascalName}`,
 						PaddingBottom = `$TextPadding{pascalName}`,

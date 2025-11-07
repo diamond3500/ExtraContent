@@ -24,10 +24,17 @@ local getMemStorageKey = CrossExperience.Utils.getMemStorageKey
 local CEV_JOIN_ATTEMPT_ID_KEY = CrossExperience.Constants.CEV_JOIN_ATTEMPT_ID_KEY
 local LOCAL_PLAYER_LOADING_TIMEOUT_ENUM = CrossExperience.Constants.LOCAL_PLAYER_LOADING_TIMEOUT_ENUM
 
-local FIntBackgroundDMLocalPlayerLoadingTimeoutSeconds = game:DefineFastInt("BackgroundDMLocalPlayerLoadingTimeoutSeconds", 12)
+local FIntBackgroundDMLocalPlayerLoadingTimeoutSeconds =
+	game:DefineFastInt("BackgroundDMLocalPlayerLoadingTimeoutSeconds", 12)
+local FFlagDelayBackgroundDMLocalPlayerLoading = game:DefineFastFlag("DelayBackgroundDMLocalPlayerLoading", false)
+local FFlagDelayAudioFocusReplication = game:DefineFastFlag("DelayAudioFocusReplication", false)
+local FIntPlayerAudioFocusReplicationTimeoutSeconds =
+	game:DefineFastInt("PlayerAudioFocusReplicationTimeoutSeconds", 10)
 
 local localUserId
-if FStringTimeoutLoadingLocalPlayerInBackgroundDM == LOCAL_PLAYER_LOADING_TIMEOUT_ENUM.Disable and CEVLogsToEventIngest then
+if
+	FStringTimeoutLoadingLocalPlayerInBackgroundDM == LOCAL_PLAYER_LOADING_TIMEOUT_ENUM.Disable and CEVLogsToEventIngest
+then
 	localUserId = (Players.LocalPlayer and Players.LocalPlayer.UserId) or -1
 end
 
@@ -39,7 +46,10 @@ local function sendAnalyticsEvent(eventName: string, args: { [string]: any }?)
 		local cevJoinAttemptId = getMemStorageKey(CEV_JOIN_ATTEMPT_ID_KEY)
 		analyticsPayload.cevJoinAttemptId = cevJoinAttemptId
 		analyticsPayload.clientTimeStamp = os.time()
-		analyticsPayload.userId = if FStringTimeoutLoadingLocalPlayerInBackgroundDM ~= LOCAL_PLAYER_LOADING_TIMEOUT_ENUM.Disable then nil else localUserId
+		analyticsPayload.userId = if FStringTimeoutLoadingLocalPlayerInBackgroundDM
+				~= LOCAL_PLAYER_LOADING_TIMEOUT_ENUM.Disable
+			then nil
+			else localUserId
 	end
 
 	AnalyticsService:SendEventDeferred("client", "partyVoice", eventName, analyticsPayload)
@@ -82,24 +92,30 @@ local function ensureLocalPlayerWithTimeout()
 			return "timeout"
 		end)
 
-		Promise.race({ localPlayerPromise, timeoutPromise }):andThen(function(winner)
-			if winner == "loaded" then
-				localPlayer = Players.LocalPlayer
+		Promise.race({ localPlayerPromise, timeoutPromise })
+			:andThen(function(winner)
+				if winner == "loaded" then
+					localPlayer = Players.LocalPlayer
 
-				sendAnalyticsEvent("cevDefaultChannelBackgroundDMLocalPlayerLoaded", {
-					timeoutSeconds = FIntBackgroundDMLocalPlayerLoadingTimeoutSeconds,
-				})
-			else
-				sendAnalyticsEvent("backgroundDMLocalPlayerLoadingTimeout", {
-					timeoutSeconds = FIntBackgroundDMLocalPlayerLoadingTimeoutSeconds,
-				})
+					sendAnalyticsEvent("cevDefaultChannelBackgroundDMLocalPlayerLoaded", {
+						timeoutSeconds = FIntBackgroundDMLocalPlayerLoadingTimeoutSeconds,
+					})
+				else
+					sendAnalyticsEvent("backgroundDMLocalPlayerLoadingTimeout", {
+						timeoutSeconds = FIntBackgroundDMLocalPlayerLoadingTimeoutSeconds,
+					})
 
-				notifyVoiceStatusChange(CrossExperience.Constants.VOICE_STATUS.ERROR_BACKGROUND_DM_LOAD_LOCALPLAYER_TIMEOUT, 
-					"LocalPlayer loading timed out after " .. FIntBackgroundDMLocalPlayerLoadingTimeoutSeconds .. " seconds")
+					notifyVoiceStatusChange(
+						CrossExperience.Constants.VOICE_STATUS.ERROR_BACKGROUND_DM_LOAD_LOCALPLAYER_TIMEOUT,
+						"LocalPlayer loading timed out after "
+							.. FIntBackgroundDMLocalPlayerLoadingTimeoutSeconds
+							.. " seconds"
+					)
 
-				localPlayer = nil
-			end
-		end):await()
+					localPlayer = nil
+				end
+			end)
+			:await()
 	end
 
 	-- If localPlayer is nil, then we timed out, and we block the thread indefinitely until we shut down the script via foreground DM
@@ -111,14 +127,22 @@ local function ensureLocalPlayerWithTimeout()
 end
 
 if FStringTimeoutLoadingLocalPlayerInBackgroundDM ~= LOCAL_PLAYER_LOADING_TIMEOUT_ENUM.Disable then
-	localUserId = ensureLocalPlayerWithTimeout()
+	if FFlagDelayBackgroundDMLocalPlayerLoading then
+		-- Delay loading local player until we need it much later
+		localUserId = -1
+	else
+		localUserId = ensureLocalPlayerWithTimeout()
+	end
 end
 
 if not CEVLogsToEventIngest and FFlagEnableCEVErrorRCCTimeoutLogs then
 	localUserId = (Players.LocalPlayer and Players.LocalPlayer.UserId) or -1
 end
 
-if FStringTimeoutLoadingLocalPlayerInBackgroundDM == LOCAL_PLAYER_LOADING_TIMEOUT_ENUM.Disable and FFlagEnableCEVErrorRCCTimeoutLogs then
+if
+	FStringTimeoutLoadingLocalPlayerInBackgroundDM == LOCAL_PLAYER_LOADING_TIMEOUT_ENUM.Disable
+	and FFlagEnableCEVErrorRCCTimeoutLogs
+then
 	sendAnalyticsEvent("partyVoiceCEVChannelFileLoaded", {
 		userId = if not CEVLogsToEventIngest then localUserId else nil,
 		clientTimeStamp = if not CEVLogsToEventIngest and FFlagRecordTimestampforCEVEvents
@@ -127,15 +151,18 @@ if FStringTimeoutLoadingLocalPlayerInBackgroundDM == LOCAL_PLAYER_LOADING_TIMEOU
 	})
 end
 
-local PlayerAudioFocusChanged = ReplicatedStorage:WaitForChild("PlayerAudioFocusChanged")
+local PlayerAudioFocusChanged
+if not FFlagDelayAudioFocusReplication then
+	PlayerAudioFocusChanged = ReplicatedStorage:WaitForChild("PlayerAudioFocusChanged")
 
-if FFlagEnableCEVErrorRCCTimeoutLogs then
-	sendAnalyticsEvent("partyVoicePlayerAudioFocusChangedLoaded", {
-		userId = if not CEVLogsToEventIngest then localUserId else nil,
-		clientTimeStamp = if not CEVLogsToEventIngest and FFlagRecordTimestampforCEVEvents
-			then os.time()
-			else nil :: never,
-	})
+	if FFlagEnableCEVErrorRCCTimeoutLogs then
+		sendAnalyticsEvent("partyVoicePlayerAudioFocusChangedLoaded", {
+			userId = if not CEVLogsToEventIngest then localUserId else nil,
+			clientTimeStamp = if not CEVLogsToEventIngest and FFlagRecordTimestampforCEVEvents
+				then os.time()
+				else nil :: never,
+		})
+	end
 end
 
 local VoiceChatCore = require(CorePackages.Workspace.Packages.VoiceChatCore)
@@ -154,7 +181,6 @@ local CaptureService = if FFlagEnableVoiceChatMuteForVideoCaptures then game:Get
 
 local LuauPolyfill = require(CorePackages.Packages.LuauPolyfill)
 local FFlagPartyVoiceBlockSync = SharedFlags.FFlagPartyVoiceBlockSync
-local FFlagPartyVoiceBypassCheck = SharedFlags.FFlagPartyVoiceBypassCheck
 local GetFFlagVoiceChatClientRewriteMasterLua = SharedFlags.GetFFlagVoiceChatClientRewriteMasterLua
 
 local FFlagUseNotificationServiceIsConnected = game:DefineFastFlag("UseNotificationServiceIsConnected", false)
@@ -169,8 +195,6 @@ local GetFFlagFixSeamlessVoiceIntegrationWithPrivateVoice =
 local GetFFlagEnableCrossExperienceVoiceCaptureMute =
 	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagEnableCrossExperienceVoiceCaptureMute
 local FFlagLogPartyVoiceReconnect = game:DefineFastFlag("LogPartyVoiceReconnect", false)
-local FFlagPartyVoiceReportJoinFailed = game:DefineFastFlag("PartyVoiceReportJoinFailed", false)
-local FFlagPartyVoiceCatchError = game:DefineFastFlag("PartyVoiceCatchError", false)
 local FFlagPartyVoiceFixCaptureVideoCheck = game:DefineFastFlag("PartyVoiceFixCaptureVideoCheck", false)
 local FIntPartyVoiceUndeafenDelayMS = SharedFlags.FIntPartyVoiceUndeafenDelayMS
 local FFlagPartyVoiceExecuteVoiceActionsPostAsyncInit =
@@ -181,8 +205,6 @@ local EnableDefaultVoiceAvailable = game:GetEngineFeature("VoiceServiceEnableDef
 local NotificationServiceIsConnectedAvailable = game:GetEngineFeature("NotificationServiceIsConnectedAvailable")
 local AudioFocusManagementEnabled = game:GetEngineFeature("AudioFocusManagement")
 local CevReadinessSync = game:GetEngineFeature("CevReadinessSync")
-
-local FFlagCevFixDuplicateObservers = game:DefineFastFlag("CevFixDuplicateObservers", false)
 
 local log = require(CorePackages.Workspace.Packages.CoreScriptsInitializer).CoreLogger:new(script.Name)
 local Analytics = VoiceChatCore.Analytics.new()
@@ -197,7 +219,6 @@ local Constants = CrossExperience.Constants
 local VOICE_STATUS = Constants.VOICE_STATUS
 
 local FFlagFixPartyVoiceGetPermissions = SharedFlags.GetFFlagFixPartyVoiceGetPermissions()
-local FFlagEnableCoreVoiceManagerPassErrorInReject = SharedFlags.FFlagEnableCoreVoiceManagerPassErrorInReject
 local FFlagEnablePartyVoiceChangersInLua = SharedFlags.FFlagEnablePartyVoiceChangersInLua
 
 local undeafenTimerHandle: thread? = nil
@@ -206,7 +227,7 @@ if GetFFlagFixSeamlessVoiceIntegrationWithPrivateVoice() then
 	CoreVoiceManager:setOptions({
 		allowSeamlessVoice = false,
 		passInitErrorInPromiseReject = true,
-		forceVoiceEnabled = FFlagPartyVoiceBypassCheck,
+		forceVoiceEnabled = true,
 	})
 end
 
@@ -314,17 +335,85 @@ if not FFlagEnableCEVErrorRCCTimeoutLogs then
 	localUserId = (Players.LocalPlayer and Players.LocalPlayer.UserId) or -1
 end
 
-observeCurrentContextId(function(currentContextId)
-	PlayerAudioFocusChanged:FireServer(currentContextId)
-end)
+if FFlagDelayAudioFocusReplication then
+	-- Capture context changes immediately to avoid missing initial state
+	-- Store the latest context ID and send it once PlayerAudioFocusChanged is ready
+	local latestContextId = nil
+	local isReplicationReady = false
 
-PlayerAudioFocusChanged.OnClientEvent:Connect(function(userId, currentContextId, currentContextIds)
-	cevEventManager:notify(CrossExperience.Constants.EVENTS.PARTY_VOICE_PARTICIPANT_AUDIO_FOCUS_CHANGED, {
-		userId = userId,
-		contextId = currentContextId,
-		contextIds = currentContextIds,
-	})
-end)
+	observeCurrentContextId(function(currentContextId)
+		latestContextId = currentContextId
+
+		print("CurrentContextId changed to", currentContextId, "isReplicationReady:", isReplicationReady)
+
+		if isReplicationReady and PlayerAudioFocusChanged then
+			PlayerAudioFocusChanged:FireServer(currentContextId)
+			print("Fired PlayerAudioFocusChanged with contextId:", currentContextId)
+		end
+	end)
+
+	-- Load PlayerAudioFocusChanged with timeout (delayed from early initialization)
+	-- This ensures ALL players have their OnClientEvent listeners before ANY player sends FireServer
+	print("Waiting for PlayerAudioFocusChanged to replicate...")
+	PlayerAudioFocusChanged =
+		ReplicatedStorage:WaitForChild("PlayerAudioFocusChanged", FIntPlayerAudioFocusReplicationTimeoutSeconds)
+
+	if PlayerAudioFocusChanged then
+		print("PlayerAudioFocusChanged replicated successfully.")
+		if FFlagEnableCEVErrorRCCTimeoutLogs then
+			sendAnalyticsEvent("partyVoicePlayerAudioFocusChangedLoaded", {
+				userId = if not CEVLogsToEventIngest then localUserId else nil,
+				clientTimeStamp = if not CEVLogsToEventIngest and FFlagRecordTimestampforCEVEvents
+					then os.time()
+					else nil :: never,
+			})
+		end
+
+		-- Establish connection before marking replication as ready
+		PlayerAudioFocusChanged.OnClientEvent:Connect(function(userId, currentContextId, currentContextIds)
+			print("Received PlayerAudioFocusChanged OnClientEvent:", userId, currentContextId)
+			cevEventManager:notify(CrossExperience.Constants.EVENTS.PARTY_VOICE_PARTICIPANT_AUDIO_FOCUS_CHANGED, {
+				userId = userId,
+				contextId = currentContextId,
+				contextIds = currentContextIds,
+			})
+		end)
+
+		-- Mark replication as ready and send any pending context
+		isReplicationReady = true
+		if latestContextId then
+			PlayerAudioFocusChanged:FireServer(latestContextId)
+			print("Fired PlayerAudioFocusChanged with latestContextId:", latestContextId)
+		end
+	else
+		print(
+			"PlayerAudioFocusChanged did not replicate within timeout of ",
+			FIntPlayerAudioFocusReplicationTimeoutSeconds,
+			" seconds."
+		)
+		if FFlagEnableCEVErrorRCCTimeoutLogs then
+			sendAnalyticsEvent("partyVoicePlayerAudioFocusChangedReplicationTimeout", {
+				userId = if not CEVLogsToEventIngest then localUserId else nil,
+				timeoutSeconds = FIntPlayerAudioFocusReplicationTimeoutSeconds,
+				clientTimeStamp = if not CEVLogsToEventIngest and FFlagRecordTimestampforCEVEvents
+					then os.time()
+					else nil :: never,
+			})
+		end
+	end
+else
+	observeCurrentContextId(function(currentContextId)
+		PlayerAudioFocusChanged:FireServer(currentContextId)
+	end)
+
+	PlayerAudioFocusChanged.OnClientEvent:Connect(function(userId, currentContextId, currentContextIds)
+		cevEventManager:notify(CrossExperience.Constants.EVENTS.PARTY_VOICE_PARTICIPANT_AUDIO_FOCUS_CHANGED, {
+			userId = userId,
+			contextId = currentContextId,
+			contextIds = currentContextIds,
+		})
+	end)
+end
 
 local onPlayerAdded = function(player)
 	cevEventManager:notify(CrossExperience.Constants.EVENTS.PARTY_VOICE_PARTICIPANT_ADDED, {
@@ -727,16 +816,14 @@ end
 local setupListenersInitialized = false
 
 local function setupListeners()
-	if FFlagCevFixDuplicateObservers and setupListenersInitialized then
+	if setupListenersInitialized then
 		log:debug("listeners already registered, skipping duplicate setup")
 		return
 	end
 
-	if FFlagCevFixDuplicateObservers then
-		setupListenersInitialized = true
+	setupListenersInitialized = true
 
-		log:debug("setting up listeners for the first time")
-	end
+	log:debug("setting up listeners for the first time")
 	CoreVoiceManager:subscribe("GetPermissions", function(callback, permissions)
 		if FFlagFixPartyVoiceGetPermissions then
 			getPermissions(permissions):andThen(callback)
@@ -864,9 +951,7 @@ local function setupListeners()
 	CoreVoiceManager:subscribe("OnReportJoinFailed", function(result)
 		log:error("CEV OnReportJoinFailed " .. result)
 
-		if FFlagPartyVoiceReportJoinFailed then
-			notifyVoiceStatusChange(Constants.VOICE_STATUS.ERROR_VOICE_JOIN, result)
-		end
+		notifyVoiceStatusChange(Constants.VOICE_STATUS.ERROR_VOICE_JOIN, result)
 	end)
 end
 
@@ -1037,23 +1122,12 @@ function initializeVoice()
 			-- a unresolved promise error. Don't report an event since the manager
 			-- will handle that.
 			log:info("CoreVoiceManager did not initialize {}", err)
-			if FFlagEnableCoreVoiceManagerPassErrorInReject then
-				local detail = "INIT_ERROR_UNKNOWN"
-
-				if FFlagPartyVoiceCatchError then
-					if err then
-						detail = err.code or err
-					end
-				else
-					if err and err.code then
-						detail = err.code
-					end
-				end
-
-				notifyVoiceStatusChange(Constants.VOICE_STATUS.ERROR_VOICE_INIT, detail)
-			else
-				notifyVoiceStatusChange(Constants.VOICE_STATUS.ERROR_VOICE_INIT, err)
+			local detail = "INIT_ERROR_UNKNOWN"
+			if err then
+				detail = err.code or err
 			end
+
+			notifyVoiceStatusChange(Constants.VOICE_STATUS.ERROR_VOICE_INIT, detail)
 		end)
 end
 
@@ -1072,6 +1146,13 @@ end
 
 function startVoice()
 	if validateSetup() then
+		if FFlagDelayBackgroundDMLocalPlayerLoading then
+			-- Call it here instead, right before we actually need the LocalPlayer
+			if FStringTimeoutLoadingLocalPlayerInBackgroundDM ~= LOCAL_PLAYER_LOADING_TIMEOUT_ENUM.Disable then
+				localUserId = ensureLocalPlayerWithTimeout()
+				log:info("Delayed loading of LocalPlayer loaded with UserId: {}", localUserId)
+			end
+		end
 		setupListeners()
 		initializeVoice()
 	end

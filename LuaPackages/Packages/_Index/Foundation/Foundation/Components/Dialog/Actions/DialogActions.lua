@@ -14,8 +14,10 @@ local View = require(Foundation.Components.View)
 local Types = require(Foundation.Components.Types)
 local withDefaults = require(Foundation.Utility.withDefaults)
 
+local Flags = require(Foundation.Utility.Flags)
+
 local useDialogVariants = require(script.Parent.Parent.useDialogVariants).useDialogVariants
-local useDialogLayout = require(script.Parent.Parent.useDialogLayout)
+local useDialog = require(script.Parent.Parent.useDialog)
 
 type Bindable<T> = Types.Bindable<T>
 type ButtonVariant = ButtonVariant.ButtonVariant
@@ -43,7 +45,7 @@ local defaultProps = {
 local function DialogActions(dialogActionsProps: DialogActionsProps)
 	local props: DialogActionsProps = withDefaults(dialogActionsProps, defaultProps)
 	local variants = useDialogVariants()
-	local layout = useDialogLayout()
+	local dialogContext = useDialog()
 
 	local actions = React.useMemo(function()
 		if not props.actions then
@@ -66,21 +68,23 @@ local function DialogActions(dialogActionsProps: DialogActionsProps)
 		)
 	end, { props.actions })
 
-	local isSmall = layout.responsiveSize == DialogSize.Small
+	local isSmall = dialogContext.responsiveSize == DialogSize.Small
 	local horizontalOrientation = props.orientation == Orientation.Horizontal or not isSmall
 	local verticalOrientation = props.orientation == Orientation.Vertical and isSmall
 
 	return React.createElement(View, {
-		tag = "col gap-large auto-y size-full-0",
+		tag = `col auto-y size-full-0 {if Flags.FoundationDialogActionsUpdate then "" else "gap-large"}`,
 		LayoutOrder = props.LayoutOrder,
+		testId = `{dialogContext.testId}--actions`,
 	}, {
 		ActionsContainer = React.createElement(View, {
 			tag = {
-				["gap-large auto-y size-full-0"] = true,
+				[`auto-y size-full-0 {if Flags.FoundationDialogActionsUpdate then "gap-small" else "gap-large"}`] = true,
 				["row wrap"] = horizontalOrientation,
 				["col flex-x-fill"] = verticalOrientation,
 			},
 			LayoutOrder = 1,
+			testId = `{dialogContext.testId}--actions-container`,
 		}, {
 			Actions = actions,
 		}),
@@ -89,6 +93,7 @@ local function DialogActions(dialogActionsProps: DialogActionsProps)
 				Text = props.label,
 				tag = variants.actionsLabel.tag,
 				LayoutOrder = 2,
+				testId = `{dialogContext.testId}--actions-label`,
 			})
 			else nil,
 	})

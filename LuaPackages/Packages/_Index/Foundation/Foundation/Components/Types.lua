@@ -14,8 +14,29 @@ local ControlState = require(Foundation.Enums.ControlState)
 type ControlState = ControlState.ControlState
 export type StateChangedCallback = (newState: ControlState) -> ()
 
+local ButtonVariant = require(Foundation.Enums.ButtonVariant)
+type ButtonVariant = ButtonVariant.ButtonVariant
+
+export type ActionProps = {
+	onActivated: () -> (),
+	variant: ButtonVariant?,
+	text: string,
+}
+
 local React = require(Packages.React)
+
 export type Bindable<T> = T | React.Binding<T>
+
+type ReactRefGuiObject = React.Ref<GuiObject>
+
+export type ResponsiveValue<T> = {
+	xs: T,
+	sm: T,
+	md: T,
+	lg: T,
+	xl: T,
+	xxl: T?,
+}
 
 export type NativeCommonProps = {
 	AnchorPoint: Bindable<Vector2>?,
@@ -42,8 +63,8 @@ export type FlexItem = {
 }
 
 export type SizeConstraint = {
-	MinSize: Bindable<Vector2>?,
-	MaxSize: Bindable<Vector2>?,
+	MinSize: Bindable<Vector2?>,
+	MaxSize: Bindable<Vector2?>,
 }
 
 export type Slice = {
@@ -80,24 +101,24 @@ export type StateLayer = {
 -- can have these properties without needing to include the entire Selection type
 export type SelectionProps = {
 	Selectable: Bindable<boolean>?,
-	NextSelectionUp: Bindable<React.Ref<GuiObject>>?,
-	NextSelectionDown: Bindable<React.Ref<GuiObject>>?,
-	NextSelectionLeft: Bindable<React.Ref<GuiObject>>?,
-	NextSelectionRight: Bindable<React.Ref<GuiObject>>?,
+	NextSelectionUp: Bindable<ReactRefGuiObject>?,
+	NextSelectionDown: Bindable<ReactRefGuiObject>?,
+	NextSelectionLeft: Bindable<ReactRefGuiObject>?,
+	NextSelectionRight: Bindable<ReactRefGuiObject>?,
 }
 
 -- Unfortunately SelectionProps can't be unioned with Selection
--- without anlyze becoming incredibly unhappy, so we jsut duplicate them.
+-- without anlyze becoming incredibly unhappy, so we just duplicate them.
 export type Selection = {
 	-- SelectionProps
 	Selectable: Bindable<boolean>?,
-	NextSelectionUp: Bindable<React.Ref<GuiObject>>?,
-	NextSelectionDown: Bindable<React.Ref<GuiObject>>?,
-	NextSelectionLeft: Bindable<React.Ref<GuiObject>>?,
-	NextSelectionRight: Bindable<React.Ref<GuiObject>>?,
+	NextSelectionUp: Bindable<ReactRefGuiObject>?,
+	NextSelectionDown: Bindable<ReactRefGuiObject>?,
+	NextSelectionLeft: Bindable<ReactRefGuiObject>?,
+	NextSelectionRight: Bindable<ReactRefGuiObject>?,
 
 	-- Additional Selection properties
-	SelectionImageObject: Bindable<React.Ref<GuiObject>>?,
+	SelectionImageObject: Bindable<ReactRefGuiObject>?,
 	SelectionOrder: Bindable<number>?,
 }
 
@@ -129,9 +150,10 @@ export type GuiObjectProps = {
 	AutomaticSize: Bindable<Enum.AutomaticSize>?,
 	BorderSizePixel: Bindable<number>?,
 	BorderColor3: Bindable<Color3>?,
+	BorderMode: Bindable<Enum.BorderMode>?,
 	ClipsDescendants: Bindable<boolean>?,
 	Rotation: Bindable<number>?,
-	Size: Bindable<UDim2>?,
+	Size: Bindable<UDim2?>,
 	SizeConstraint: Bindable<Enum.SizeConstraint>?,
 
 	stateLayer: StateLayer?, -- Can this be bindable?
@@ -192,6 +214,10 @@ export type InternalTextInputRef = {
 	focus: () -> (),
 	releaseFocus: () -> (),
 	setHover: (isHovering: boolean) -> (),
+	getSelectionStart: () -> number,
+	getCursorPosition: () -> number,
+	setSelectionStart: (position: number) -> (),
+	setCursorPosition: (position: number) -> (),
 }
 
 export type TextInputRef = {

@@ -23,6 +23,7 @@ type Segment = Segment.Segment
 
 export type SegmentedControlProps = {
 	segments: { Segment },
+	-- The current selected segment.
 	value: Types.ItemId,
 	onActivated: (id: Types.ItemId) -> (),
 	size: InputSize?,
@@ -30,6 +31,7 @@ export type SegmentedControlProps = {
 
 local defaultProps = {
 	size = InputSize.Medium,
+	testId = "--foundation-segmented-control",
 }
 
 local function SegmentedControl(segmentedControlProps: SegmentedControlProps, ref: React.Ref<GuiObject>?)

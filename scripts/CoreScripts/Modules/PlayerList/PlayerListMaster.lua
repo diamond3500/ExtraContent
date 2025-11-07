@@ -1,6 +1,7 @@
 --!nonstrict
 local CorePackages = game:GetService("CorePackages")
 local CoreGui = game:GetService("CoreGui")
+local GuiService = game:GetService("GuiService")
 local StarterGui = game:GetService("StarterGui")
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
@@ -48,6 +49,10 @@ end
 local FFlagUseNewPlayerList = PlayerListPackage.Flags.FFlagUseNewPlayerList
 local FFlagAddNewPlayerListFocusNav = PlayerListPackage.Flags.FFlagAddNewPlayerListFocusNav
 local FStringPlayerListOverrideType = require(PlayerList.Flags.FStringPlayerListOverrideType)
+local FFlagModalPlayerListCloseUnfocused = PlayerListPackage.Flags.FFlagModalPlayerListCloseUnfocused
+local FFlagSetIsGamepadOnMount = game:DefineFastFlag("PlayerListSetIsGamepadOnMount", false)
+local FFlagEnableMobilePlayerListOnConsole = PlayerListPackage.Flags.FFlagEnableMobilePlayerListOnConsole
+local FFlagPlayerListUseMobileOnSmallDisplay = PlayerListPackage.Flags.FFlagPlayerListUseMobileOnSmallDisplay
 
 local PlayerListContainer = PlayerListPackage.Container.PlayerListContainer
 local LeaderboardStoreInstanceManager = PlayerListPackage.LeaderboardStoreInstanceManager
@@ -58,7 +63,13 @@ local function isSmallTouchScreen()
 	if _G.__TESTEZ_RUNNING_TEST__ then
 		return false
 	end
-	return SettingsUtil:IsSmallTouchScreen() or (FStringPlayerListOverrideType == "mobile")
+	local isSmallDisplaySize = if FFlagPlayerListUseMobileOnSmallDisplay then GuiService.ViewportDisplaySize == Enum.DisplaySize.Small else false
+	local isLargeDisplaySize = if FFlagEnableMobilePlayerListOnConsole then GuiService.ViewportDisplaySize == Enum.DisplaySize.Large else false
+	local isTouchOrGamepad = if FFlagEnableMobilePlayerListOnConsole or FFlagPlayerListUseMobileOnSmallDisplay then UserInputService.PreferredInput == Enum.PreferredInput.Touch or UserInputService.PreferredInput == Enum.PreferredInput.Gamepad else false
+	return SettingsUtil:IsSmallTouchScreen() 
+		or (FFlagEnableMobilePlayerListOnConsole and isLargeDisplaySize and isTouchOrGamepad) 
+		or (FFlagPlayerListUseMobileOnSmallDisplay and isSmallDisplaySize and isTouchOrGamepad) 
+		or (FStringPlayerListOverrideType == "mobile")
 end
 
 local function setupSettings(store)
@@ -112,15 +123,21 @@ function PlayerListMaster.new()
 		self.store:dispatch(SetSmallTouchDevice(isSmallTouchScreen()))
 	end)()
 
-	self.store:dispatch(SetTenFootInterface(TenFootInterface:IsEnabled()))
+	if FFlagEnableMobilePlayerListOnConsole then
+		self.store:dispatch(SetTenFootInterface(false))
+	else
+		self.store:dispatch(SetTenFootInterface(TenFootInterface:IsEnabled()))
+	end
 
 	coroutine.wrap(function()
 		self.store:dispatch(SetSubjectToChinaPolicies(CachedPolicyService:IsSubjectToChinaPolicies()))
 	end)()
 
-	local lastInputType = UserInputService:GetLastInputType()
-	local isGamepad = lastInputType and lastInputType.Name:find("Gamepad")
-	self.store:dispatch(SetIsUsingGamepad(isGamepad ~= nil))
+	if not FFlagUseNewPlayerList or not FFlagSetIsGamepadOnMount then
+		local lastInputType = UserInputService:GetLastInputType()
+		local isGamepad = lastInputType and lastInputType.Name:find("Gamepad")
+		self.store:dispatch(SetIsUsingGamepad(isGamepad ~= nil))
+	end
 
 	self:_trackEnabled()
 
@@ -149,6 +166,14 @@ function PlayerListMaster.new()
 		StoreProvider = self.root,
 	})
 
+	if FFlagSetIsGamepadOnMount then
+		self._setIsUsingGamepad = function()
+			local lastInputType = UserInputService:GetLastInputType()
+			local isGamepad = lastInputType and lastInputType.Name:find("Gamepad")
+			self.store:dispatch(SetIsUsingGamepad(isGamepad ~= nil))
+		end
+	end
+
 	self._mountLeaderboardStore = function()
 		LeaderboardStoreInstanceManager.createLeaderboardStoreInstance()
 	end
@@ -159,10 +184,13 @@ function PlayerListMaster.new()
 
 	if FFlagUseNewPlayerList then
 		self._mountLeaderboardStore()
+		if FFlagSetIsGamepadOnMount then
+			self._setIsUsingGamepad()
+		end
 		self.root = Roact.createElement(PlayerListContainer, {
 			leaderboardStore = LeaderboardStoreInstanceManager.getLeaderboardStoreInstance,
 			TopBarConstants = require(RobloxGui.Modules.TopBar.Constants),
-			isTenFoot = TenFootInterface:IsEnabled(),
+			isTenFoot = if FFlagEnableMobilePlayerListOnConsole then false else TenFootInterface:IsEnabled(),
 		}, {
 			PlayerListMaster = self.root,
 		})
@@ -214,11 +242,14 @@ function PlayerListMaster.new()
 end
 
 function PlayerListMaster:_updateMounted()
-	if not TenFootInterface:IsEnabled() then
+	if FFlagEnableMobilePlayerListOnConsole or not TenFootInterface:IsEnabled() then
 		local shouldMount = self.coreGuiEnabled and self.topBarEnabled
 		if shouldMount and not self.mounted then
 			if FFlagUseNewPlayerList then
 				self._mountLeaderboardStore()
+				if FFlagSetIsGamepadOnMount then
+					self._setIsUsingGamepad()
+				end
 			end
 			self.element = Roact.mount(self.root, CoreGui, "PlayerList")
 			self.mounted = true
@@ -244,6 +275,12 @@ function PlayerListMaster:_trackEnabled()
 			self.store:dispatch(SetPlayerListEnabled(enabled))
 		end
 	end)
+end
+
+if FFlagModalPlayerListCloseUnfocused then
+	function PlayerListMaster:GetIsModal()
+		return self.store:getState().displayOptions.isSmallTouchDevice
+	end
 end
 
 function PlayerListMaster:GetVisibility()

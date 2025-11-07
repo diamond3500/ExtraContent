@@ -3,15 +3,17 @@ local Cryo = require(CorePackages.Packages.Cryo)
 local Rodux = require(CorePackages.Packages.Rodux)
 local InspectAndBuyFolder = script.Parent.Parent
 local SetBundles = require(InspectAndBuyFolder.Actions.SetBundles)
+local SetFavoriteBundle = require(InspectAndBuyFolder.Actions.SetFavoriteBundle)
 local UpdateBulkPuchaseResults = require(InspectAndBuyFolder.Actions.UpdateBulkPuchaseResults)
 local SetAvatarPreviewDetails = require(InspectAndBuyFolder.Actions.SetAvatarPreviewDetails)
 local AvatarExperienceCommon = require(CorePackages.Workspace.Packages.AvatarExperienceCommon)
-local ItemRestrictions = AvatarExperienceCommon.Enums.ItemRestrictions
 local ItemType = AvatarExperienceCommon.Enums.ItemTypeEnum
 
 local FFlagAXEnableFetchAvatarPreview = require(InspectAndBuyFolder.Flags.FFlagAXEnableFetchAvatarPreview)
 local FFlagAXEnableInspectAndBuyBulkPurchase =
 	require(CorePackages.Workspace.Packages.SharedFlags).FFlagAXEnableInspectAndBuyBulkPurchase
+local FFlagAXEnableFavoritesInfoForAssetsAndBundles =
+	require(InspectAndBuyFolder.Flags.FFlagAXEnableFavoritesInfoForAssetsAndBundles)
 
 local BundleInfo = require(InspectAndBuyFolder.Models.BundleInfo)
 type SetAvatarPreviewDetails = SetAvatarPreviewDetails.SetAvatarPreviewDetails
@@ -27,6 +29,18 @@ return Rodux.createReducer(
 	{},
 	{
 		--[[
+		Sets the favorite status of a bundle.
+	]]
+		[SetFavoriteBundle.name] = if FFlagAXEnableFavoritesInfoForAssetsAndBundles
+			then function(state, action)
+				local prevBundle = state[action.id] or {}
+				local nextBundle = Cryo.Dictionary.join({}, prevBundle)
+				state[action.id] =
+					Cryo.Dictionary.join(nextBundle, BundleInfo.fromGetFavoriteForAsset(action.id, action.isFavorite))
+				return state
+			end
+			else nil,
+		--[[
 		Updates asset ownerships based on the bulk purchase results.
 	]]
 		[UpdateBulkPuchaseResults.name] = if FFlagAXEnableInspectAndBuyBulkPurchase
@@ -34,17 +48,9 @@ return Rodux.createReducer(
 				local items = action.result.Items
 				for _, item in items do
 					if item.type == Enum.MarketplaceProductType.AvatarBundle then
-						local itemRestrictions = state[item.id].itemRestrictions
-						local nextBundle = Cryo.Dictionary.join({}, state[item.id])
-						if
-							itemRestrictions and itemRestrictions[ItemRestrictions.Collectible]
-							or itemRestrictions[ItemRestrictions.Limited]
-							or itemRestrictions[ItemRestrictions.LimitedUnique]
-						then
-							-- update the resellable count by 1 if the bundle is a collectible
-							nextBundle.resellableCount = nextBundle.resellableCount + 1
-						end
-						state[item.id] = Cryo.Dictionary.join(nextBundle, BundleInfo.fromBulkPurchaseResult(item))
+						local prevBundle = Cryo.Dictionary.join({}, state[item.id])
+						state[item.id] =
+							Cryo.Dictionary.join(prevBundle, BundleInfo.fromBulkPurchaseResult(item, prevBundle))
 					end
 				end
 				return state
@@ -77,6 +83,29 @@ return Rodux.createReducer(
 			for _, bundle in ipairs(action.bundles) do
 				assert(bundle.bundleId ~= nil, "Expected a bundle id when setting a bundle's information.")
 				local currentBundle = state[bundle.bundleId] or {} :: any
+
+				-- incoming bundle
+				if FFlagAXEnableFavoritesInfoForAssetsAndBundles then
+					if bundle.assetsInBundle then
+						local mergedAssetsInBundle = {}
+
+						-- iterate through the incoming bundle assets
+						for _, asset in bundle.assetsInBundle do
+							local oldAssetsInBundle = currentBundle.assetsInBundle or {}
+							-- find the old asset in the old assetsInBundle
+							for _, oldAsset in oldAssetsInBundle do
+								if oldAsset.id == asset.id then
+									-- merge the old asset with the new asset
+									local mergedAsset = Cryo.Dictionary.join(oldAsset, asset)
+									table.insert(mergedAssetsInBundle, mergedAsset)
+									break
+								end
+							end
+						end
+						bundle.assetsInBundle = mergedAssetsInBundle
+					end
+				end
+
 				bundles[bundle.bundleId] = Cryo.Dictionary.join(currentBundle, bundle)
 				if bundles[bundle.bundleId] then
 					bundles[bundle.bundleId] = BundleInfo.getSaleDetailsForCollectibles(bundles[bundle.bundleId])

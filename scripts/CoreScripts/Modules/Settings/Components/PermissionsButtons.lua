@@ -48,17 +48,13 @@ local GetFFlagRemoveInGameChatBubbleChatReferences =
 local GetFFlagJoinWithoutMicPermissions =
 	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagJoinWithoutMicPermissions
 local GetFFlagEnableInExpVoiceUpsell = require(RobloxGui.Modules.Flags.GetFFlagEnableInExpVoiceUpsell)
-local GetFFlagEnableInExpJoinVoiceAnalytics = require(RobloxGui.Modules.Flags.GetFFlagEnableInExpJoinVoiceAnalytics)
 local GetFFlagEnableConnectDisconnectButtonAnalytics =
 	require(RobloxGui.Modules.Flags.GetFFlagEnableConnectDisconnectButtonAnalytics)
-local GetFFlagPassShouldRequestPermsArg = require(RobloxGui.Modules.Flags.GetFFlagPassShouldRequestPermsArg)
 local EngineFeatureRbxAnalyticsServiceExposePlaySessionId =
 	game:GetEngineFeature("RbxAnalyticsServiceExposePlaySessionId")
 local GetFFlagFixPermissionsButtonsEvents =
 	require(RobloxGui.Modules.Settings.Flags.GetFFlagFixPermissionsButtonsEvents)
 local GetFStringVoiceUpsellLayer = require(CorePackages.Workspace.Packages.SharedFlags).GetFStringVoiceUpsellLayer
-local GetFFlagUseMicPermForEnrollment =
-	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagUseMicPermForEnrollment
 local GetFFlagEnableInExpPhoneVoiceUpsellEntrypoints =
 	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagEnableInExpPhoneVoiceUpsellEntrypoints
 local GetFFlagEnableSeamlessVoiceConnectDisconnectButton =
@@ -143,7 +139,7 @@ function PermissionsButtons:init()
 		showSelfView = showSelfView,
 		hasCameraPermissions = false,
 		hasMicPermissions = false,
-		isFetchingMicPermissions = if GetFFlagUseMicPermForEnrollment() then true else nil,
+		isFetchingMicPermissions = true,
 	})
 
 
@@ -160,7 +156,6 @@ function PermissionsButtons:init()
 				-- confirm that we have mic permissions so we can change that state and update the UI accordingly.
 				if
 					GetFFlagEnableInExpVoiceUpsell()
-					and GetFFlagPassShouldRequestPermsArg()
 					and not self.state.hasMicPermissions
 				then
 					self:getMicPermission(false)
@@ -328,7 +323,7 @@ function PermissionsButtons:init()
 		local ageVerificationResponse = VoiceChatServiceManager:FetchAgeVerificationOverlay()
 		local voiceInExpUpsellVariant = ageVerificationResponse.showVoiceInExperienceUpsellVariant
 
-		if GetFFlagEnableInExpJoinVoiceAnalytics() and not GetFFlagEnableConnectDisconnectButtonAnalytics() then
+		if not GetFFlagEnableConnectDisconnectButtonAnalytics() then
 			VoiceChatServiceManager.Analytics:reportJoinVoiceButtonEvent(
 				"clicked",
 				self:GetInExpJoinVoiceAnalyticsData()
@@ -444,13 +439,13 @@ function PermissionsButtons:getMicPermission(shouldRequestPerms: boolean?)
 	local callback = function(response)
 		self:setState({
 			hasMicPermissions = response.hasMicPermissions,
-			isFetchingMicPermissions = if GetFFlagUseMicPermForEnrollment() then false else nil,
+			isFetchingMicPermissions = false,
 		})
 	end
 	getCamMicPermissions(
 		callback,
 		{ PermissionsProtocol.Permissions.MICROPHONE_ACCESS :: string },
-		if GetFFlagPassShouldRequestPermsArg() and shouldRequestPerms ~= nil then not shouldRequestPerms else nil,
+		if shouldRequestPerms ~= nil then not shouldRequestPerms else nil,
 		"PermissionsButtons.getMicPermission"
 	)
 end

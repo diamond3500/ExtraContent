@@ -3,18 +3,20 @@ local CorePackages = game:GetService("CorePackages")
 local JestGlobals = require(CorePackages.Packages.Dev.JestGlobals3)
 local expect = JestGlobals.expect
 local describe = JestGlobals.describe
-local beforeEach = JestGlobals.beforeEach
+local beforeAll = JestGlobals.beforeAll
+local afterAll = JestGlobals.afterAll
 local it = JestGlobals.it
 
 local Signals = require(CorePackages.Packages.Signals)
 local ChatIconVisibleSignals = require(script.Parent.ChatIconVisibleSignals)
 
-local signals
-local getValue
+local Chrome = script.Parent.Parent.Parent
+local FFlagRemoveLegacyChatConsoleCheck = require(Chrome.Flags.FFlagRemoveLegacyChatConsoleCheck)
+local FFlagExpChatWindowSyncUnibar = require(CorePackages.Workspace.Packages.SharedFlags).FFlagExpChatWindowSyncUnibar
 
-beforeEach(function()
-	signals = ChatIconVisibleSignals.new()
-	getValue = function()
+local function makeSignalsAndGetValue()
+	local signals = ChatIconVisibleSignals.new()
+	local function getValue()
 		local value
 		Signals.createEffect(function(scope)
 			local v = signals.getIsChatIconVisible(scope)
@@ -22,76 +24,102 @@ beforeEach(function()
 		end)
 		return value
 	end
-end)
+	return signals, getValue
+end
 
-it("should default unavailable (not visible)", function()
+it("should default unavailable and not visible", function()
+	print("should default unavailable and not visible")
+	local signals, getValue = makeSignalsAndGetValue()
+	print("getValue", getValue())
 	expect(getValue()).toBe(false)
 end)
 
-describe("WHEN isForceDisabledForConsoleUsecase is true", function()
-	it("should return unavailable (not visible) even if all other conditions are true", function()
-		signals.setLocalUserChat(true)
-		signals.setCoreGuiEnabled(true)
-		signals.setChatActiveCalledByDeveloper(true)
-		signals.setVisibleViaChatSelector(true)
-		signals.setForceDisableForConsoleUsecase(true)
-		expect(getValue()).toBe(false)
-	end)
-
-	it("should return unavailable (not visible) if privacy settings are off", function()
-		signals.setLocalUserChat(false)
-		signals.setCoreGuiEnabled(true)
-		signals.setForceDisableForConsoleUsecase(true)
-		expect(getValue()).toBe(false)
-	end)
-
-	it("should return unavailable (not visible) if chat selector is visible", function()
-		signals.setLocalUserChat(false)
-		signals.setCoreGuiEnabled(false)
-		signals.setVisibleViaChatSelector(true)
-		signals.setForceDisableForConsoleUsecase(true)
-		expect(getValue()).toBe(false)
-	end)
-
-	it("should return unavailable (not visible) if developer tries to reveal chat", function()
-		signals.setLocalUserChat(false)
-		signals.setCoreGuiEnabled(true)
-		signals.setChatActiveCalledByDeveloper(true)
-		signals.setForceDisableForConsoleUsecase(true)
-		expect(getValue()).toBe(false)
-	end)
-
-	it("should return unavailable (not visible) if only isForceDisabledForConsoleUsecase is true", function()
-		signals.setForceDisableForConsoleUsecase(true)
-		expect(getValue()).toBe(false)
-	end)
-
-	it(
-		"should return unavailable (not visible) if toggling isForceDisabledForConsoleUsecase from false to true",
-		function()
+if not FFlagRemoveLegacyChatConsoleCheck then
+	describe("WHEN isForceDisabledForConsoleUsecase is true", function()
+		it("should return unavailable (not visible) even if all other conditions are true", function()
+			local signals, getValue = makeSignalsAndGetValue()
 			signals.setLocalUserChat(true)
 			signals.setCoreGuiEnabled(true)
-			expect(getValue()).toBe(true)
+			if FFlagExpChatWindowSyncUnibar then
+				signals.setGameSettingsChatVisible(true)
+			else
+				signals.setChatActiveCalledByDeveloper(true)
+				signals.setVisibleViaChatSelector(true)
+			end
 			signals.setForceDisableForConsoleUsecase(true)
 			expect(getValue()).toBe(false)
-		end
-	)
+		end)
 
-	it(
-		"should return available (visible) again if isForceDisabledForConsoleUsecase is set back to false and other conditions allow",
-		function()
-			signals.setLocalUserChat(true)
+		it("should return unavailable (not visible) if privacy settings are off", function()
+			local signals, getValue = makeSignalsAndGetValue()
+			signals.setLocalUserChat(false)
 			signals.setCoreGuiEnabled(true)
 			signals.setForceDisableForConsoleUsecase(true)
 			expect(getValue()).toBe(false)
-			signals.setForceDisableForConsoleUsecase(false)
-			expect(getValue()).toBe(true)
-		end
-	)
-end)
+		end)
+
+		it("should return unavailable (not visible) if chat selector is visible", function()
+			local signals, getValue = makeSignalsAndGetValue()
+			signals.setLocalUserChat(false)
+			signals.setCoreGuiEnabled(false)
+			if FFlagExpChatWindowSyncUnibar then
+				signals.setGameSettingsChatVisible(true)
+			else
+				signals.setVisibleViaChatSelector(true)
+			end
+			signals.setForceDisableForConsoleUsecase(true)
+			expect(getValue()).toBe(false)
+		end)
+
+		it("should return unavailable (not visible) if developer tries to reveal chat", function()
+			local signals, getValue = makeSignalsAndGetValue()
+			signals.setLocalUserChat(false)
+			signals.setCoreGuiEnabled(true)
+			if FFlagExpChatWindowSyncUnibar then
+				signals.setGameSettingsChatVisible(true)
+			else
+				signals.setChatActiveCalledByDeveloper(true)
+			end
+			signals.setForceDisableForConsoleUsecase(true)
+			expect(getValue()).toBe(false)
+		end)
+
+		it("should return unavailable (not visible) if only isForceDisabledForConsoleUsecase is true", function()
+			local signals, getValue = makeSignalsAndGetValue()
+			signals.setForceDisableForConsoleUsecase(true)
+			expect(getValue()).toBe(false)
+		end)
+
+		it(
+			"should return unavailable (not visible) if toggling isForceDisabledForConsoleUsecase from false to true",
+			function()
+				local signals, getValue = makeSignalsAndGetValue()
+				signals.setLocalUserChat(true)
+				signals.setCoreGuiEnabled(true)
+				expect(getValue()).toBe(true)
+				signals.setForceDisableForConsoleUsecase(true)
+				expect(getValue()).toBe(false)
+			end
+		)
+
+		it(
+			"should return available (visible) again if isForceDisabledForConsoleUsecase is set back to false and other conditions allow",
+			function()
+				local signals, getValue = makeSignalsAndGetValue()
+				signals.setLocalUserChat(true)
+				signals.setCoreGuiEnabled(true)
+				signals.setForceDisableForConsoleUsecase(true)
+				expect(getValue()).toBe(false)
+				signals.setForceDisableForConsoleUsecase(false)
+				expect(getValue()).toBe(true)
+			end
+		)
+	end)
+end
 
 describe("WHEN privacy settings are on", function()
 	it("should return available (visible)", function()
+		local signals, getValue = makeSignalsAndGetValue()
 		signals.setLocalUserChat(true)
 		signals.setCoreGuiEnabled(true)
 		expect(getValue()).toBe(true)
@@ -99,6 +127,7 @@ describe("WHEN privacy settings are on", function()
 
 	describe("WHEN the developer disables chat", function()
 		it("should return unavailable (not visible)", function()
+			local signals, getValue = makeSignalsAndGetValue()
 			signals.setLocalUserChat(true)
 			signals.setCoreGuiEnabled(false)
 			expect(getValue()).toBe(false)
@@ -106,19 +135,29 @@ describe("WHEN privacy settings are on", function()
 
 		describe("WHEN the developer attempts to reveal chat", function()
 			it("should return unavailable (not visible)", function()
+				local signals, getValue = makeSignalsAndGetValue()
 				signals.setLocalUserChat(true)
 				signals.setCoreGuiEnabled(false)
-				signals.setChatActiveCalledByDeveloper(true)
+				if FFlagExpChatWindowSyncUnibar then
+					signals.setGameSettingsChatVisible(true)
+				else
+					signals.setChatActiveCalledByDeveloper(true)
+				end
 				expect(getValue()).toBe(false)
 			end)
 		end)
 
 		describe("WHEN chat selector visibility is toggled", function()
 			it("should remain unavailable (not visible)", function()
+				local signals, getValue = makeSignalsAndGetValue()
 				signals.setLocalUserChat(true)
 				signals.setCoreGuiEnabled(false)
-				signals.setChatActiveCalledByDeveloper(true)
-				signals.setVisibleViaChatSelector(true)
+				if FFlagExpChatWindowSyncUnibar then
+					signals.setGameSettingsChatVisible(true)
+				else
+					signals.setChatActiveCalledByDeveloper(true)
+					signals.setVisibleViaChatSelector(true)
+				end
 				expect(getValue()).toBe(false)
 			end)
 		end)
@@ -126,6 +165,7 @@ describe("WHEN privacy settings are on", function()
 
 	describe("WHEN the developer enables chat", function()
 		it("should return available (visible)", function()
+			local signals, getValue = makeSignalsAndGetValue()
 			signals.setLocalUserChat(true)
 			signals.setCoreGuiEnabled(true)
 			expect(getValue()).toBe(true)
@@ -133,18 +173,28 @@ describe("WHEN privacy settings are on", function()
 
 		describe("WHEN the developer attempts to hide chat", function()
 			it("should return available (visible)", function()
+				local signals, getValue = makeSignalsAndGetValue()
 				signals.setLocalUserChat(true)
 				signals.setCoreGuiEnabled(true)
-				signals.setChatActiveCalledByDeveloper(false)
+				if FFlagExpChatWindowSyncUnibar then
+					signals.setGameSettingsChatVisible(false)
+				else
+					signals.setChatActiveCalledByDeveloper(false)
+				end
 				expect(getValue()).toBe(true)
 			end)
 		end)
 
 		describe("WHEN the developer disables chat", function()
 			it("should return unavailable (not visible)", function()
+				local signals, getValue = makeSignalsAndGetValue()
 				signals.setLocalUserChat(true)
 				signals.setCoreGuiEnabled(true)
-				signals.setChatActiveCalledByDeveloper(false)
+				if FFlagExpChatWindowSyncUnibar then
+					signals.setGameSettingsChatVisible(false)
+				else
+					signals.setChatActiveCalledByDeveloper(false)
+				end
 				signals.setCoreGuiEnabled(false)
 				expect(getValue()).toBe(false)
 			end)
@@ -154,12 +204,15 @@ end)
 
 describe("WHEN privacy settings are off", function()
 	it("should return unavailable (not visible)", function()
+		local signals, getValue = makeSignalsAndGetValue()
+		print("WHEN privacy settings are off")
 		signals.setLocalUserChat(false)
 		expect(getValue()).toBe(false)
 	end)
 
 	describe("WHEN the developer enables chat", function()
 		it("should remain unavailable (not visible)", function()
+			local signals, getValue = makeSignalsAndGetValue()
 			signals.setLocalUserChat(false)
 			signals.setCoreGuiEnabled(true)
 			expect(getValue()).toBe(false)
@@ -167,27 +220,44 @@ describe("WHEN privacy settings are off", function()
 
 		describe("WHEN the developer attempts to hide chat", function()
 			it("should remain unavailable (not visible)", function()
+				local signals, getValue = makeSignalsAndGetValue()
 				signals.setLocalUserChat(false)
 				signals.setCoreGuiEnabled(true)
-				signals.setChatActiveCalledByDeveloper(false)
+				if FFlagExpChatWindowSyncUnibar then
+					signals.setGameSettingsChatVisible(false)
+				else
+					signals.setChatActiveCalledByDeveloper(false)
+				end
 				expect(getValue()).toBe(false)
 			end)
 		end)
 
 		describe("WHEN the developer attempts to reveal chat", function()
-			it("should transition to available (visible)", function()
+			it("should transition to available and visible", function()
+				print("\n\n=====Start should transition to available (visible)")
+				local signals, getValue = makeSignalsAndGetValue()
 				signals.setLocalUserChat(false)
 				signals.setCoreGuiEnabled(true)
-				signals.setChatActiveCalledByDeveloper(true)
+				if FFlagExpChatWindowSyncUnibar then
+					signals.setGameSettingsChatVisible(true)
+				else
+					signals.setChatActiveCalledByDeveloper(true)
+				end
+				print("\n\n=====End should transition to available (visible)", getValue())
 				expect(getValue()).toBe(true)
 			end)
 		end)
 
 		describe("WHEN the developer disables chat", function()
 			it("should remain unavailable (not visible)", function()
+				local signals, getValue = makeSignalsAndGetValue()
 				signals.setLocalUserChat(false)
 				signals.setCoreGuiEnabled(true)
-				signals.setChatActiveCalledByDeveloper(false)
+				if FFlagExpChatWindowSyncUnibar then
+					signals.setGameSettingsChatVisible(false)
+				else
+					signals.setChatActiveCalledByDeveloper(false)
+				end
 				signals.setCoreGuiEnabled(false)
 				expect(getValue()).toBe(false)
 			end)
@@ -196,11 +266,96 @@ describe("WHEN privacy settings are off", function()
 
 	describe("WHEN chat selector visibility is toggled", function()
 		it("should remain unavailable (not visible)", function()
+			local signals, getValue = makeSignalsAndGetValue()
 			signals.setLocalUserChat(false)
 			signals.setCoreGuiEnabled(true)
-			signals.setChatActiveCalledByDeveloper(false)
-			signals.setVisibleViaChatSelector(true)
+			if FFlagExpChatWindowSyncUnibar then
+				signals.setGameSettingsChatVisible(true)
+			else
+				signals.setChatActiveCalledByDeveloper(false)
+				signals.setVisibleViaChatSelector(true)
+			end
 			expect(getValue()).toBe(true)
 		end)
 	end)
 end)
+
+if FFlagExpChatWindowSyncUnibar then
+	describe("getIsChatWindowVisible", function()
+		local function makeSignalsAndGetWindowValue()
+			local signals = ChatIconVisibleSignals.new()
+			local function getWindowValue()
+				local value
+				Signals.createEffect(function(scope)
+					local v = signals.getIsChatWindowVisible(scope)
+					value = v
+				end)
+				return value
+			end
+			return signals, getWindowValue
+		end
+
+		it("should never be true if ChatIconVisible is false", function()
+			local signals, getWindowValue = makeSignalsAndGetWindowValue()
+			-- Both false by default
+			expect(getWindowValue()).toBe(false)
+
+			-- ChatIconVisible false, ChatWindowVisible should remain false
+			signals.setCoreGuiEnabled(false)
+			signals.setGameSettingsChatVisible(true)
+			expect(getWindowValue()).toBe(false)
+
+			-- ChatIconVisible true, ChatWindowVisible can be true if GameSettingsChatVisible is true
+			signals.setCoreGuiEnabled(true)
+			signals.setLocalUserChat(true)
+			signals.setGameSettingsChatVisible(true)
+			expect(getWindowValue()).toBe(true)
+
+			-- ChatIconVisible true, but GameSettingsChatVisible false => ChatWindowVisible false
+			signals.setGameSettingsChatVisible(false)
+			expect(getWindowValue()).toBe(false)
+
+			-- ChatIconVisible false again, ChatWindowVisible must be false
+			signals.setCoreGuiEnabled(false)
+			expect(getWindowValue()).toBe(false)
+		end)
+
+		it("should be true only when both ChatIconVisible and GameSettingsChatVisible are true", function()
+			local signals, getWindowValue = makeSignalsAndGetWindowValue()
+			signals.setCoreGuiEnabled(true)
+			signals.setLocalUserChat(true)
+
+			-- Only ChatIconVisible true, GameSettingsChatVisible false
+			signals.setGameSettingsChatVisible(false)
+			expect(getWindowValue()).toBe(false)
+
+			-- Both true
+			signals.setGameSettingsChatVisible(true)
+			expect(getWindowValue()).toBe(true)
+
+			-- Only GameSettingsChatVisible true, ChatIconVisible false
+			signals.setCoreGuiEnabled(false)
+			expect(getWindowValue()).toBe(false)
+		end)
+
+		it("should react to toggling ChatIconVisible and GameSettingsChatVisible", function()
+			local signals, getWindowValue = makeSignalsAndGetWindowValue()
+			signals.setCoreGuiEnabled(true)
+			signals.setLocalUserChat(true)
+			signals.setGameSettingsChatVisible(false)
+			expect(getWindowValue()).toBe(false)
+
+			signals.setGameSettingsChatVisible(true)
+			expect(getWindowValue()).toBe(true)
+
+			signals.setCoreGuiEnabled(false)
+			expect(getWindowValue()).toBe(false)
+
+			signals.setCoreGuiEnabled(true)
+			expect(getWindowValue()).toBe(true)
+
+			signals.setGameSettingsChatVisible(false)
+			expect(getWindowValue()).toBe(false)
+		end)
+	end)
+end

@@ -1,6 +1,8 @@
 --!nonstrict
 local CorePackages = game:GetService("CorePackages")
 
+local PlayerList = script:FindFirstAncestor("PlayerList")
+
 local Cryo = require(CorePackages.Packages.Cryo)
 local Roact = require(CorePackages.Packages.Roact)
 local RoactRodux = require(CorePackages.Packages.RoactRodux)
@@ -25,6 +27,8 @@ local ImageSetLabel = UIBlox.Core.ImageSet.ImageSetLabel
 local Images = UIBlox.App.ImageSet.Images
 
 local FFlagAddMobilePlayerListScaling = PlayerListPackage.Flags.FFlagAddMobilePlayerListScaling
+local FFlagEnableMobilePlayerListOnConsole = PlayerListPackage.Flags.FFlagEnableMobilePlayerListOnConsole
+local FFlagPlayerListAddConnectionButtonFocusNav = require(PlayerList.Flags.FFlagPlayerListAddConnectionButtonFocusNav)
 
 local DropDownButton = Roact.PureComponent:extend("DropDownButton")
 
@@ -149,6 +153,7 @@ function DropDownButton:render()
 				BackgroundColor3 = Color3.fromRGB(0, 0, 0),
 				AutoButtonColor = false,
 				BorderSizePixel = 0,
+				Selectable = if FFlagPlayerListAddConnectionButtonFocusNav then not rightButtonsVisible else nil,
 
 				[Roact.Event.Activated] = (not rightButtonsVisible) and self.props.onActivated or nil,
 
@@ -243,7 +248,7 @@ function DropDownButton:render()
 						Size = UDim2.new(1, -textLabelSizeOffset, 1, 0),
 						Text = self.props.text,
 						Font = style.Font.Header2.Font,
-						TextSize = style.Font.BaseSize * style.Font.Header2.RelativeSize,
+						TextSize = if FFlagEnableMobilePlayerListOnConsole then layoutValues.DropDownButtonTextSize else style.Font.BaseSize * style.Font.Header2.RelativeSize,
 						TextColor3 = style.Theme.TextEmphasis.Color,
 						TextTransparency = style.Theme.TextEmphasis.Transparency,
 						TextXAlignment = Enum.TextXAlignment.Left,

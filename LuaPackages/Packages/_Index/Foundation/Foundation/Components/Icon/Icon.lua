@@ -40,6 +40,7 @@ export type IconProps = {
 local defaultProps = {
 	size = IconSize.Medium,
 	variant = IconVariant.Regular,
+	testId = "--foundation-icon",
 }
 
 local function Icon(iconProps: IconProps, ref: React.Ref<GuiObject>?)
@@ -106,7 +107,7 @@ local function Icon(iconProps: IconProps, ref: React.Ref<GuiObject>?)
 						MaxTextSize = fontSize,
 					})
 					else nil,
-				Children = React.createElement(React.Fragment, props.children),
+				Children = React.createElement(React.Fragment, nil, props.children),
 			}
 		)
 	end

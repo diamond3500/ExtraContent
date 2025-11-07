@@ -20,6 +20,7 @@ export type RadioGroupProps = {
 
 local defaultProps = {
 	Selectable = true,
+	testId = "--foundation-radio-group",
 }
 
 local function RadioGroup(radioGroupProps: RadioGroupProps, ref: React.Ref<GuiObject>?)
@@ -40,7 +41,7 @@ local function RadioGroup(radioGroupProps: RadioGroupProps, ref: React.Ref<GuiOb
 	return React.createElement(
 		View,
 		withCommonProps(props, {
-			tag = "auto-xy col gap-large",
+			tag = "auto-xy col gap-medium",
 			ref = ref,
 		}),
 		{
@@ -49,6 +50,7 @@ local function RadioGroup(radioGroupProps: RadioGroupProps, ref: React.Ref<GuiOb
 					value = value,
 					onValueChanged = onValueChanged,
 					Selectable = props.Selectable,
+					testId = props.testId,
 				},
 			}, props.children),
 		}

@@ -23,7 +23,6 @@ local FFlagChromeShortcutAddRespawnLeaveToIEM = SharedFlags.FFlagChromeShortcutA
 local FFlagChromeShortcutRemoveLeaveOnRespawnPage = SharedFlags.FFlagChromeShortcutRemoveLeaveOnRespawnPage
 local FFlagChromeShortcutRemoveRespawnOnLeavePage = SharedFlags.FFlagChromeShortcutRemoveRespawnOnLeavePage
 local FFlagConsoleChatUseChromeFocusUtils = SharedFlags.FFlagConsoleChatUseChromeFocusUtils
-local FFlagShortcutBarUseTokens = SharedFlags.FFlagShortcutBarUseTokens
 local FFlagChromeFixMenuIconBackButton = SharedFlags.FFlagChromeFixMenuIconBackButton
 local FFlagChromeShortcutChatOpenKeyboard = SharedFlags.FFlagChromeShortcutChatOpenKeyboard
 local FFlagAddSwitchTabHintsToIEM = SharedFlags.FFlagAddSwitchTabHintsToIEM
@@ -38,10 +37,12 @@ local FFlagRemoveLeaveShortcutFromLeaveConfirm = ChromeSharedFlags.FFlagRemoveLe
 local FFlagRemoveRespawnShortcutFromRespawnConfirmation =
 	ChromeSharedFlags.FFlagRemoveRespawnShortcutFromRespawnConfirmation
 
+local FFlagFixBackOnTopBarTriggeringDevUI = game:DefineFastFlag("FFlagFixBackOnTopBarTriggeringDevUI", false)
+
 local ChatSelector = if FFlagConsoleChatOnExpControls then require(RobloxGui.Modules.ChatSelector) else nil :: never
 local leaveGame = require(RobloxGui.Modules.Settings.leaveGame)
 
-local FFlagConsoleSinglePressIntegrationExit = SharedFlags.FFlagConsoleSinglePressIntegrationExit
+local FFlagEnableChromeShortcutBar = SharedFlags.FFlagEnableChromeShortcutBar
 local FFlagShowUnibarOnVirtualCursor = SharedFlags.FFlagShowUnibarOnVirtualCursor
 
 local leaveActionProps = {
@@ -134,6 +135,9 @@ local function activateBack(): Enum.ContextActionResult?
 		if not SettingsHub:GetVisibility() then
 			ChromeService:selectMenuIcon()
 		end
+		if FFlagFixBackOnTopBarTriggeringDevUI then
+			return Enum.ContextActionResult.Sink
+		end
 	elseif inFocusNav or isMenuIconSelected then
 		local subMenuId = ChromeService:currentSubMenu():get()
 		if subMenuId then
@@ -146,14 +150,20 @@ local function activateBack(): Enum.ContextActionResult?
 			if FFlagChromeFixMenuIconBackButton then
 				ChromeFocusUtils.MenuIconSelectedSignal:set(false)
 			end
-			if FFlagConsoleSinglePressIntegrationExit then
+			if not FFlagFixBackOnTopBarTriggeringDevUI and FFlagEnableChromeShortcutBar then
 				return Enum.ContextActionResult.Pass
 			end
+		end
+		if FFlagFixBackOnTopBarTriggeringDevUI then
+			return Enum.ContextActionResult.Sink
 		end
 	elseif FFlagConsoleChatUseChromeFocusUtils and ExpChatFocusNavigationStore.getChatInputBarFocused(false) then
 		ChromeFocusUtils.FocusOnChrome(function()
 			ExpChatFocusNavigationStore.unfocusChatInputBar()
 		end, "chat")
+		if FFlagFixBackOnTopBarTriggeringDevUI then
+			return Enum.ContextActionResult.Sink
+		end
 	end
 	return
 end
@@ -266,7 +276,7 @@ function registerShortcuts()
 		id = "back",
 		label = "CoreScripts.TopBar.Back",
 		keyCode = Enum.KeyCode.ButtonB,
-		displayPriority = if FFlagShortcutBarUseTokens then -10 else nil,
+		displayPriority = if FFlagEnableChromeShortcutBar then -10 else nil,
 		integration = nil,
 		actionName = "UnibarGamepadBack",
 		activated = activateBack,

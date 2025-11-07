@@ -8,6 +8,7 @@
 local root = script.Parent.Parent
 
 local getEngineFeatureRemoveProxyWrap = require(root.flags.getEngineFeatureRemoveProxyWrap)
+local getFFlagUGCValidateCheckHSRFileDataFix = require(root.flags.getFFlagUGCValidateCheckHSRFileDataFix)
 
 local Constants = require(root.Constants)
 local checkForProxyWrap = require(root.util.checkForProxyWrap)
@@ -34,7 +35,13 @@ local function getAssetUrlId(contentId)
 	if not contentId then
 		return nil
 	end
-	local id = string.match(contentId, "^%.com/asset/%?id=(%d+)$")
+
+	local id = nil
+	if getFFlagUGCValidateCheckHSRFileDataFix() then
+		id = string.match(contentId, "^%.com//?asset/%?id=(%d+)$") -- allows for one or two forward slashes after '.com'
+	else
+		id = string.match(contentId, "^%.com/asset/%?id=(%d+)$")
+	end
 	return id
 end
 

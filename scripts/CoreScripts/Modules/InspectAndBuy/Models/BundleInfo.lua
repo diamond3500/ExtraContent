@@ -24,9 +24,13 @@ local InspectAndBuyFolder = script.Parent.Parent
 
 local Constants = require(InspectAndBuyFolder.Constants)
 local AvatarExperienceInspectAndBuy = require(CorePackages.Workspace.Packages.AvatarExperienceInspectAndBuy)
+local AvatarExperienceCommon = require(CorePackages.Workspace.Packages.AvatarExperienceCommon)
+local ItemRestrictions = AvatarExperienceCommon.Enums.ItemRestrictions
+
 type AvatarPreviewItem = AvatarExperienceInspectAndBuy.AvatarPreviewItem
 type BundleInfo = AvatarExperienceInspectAndBuy.BundleInfo
 type BulkPurchaseResultItem = AvatarExperienceInspectAndBuy.BulkPurchaseResultItem
+type ItemDetails = AvatarExperienceInspectAndBuy.ItemDetails
 
 local FFlagAXParseAdditionalItemDetailsFromCatalog =
 	require(InspectAndBuyFolder.Flags.FFlagAXParseAdditionalItemDetailsFromCatalog)
@@ -73,14 +77,39 @@ end
 --[[
     Used to process ownership of a bundle based on the PromptBulkPurchaseFinished result
 ]]
-function BundleInfo.fromBulkPurchaseResult(bulkPurchaseResult: BulkPurchaseResultItem): BundleInfo
+function BundleInfo.fromBulkPurchaseResult(
+	bulkPurchaseResult: BulkPurchaseResultItem,
+	prevBundle: BundleInfo?
+): BundleInfo
 	local newBundle = BundleInfo.new()
+	local itemRestrictions = if prevBundle and prevBundle.itemRestrictions then prevBundle.itemRestrictions else {}
+	newBundle.resellableCount = if prevBundle and prevBundle.resellableCount then prevBundle.resellableCount else 0
+
 	if
 		bulkPurchaseResult.status == Enum.MarketplaceItemPurchaseStatus.Success
 		and bulkPurchaseResult.type == Enum.MarketplaceProductType.AvatarBundle
 	then
 		newBundle.owned = true
+
+		-- update the resellable count by 1 if the bundle is a collectible
+		if
+			itemRestrictions[ItemRestrictions.Collectible]
+			or itemRestrictions[ItemRestrictions.Limited]
+			or itemRestrictions[ItemRestrictions.LimitedUnique]
+		then
+			newBundle.resellableCount = newBundle.resellableCount + 1
+		end
 	end
+	return newBundle
+end
+
+--[[
+	Sets the favorite status of a bundle.
+]]
+function BundleInfo.fromGetFavoriteForAsset(id: string, isFavorite: boolean): BundleInfo
+	local newBundle = BundleInfo.new()
+	newBundle.bundleId = tostring(id)
+	newBundle.isFavorited = isFavorite
 	return newBundle
 end
 
@@ -103,8 +132,19 @@ function BundleInfo.fromAvatarPreviewItem(avatarPreviewItem: AvatarPreviewItem):
 	newBundle.bundleType = tostring(avatarPreviewItem.bundleType)
 	newBundle.noPriceStatus = avatarPreviewItem.noPriceStatus
 
-	-- parse assetsInBundle field
-	newBundle.assetsInBundle = avatarPreviewItem.assetsInBundle
+	-- parse assetsInBundle field and turn the number ids into string ids
+	local stringAssetsInBundle = {}
+	if avatarPreviewItem.assetsInBundle then
+		for _, asset in avatarPreviewItem.assetsInBundle do
+			table.insert(stringAssetsInBundle, {
+				id = tostring(asset.id),
+				assetType = tostring(asset.assetType),
+				isIncluded = asset.isIncluded,
+				meta = asset.meta,
+			})
+		end
+	end
+	newBundle.assetsInBundle = stringAssetsInBundle
 
 	-- parse item restrictions for bundle
 	if avatarPreviewItem.itemRestrictions then
@@ -165,6 +205,38 @@ function BundleInfo.fromGetAssetBundles(bundleInfo)
 	return newBundle
 end
 
+function BundleInfo.fromGetItemDetailsV2(itemDetails: ItemDetails): BundleInfo
+	local newBundle = BundleInfo.new()
+
+	newBundle.bundleId = tostring(itemDetails.id)
+	newBundle.isForSale = itemDetails.isPurchasable
+	newBundle.price = itemDetails.price or 0
+	newBundle.hasResellers = itemDetails.hasResellers
+	newBundle.collectibleItemId = itemDetails.collectibleItemId
+
+	newBundle.remaining = itemDetails.unitsAvailableForConsumption
+	newBundle.collectibleTotalQuantity = itemDetails.totalQuantity
+	newBundle.collectibleLowestResalePrice = itemDetails.lowestResalePrice
+	newBundle.isOffSale = itemDetails.isOffSale
+	newBundle.saleLocationType = itemDetails.saleLocationType
+	newBundle.numFavorites = itemDetails.favoriteCount
+	newBundle.catalogPriceStatus = itemDetails.priceStatus
+
+	-- parse the assets in the bundle
+	local assetsInBundle = {}
+	if itemDetails.bundledItems then
+		for _, bundleAsset in itemDetails.bundledItems do
+			table.insert(assetsInBundle, {
+				id = tostring(bundleAsset.id),
+				name = bundleAsset.name,
+			})
+		end
+	end
+	newBundle.assetsInBundle = assetsInBundle
+
+	return newBundle
+end
+
 function BundleInfo.fromGetItemDetails(itemDetails)
 	local newBundle = BundleInfo.new()
 
@@ -181,6 +253,18 @@ function BundleInfo.fromGetItemDetails(itemDetails)
 		newBundle.collectibleLowestResalePrice = itemDetails.LowestResalePrice
 		newBundle.isOffSale = itemDetails.IsOffSale
 		newBundle.saleLocationType = itemDetails.SaleLocationType
+		newBundle.numFavorites = itemDetails.FavoriteCount
+		newBundle.catalogPriceStatus = itemDetails.PriceStatus
+
+		-- parse the assets in the bundle
+		local assetsInBundle = {}
+		for _, bundleAsset in itemDetails.BundledItems do
+			table.insert(assetsInBundle, {
+				id = tostring(bundleAsset.Id),
+				name = bundleAsset.Name,
+			})
+		end
+		newBundle.assetsInBundle = assetsInBundle
 	end
 
 	return newBundle

@@ -47,6 +47,8 @@ local FFlagPlayerListReduceRerenders = require(PlayerList.Flags.FFlagPlayerListR
 local FFlagNavigateToBlockingModal = require(RobloxGui.Modules.Common.Flags.FFlagNavigateToBlockingModal)
 local FFlagAddNewPlayerListMobileFocusNav = PlayerListPackage.Flags.FFlagAddNewPlayerListMobileFocusNav
 local FFlagAddMobilePlayerListScaling = PlayerListPackage.Flags.FFlagAddMobilePlayerListScaling
+local FFlagPlayerListAddConnectionButtonFocusNav = require(PlayerList.Flags.FFlagPlayerListAddConnectionButtonFocusNav)
+local FFlagFixPlayerListBlockingModalFocusNav = PlayerListPackage.Flags.FFlagFixPlayerListBlockingModalFocusNav
 
 local BlockPlayer = require(PlayerList.Thunks.BlockPlayer)
 local UnblockPlayer = require(PlayerList.Thunks.UnblockPlayer)
@@ -138,6 +140,7 @@ function PlayerDropDown:createFriendButton(playerRelationship)
 		dropDownOpen = self.props.isVisible,
 		requestFriendship = self.props.requestFriendship,
 		contentVisible = self.state.contentVisible,
+		isUsingGamepad = if FFlagPlayerListAddConnectionButtonFocusNav then self.props.isUsingGamepad else nil,
 	})
 end
 
@@ -163,7 +166,14 @@ function PlayerDropDown:createBlockButton(playerRelationship)
 					onBlockButtonActivated(selectedPlayer, nil, self.__componentName, {
 						onBlockingSuccess = function()
 							self.props.blockPlayerSuccess(selectedPlayer)
-						end
+						end,
+						onBlockingModalClose = if FFlagFixPlayerListBlockingModalFocusNav 
+							then function()
+								if self.props.isUsingGamepad then
+										self.props.focusGuiObject(self.buttonsContainerRef.current)
+									end
+								end
+							else nil,
 					})
 				else
 					self.props.blockPlayer(selectedPlayer)
@@ -282,6 +292,11 @@ function PlayerDropDown:render()
 			AutoButtonColor = false,
 			Active = self.props.isVisible,
 			Image = "",
+			SelectionGroup = if FFlagFixPlayerListBlockingModalFocusNav then true else nil,
+			SelectionBehaviorUp = if FFlagFixPlayerListBlockingModalFocusNav then Enum.SelectionBehavior.Stop else nil,
+			SelectionBehaviorDown = if FFlagFixPlayerListBlockingModalFocusNav then Enum.SelectionBehavior.Stop else nil,
+			SelectionBehaviorLeft = if FFlagFixPlayerListBlockingModalFocusNav then Enum.SelectionBehavior.Stop else nil,
+			SelectionBehaviorRight = if FFlagFixPlayerListBlockingModalFocusNav then Enum.SelectionBehavior.Stop else nil,
 			[Roact.Event.Activated] = self.props.closeDropDown,
 			[Roact.Ref] = self.imageButtonRef,
 		}, {
@@ -328,11 +343,13 @@ function PlayerDropDown:didUpdate(previousProps, previousState)
 		if self.props.isUsingGamepad and (previousState.contentVisible ~= self.state.contentVisible or not self.props.focusedGuiObject) then
 			if self.state.contentVisible and self.buttonsContainerRef.current then
 				self.props.focusGuiObject(self.buttonsContainerRef.current)
-				self.buttonsContainerRef.current.SelectionGroup = true
-				self.buttonsContainerRef.current.SelectionBehaviorUp = Enum.SelectionBehavior.Stop
-				self.buttonsContainerRef.current.SelectionBehaviorDown = Enum.SelectionBehavior.Stop
-				self.buttonsContainerRef.current.SelectionBehaviorLeft = Enum.SelectionBehavior.Stop
-				self.buttonsContainerRef.current.SelectionBehaviorRight = Enum.SelectionBehavior.Stop
+				if not FFlagFixPlayerListBlockingModalFocusNav then
+					self.buttonsContainerRef.current.SelectionGroup = true
+					self.buttonsContainerRef.current.SelectionBehaviorUp = Enum.SelectionBehavior.Stop
+					self.buttonsContainerRef.current.SelectionBehaviorDown = Enum.SelectionBehavior.Stop
+					self.buttonsContainerRef.current.SelectionBehaviorLeft = Enum.SelectionBehavior.Stop
+					self.buttonsContainerRef.current.SelectionBehaviorRight = Enum.SelectionBehavior.Stop
+				end
 			end
 		end
 	end
@@ -402,7 +419,7 @@ local function PlayerDropDownWrapper(props)
 
 	local focusGuiObject = ReactFocusNavigation.useFocusGuiObject()
 	local focusedGuiObject = ReactFocusNavigation.useFocusedGuiObject()
-	
+
 	return Roact.createElement(PlayerDropDown, Cryo.Dictionary.join(props, {
 		focusGuiObject = focusGuiObject,
 		focusedGuiObject = focusedGuiObject,

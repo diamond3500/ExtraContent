@@ -14,6 +14,11 @@ local Constants = require(root.Components.Constants)
 local TnSIXPWrapper = require(root.IXP.TnSIXPWrapper)
 local Cryo = require(CorePackages.Packages.Cryo)
 
+local submitChatLineReport = require(root.Utility.submitChatLineReport)
+
+local FFlagInGameMenuAddChatLineReporting =
+	require(CorePackages.Workspace.Packages.SharedFlags).FFlagInGameMenuAddChatLineReporting
+
 function isEligibleForVoiceSubmit(menuUIState: Types.ReportPersonState, utilityProps: Types.MenuUtilityProps)
 	return menuUIState.allegedAbuser ~= nil
 		and menuUIState.allegedAbuserId ~= nil
@@ -30,7 +35,12 @@ function isEligibleForRAOtherSubmit(menuUIState: Types.ReportPersonState)
 		and PlayersService.LocalPlayer ~= nil
 end
 function isEligibleForTextSubmit(menuUIState: Types.ReportPersonState)
-	return menuUIState.allegedAbuser ~= nil and menuUIState.abuseReason ~= nil
+	if FFlagInGameMenuAddChatLineReporting then
+		return (menuUIState.selectedMessage ~= nil or menuUIState.allegedAbuser ~= nil)
+			and menuUIState.abuseReason ~= nil
+	else
+		return menuUIState.allegedAbuser ~= nil and menuUIState.abuseReason ~= nil
+	end
 end
 
 local SubmitReportButtonMenuConfig: Types.ButtonMenuItemType = {
@@ -101,9 +111,21 @@ local SubmitReportButtonMenuConfig: Types.ButtonMenuItemType = {
 			or methodOfAbuse == nil
 		then
 			if isEligibleForTextSubmit(menuUIState) then
-				spawn(function()
-					PlayersService:ReportAbuse(allegedAbuser, abuseReason, menuUIState.comment)
-				end)
+				if FFlagInGameMenuAddChatLineReporting and menuUIState.selectedMessage then
+					submitChatLineReport({
+						localPlayerUserId = PlayersService.LocalPlayer.UserId,
+						abuserUserId = menuUIState.selectedMessage.userId,
+						abuseReason = abuseReason,
+						selectedMessage = menuUIState.selectedMessage,
+						abuseDescription = menuUIState.comment,
+						orderedMessages = menuUIState.orderedMessages,
+						reportTargetUser = menuUIState.selectedMessage.userId,
+					})
+				else
+					spawn(function()
+						PlayersService:ReportAbuse(allegedAbuser, abuseReason, menuUIState.comment)
+					end)
+				end
 				utilityProps.analyticsDispatch({ type = Constants.AnalyticsActions.SetSubmissionCompleted })
 				local successToastMessage = getToastMessageFromAbuseReason(abuseReason)
 				utilityProps.onReportComplete(successToastMessage)
@@ -124,7 +146,12 @@ local SubmitReportButtonMenuConfig: Types.ButtonMenuItemType = {
 							utilityProps.reportAnythingState,
 							utilityProps.reportAnythingAnalytics.getAccumulatedParameters()
 						)
-						PlayersService:ReportAbuseV3(PlayersService.LocalPlayer, request)
+
+						if game:GetEngineFeature("WHAM2165") and methodOfAbuse == Constants.AbuseMethods.Avatar then
+							PlayersService:ReportAvatarAbuse(allegedAbuserId, request)
+						else
+							PlayersService:ReportAbuseV3(PlayersService.LocalPlayer, request)
+						end
 
 						utilityProps.analyticsDispatch({ type = Constants.AnalyticsActions.SetSubmissionCompleted })
 						local successToastMessage = getToastMessageFromAbuseReason(abuseReason, true)

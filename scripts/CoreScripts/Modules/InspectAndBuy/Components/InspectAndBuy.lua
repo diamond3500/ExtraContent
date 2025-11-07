@@ -15,6 +15,9 @@ local Symbol = require(CorePackages.Workspace.Packages.AppCommonLib).Symbol
 local renderWithCoreScriptsStyleProvider = require(CoreGui.RobloxGui.Modules.Common.renderWithCoreScriptsStyleProvider)
 local UIBlox = require(CorePackages.Packages.UIBlox)
 local SelectionCursorProvider = UIBlox.App.SelectionImage.SelectionCursorProvider
+local IXPUtils = require(CorePackages.Workspace.Packages.IxpUtils)
+local FStringAXInspectAndBuyLayerName = game:DefineFastString("AXInspectAndBuyLayerName", "Experience.Menu")
+local FFlagEnableInspectAndBuyExposureLogging = game:DefineFastFlag("AXEnableInspectAndBuyExposureLogging", false)
 
 local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 
@@ -29,7 +32,7 @@ local ChromeService = if ChromeEnabled() then require(Chrome.Service) else nil :
 
 local SharedFlags = require(CorePackages.Workspace.Packages.SharedFlags)
 local FFlagChromeHideShortcutBarOnInspectAndBuy = SharedFlags.FFlagChromeHideShortcutBarOnInspectAndBuy
-local FFlagChromeEnabledShortcutBarFix = SharedFlags.FFlagChromeEnabledShortcutBarFix
+local FFlagEnableConsoleExpControls = SharedFlags.FFlagEnableConsoleExpControls
 
 local InspectAndBuyFolder = script.Parent.Parent
 local SetDetailsInformation = require(InspectAndBuyFolder.Actions.SetDetailsInformation)
@@ -63,6 +66,11 @@ local InspectAndBuyContext = require(InspectAndBuyFolder.Components.InspectAndBu
 local CloseOverlay = require(InspectAndBuyFolder.Actions.CloseOverlay)
 local AvatarExperienceInspectAndBuy = require(CorePackages.Workspace.Packages.AvatarExperienceInspectAndBuy)
 local getViewType = AvatarExperienceInspectAndBuy.Utils.getViewType
+local InspectAndBuyVersion = AvatarExperienceInspectAndBuy.Enums.InspectAndBuyVersion
+local FFlagEnableInspectAndBuyV2RootFlag =
+	require(CorePackages.Workspace.Packages.SharedFlags).FFlagEnableInspectAndBuyV2RootFlag
+local FFlagAXEnableInspectAndBuyVersionAnalytics =
+	require(InspectAndBuyFolder.Flags.FFlagAXEnableInspectAndBuyVersionAnalytics)
 
 local CachedPolicyService = require(CorePackages.Workspace.Packages.CachedPolicyService)
 
@@ -125,7 +133,22 @@ function InspectAndBuy:init()
 	local ctx = self.props.ctx
 	self.connections = {}
 	self.network = self.props.network or Network.new()
-	self.analytics = Analytics.new(playerId, ctx)
+
+	--[[
+		the root flag will determine whether the UI is V1 or V2
+		the analytics flag should be de-coupled from the root flag so it is available on the old and new UI
+	]]
+	self.analytics = (
+		if FFlagAXEnableInspectAndBuyVersionAnalytics
+			then Analytics.new(
+				playerId,
+				ctx,
+				if FFlagEnableInspectAndBuyV2RootFlag
+					then InspectAndBuyVersion.Version2
+					else InspectAndBuyVersion.Version1
+			)
+			else Analytics.new(playerId, ctx)
+	) :: any
 	self.humanoidDescription = self.props.humanoidDescription
 
 	self.analytics.reportOpenInspectMenu()
@@ -185,9 +208,14 @@ function InspectAndBuy:didMount()
 	self:configureInputType()
 	self:pushMouseIconOverride()
 
+	if FFlagEnableInspectAndBuyExposureLogging then
+		-- log exposure for both V1 and V2 UIs
+		IXPUtils.logLayerExposure(FStringAXInspectAndBuyLayerName)
+	end
+
 	if
 		FFlagChromeHideShortcutBarOnInspectAndBuy
-		and (if FFlagChromeEnabledShortcutBarFix then ChromeEnabled() else ChromeEnabled)
+		and (if FFlagEnableConsoleExpControls then ChromeEnabled() else ChromeEnabled)
 	then
 		ChromeService:setHideShortcutBar(MODULE_NAME, true)
 	end
@@ -296,7 +324,7 @@ function InspectAndBuy:willUnmount()
 
 	if
 		FFlagChromeHideShortcutBarOnInspectAndBuy
-		and (if FFlagChromeEnabledShortcutBarFix then ChromeEnabled() else ChromeEnabled)
+		and (if FFlagEnableConsoleExpControls then ChromeEnabled() else ChromeEnabled)
 	then
 		ChromeService:setHideShortcutBar(MODULE_NAME, false)
 	end
@@ -306,15 +334,18 @@ function InspectAndBuy:render()
 	local localPlayerModel = self.localPlayerModel
 
 	if FFlagAXEnableNewInspectAndBuyContainer then
-		return Roact.createElement(CoreScriptsRootProvider, {}, {
-			FocusNavigationWrapper = Roact.createElement(FocusRoot, {
-				surfaceIdentifier = FocusNavigableSurfaceIdentifierEnum.CentralOverlay,
-			}, {
-				StoreProvider = Roact.createElement(RoactRodux.StoreProvider, {
-					store = self.state.store,
+		return Roact.createElement("Folder", { Name = "InspectAndBuyApp" }, {
+			CoreScriptsRootProvider = Roact.createElement(CoreScriptsRootProvider, {}, {
+				FocusNavigationWrapper = Roact.createElement(FocusRoot, {
+					surfaceIdentifier = FocusNavigableSurfaceIdentifierEnum.CentralOverlay,
 				}, {
-					Container = Roact.createElement(InspectAndBuyBaseContainer, {
-						localPlayerModel = localPlayerModel,
+					StoreProvider = Roact.createElement(RoactRodux.StoreProvider, {
+						store = self.state.store,
+					}, {
+						Container = Roact.createElement(InspectAndBuyBaseContainer, {
+							localPlayerModel = localPlayerModel,
+							analytics = self.analytics,
+						}),
 					}),
 				}),
 			}),

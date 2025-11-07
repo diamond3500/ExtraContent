@@ -21,9 +21,12 @@ local FFlagNavigateToBlockingModal = require(Modules.Common.Flags.FFlagNavigateT
 local FFlagEnableNewBlockingModal = require(Modules.Common.Flags.FFlagEnableNewBlockingModal)
 local FFlagEnableToastForBlockingModal = require(Modules.Common.Flags.FFlagEnableToastForBlockingModal)
 local FFlagRenderPeoplePageOnTabSwitch = game:DefineFastFlag("RenderPeoplePageOnTabSwitch", false)
+local FFlagRemovePeoplePageFoundationProvider = game:DefineFastFlag("RemovePeoplePageFoundationProvider", false)
 
 -- Chrome check
+local Chrome = RobloxGui.Modules.Chrome
 local ChromeEnabled = require(RobloxGui.Modules.Chrome.Enabled)()
+local LocalStore = if ChromeEnabled then require(Chrome.ChromeShared.Service.LocalStore) else nil
 
 -- Modules
 local Foundation = require(CorePackages.Packages.Foundation)
@@ -39,6 +42,7 @@ local locales = Localization.new(LocalizationService.RobloxLocaleId)
 local BuilderIcons = require(CorePackages.Packages.BuilderIcons)
 local BlockingModalScreen = require(Modules.Settings.Components.Blocking.BlockingModalScreen)
 local migrationLookup = BuilderIcons.Migration['uiblox']
+local PeopleService = require(CorePackages.Workspace.Packages.PeopleService)
 
 -- Focus Navigation
 local FocusNavigationUtils = require(CorePackages.Workspace.Packages.FocusNavigationUtils)
@@ -55,6 +59,10 @@ if FFlagRefactorPeoplePage() then
 	Integrations = require(Modules.Settings.Integrations)
 	Utils = Integrations.Utils
 end
+
+-- Flags
+local PeopleFlags = PeopleService.getService("Flags")
+local GetFFlagAddPeoplePageCardLayout = PeopleFlags.GetFFlagAddPeoplePageCardLayout
 
 local tree: ReactRoblox.RootType? = nil
 local getDisplayed, setDisplayed = Signals.createSignal(false)
@@ -110,28 +118,38 @@ local function createPeoplePage()
 		local PeopleConditionalView = function()
 			local displayed = SignalsReact.useSignalState(getDisplayed)
 
-			local People = if displayed then React.createElement(CoreScriptsRootProvider, {}, {
-				LocalizationProvider = React.createElement(LocalizationProvider, {
-					localization = locales,
-				}, {
-					FoundationProvider = React.createElement(FoundationProvider, {
+			-- Remove function and place elements inline when FFlagRemovePeoplePageFoundationProvider is cleaned up
+			local function withFoundationProvider(children)
+				if FFlagRemovePeoplePageFoundationProvider then
+					return children
+				else
+					return React.createElement(FoundationProvider, {
 						theme = Foundation.Enums.Theme.Dark,
 						device = Utils.getDeviceType(),
-					}, {
-						FocusRoot = React.createElement(PeopleFocusRoot, {}, {
-							PeopleReactView = React.createElement(PeopleReactView, {
-								blockingModalScreen = BlockingModalScreen,
-								blockingFlags = {
-									FFlagNavigateToBlockingModal = FFlagNavigateToBlockingModal,
-									FFlagEnableNewBlockingModal = FFlagEnableNewBlockingModal,
-									FFlagEnableToastForBlockingModal = FFlagEnableToastForBlockingModal,
-								},
-								chromeEnabled = ChromeEnabled,
+					}, children)
+				end
+			end
+
+			local People = if displayed then React.createElement(CoreScriptsRootProvider, {}, {
+					LocalizationProvider = React.createElement(LocalizationProvider, {
+						localization = locales,
+					}, withFoundationProvider({
+							FocusRoot = React.createElement(PeopleFocusRoot, {}, {
+								PeopleReactView = React.createElement(PeopleReactView, {
+									blockingModalScreen = BlockingModalScreen,
+									blockingFlags = {
+										FFlagNavigateToBlockingModal = FFlagNavigateToBlockingModal,
+										FFlagEnableNewBlockingModal = FFlagEnableNewBlockingModal,
+										FFlagEnableToastForBlockingModal = FFlagEnableToastForBlockingModal,
+									},
+									chromeEnabled = ChromeEnabled,
+									getUniversesExposedTo = if GetFFlagAddPeoplePageCardLayout() and LocalStore then LocalStore.getUniversesExposedTo else nil,
+									addUniverseToExposureList = if GetFFlagAddPeoplePageCardLayout() and LocalStore then LocalStore.addUniverseToExposureList else nil,
+								})
 							})
 						})
-					})
-				})
-			}) else nil
+					)
+				}) else nil
 
 			return People
 		end

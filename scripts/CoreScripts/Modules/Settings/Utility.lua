@@ -51,14 +51,13 @@ local UserGameSettings = UserSettings():GetService("UserGameSettings")
 --------------- FLAGS ----------------
 
 local GetFFlagSettingsHubButtonCanBeDisabled = require(Settings.Flags.GetFFlagSettingsHubButtonCanBeDisabled)
-local FFlagUseNonDeferredSliderSignal = game:DefineFastFlag("UseNonDeferredSliderSignal", false)
 local FFlagRefactorMenuConfirmationButtons = require(RobloxGui.Modules.Settings.Flags.FFlagRefactorMenuConfirmationButtons)
 local FFlagAddNextUpContainer = require(RobloxGui.Modules.Settings.Pages.LeaveGameWithNextUp.Flags.FFlagAddNextUpContainer)
 
 local SettingsFlags = require(Settings.Flags)
-local FFlagGameSettingsUsePreferredInputMovement = SettingsFlags.FFlagGameSettingsUsePreferredInputMovement
 local FFlagGameSettingsRemoveTextTransparency = SettingsFlags.FFlagGameSettingsRemoveTextTransparency
 local FFlagGameSettingsRemoveMouseButton1Event = SettingsFlags.FFlagGameSettingsRemoveMouseButton1Event
+local FFlagIEMSelectorUnchangedByMouseWheel = SettingsFlags.FFlagIEMSelectorUnchangedByMouseWheel
 
 local SharedFlags = require(CorePackages.Workspace.Packages.SharedFlags)
 local FFlagIEMFocusNavToButtons = SharedFlags.FFlagIEMFocusNavToButtons
@@ -213,11 +212,7 @@ function PropertyTweener(instance, prop, start, final, duration, easingFunc, cbF
 end
 
 local function isTouchInput()
-	if FFlagGameSettingsUsePreferredInputMovement then
-		return UserInputService.PreferredInput == Enum.PreferredInput.Touch
-	else
-		return UserInputService.TouchEnabled
-	end
+	return UserInputService.PreferredInput == Enum.PreferredInput.Touch
 end
 
 ----------- CLASS DECLARATION --------------
@@ -1510,10 +1505,15 @@ local function CreateSelector(selectionStringTable, startPosition)
 	onVREnabled("VREnabled")
 
 	leftButton.InputBegan:Connect(function(inputObject)
-		local shouldStep = isLastInputModeTap(false) 
+		local shouldStep
+		if FFlagIEMSelectorUnchangedByMouseWheel then
+			shouldStep = isLastInputModeTap(false) or isLastInputModePointer(false) and inputObject.UserInputType == Enum.UserInputType.MouseButton1
+		else
+			shouldStep = isLastInputModeTap(false) 
 			or isLastInputModePointer(false) 
 			and inputObject.UserInputType ~= Enum.UserInputType.Keyboard 
 			and inputObject.UserInputType ~= Enum.UserInputType.MouseMovement
+		end
 		if (if FFlagGameSettingsRemoveMouseButton1Event then shouldStep else inputObject.UserInputType == Enum.UserInputType.Touch)  then
 			stepFunc(nil, -1)
 		end
@@ -1526,10 +1526,15 @@ local function CreateSelector(selectionStringTable, startPosition)
 		end)
 	end
 	rightButton.InputBegan:Connect(function(inputObject)
-		local shouldStep = isLastInputModeTap(false) 
+		local shouldStep
+		if FFlagIEMSelectorUnchangedByMouseWheel then
+			shouldStep = isLastInputModeTap(false) or isLastInputModePointer(false) and inputObject.UserInputType == Enum.UserInputType.MouseButton1
+		else
+			shouldStep = isLastInputModeTap(false) 
 			or isLastInputModePointer(false) 
 			and inputObject.UserInputType ~= Enum.UserInputType.Keyboard 
 			and inputObject.UserInputType ~= Enum.UserInputType.MouseMovement
+		end
 		if (if FFlagGameSettingsRemoveMouseButton1Event then shouldStep else inputObject.UserInputType == Enum.UserInputType.Touch) then
 			stepFunc(nil, 1)
 		end
@@ -1860,10 +1865,7 @@ local function CreateNewSlider(numOfSteps, startStep, minStep, leftLabelText, ri
 
 	local valueChangedEvent = Instance.new("BindableEvent")
 	valueChangedEvent.Name = "ValueChanged"
-	local valueChangedSignal
-	if FFlagUseNonDeferredSliderSignal then
-		valueChangedSignal = Signal.new()
-	end
+	local valueChangedSignal = Signal.new()
 	----------------- GUI SETUP ------------------------
 	this.SliderFrame = Create("ImageButton")({
 		Name = "Slider",

@@ -8,15 +8,29 @@ local SetAssets = require(InspectAndBuyFolder.Actions.SetAssets)
 local SetBundlesAssetIsPartOf = require(InspectAndBuyFolder.Actions.SetBundlesAssetIsPartOf)
 local SetAssetFromBundleInfo = require(InspectAndBuyFolder.Actions.SetAssetFromBundleInfo)
 local SetAvatarPreviewDetails = require(InspectAndBuyFolder.Actions.SetAvatarPreviewDetails)
+local SetFavoriteAsset = require(InspectAndBuyFolder.Actions.SetFavoriteAsset)
 local UpdateBulkPuchaseResults = require(InspectAndBuyFolder.Actions.UpdateBulkPuchaseResults)
 local AvatarExperienceCommon = require(CorePackages.Workspace.Packages.AvatarExperienceCommon)
-local ItemRestrictions = AvatarExperienceCommon.Enums.ItemRestrictions
 local ItemType = AvatarExperienceCommon.Enums.ItemTypeEnum
 local FFlagAXEnableFetchAvatarPreview = require(InspectAndBuyFolder.Flags.FFlagAXEnableFetchAvatarPreview)
 local FFlagAXEnableInspectAndBuyBulkPurchase =
 	require(CorePackages.Workspace.Packages.SharedFlags).FFlagAXEnableInspectAndBuyBulkPurchase
+local FFlagAXEnableFavoritesInfoForAssetsAndBundles =
+	require(InspectAndBuyFolder.Flags.FFlagAXEnableFavoritesInfoForAssetsAndBundles)
 
 return Rodux.createReducer({}, {
+	--[[
+		Sets the favorite status of an asset.
+	]]
+	[SetFavoriteAsset.name] = if FFlagAXEnableFavoritesInfoForAssetsAndBundles
+		then function(state, action)
+			local prevAsset = state[action.id] or {}
+			local nextAsset = Cryo.Dictionary.join({}, prevAsset)
+			state[action.id] =
+				Cryo.Dictionary.join(nextAsset, AssetInfo.fromGetFavoriteForAsset(action.id, action.isFavorite))
+			return state
+		end
+		else nil,
 	--[[
 		Updates asset ownerships based on the bulk purchase results.
 	]]
@@ -26,17 +40,8 @@ return Rodux.createReducer({}, {
 			for _, item in items do
 				if item.type == Enum.MarketplaceProductType.AvatarAsset then
 					-- check to see if the asset is a collectible using item restrictions status
-					local itemRestrictions = state[item.id].itemRestrictions
-					local nextAsset = Cryo.Dictionary.join({}, state[item.id])
-					if
-						itemRestrictions and itemRestrictions[ItemRestrictions.Collectible]
-						or itemRestrictions[ItemRestrictions.Limited]
-						or itemRestrictions[ItemRestrictions.LimitedUnique]
-					then
-						-- update the resellable count by 1 if the asset is a collectible
-						nextAsset.resellableCount = nextAsset.resellableCount + 1
-					end
-					state[item.id] = Cryo.Dictionary.join(nextAsset, AssetInfo.fromBulkPurchaseResult(item))
+					local prevAsset = Cryo.Dictionary.join({}, state[item.id])
+					state[item.id] = Cryo.Dictionary.join(prevAsset, AssetInfo.fromBulkPurchaseResult(item, prevAsset))
 				end
 			end
 			return state

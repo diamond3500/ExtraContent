@@ -1,6 +1,7 @@
 local Foundation = script:FindFirstAncestor("Foundation")
 local Packages = Foundation.Parent
 
+local Flags = require(Foundation.Utility.Flags)
 local Motion = require(Packages.Motion)
 local useMotion = Motion.useMotion
 
@@ -46,9 +47,8 @@ export type InputVariantProps = {
 }
 
 type Props = {
-	-- Whether the input is currently checked. If it is left `nil`,
-	-- the input will be considered uncontrolled.
-	isChecked: boolean?,
+	-- Whether the input is currently checked.
+	isChecked: boolean,
 	-- Whether the input is disabled. When `true`, the `onActivated` callback
 	-- will not be invoked, even if the user interacts with the input.
 	isDisabled: boolean?,
@@ -69,6 +69,7 @@ type Props = {
 local defaultProps = {
 	size = InputSize.Medium,
 	Selectable = true,
+	testId = "--foundation-internal-input",
 }
 
 local function InternalInput(inputProps: Props, ref: React.Ref<GuiObject>?)
@@ -80,20 +81,15 @@ local function InternalInput(inputProps: Props, ref: React.Ref<GuiObject>?)
 	local isHovering, setIsHovering = React.useState(false)
 	local tokens = useTokens()
 
-	local isChecked, setIsChecked = React.useState(props.isChecked or false)
-	React.useEffect(function()
-		if props.isChecked ~= nil then
-			setIsChecked(props.isChecked)
-		end
-	end, { props.isChecked })
-
 	local variantProps = useInputVariants(tokens, props.size)
 
 	local cursor = React.useMemo(function()
 		return {
-			radius = if hasLabel
-				then UDim.new(0, tokens.Radius.Small)
-				else props.customVariantProps.cursorRadius or UDim.new(0, 0),
+			radius = if Flags.FoundationInternalInputSelectedStylesAndSpacing
+				then props.customVariantProps.cursorRadius or UDim.new(0, 0)
+				else if hasLabel
+					then UDim.new(0, tokens.Radius.Small)
+					else props.customVariantProps.cursorRadius or UDim.new(0, 0),
 			offset = tokens.Size.Size_200,
 			borderWidth = tokens.Stroke.Thicker,
 		}
@@ -103,14 +99,15 @@ local function InternalInput(inputProps: Props, ref: React.Ref<GuiObject>?)
 	local values, animate = useMotion(motionStates.Default)
 
 	React.useEffect(function()
-		if isChecked then
+		if props.isChecked then
 			animate(motionStates.Checked)
 		elseif isHovering then
 			animate(motionStates.Hover)
 		else
 			animate(motionStates.Default)
 		end
-	end, { isChecked, isHovering })
+		-- tokens are included in the dependency array to ensure that the component re-renders when theme changes
+	end, { props.isChecked, isHovering, tokens } :: { unknown })
 
 	local onInputStateChanged = React.useCallback(function(newState: ControlState)
 		setIsHovering(newState == ControlState.Hover)
@@ -120,11 +117,8 @@ local function InternalInput(inputProps: Props, ref: React.Ref<GuiObject>?)
 		if props.isDisabled then
 			return
 		end
-		if props.isChecked == nil then
-			setIsChecked(not isChecked)
-		end
-		props.onActivated(not isChecked)
-	end, { props.isDisabled :: any, props.isChecked, props.onActivated, isChecked })
+		props.onActivated(not props.isChecked)
+	end, { props.isDisabled :: any, props.isChecked, props.onActivated })
 
 	local selectionProps = {
 		Selectable = if props.isDisabled then false else props.Selectable,
@@ -140,8 +134,12 @@ local function InternalInput(inputProps: Props, ref: React.Ref<GuiObject>?)
 		onActivated = onActivated,
 		onStateChanged = onInputStateChanged,
 		stateLayer = { affordance = StateLayerAffordance.None },
-		selection = selectionProps,
-		cursor = cursor,
+		selection = if Flags.FoundationInternalInputSelectedStylesAndSpacing
+			then (if hasLabel then { Selectable = false } else selectionProps)
+			else selectionProps,
+		cursor = if Flags.FoundationInternalInputSelectedStylesAndSpacing
+			then (if hasLabel then nil else cursor)
+			else cursor,
 		isDisabled = props.isDisabled,
 		ref = ref,
 	}
@@ -169,17 +167,18 @@ local function InternalInput(inputProps: Props, ref: React.Ref<GuiObject>?)
 			end),
 			Thickness = strokeThickness,
 		},
-		selection = if not hasLabel
+		selection = if Flags.FoundationInternalInputSelectedStylesAndSpacing
 			then selectionProps
-			else {
-				Selectable = false,
-			},
+			else (if not hasLabel then selectionProps else { Selectable = false }),
+		cursor = if Flags.FoundationInternalInputSelectedStylesAndSpacing
+			then (if hasLabel then cursor else nil)
+			else nil,
 		--[[
 			Labels for radio buttons and most other inputs should be positioned after the field.
 			Source: https://www.w3.org/TR/WCAG20-TECHS/G162.html
 		]]
 		LayoutOrder = if hasLabel then (if labelPosition == Enum.HorizontalAlignment.Left then 1 else -1) else nil,
-		testId = "--foundation-input-container",
+		testId = `{props.testId}--container`,
 	}
 
 	if not hasLabel then
@@ -217,7 +216,7 @@ local function InternalInput(inputProps: Props, ref: React.Ref<GuiObject>?)
 					Text = label,
 					textStyle = values.labelStyle,
 					size = getInputTextSize(props.size),
-					testId = "--foundation-input-label",
+					testId = `{props.testId}--label`,
 				})
 				else label,
 		}

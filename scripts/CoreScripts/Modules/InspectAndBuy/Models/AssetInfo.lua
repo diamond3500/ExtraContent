@@ -34,10 +34,14 @@ local InspectAndBuyFolder = script.Parent.Parent
 local MockId = require(InspectAndBuyFolder.MockId)
 local Constants = require(InspectAndBuyFolder.Constants)
 local AvatarExperienceInspectAndBuy = require(CorePackages.Workspace.Packages.AvatarExperienceInspectAndBuy)
+local AvatarExperienceCommon = require(CorePackages.Workspace.Packages.AvatarExperienceCommon)
+local ItemRestrictions = AvatarExperienceCommon.Enums.ItemRestrictions
+
 type AvatarPreviewItem = AvatarExperienceInspectAndBuy.AvatarPreviewItem
 type AssetInfo = AvatarExperienceInspectAndBuy.AssetInfo
 type BundleInfo = AvatarExperienceInspectAndBuy.BundleInfo
 type BulkPurchaseResultItem = AvatarExperienceInspectAndBuy.BulkPurchaseResultItem
+type ItemDetails = AvatarExperienceInspectAndBuy.ItemDetails
 
 local FFlagEnableRestrictedAssetSaleLocationInspectAndBuy =
 	require(CoreGui.RobloxGui.Modules.Flags.FFlagEnableRestrictedAssetSaleLocationInspectAndBuy)
@@ -103,13 +107,24 @@ end
 --[[
     Used to process ownership of an asset based on the bulk purchase result
 ]]
-function AssetInfo.fromBulkPurchaseResult(bulkPurchaseResult: BulkPurchaseResultItem): AssetInfo
+function AssetInfo.fromBulkPurchaseResult(bulkPurchaseResult: BulkPurchaseResultItem, prevAsset: AssetInfo?): AssetInfo
 	local newAsset = AssetInfo.new()
+	local itemRestrictions = if prevAsset and prevAsset.itemRestrictions then prevAsset.itemRestrictions else {}
+	newAsset.resellableCount = if prevAsset and prevAsset.resellableCount then prevAsset.resellableCount else 0
 	if
 		bulkPurchaseResult.status == Enum.MarketplaceItemPurchaseStatus.Success
 		and bulkPurchaseResult.type == Enum.MarketplaceProductType.AvatarAsset
 	then
 		newAsset.owned = true
+
+		-- update the resellable count by 1 if the asset is a collectible
+		if
+			itemRestrictions[ItemRestrictions.Collectible]
+			or itemRestrictions[ItemRestrictions.Limited]
+			or itemRestrictions[ItemRestrictions.LimitedUnique]
+		then
+			newAsset.resellableCount = newAsset.resellableCount + 1
+		end
 	end
 	return newAsset
 end
@@ -235,6 +250,16 @@ function AssetInfo.fromGetAssetBundles(assetId, bundleIds)
 	return newAsset
 end
 
+--[[
+	Sets the favorite status of an asset.
+]]
+function AssetInfo.fromGetFavoriteForAsset(id: string, isFavorite: boolean): AssetInfo
+	local newAsset = AssetInfo.new()
+	newAsset.assetId = tostring(id)
+	newAsset.isFavorited = isFavorite
+	return newAsset
+end
+
 function AssetInfo.fromBundleInfo(assetId, bundleInfo)
 	local newAsset = AssetInfo.new()
 	newAsset.assetId = tostring(assetId)
@@ -300,6 +325,35 @@ function AssetInfo.fromGetEconomyProductInfo(asset, isOwned, price, isForSale, p
 	return newAsset
 end
 
+function AssetInfo.fromGetItemDetailsV2(itemDetails: ItemDetails): AssetInfo
+	local newAsset = AssetInfo.new()
+
+	newAsset.assetId = tostring(itemDetails.id)
+	newAsset.isForSale = itemDetails.isPurchasable
+	newAsset.price = itemDetails.price or 0
+	newAsset.hasResellers = itemDetails.hasResellers
+	newAsset.collectibleItemId = itemDetails.collectibleItemId
+
+	local itemRestrictions = {}
+	if itemDetails.itemRestrictions then
+		for _, value in itemDetails.itemRestrictions do
+			itemRestrictions[value] = true
+		end
+		newAsset.itemRestrictions = itemRestrictions
+	end
+
+	newAsset.saleLocationType = itemDetails.saleLocationType
+	newAsset.remaining = itemDetails.unitsAvailableForConsumption
+	newAsset.collectibleTotalQuantity = itemDetails.totalQuantity
+	newAsset.collectibleLowestResalePrice = itemDetails.lowestResalePrice
+	newAsset.isOffSale = itemDetails.isOffSale
+	newAsset.saleLocationType = itemDetails.saleLocationType
+	newAsset.numFavorites = itemDetails.favoriteCount
+	newAsset.catalogPriceStatus = itemDetails.priceStatus
+
+	return newAsset
+end
+
 function AssetInfo.fromGetItemDetails(itemDetails)
 	local newAsset = AssetInfo.new()
 
@@ -325,6 +379,8 @@ function AssetInfo.fromGetItemDetails(itemDetails)
 		newAsset.collectibleLowestResalePrice = itemDetails.LowestResalePrice
 		newAsset.isOffSale = itemDetails.IsOffSale
 		newAsset.saleLocationType = itemDetails.SaleLocationType
+		newAsset.numFavorites = itemDetails.FavoriteCount
+		newAsset.catalogPriceStatus = itemDetails.PriceStatus
 	end
 
 	return newAsset

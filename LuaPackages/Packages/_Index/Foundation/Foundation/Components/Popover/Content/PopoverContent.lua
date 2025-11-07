@@ -10,6 +10,7 @@ local useTokens = require(Foundation.Providers.Style.useTokens)
 local withDefaults = require(Foundation.Utility.withDefaults)
 local usePointerPosition = require(Foundation.Utility.usePointerPosition)
 local isPointInGuiObjectBounds = require(Foundation.Utility.isPointInGuiObjectBounds)
+local Constants = require(Foundation.Constants)
 
 local StateLayerAffordance = require(Foundation.Enums.StateLayerAffordance)
 local PopoverSide = require(Foundation.Enums.PopoverSide)
@@ -60,15 +61,14 @@ local radiusToTag: { [Radius]: string } = {
 	[Radius.Circle] = "radius-circle",
 }
 
-local SHADOW_IMAGE = "component_assets/dropshadow_17_8"
-local SHADOW_SIZE = 16
+local SHADOW_IMAGE = Constants.SHADOW_IMAGE
+local SHADOW_SIZE = Constants.SHADOW_SIZE
 local SHADOW_VERTICAL_OFFSET = 2
 
 local function PopoverContent(contentProps: PopoverContentProps, forwardedRef: React.Ref<GuiObject>?)
 	local props = withDefaults(contentProps, defaultProps)
 	local popoverContext = React.useContext(PopoverContext)
 	local hasGuiObjectAnchor = typeof(popoverContext.anchor) == "Instance"
-	local pointerPosition = usePointerPosition(if hasGuiObjectAnchor then popoverContext.anchor :: GuiObject else nil)
 	local hasArrow = if Flags.FoundationNoArrowOnVirtualRef
 		then if hasGuiObjectAnchor then props.hasArrow else false
 		else props.hasArrow
@@ -82,12 +82,18 @@ local function PopoverContent(contentProps: PopoverContentProps, forwardedRef: R
 	local backgroundStyle = props.backgroundStyle or tokens.Color.Surface.Surface_100
 
 	local ref = React.useRef(nil)
+	local backdropInstance, setBackdropInstance = React.useState(nil :: GuiObject?)
+	local pointerPosition = usePointerPosition(
+		if Flags.FoundationPopoverContentStateFix
+			then backdropInstance
+			else if hasGuiObjectAnchor then popoverContext.anchor :: GuiObject else nil
+	)
 
 	React.useImperativeHandle(forwardedRef, function()
 		return ref.current
 	end, {})
 
-	local position, isVisible, contentSize, arrowPosition, screenSize = useFloating(
+	local position, isVisible, contentSize, arrowPosition, screenSize, anchorPoint = useFloating(
 		popoverContext.isOpen,
 		popoverContext.anchor,
 		ref.current,
@@ -104,18 +110,29 @@ local function PopoverContent(contentProps: PopoverContentProps, forwardedRef: R
 			backdropListener.current:Disconnect()
 		end
 
+		if Flags.FoundationPopoverContentStateFix then
+			setBackdropInstance(instance)
+		end
+
 		if instance ~= nil and props.onPressedOutside then
 			backdropListener.current = instance:GetPropertyChangedSignal("GuiState"):Connect(function()
 				if instance.GuiState == Enum.GuiState.Press then
 					if popoverContext.anchor and hasGuiObjectAnchor then
-						if Flags.FoundationPopoverContentToggleOnAnchorClick then
-							if (popoverContext.anchor :: GuiObject).GuiState ~= Enum.GuiState.Idle then
-								return
-							end
-						else
-							local pointerPositionValue = pointerPosition:getValue()
+						local anchor = popoverContext.anchor :: GuiObject
+						local pointerPositionValue = pointerPosition:getValue()
+						local isPointerWithinAnchorBounds = isPointInGuiObjectBounds(anchor, pointerPositionValue)
 
-							if isPointInGuiObjectBounds(popoverContext.anchor :: GuiObject, pointerPositionValue) then
+						if Flags.FoundationPopoverContentStateFix and isPointerWithinAnchorBounds then
+							return
+						end
+
+						if
+							Flags.FoundationPopoverContentToggleOnAnchorClick
+							and anchor.GuiState ~= Enum.GuiState.Idle
+						then
+							return
+						else
+							if isPointerWithinAnchorBounds then
 								return
 							end
 						end
@@ -126,7 +143,7 @@ local function PopoverContent(contentProps: PopoverContentProps, forwardedRef: R
 				end
 			end)
 		end
-	end, { props.onPressedOutside :: unknown, popoverContext.anchor })
+	end, { props.onPressedOutside, popoverContext.anchor } :: { unknown })
 
 	React.useEffect(function()
 		return function()
@@ -145,24 +162,37 @@ local function PopoverContent(contentProps: PopoverContentProps, forwardedRef: R
 				},
 				Size = UDim2.fromScale(1, 1),
 				ref = backdropCallback,
-				testId = "--foundation-popover-backdrop",
+				testId = `{popoverContext.testId}--backdrop`,
 			})
 			else nil,
 		Shadow = React.createElement(Image, {
+			AnchorPoint = if Flags.FoundationPopoverOverflow then anchorPoint else nil,
 			Image = SHADOW_IMAGE,
 			Size = contentSize:map(function(value: UDim2)
 				return value + UDim2.fromOffset(SHADOW_SIZE, SHADOW_SIZE)
 			end),
-			Position = position:map(function(value: Vector2)
-				return UDim2.fromOffset(value.X - SHADOW_SIZE / 2, value.Y - SHADOW_SIZE / 2 + SHADOW_VERTICAL_OFFSET)
-			end),
+			Position = if Flags.FoundationPopoverOverflow
+				then React.joinBindings({ position, anchorPoint }):map(function(values: { Vector2 })
+					local xShift = if values[2].X == 0 then -1 else 1
+					local yShift = if values[2].Y == 0 then -1 else 1
+					return UDim2.fromOffset(
+						values[1].X + SHADOW_SIZE / 2 * xShift,
+						values[1].Y + SHADOW_SIZE / 2 * yShift + SHADOW_VERTICAL_OFFSET
+					)
+				end)
+				else position:map(function(value: Vector2)
+					return UDim2.fromOffset(
+						value.X - SHADOW_SIZE / 2,
+						value.Y - SHADOW_SIZE / 2 + SHADOW_VERTICAL_OFFSET
+					)
+				end),
 			ZIndex = 2,
 			Visible = isVisible,
 			slice = {
 				center = Rect.new(SHADOW_SIZE, SHADOW_SIZE, SHADOW_SIZE + 1, SHADOW_SIZE + 1),
 			},
 			imageStyle = tokens.Color.Extended.Black.Black_20,
-			testId = "--foundation-popover-shadow",
+			testId = `{popoverContext.testId}--shadow`,
 		}),
 		Arrow = if hasArrow
 			then React.createElement(View, {
@@ -175,10 +205,11 @@ local function PopoverContent(contentProps: PopoverContentProps, forwardedRef: R
 				Visible = isVisible,
 				backgroundStyle = backgroundStyle,
 				tag = "anchor-center-center",
-				testId = "--foundation-popover-arrow",
+				testId = `{popoverContext.testId}--arrow`,
 			})
 			else nil,
 		Content = React.createElement(View, {
+			AnchorPoint = if Flags.FoundationPopoverOverflow then anchorPoint else nil,
 			Position = position:map(function(value: Vector2)
 				return UDim2.fromOffset(value.X, value.Y)
 			end),
@@ -196,7 +227,7 @@ local function PopoverContent(contentProps: PopoverContentProps, forwardedRef: R
 			backgroundStyle = backgroundStyle,
 			tag = `auto-xy {radiusToTag[props.radius]}`,
 			ref = ref,
-			testId = "--foundation-popover-content",
+			testId = `{popoverContext.testId}--content`,
 		}, props.children),
 	})
 

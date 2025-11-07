@@ -15,6 +15,7 @@ type VariantProps = composeStyleVariant.VariantProps
 local Tokens = require(Foundation.Providers.Style.Tokens)
 type Tokens = Tokens.Tokens
 
+local Flags = require(Foundation.Utility.Flags)
 local getKnobSize = require(Foundation.Components.Knob.getKnobSize)
 local VariantsContext = require(Foundation.Providers.Style.VariantsContext)
 
@@ -49,33 +50,57 @@ local function variantsFactory(tokens: Tokens)
 	local common = {
 		input = {
 			checkedStyle = tokens.Color.ActionEmphasis.Background,
-			cursorRadius = UDim.new(0, tokens.Radius.Medium),
+			cursorRadius = if Flags.FoundationInternalInputSelectedStylesAndSpacing
+				then UDim.new(0, tokens.Radius.Circle)
+				else UDim.new(0, tokens.Radius.Medium),
 		},
 	}
 
-	local sizes: { [InputSize]: VariantProps } = {
-		[InputSize.XSmall] = computeProps({
-			tag = "radius-large",
-			size = { width = tokens.Size.Size_700, height = tokens.Size.Size_300 },
-			knobSize = getKnobSize(tokens, InputSize.XSmall),
-		}),
-		[InputSize.Small] = computeProps({
-			tag = "radius-large",
-			size = { width = tokens.Size.Size_800, height = tokens.Size.Size_400 },
-			knobSize = getKnobSize(tokens, InputSize.Small),
-		}),
-		[InputSize.Medium] = computeProps({
-			tag = "radius-large",
-			size = { width = tokens.Size.Size_1000, height = tokens.Size.Size_500 },
-			knobSize = getKnobSize(tokens, InputSize.Medium),
-		}),
-		[InputSize.Large] = computeProps({
-			tag = "radius-circle",
-			size = { width = tokens.Size.Size_1600, height = tokens.Size.Size_900 },
-			knobSize = getKnobSize(tokens, InputSize.Large),
-		}),
-	}
-
+	local sizes: { [InputSize]: VariantProps } = if Flags.FoundationUpdateKnobComponent
+		then {
+			[InputSize.XSmall] = computeProps({
+				tag = "radius-circle",
+				size = { width = tokens.Size.Size_700, height = tokens.Size.Size_400 },
+				knobSize = getKnobSize(tokens, InputSize.XSmall),
+			}),
+			[InputSize.Small] = computeProps({
+				tag = "radius-circle",
+				size = { width = tokens.Size.Size_800, height = tokens.Size.Size_500 },
+				knobSize = getKnobSize(tokens, InputSize.Small),
+			}),
+			[InputSize.Medium] = computeProps({
+				tag = "radius-circle",
+				size = { width = tokens.Size.Size_1000, height = tokens.Size.Size_600 },
+				knobSize = getKnobSize(tokens, InputSize.Medium),
+			}),
+			[InputSize.Large] = computeProps({
+				tag = "radius-circle",
+				size = { width = tokens.Size.Size_1100, height = tokens.Size.Size_600 },
+				knobSize = getKnobSize(tokens, InputSize.Medium),
+			}),
+		}
+		else {
+			[InputSize.XSmall] = computeProps({
+				tag = "radius-large",
+				size = { width = tokens.Size.Size_700, height = tokens.Size.Size_300 },
+				knobSize = getKnobSize(tokens, InputSize.XSmall),
+			}),
+			[InputSize.Small] = computeProps({
+				tag = "radius-large",
+				size = { width = tokens.Size.Size_800, height = tokens.Size.Size_400 },
+				knobSize = getKnobSize(tokens, InputSize.Small),
+			}),
+			[InputSize.Medium] = computeProps({
+				tag = "radius-large",
+				size = { width = tokens.Size.Size_1000, height = tokens.Size.Size_500 },
+				knobSize = getKnobSize(tokens, InputSize.Medium),
+			}),
+			[InputSize.Large] = computeProps({
+				tag = "radius-circle",
+				size = { width = tokens.Size.Size_1600, height = tokens.Size.Size_900 },
+				knobSize = getKnobSize(tokens, InputSize.Large),
+			}),
+		}
 	return { common = common, sizes = sizes }
 end
 

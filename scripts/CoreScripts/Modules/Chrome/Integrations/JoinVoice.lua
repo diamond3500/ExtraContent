@@ -19,15 +19,13 @@ local VoiceChatConstants = require(CorePackages.Workspace.Packages.VoiceChatCore
 local GetIcon = require(CorePackages.Workspace.Packages.VoiceChat).Utils.GetIcon
 local CEV_CONTEXT_ID =
 	require(CorePackages.Workspace.Packages.CrossExperience).Constants.AUDIO_FOCUS_MANAGEMENT.CEV.CONTEXT_ID
-
-local GetFFlagEnableJoinVoiceOnUnibar =
-	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagEnableJoinVoiceOnUnibar
 local GetFFlagEnableConnectDisconnectInSettingsAndChrome =
 	require(RobloxGui.Modules.Flags.GetFFlagEnableConnectDisconnectInSettingsAndChrome)
 local GetFFlagIntegratePhoneUpsellJoinVoice =
 	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagIntegratePhoneUpsellJoinVoice
 local GetFFlagFixSeamlessVoiceIntegrationWithPrivateVoice =
 	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagFixSeamlessVoiceIntegrationWithPrivateVoice
+local GetFFlagEnableVoiceUxUpdates = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagEnableVoiceUxUpdates
 
 local ChromeSharedFlags = require(Chrome.ChromeShared.Flags)
 local FFlagTokenizeUnibarConstantsWithStyleProvider = ChromeSharedFlags.FFlagTokenizeUnibarConstantsWithStyleProvider
@@ -170,7 +168,7 @@ if FFlagJoinVoiceHideWhenPartyVoiceFocused then
 	end)
 end
 
-if GetFFlagEnableJoinVoiceOnUnibar() and game:GetEngineFeature("VoiceChatSupported") then
+if game:GetEngineFeature("VoiceChatSupported") then
 	if GetFFlagIntegratePhoneUpsellJoinVoice() then
 		task.spawn(function()
 			-- Only show the join voice button if we're not in the phone upsell flow
@@ -197,20 +195,22 @@ if GetFFlagEnableJoinVoiceOnUnibar() and game:GetEngineFeature("VoiceChatSupport
 		VoiceChatServiceManager.VoiceJoinProgressChanged.Event:Connect(HideOrShowJoinVoiceButton)
 	end
 	if GetFFlagEnableConnectDisconnectInSettingsAndChrome() then
-		VoiceChatServiceManager.showVoiceUI.Event:Connect(function()
-			if FFlagJoinVoiceHideWhenPartyVoiceFocused then
-				setAvailability(ChromeService.AvailabilitySignal.Unavailable)
-			else
-				joinVoice.availability:unavailable()
-			end
-		end)
-		VoiceChatServiceManager.hideVoiceUI.Event:Connect(function()
-			if FFlagJoinVoiceHideWhenPartyVoiceFocused then
-				setAvailability(ChromeService.AvailabilitySignal.Available)
-			else
-				joinVoice.availability:available()
-			end
-		end)
+		if not GetFFlagEnableVoiceUxUpdates() then
+			VoiceChatServiceManager.showVoiceUI.Event:Connect(function()
+				if FFlagJoinVoiceHideWhenPartyVoiceFocused then
+					setAvailability(ChromeService.AvailabilitySignal.Unavailable)
+				else
+					joinVoice.availability:unavailable()
+				end
+			end)
+			VoiceChatServiceManager.hideVoiceUI.Event:Connect(function()
+				if FFlagJoinVoiceHideWhenPartyVoiceFocused then
+					setAvailability(ChromeService.AvailabilitySignal.Available)
+				else
+					joinVoice.availability:available()
+				end
+			end)
+		end
 	else
 		VoiceChatServiceManager.VoiceJoinProgressChanged.Event:Connect(HideOrShowJoinVoiceButton)
 	end

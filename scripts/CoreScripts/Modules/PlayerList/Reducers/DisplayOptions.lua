@@ -6,6 +6,8 @@ local GuiService = game:GetService("GuiService")
 local Rodux = require(CorePackages.Packages.Rodux)
 local Cryo = require(CorePackages.Packages.Cryo)
 
+local PlayerListPackage = require(CorePackages.Workspace.Packages.PlayerList)
+
 local PlayerList = script.Parent.Parent
 
 local Actions = script.Parent.Parent.Actions
@@ -22,12 +24,15 @@ local SetMinimized = require(Actions.SetMinimized)
 local SetSubjectToChinaPolicies = require(Actions.SetSubjectToChinaPolicies)
 
 local FFlagPlayerListPersistVisibility = require(PlayerList.Flags.FFlagPlayerListPersistVisibility)
+local FFlagModalPlayerListCloseUnfocused = PlayerListPackage.Flags.FFlagModalPlayerListCloseUnfocused
+local FFlagPlayerListUseMobileOnSmallDisplay = PlayerListPackage.Flags.FFlagPlayerListUseMobileOnSmallDisplay
+local FFlagPlayerListPersistVisibilityDesktopOnly = game:DefineFastFlag("PlayerListPersistVisibilityDesktopOnly", false)
 
 local GameSettings = if FFlagPlayerListPersistVisibility then UserSettings().GameSettings else nil
 
 local initialDisplayOptions = {
 	isMinimized = false,
-	setVisible = if FFlagPlayerListPersistVisibility then GameSettings.PlayerListVisible else true, --If the user wants the leaderboard visible or not
+	setVisible = if FFlagPlayerListUseMobileOnSmallDisplay then false else if FFlagPlayerListPersistVisibility then GameSettings.PlayerListVisible else true, --If the user wants the leaderboard visible or not
 	isVisible = true, --Visiblity based on all other display options
 	isSmallTouchDevice = false,
 	performanceStatsVisible = false,
@@ -56,7 +61,9 @@ end
 local DisplayOptions = Rodux.createReducer(initialDisplayOptions, {
 	[SetPlayerListVisibility.name] = function(state, action)
 		if FFlagPlayerListPersistVisibility then
-			GameSettings.PlayerListVisible = action.isVisible
+			if not FFlagPlayerListPersistVisibilityDesktopOnly or (FFlagPlayerListPersistVisibilityDesktopOnly and not state.isSmallTouchDevice and not state.isTenFootInterface) then
+				GameSettings.PlayerListVisible = action.isVisible
+			end
 		end
 		
 		return updateIsVisible(Cryo.Dictionary.join(state, {
@@ -65,8 +72,16 @@ local DisplayOptions = Rodux.createReducer(initialDisplayOptions, {
 	end,
 
 	[SetPlayerListEnabled.name] = function(state, action)
+		local newSetVisible = nil
+		if FFlagModalPlayerListCloseUnfocused then
+			-- Ensure visibility is set to false if the player list is disabled
+			if not action.isEnabled then
+				newSetVisible = false
+			end
+		end
 		return updateIsVisible(Cryo.Dictionary.join(state, {
 			playerlistCoreGuiEnabled = action.isEnabled,
+			setVisible = if FFlagModalPlayerListCloseUnfocused then newSetVisible else nil,
 		}))
 	end,
 

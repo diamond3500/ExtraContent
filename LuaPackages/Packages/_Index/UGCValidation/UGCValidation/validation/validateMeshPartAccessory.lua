@@ -17,7 +17,6 @@ local validateAttributes = require(root.validation.validateAttributes)
 local validateMeshVertColors = require(root.validation.validateMeshVertColors)
 local validateSingleInstance = require(root.validation.validateSingleInstance)
 local validateThumbnailConfiguration = require(root.validation.validateThumbnailConfiguration)
-local validateAccessoryName = require(root.validation.validateAccessoryName)
 local validateSurfaceAppearances = require(root.validation.validateSurfaceAppearances)
 local validateSurfaceAppearanceTextureSize = require(root.validation.validateSurfaceAppearanceTextureSize)
 local validateSurfaceAppearanceTransparency = require(root.validation.validateSurfaceAppearanceTransparency)
@@ -36,18 +35,19 @@ local getEditableMeshFromContext = require(root.util.getEditableMeshFromContext)
 local getEditableImageFromContext = require(root.util.getEditableImageFromContext)
 local getExpectedPartSize = require(root.util.getExpectedPartSize)
 local pcallDeferred = require(root.util.pcallDeferred)
+local getAccessoryScale = require(root.util.getAccessoryScale)
 local RigidOrLayeredAllowed = require(root.util.RigidOrLayeredAllowed)
 
 local getFFlagUGCValidateMeshVertColors = require(root.flags.getFFlagUGCValidateMeshVertColors)
-local getFFlagUGCValidateThumbnailConfiguration = require(root.flags.getFFlagUGCValidateThumbnailConfiguration)
-local getFFlagUGCValidationNameCheck = require(root.flags.getFFlagUGCValidationNameCheck)
-local getFFlagCheckAccessoryMeshSize = require(root.flags.getFFlagCheckAccessoryMeshSize)
 
 local getEngineFeatureEngineUGCValidateRigidNonSkinned =
 	require(root.flags.getEngineFeatureEngineUGCValidateRigidNonSkinned)
 local getFFlagUGCValidateAccessoriesRCCOwnership = require(root.flags.getFFlagUGCValidateAccessoriesRCCOwnership)
 local getEngineFeatureEngineUGCValidatePropertiesSensible =
 	require(root.flags.getEngineFeatureEngineUGCValidatePropertiesSensible)
+
+local FFlagMeshpartAccessoryCheckAvatarPartScaleType =
+	game:DefineFastFlag("MeshpartAccessoryCheckAvatarPartScaleType", false)
 
 local function validateMeshPartAccessory(validationContext: Types.ValidationContext): (boolean, { string }?)
 	assert(
@@ -94,13 +94,6 @@ local function validateMeshPartAccessory(validationContext: Types.ValidationCont
 
 	if getEngineFeatureEngineUGCValidatePropertiesSensible() then
 		success, reasons = ValidatePropertiesSensible.validate(instance, validationContext)
-		if not success then
-			return false, reasons
-		end
-	end
-
-	if getFFlagUGCValidationNameCheck() and isServer then
-		success, reasons = validateAccessoryName(instance, validationContext)
 		if not success then
 			return false, reasons
 		end
@@ -207,11 +200,9 @@ local function validateMeshPartAccessory(validationContext: Types.ValidationCont
 
 	reasonsAccumulator:updateReasons(validateTextureSize(textureInfo, --[[ allowNoTexture = ]] true, validationContext))
 
-	if getFFlagUGCValidateThumbnailConfiguration() then
-		reasonsAccumulator:updateReasons(
-			validateThumbnailConfiguration(instance, handle, meshInfo, meshScale, validationContext)
-		)
-	end
+	reasonsAccumulator:updateReasons(
+		validateThumbnailConfiguration(instance, handle, meshInfo, meshScale, validationContext)
+	)
 
 	local checkModeration = not isServer
 	if allowUnreviewedAssets then
@@ -221,12 +212,19 @@ local function validateMeshPartAccessory(validationContext: Types.ValidationCont
 		reasonsAccumulator:updateReasons(validateModeration(instance, {}, validationContext))
 	end
 
+	if FFlagMeshpartAccessoryCheckAvatarPartScaleType then
+		if handle:FindFirstChild("AvatarPartScaleType") then
+			local accessoryScale = getAccessoryScale(handle, attachment)
+			boundsInfo = {
+				size = boundsInfo.size / accessoryScale,
+				offset = if boundsInfo.offset then boundsInfo.offset / accessoryScale else nil,
+			}
+		end
+	end
+
 	if hasMeshContent then
 		reasonsAccumulator:updateReasons(validateTotalSurfaceArea(meshInfo, meshScale, validationContext))
-
-		if getFFlagCheckAccessoryMeshSize() then
-			reasonsAccumulator:updateReasons(ValidateMeshSizeProperty.validateSingleMeshPart(handle, validationContext))
-		end
+		reasonsAccumulator:updateReasons(ValidateMeshSizeProperty.validateSingleMeshPart(handle, validationContext))
 
 		reasonsAccumulator:updateReasons(
 			validateMeshBounds(

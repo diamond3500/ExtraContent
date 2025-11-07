@@ -9,10 +9,10 @@ local getEngineFeatureEngineUGCValidateLCCagingRelevancy =
 local getFStringLCCageQualityDocumentationLink = require(root.flags.getFStringLCCageQualityDocumentationLink)
 local getEngineFeatureUGCValidateCageMeshDistance = require(root.flags.getEngineFeatureUGCValidateCageMeshDistance)
 local getFFlagUGCValidationHyperlinksInCageQuality = require(root.flags.getFFlagUGCValidationHyperlinksInCageQuality)
+local getFFlagUGCValidationEyebrowEyelashSupport = require(root.flags.getFFlagUGCValidationEyebrowEyelashSupport)
 
 local getEngineFeatureEngineUGCValidationCageUVDuplicates =
 	require(root.flags.getEngineFeatureEngineUGCValidationCageUVDuplicates)
-local getEngineFeatureUGCValidateExtraShoesTests = require(root.flags.getEngineFeatureUGCValidateExtraShoesTests)
 
 local validateVerticesSimilarity = require(root.validation.validateVerticesSimilarity)
 local validateLCCagingRelevancy = require(root.validation.validateLCCagingRelevancy)
@@ -87,17 +87,35 @@ local function validateLCCageQuality(
 	end
 
 	if getEngineFeatureUGCValidateCageMeshDistance() then
-		local success: boolean, failedReason: { string }? = validateCageMeshDistance(
-			innerCage,
-			outerCage,
-			meshInfoRenderMesh,
-			wrapLayer.ReferenceOrigin,
-			wrapLayer.CageOrigin,
-			validationContext
-		)
-		if not success then
-			table.insert(issues, table.concat(failedReason :: { string }, "\n"))
-			validationResult = false
+		if getFFlagUGCValidationEyebrowEyelashSupport() then
+			local assetTypeEnum = validationContext.assetTypeEnum :: Enum.AssetType
+			if assetTypeEnum ~= Enum.AssetType.Eyebrow and assetTypeEnum ~= Enum.AssetType.Eyelash then
+				local success: boolean, failedReason: { string }? = validateCageMeshDistance(
+					innerCage,
+					outerCage,
+					meshInfoRenderMesh,
+					wrapLayer.ReferenceOrigin,
+					wrapLayer.CageOrigin,
+					validationContext
+				)
+				if not success then
+					table.insert(issues, table.concat(failedReason :: { string }, "\n"))
+					validationResult = false
+				end
+			end
+		else
+			local success: boolean, failedReason: { string }? = validateCageMeshDistance(
+				innerCage,
+				outerCage,
+				meshInfoRenderMesh,
+				wrapLayer.ReferenceOrigin,
+				wrapLayer.CageOrigin,
+				validationContext
+			)
+			if not success then
+				table.insert(issues, table.concat(failedReason :: { string }, "\n"))
+				validationResult = false
+			end
 		end
 	end
 
@@ -110,7 +128,7 @@ local function validateLCCageQuality(
 		end
 	end
 
-	if getEngineFeatureUGCValidateExtraShoesTests() then
+	do
 		local success, failedReason = ValidateModifiedCageArea.validate(
 			innerCage,
 			wrapLayer.ReferenceOrigin,

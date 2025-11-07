@@ -80,6 +80,7 @@ local FFlagEnableExperienceGenericChallengeRenderingOnLoadingScript =
 	game:DefineFastFlag("EnableExperienceGenericChallengeRenderingOnLoadingScript", false)
 local FFlagEnableRobloxCommerce = game:GetEngineFeature("EnableRobloxCommerce")
 local FFlagEnableLinkSharingEvent = game:DefineFastFlag("EnableLinkSharingEvent", false)
+local FFlagPlayerFeedbackPromptEnabled = game:GetEngineFeature("PlayerFeedbackEnabled")
 
 local UIBlox = require(CorePackages.Packages.UIBlox)
 local uiBloxConfig = require(CorePackages.Workspace.Packages.CoreScriptsInitializer).UIBloxInGameConfig
@@ -101,6 +102,8 @@ if ReactSchedulerConfig then
 	ReactScheduler.unstable_setSchedulerFlags(ReactSchedulerConfig)
 end
 
+local FFlagEnableAEGIS2CommsFAEUpsell = require(CorePackages.Workspace.Packages.SharedFlags).FFlagEnableAEGIS2CommsFAEUpsell
+
 local localPlayer = Players.LocalPlayer
 while not localPlayer do
 	Players:GetPropertyChangedSignal("LocalPlayer"):Wait()
@@ -112,17 +115,7 @@ if game:GetEngineFeature("SoundServiceControlsDefaultListenerLocation") then
 end
 
 if GetFFlagEnableAppChatInExperience() then
-	local ExperimentCacheManager =
-		require(CorePackages.Workspace.Packages.ExperimentCacheManager).ExperimentCacheManager
-	ExperimentCacheManager.default:initialize()
-
-	local InExperienceAppChatExperimentation =
-		require(CorePackages.Workspace.Packages.AppChat).App.InExperienceAppChatExperimentation
-	InExperienceAppChatExperimentation.default:initialize()
-
-	if InExperienceAppChatExperimentation.getHasInExperienceAppChatEntryPoint() then
-		ScriptContext:AddCoreScriptLocal("CoreScripts/AppChatMain", RobloxGui)
-	end
+	ScriptContext:AddCoreScriptLocal("CoreScripts/AppChatMain", RobloxGui)
 end
 
 if GetFFlagEnableCrossExpVoice() then
@@ -305,6 +298,10 @@ end
 
 coroutine.wrap(safeRequire)(CoreGuiModules.ExperienceEvents.ExperienceEventsApp)
 
+if FFlagPlayerFeedbackPromptEnabled then
+	coroutine.wrap(safeRequire)(CoreGuiModules.PlayerFeedback)
+end
+
 coroutine.wrap(safeRequire)(CoreGuiModules.AvatarGeneration.SelfieConsent)
 
 -- Prompt Block Player Script
@@ -334,7 +331,11 @@ coroutine.wrap(safeRequire)(CorePackages.Workspace.Packages.VirtualCursor)
 ScriptContext:AddCoreScriptLocal("CoreScripts/VehicleHud", RobloxGui)
 ScriptContext:AddCoreScriptLocal("CoreScripts/InviteToGamePrompt", RobloxGui)
 
-if UserInputService.TouchEnabled then -- touch devices don't use same control frame
+local hasTouchSupport = if game:GetEngineFeature("TouchScreenEnabled")
+	then UserInputService.TouchScreenEnabled
+	else UserInputService.TouchEnabled
+
+if hasTouchSupport then -- touch devices don't use same control frame
 	-- only used for touch device button generation
 	ScriptContext:AddCoreScriptLocal("CoreScripts/ContextActionTouch", RobloxGui)
 
@@ -559,4 +560,18 @@ local CorescriptMemoryTracker = require(CoreGuiModules.Common.CorescriptMemoryTr
 local coreScriptMemoryTracker = CorescriptMemoryTracker(FStringReactSchedulingContext)
 if coreScriptMemoryTracker then
     coreScriptMemoryTracker:start()
+end
+
+if game:GetEngineFeature("RecordingServicePlaybackApiLua") then
+	coroutine.wrap(safeRequire)(CorePackages.Workspace.Packages.ExperienceStateReplay)
+end
+
+if FFlagEnableAEGIS2CommsFAEUpsell then
+	coroutine.wrap(function()
+		local SocialUpsell = safeRequire(CorePackages.Workspace.Packages.SocialUpsell)
+
+		if SocialUpsell then
+			SocialUpsell.Overlay.initializeInExpOverlay()
+		end
+	end)()
 end

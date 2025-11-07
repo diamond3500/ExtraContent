@@ -12,6 +12,8 @@ local Image = require(Components.Image)
 local Icon = require(Components.Icon)
 local FoundationConstants = require(Foundation.Constants)
 local Flags = require(Foundation.Utility.Flags)
+local withCommonProps = require(Foundation.Utility.withCommonProps)
+local Types = require(Foundation.Components.Types)
 
 local NumberInputControlsVariant = require(Foundation.Enums.NumberInputControlsVariant)
 type NumberInputControlsVariant = NumberInputControlsVariant.NumberInputControlsVariant
@@ -31,10 +33,19 @@ type NumberInputControlsProps = {
 	size: InputSize,
 	increment: NumberInputControlProps,
 	decrement: NumberInputControlProps,
+	testId: string,
 	LayoutOrder: number?,
 }
 
-local StackedIconButton = function(props)
+type StackedIconButtonProps = {
+	onActivated: () -> (),
+	isDisabled: boolean?,
+	padding: Types.Padding,
+	tag: string?,
+	children: React.ReactNode?,
+} & Types.CommonProps
+
+local StackedIconButton = function(props: StackedIconButtonProps)
 	local tokens = useTokens()
 	local radius = UDim.new(0, tokens.Radius.Medium)
 
@@ -46,19 +57,21 @@ local StackedIconButton = function(props)
 		}
 	end, { tokens })
 
-	return React.createElement(View, {
-		onActivated = props.onActivated,
-		Size = props.size,
-		isDisabled = props.isDisabled,
-		selection = {
-			Selectable = not props.isDisabled,
-		},
-		cursor = cursor,
-		padding = props.padding,
-		cornerRadius = radius,
-		tag = props.tag,
-		LayoutOrder = props.layoutOrder,
-	}, props.children)
+	return React.createElement(
+		View,
+		withCommonProps(props, {
+			onActivated = props.onActivated,
+			isDisabled = props.isDisabled,
+			selection = {
+				Selectable = not props.isDisabled,
+			},
+			cursor = cursor,
+			padding = props.padding,
+			cornerRadius = radius,
+			tag = props.tag,
+		}),
+		props.children
+	)
 end
 
 local function SplitControls(props: NumberInputControlsProps)
@@ -83,20 +96,20 @@ local function SplitControls(props: NumberInputControlsProps)
 				Transparency = math.lerp(
 					tokens.Color.Stroke.Emphasis.Transparency,
 					1,
-					if Flags.FoundationNumberInputDisabledStrokeTransparency
-						then (if props.increment.isDisabled then FoundationConstants.DISABLED_TRANSPARENCY else 0)
-						else 0
+					if props.increment.isDisabled then FoundationConstants.DISABLED_TRANSPARENCY else 0
 				),
 				Thickness = tokens.Stroke.Standard,
 			},
 			tag = variantProps.splitButton.tag,
 			LayoutOrder = 1,
 			GroupTransparency = if props.increment.isDisabled then FoundationConstants.DISABLED_TRANSPARENCY else nil,
+			testId = `{props.testId}--increment`,
 		}, {
 			Icon = React.createElement(Icon, {
 				name = BuilderIcons.Icon.PlusSmall,
 				AnchorPoint = Vector2.new(0.5, 0.5),
 				Position = UDim2.fromScale(0.5, 0.5),
+				testId = `{props.testId}--increment-icon`,
 			}),
 		}),
 		ControlDecrement = React.createElement(View, {
@@ -109,20 +122,20 @@ local function SplitControls(props: NumberInputControlsProps)
 				Transparency = math.lerp(
 					tokens.Color.Stroke.Emphasis.Transparency,
 					1,
-					if Flags.FoundationNumberInputDisabledStrokeTransparency
-						then (if props.decrement.isDisabled then FoundationConstants.DISABLED_TRANSPARENCY else 0)
-						else 0
+					if props.decrement.isDisabled then FoundationConstants.DISABLED_TRANSPARENCY else 0
 				),
 				Thickness = tokens.Stroke.Standard,
 			},
 			tag = variantProps.splitButton.tag,
 			LayoutOrder = -1,
 			GroupTransparency = if props.decrement.isDisabled then FoundationConstants.DISABLED_TRANSPARENCY else nil,
+			testId = `{props.testId}--decrement`,
 		}, {
 			Icon = React.createElement(Icon, {
 				name = BuilderIcons.Icon.MinusSmall,
 				AnchorPoint = Vector2.new(0.5, 0.5),
 				Position = UDim2.fromScale(0.5, 0.5),
+				testId = `{props.testId}--decrement-icon`,
 			}),
 		}),
 	})
@@ -131,6 +144,20 @@ end
 local function StackedControls(props: NumberInputControlsProps)
 	local tokens = useTokens()
 	local variantProps = useNumberInputVariants(tokens, props.size)
+
+	local incrementImageStyle = React.useMemo(function()
+		return {
+			Color3 = tokens.Color.Stroke.Emphasis.Color3,
+			Transparency = if props.increment.isDisabled then FoundationConstants.DISABLED_TRANSPARENCY else 0,
+		}
+	end, { tokens, props.increment.isDisabled } :: { unknown })
+
+	local decrementImageStyle = React.useMemo(function()
+		return {
+			Color3 = tokens.Color.Stroke.Emphasis.Color3,
+			Transparency = if props.decrement.isDisabled then FoundationConstants.DISABLED_TRANSPARENCY else 0,
+		}
+	end, { tokens, props.decrement.isDisabled } :: { unknown })
 
 	return React.createElement(View, {
 		tag = "col",
@@ -142,10 +169,13 @@ local function StackedControls(props: NumberInputControlsProps)
 			isDisabled = props.increment.isDisabled,
 			padding = variantProps.button.padding,
 			tag = variantProps.upButton.tag,
+			testId = `{props.testId}--increment`,
 		}, {
 			Icon = React.createElement(Image, {
 				Image = "component_assets/triangleUp_16",
+				imageStyle = if Flags.FoundationNumberInputDisabledStackedVisual then incrementImageStyle else nil,
 				tag = variantProps.icon.tag,
+				testId = `{props.testId}--increment-icon`,
 			}),
 		}),
 		ControlDecrement = React.createElement(StackedIconButton, {
@@ -153,10 +183,13 @@ local function StackedControls(props: NumberInputControlsProps)
 			onActivated = props.decrement.onClick,
 			isDisabled = props.decrement.isDisabled,
 			padding = variantProps.button.padding,
+			testId = `{props.testId}--decrement`,
 		}, {
 			Icon = React.createElement(Image, {
 				Image = "component_assets/triangleDown_16",
+				imageStyle = if Flags.FoundationNumberInputDisabledStackedVisual then decrementImageStyle else nil,
 				tag = variantProps.icon.tag,
+				testId = `{props.testId}--decrement-icon`,
 			}),
 		}),
 	})

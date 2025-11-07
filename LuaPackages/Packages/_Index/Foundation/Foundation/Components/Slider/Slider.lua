@@ -3,6 +3,8 @@ local Packages = Foundation.Parent
 
 local React = require(Packages.React)
 
+local Constants = require(Foundation.Constants)
+
 local View = require(Foundation.Components.View)
 local Types = require(Foundation.Components.Types)
 local withCommonProps = require(Foundation.Utility.withCommonProps)
@@ -15,6 +17,9 @@ local InputMode = require(Foundation.Utility.Input.InputMode)
 local calculateSliderValueFromPosition = require(script.Parent.calculateSliderValueFromPosition)
 local calculateSliderPositionDelta = require(script.Parent.calculateSliderPositionDelta)
 local calculateSliderValueFromDelta = require(script.Parent.calculateSliderValueFromDelta)
+local calculatePixelsPerStep = require(script.Parent.calculatePixelsPerStep)
+local calculateNextStepValue = require(script.Parent.calculateNextStepValue)
+local calculateSliderStepValue = require(script.Parent.calculateSliderStepValue)
 
 local InputSize = require(Foundation.Enums.InputSize)
 type InputSize = InputSize.InputSize
@@ -33,6 +38,8 @@ local useTokens = require(Foundation.Providers.Style.useTokens)
 local useSliderVariants = require(Foundation.Components.Slider.useSliderVariants)
 local useSliderMotionStates = require(Foundation.Components.Slider.useSliderMotionStates)
 local Knob = require(Foundation.Components.Knob)
+local PresentationContext = require(Foundation.Providers.Style.PresentationContext)
+local Flags = require(Foundation.Utility.Flags)
 
 -- When observing the drag deltas this was a reasonably large value that would
 -- only realistically be reached from the directional input jumping back to the
@@ -56,6 +63,7 @@ export type SliderProps = {
 	isContained: boolean?,
 	knobVisibility: Visibility?,
 	knob: React.ReactElement?,
+	step: number?,
 
 	onValueChanged: ((newValue: number) -> ())?,
 	onDragStarted: (() -> ())?,
@@ -70,7 +78,10 @@ local defaultProps = {
 	isDisabled = false,
 	isContained = false,
 	knobVisibility = Visibility.Auto,
+	testId = "--foundation-slider",
 }
+
+local IS_INVERSE = { isInverse = true }
 
 local function Slider(sliderProps: SliderProps, forwardRef: React.Ref<GuiObject>?)
 	local props = withDefaults(sliderProps, defaultProps)
@@ -78,7 +89,7 @@ local function Slider(sliderProps: SliderProps, forwardRef: React.Ref<GuiObject>
 	local controlState, setControlState = React.useState(ControlState.Initialize :: ControlState)
 	local isDragging, setIsDragging = React.useState(false)
 	local isKnobVisible, setIsKnobVisible = React.useState(false)
-	local value = useBindable(props.value)
+	local value: React.Binding<number> = useBindable(props.value)
 
 	local lastDragPosition = React.useRef(nil :: Vector2?)
 	local lastInputMode = useLastInputMode()
@@ -117,11 +128,16 @@ local function Slider(sliderProps: SliderProps, forwardRef: React.Ref<GuiObject>
 
 	local calculateValueFromAbsPosition = React.useCallback(function(position: Vector2)
 		if ref.current then
-			return calculateSliderValueFromPosition(position, ref.current, props.range)
+			local unsteppedValue = calculateSliderValueFromPosition(position, ref.current, props.range)
+			if props.step then
+				return calculateSliderStepValue(unsteppedValue, props.step, props.range)
+			end
+
+			return unsteppedValue
 		else
 			return 0
 		end
-	end, { ref, props.range } :: { unknown })
+	end, { ref, props.range, props.step } :: { unknown })
 
 	local updateValue = React.useCallback(function(newValue: number)
 		if newValue ~= value:getValue() then
@@ -147,28 +163,68 @@ local function Slider(sliderProps: SliderProps, forwardRef: React.Ref<GuiObject>
 
 	local onDrag = React.useCallback(function(_rbx, position: Vector2)
 		if ref.current and lastDragPosition.current then
-			local length = ref.current.AbsoluteSize.Magnitude
-			local delta = calculateSliderPositionDelta(position, lastDragPosition.current, length)
+			-- When step is enabled, use absolute position calculation for better
+			-- stepping behavior instead of delta-based calculation
+			if props.step and props.step > 0 then
+				if lastInputMode == InputMode.Directional then
+					-- Handle directional input movement by stepping one `props.step` at a time
 
-			lastDragPosition.current = position
+					local pixelDisplacement = position - lastDragPosition.current
+					local pixelDistanceX = math.abs(pixelDisplacement.X)
+					local pixelsPerStep = calculatePixelsPerStep(ref.current.AbsoluteSize.X, props.step, props.range)
 
-			-- When using directional input (Gamepad/WASD/Arrow keys) with a Scriptable UIDragDetector,
-			-- the `position` gets reset when making significant directional changes.
-			-- Examples of this include going from Right -> Right+Up or Right -> Left.
-			--
-			-- In practice, this means that if the user moves the Slider to the right then wants to adjust
-			-- and move back a bit towards the left, this will immediately jump to the center of the
-			-- bar. To work around this, we discard that jump in position by making sure the delta isn't too large,
-			-- then from there we receive incremental changes like normal and sliding continues to work smoothly.
-			if lastInputMode == InputMode.Directional and math.abs(delta) > MAX_DIRECTIONAL_INPUT_DRAG_DELTA then
-				return
+					-- Detect position jumps that are too large for a single frame
+					-- Thumbstick movement is gradual, so anything > 2 steps is likely a position reset
+					local maxExpectedMovement = pixelsPerStep * 2
+					if pixelDistanceX > maxExpectedMovement then
+						lastDragPosition.current = position
+						return
+					end
+
+					-- Only register movement if it's at least the half the size of one step
+					if pixelDistanceX < pixelsPerStep / 2 then
+						return
+					end
+
+					local currentValue = value:getValue()
+					local newValue = calculateNextStepValue(pixelDisplacement.X, currentValue, props.step, props.range)
+
+					if newValue ~= currentValue then
+						-- Only update position baseline when we actually step
+						updateValue(newValue)
+						lastDragPosition.current = position
+					end
+				else
+					-- Handle normal drag movement by snapping to the nearest step
+					local newValue = calculateValueFromAbsPosition(position)
+					updateValue(newValue)
+					lastDragPosition.current = position
+				end
+			else
+				local length = ref.current.AbsoluteSize.Magnitude
+				local delta = calculateSliderPositionDelta(position, lastDragPosition.current, length)
+
+				lastDragPosition.current = position
+
+				-- When using directional input (Gamepad/WASD/Arrow keys) with a Scriptable UIDragDetector,
+				-- the `position` gets reset when making significant directional changes.
+				-- Examples of this include going from Right -> Right+Up or Right -> Left.
+				--
+				-- In practice, this means that if the user moves the Slider to the right then wants to adjust
+				-- and move back a bit towards the left, this will immediately jump to the center of the
+				-- bar. To work around this, we discard that jump in position by making sure the delta isn't too large,
+				-- then from there we receive incremental changes like normal and sliding continues to work smoothly.
+				if lastInputMode == InputMode.Directional and math.abs(delta) > MAX_DIRECTIONAL_INPUT_DRAG_DELTA then
+					return
+				end
+
+				-- Calculate the new value from the delta
+				local unsteppedValue = calculateSliderValueFromDelta(value:getValue(), delta, props.range)
+
+				updateValue(unsteppedValue)
 			end
-
-			-- Calculate the new value from the delta
-			local newValue = calculateSliderValueFromDelta(value:getValue() :: number, delta, props.range)
-			updateValue(newValue)
 		end
-	end, { ref, lastDragPosition, value, updateValue, lastInputMode } :: { unknown })
+	end, { props.step, props.range, lastInputMode, value, updateValue, calculateValueFromAbsPosition } :: { unknown })
 
 	local onDragEnded = React.useCallback(function()
 		setIsDragging(false)
@@ -191,7 +247,7 @@ local function Slider(sliderProps: SliderProps, forwardRef: React.Ref<GuiObject>
 
 	local knobPosition = UDim2.fromScale(1, 0.5)
 	local knobAnchorPoint = if props.isContained
-		then (value :: React.Binding<number>):map(function(currentValue: number)
+		then value:map(function(currentValue: number)
 			local valuePercent = (currentValue - props.range.Min) / (props.range.Max - props.range.Min)
 			return Vector2.new(valuePercent, 0.5)
 		end)
@@ -201,7 +257,7 @@ local function Slider(sliderProps: SliderProps, forwardRef: React.Ref<GuiObject>
 		View,
 		withCommonProps(props, {
 			Size = UDim2.new(props.width, UDim.new(0, variant.hitbox.height)),
-			GroupTransparency = if props.isDisabled then 0.5 else nil,
+			GroupTransparency = if props.isDisabled then Constants.DISABLED_TRANSPARENCY else nil,
 			stateLayer = {
 				-- This element is just the hitbox so we don't actually want it to visually change
 				affordance = StateLayerAffordance.None,
@@ -221,14 +277,14 @@ local function Slider(sliderProps: SliderProps, forwardRef: React.Ref<GuiObject>
 
 			Bar = React.createElement(View, {
 				tag = variant.bar.tag,
-				testId = "--foundation-slider-bar",
+				testId = `{props.testId}--bar`,
 			}, {
 				Fill = React.createElement(View, {
 					tag = variant.fill.tag,
-					Size = (value :: React.Binding<number>):map(function(alpha: number)
+					Size = value:map(function(alpha: number)
 						return UDim2.fromScale((alpha - props.range.Min) / (props.range.Max - props.range.Min), 1)
 					end),
-					testId = "--foundation-slider-fill",
+					testId = `{props.testId}--fill`,
 				}, {
 					Knob = if props.knob
 						then React.createElement(View, {
@@ -236,17 +292,29 @@ local function Slider(sliderProps: SliderProps, forwardRef: React.Ref<GuiObject>
 							AnchorPoint = knobAnchorPoint,
 							Position = knobPosition,
 							Visible = isKnobVisible,
-							testId = "--foundation-knob",
+							testId = `{props.testId}--custom-knob`,
 						}, props.knob)
-						else React.createElement(Knob, {
-							AnchorPoint = knobAnchorPoint,
-							Position = knobPosition,
-							size = props.size,
-							style = currentMotionState.knobStyle,
-							stroke = variant.knob.stroke,
-							hasShadow = variant.knob.hasShadow,
-							testId = "--foundation-knob",
-						}),
+						else if Flags.FoundationUpdateKnobComponent
+							then React.createElement(PresentationContext.Provider, { value = IS_INVERSE }, {
+								Knob = React.createElement(Knob, {
+									AnchorPoint = knobAnchorPoint,
+									Position = knobPosition,
+									size = props.size,
+									style = currentMotionState.knobStyle,
+									stroke = variant.knob.stroke,
+									hasShadow = variant.knob.hasShadow,
+									testId = `{props.testId}--knob`,
+								}),
+							})
+							else React.createElement(Knob, {
+								AnchorPoint = knobAnchorPoint,
+								Position = knobPosition,
+								size = props.size,
+								style = currentMotionState.knobStyle,
+								stroke = variant.knob.stroke,
+								hasShadow = variant.knob.hasShadow,
+								testId = `{props.testId}--knob`,
+							}),
 				}),
 			}),
 		}

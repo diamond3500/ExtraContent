@@ -21,9 +21,7 @@ end
 local function getTokens(device: Device, theme: Theme, scaleFactor: number?)
 	local generators = RbxDesignFoundations.Tokens
 	local scale = getPlatformScale(device, scaleFactor)
-	local themeTokens: typeof(generators.FoundationDark) = if theme == Theme.Dark
-		then generators.FoundationDark
-		else generators.FoundationLight
+	local themeTokens: typeof(generators.Dark) = if theme == Theme.Dark then generators.Dark else generators.Light
 
 	local tokens = themeTokens(scale)
 
@@ -31,6 +29,7 @@ local function getTokens(device: Device, theme: Theme, scaleFactor: number?)
 		Color = tokens.Color,
 		Config = tokens.Config,
 		DarkMode = tokens.DarkMode,
+		Ease = tokens.Ease,
 		LightMode = tokens.LightMode,
 		Inverse = tokens.Inverse,
 		Semantic = tokens.Semantic, -- TODO(tokens): Remove once icon sizes are moved
@@ -44,6 +43,7 @@ local function getTokens(device: Device, theme: Theme, scaleFactor: number?)
 		LineHeight = tokens.LineHeight,
 		FontSize = tokens.FontSize,
 		FontWeight = tokens.FontWeight,
+		Time = tokens.Time,
 		Typography = tokens.Typography,
 	}
 

@@ -8,12 +8,15 @@ local DropdownReportMenuItem = require(root.Components.MenuItems.DropdownReportM
 local ButtonReportMenuItem = require(root.Components.MenuItems.ButtonReportMenuItem)
 local FreeCommentsMenuItem = require(root.Components.MenuItems.FreeCommentsMenuItem)
 local ModalBasedSelectorMenuItem = require(root.Components.MenuItems.ModalBasedSelectorMenuItem)
+local ChatModalSelectorMenuItem = require(root.Components.MenuItems.ChatModalSelectorMenuItem)
 local Types = require(root.Components.Types)
 local Constants = require(root.Components.Constants)
 
 local ButtonVariant = Foundation.Enums.ButtonVariant
 
 local FFlagHideShortcutsOnReportDropdown = require(root.Flags.FFlagHideShortcutsOnReportDropdown)
+local FFlagInGameMenuAddChatLineReporting =
+	require(CorePackages.Workspace.Packages.SharedFlags).FFlagInGameMenuAddChatLineReporting
 
 local function getMenuItemsFromConfigs(
 	menuUIStates: Types.ReportPersonState | Types.ReportExperienceState,
@@ -114,6 +117,28 @@ local function getMenuItemsFromConfigs(
 					isSmallPortraitViewport = isSmallPortraitViewport,
 					placeholderText = localizedText.ChooseOne,
 				})
+			elseif FFlagInGameMenuAddChatLineReporting and componentType == "chatModalSelector" then
+				menuItems[componentName] = React.createElement(ChatModalSelectorMenuItem, {
+					label = localizedText[config.fieldLabel],
+					layoutOrder = i,
+					onSelect = function(message: Types.Message, orderedMessages: { Types.Message })
+						config.onUpdateSelectedOption(
+							message,
+							orderedMessages,
+							menuUIStates,
+							dispatchUIStates,
+							utilityProps
+						)
+					end,
+					onMenuOpenChange = onMenuOpenChange,
+					menuContainerWidth = utilityProps.menuWidth,
+					selectorHeight = Constants.MenuItemHeight,
+					selectedValue = if config.getSelectedValue
+						then config.getSelectedValue(menuUIStates) or nil
+						else nil,
+					isSmallPortraitViewport = isSmallPortraitViewport,
+					placeholderText = localizedText.ChooseOne,
+				}) :: React.ReactElement
 			end
 		end
 	end

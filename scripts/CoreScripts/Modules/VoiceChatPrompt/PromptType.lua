@@ -25,4 +25,6 @@ return {
 	LeaveVoice = "LeaveVoice",
 	DevicePermissionsModal = "DevicePermissionsModal",
 	VoiceDataConsentOptOutToast = "VoiceDataConsentOptOutToast",
+	UnifiedJoinVoiceToast = "UnifiedJoinVoiceToast",
+	AgeCheckForVoiceToast = "AgeCheckForVoiceToast",
 }

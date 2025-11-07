@@ -12,6 +12,7 @@ local UnibarStyle = require(Chrome.ChromeShared.Unibar.UnibarStyle)
 
 local CommonIcon = require(Chrome.Integrations.CommonIcon)
 local CommonFtuxTooltip = require(Chrome.Integrations.CommonFtuxTooltip)
+local AvatarSwitcherFtuxTooltip = require(Chrome.Integrations.AvatarSwitcher.AvatarSwitcherFtuxTooltip)
 local VRService = game:GetService("VRService")
 local CoreGui = game:GetService("CoreGui")
 local RobloxGui = CoreGui:WaitForChild("RobloxGui")
@@ -31,9 +32,6 @@ local isSpatial = require(CorePackages.Workspace.Packages.AppCommonLib).isSpatia
 
 local SelfieView = require(RobloxGui.Modules.SelfieView)
 
-local AppChat = require(CorePackages.Workspace.Packages.AppChat)
-local InExperienceAppChatExperimentation = AppChat.App.InExperienceAppChatExperimentation
-
 local GetFFlagUnpinUnavailable = require(Chrome.Flags.GetFFlagUnpinUnavailable)
 local GetFStringConnectTooltipLocalStorageKey = require(Chrome.Flags.GetFStringConnectTooltipLocalStorageKey)
 local FFlagEnableUnibarFtuxTooltips = require(CorePackages.Workspace.Packages.SharedFlags).FFlagEnableUnibarFtuxTooltips
@@ -46,6 +44,7 @@ local FFlagFixIntegrationActivated = game:DefineFastFlag("FixIntegrationActivate
 local FFlagFixInventoryFilledIcon = game:DefineFastFlag("FixInventoryFilledIcon", false)
 local FFlagBuilderIcons = require(CorePackages.Workspace.Packages.SharedFlags).UIBlox.FFlagUIBloxMigrateBuilderIcon
 local FFlagEnableUnibarTooltipQueue = require(Chrome.Flags.FFlagEnableUnibarTooltipQueue)()
+local FFlagRemoveUnusedTopBarNotifications = game:DefineFastFlag("RemoveUnusedTopBarNotifications", false)
 
 local ChromeSharedFlags = require(Chrome.ChromeShared.Flags)
 local FFlagTokenizeUnibarConstantsWithStyleProvider = ChromeSharedFlags.FFlagTokenizeUnibarConstantsWithStyleProvider
@@ -55,11 +54,11 @@ local GetFFlagAppChatRebrandStringUpdates = SharedFlags.GetFFlagAppChatRebrandSt
 
 local FFlagAppChatEnabledChromeDropdownFtuxTooltip =
 	game:DefineFastFlag("AppChatEnabledChromeDropdownFtuxTooltip", false)
+local FFlagAvatarSwitcherFtuxTooltip = game:DefineFastFlag("AvatarSwitcherFtuxTooltip", false)
 
 local FIntUnibarConnectIconTooltipPriority = game:DefineFastInt("UnibarConnectTooltipPriority", 2000)
 local shouldShowConnectTooltip = GetFFlagEnableAppChatInExperience()
 	and FFlagEnableUnibarFtuxTooltips
-	and InExperienceAppChatExperimentation.default.variant.ShowPlatformChatChromeDropdownEntryPoint
 	and FFlagAppChatEnabledChromeDropdownFtuxTooltip
 	and GetShouldShowPlatformChatBasedOnPolicy()
 
@@ -325,12 +324,17 @@ function HamburgerButton(props)
 			})
 			else nil,
 		connectTooltip,
+		if FFlagAvatarSwitcherFtuxTooltip
+			then React.createElement(AvatarSwitcherFtuxTooltip, {
+				visible = props.visible,
+			})
+			else nil,
 	})
 end
 
 return ChromeService:register({
 	initialAvailability = ChromeService.AvailabilitySignal.Pinned,
-	notification = ChromeService:subMenuNotifications("nine_dot"),
+	notification = if FFlagRemoveUnusedTopBarNotifications then nil else ChromeService:subMenuNotifications("nine_dot"),
 	id = "nine_dot",
 	label = "CoreScripts.TopBar.MoreMenu",
 	isActivated = if FFlagFixIntegrationActivated

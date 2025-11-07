@@ -7,14 +7,16 @@ local PreferencesProvider = require(script.Providers.Preferences)
 local Packages = script.Parent
 local BuilderIcons = require(Packages.BuilderIcons)
 
+export type ActionProps = Types.ActionProps
 export type Bindable<T> = Types.Bindable<T>
 export type CommonProps = Types.CommonProps
-export type StateChangedCallback = Types.StateChangedCallback
-export type StateLayer = Types.StateLayer
-export type Tags = Types.Tags
+export type Padding = Types.Padding
 export type PopoverAnchor = Types.PopoverAnchor
 export type Preferences = PreferencesProvider.PreferencesProps
 export type PreferencesProviderProps = PreferencesProvider.PreferencesProviderProps
+export type StateChangedCallback = Types.StateChangedCallback
+export type StateLayer = Types.StateLayer
+export type Tags = Types.Tags
 
 -- Token types
 export type ColorStyle = Types.ColorStyle
@@ -31,6 +33,7 @@ local ChipSize = require(script.Enums.ChipSize)
 local ControlState = require(script.Enums.ControlState)
 local CursorType = require(script.Enums.CursorType)
 local Device = require(script.Enums.Device)
+local DateTimePickerVariant = require(script.Enums.DateTimePickerVariant)
 local DialogSize = require(script.Enums.DialogSize)
 local Orientation = require(script.Enums.Orientation)
 local DividerVariant = require(script.Enums.DividerVariant)
@@ -66,6 +69,7 @@ export type ChipSize = ChipSize.ChipSize
 export type ControlState = ControlState.ControlState
 export type CursorType = CursorType.CursorType
 export type Device = Device.Device
+export type DateTimePickerVariant = DateTimePickerVariant.DateTimePickerVariant
 export type DialogSize = DialogSize.DialogSize
 export type Orientation = Orientation.Orientation
 export type DividerVariant = DividerVariant.DividerVariant
@@ -108,11 +112,20 @@ export type AvatarGroupProps = AvatarGroup.AvatarGroupProps
 local Badge = require(script.Components.Badge)
 export type BadgeProps = Badge.BadgeProps
 
+local BaseMenu = require(script.Components.BaseMenu)
+export type BaseMenuProps<Item = BaseMenuItem> = BaseMenu.BaseMenuProps<Item>
+export type BaseMenuItem = BaseMenu.BaseMenuItem
+export type BaseMenuItems<Item = BaseMenuItem> = BaseMenu.BaseMenuItems<Item>
+export type BaseMenuItemGroup<Item = BaseMenuItem> = BaseMenu.BaseMenuItemGroup<Item>
+
 local Button = require(script.Components.Button)
 export type ButtonProps = Button.ButtonProps
 
 local Checkbox = require(script.Components.Checkbox)
 export type CheckboxProps = Checkbox.CheckboxProps
+
+local Coachmark = require(script.Components.Coachmark)
+export type CoachmarkProps = Coachmark.CoachmarkProps
 
 local Chip = require(script.Components.Chip)
 export type ChipProps = Chip.ChipProps
@@ -128,11 +141,21 @@ export type DialogTextProps = Dialog.DialogTextProps
 export type DialogHeroMediaProps = Dialog.DialogHeroMediaProps
 export type DialogTitleProps = Dialog.DialogTitleProps
 
+local DateTimePicker = require(script.Components.DateTimePicker)
+export type DateTimePickerProps = DateTimePicker.DateTimePickerProps
+
 local Divider = require(script.Components.Divider)
 export type DividerProps = Divider.DividerProps
 
 local Dropdown = require(script.Components.Dropdown)
 export type DropdownProps = Dropdown.DropdownProps
+export type DropdownItem = Dropdown.DropdownItem
+export type DropdownItems = Dropdown.DropdownItems
+
+local Grid = require(script.Components.Grid)
+export type GridProps = Grid.GridProps
+export type GridCellProps = Grid.GridCellProps
+export type GridDebugProps = Grid.GridDebugProps
 
 local Empty = require(script.Components.Empty)
 export type EmptyProps = Empty.EmptyProps
@@ -161,6 +184,7 @@ export type LoadingProps = Loading.LoadingProps
 local Menu = require(script.Components.Menu)
 export type MenuProps = Menu.MenuProps
 export type MenuItem = Menu.MenuItem
+export type MenuItems = Menu.MenuItems
 
 local NumberInput = require(script.Components.NumberInput)
 export type NumberInputProps = NumberInput.NumberInputProps
@@ -182,6 +206,13 @@ export type ScrollViewProps = ScrollView.ScrollViewProps
 
 local SegmentedControl = require(script.Components.SegmentedControl)
 export type SegmentedControlProps = SegmentedControl.SegmentedControlProps
+
+local Sheet = require(script.Components.Sheet)
+export type SheetProps = Sheet.SheetProps
+export type SheetActionsProps = Sheet.SheetActionsProps
+export type SheetContentProps = Sheet.SheetContentProps
+export type SheetHeaderProps = Sheet.SheetHeaderProps
+export type SheetRef = Sheet.SheetRef
 
 local Skeleton = require(script.Components.Skeleton)
 export type SkeletonProps = Skeleton.SkeletonProps
@@ -228,10 +259,13 @@ local Foundation = strict({
 	Button = Button,
 	Checkbox = Checkbox,
 	Chip = Chip,
+	Coachmark = Coachmark,
 	ColorPicker = ColorPicker,
+	DateTimePicker = DateTimePicker,
 	Dialog = Dialog,
 	Divider = Divider,
 	Dropdown = Dropdown,
+	Grid = Grid,
 	Empty = Empty,
 	Icon = Icon,
 	IconButton = IconButton,
@@ -248,6 +282,7 @@ local Foundation = strict({
 	RadioGroup = RadioGroup,
 	ScrollView = ScrollView,
 	SegmentedControl = SegmentedControl,
+	Sheet = Sheet,
 	Skeleton = Skeleton,
 	Slider = Slider,
 	Snackbar = Snackbar,
@@ -267,6 +302,9 @@ local Foundation = strict({
 
 	-- Hooks
 	Hooks = {
+		useBreakpoint = require(script.Providers.Responsive.Hooks.useBreakpoint),
+		useResponsiveValue = require(script.Providers.Responsive.Hooks.useResponsiveValue),
+		useResponsive = require(script.Providers.Responsive.useResponsive),
 		useCumulativeBackground = require(script.Utility.useCumulativeBackground),
 		useCursor = require(script.Providers.Cursor.useCursor),
 		useDefaultTags = require(script.Utility.useDefaultTags),
@@ -298,6 +336,7 @@ local Foundation = strict({
 		ControlState = ControlState,
 		ChipSize = ChipSize,
 		CursorType = CursorType,
+		DateTimePickerVariant = DateTimePickerVariant,
 		Device = Device,
 		DialogSize = DialogSize,
 		-- **DEPRECATED**: DividerOrientation is deprecated. Use Orientation instead.
@@ -336,14 +375,17 @@ local Foundation = strict({
 	-- Utility
 	Utility = {
 		composeStyleVariant = require(script.Utility.composeStyleVariant),
+		getGridMetrics = require(script.Utility.getGridMetrics),
 		getRbxThumb = require(script.Utility.getRbxThumb),
 		getIconRichText = require(script.Utility.getIconRichText),
 		indexBindable = require(script.Utility.indexBindable),
+		-- **DEPRECATED**: Utility.mockComponent is deprecated. Use FoundationTestingLibrary.mockComponent instead.
 		mockComponent = require(script.Utility.mockComponent),
 		withCommonProps = require(script.Utility.withCommonProps),
 		withDefaults = require(script.Utility.withDefaults),
 		isBuilderIcon = require(script.Utility.isBuilderIcon),
 		isPointInGuiObjectBounds = require(script.Utility.isPointInGuiObjectBounds),
+		preloadCloudAssets = require(script.Utility.preloadAssets),
 		Flags = require(script.Utility.Flags),
 	},
 
@@ -352,6 +394,7 @@ local Foundation = strict({
 		-- Use View/Text/Image instead
 		Interactable = require(script.Components.Interactable),
 		withCursorMigration = require(script.Providers.Cursor.withCursorMigration),
+		BaseMenu = BaseMenu,
 	},
 })
 

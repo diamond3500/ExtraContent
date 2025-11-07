@@ -43,6 +43,11 @@ local GetFFlagSimpleChatUnreadMessageCount = SharedFlags.GetFFlagSimpleChatUnrea
 local CoreGuiCommon = require(CorePackages.Workspace.Packages.CoreGuiCommon)
 local FFlagTopBarSignalizeSetCores = CoreGuiCommon.Flags.FFlagTopBarSignalizeSetCores
 local FFlagTopBarSignalizeMenuOpen = CoreGuiCommon.Flags.FFlagTopBarSignalizeMenuOpen
+local FFlagTopBarDeprecateGameInfoRodux = require(script.Flags.FFlagTopBarDeprecateGameInfoRodux)
+local FFlagTopBarDeprecateGamepadNavigationDialogRodux = require(script.Flags.FFlagTopBarDeprecateGamepadNavigationDialogRodux)
+
+local FFlagTopBarDeprecateChatRodux = require(script.Flags.FFlagTopBarDeprecateChatRodux)
+local FFlagTopBarDeprecateDisplayOptionsRodux = require(script.Flags.FFlagTopBarDeprecateDisplayOptionsRodux)
 
 if ChromeEnabled and (not TenFootInterface:IsEnabled() or FFlagAdaptUnibarAndTiltSizing or FFlagTopBarStyleUseDisplayUIScale) then
 	local function SetGlobalGuiInset()
@@ -127,9 +132,14 @@ function TopBar.new()
 	if not FFlagTopBarSignalizeSetCores	then
 		registerSetCores(self.store)
 	end
-	self.store:dispatch(GetCanChat)
+	
+	if not FFlagTopBarDeprecateChatRodux then
+		self.store:dispatch(GetCanChat)
+	end
 
-	self.store:dispatch(GetGameName)
+	if not FFlagTopBarDeprecateGameInfoRodux then
+		self.store:dispatch(GetGameName)
+	end
 
 	if GetFFlagDebugEnableVRFTUXExperienceInStudio() then
 		if isRunningInStudio() then
@@ -149,9 +159,11 @@ function TopBar.new()
 		InGameMenu.mountInGameMenu()
 	end
 
-	coroutine.wrap(function()
-		self.store:dispatch(SetSmallTouchDevice(SettingsUtil:IsSmallTouchScreen()))
-	end)()
+	if not FFlagTopBarDeprecateDisplayOptionsRodux then
+		coroutine.wrap(function()
+			self.store:dispatch(SetSmallTouchDevice(SettingsUtil:IsSmallTouchScreen()))
+		end)()
+	end
 
 	local appStyleForAppStyleProvider = {
 		themeName = StyleConstants.ThemeName.Dark,
@@ -233,14 +245,14 @@ function TopBar.new()
 	self.element = Roact.mount(self.root, CoreGui, "TopBar")
 
 	-- add binding
-	if not GetFFlagSimpleChatUnreadMessageCount() then
+	if not GetFFlagSimpleChatUnreadMessageCount() and not FFlagTopBarDeprecateChatRodux then
 		local TextChatService = game:GetService("TextChatService")
 		TextChatService.MessageReceived:Connect(function()
 			self.store:dispatch(UpdateUnreadMessagesBadge(1))
 		end)
 	end
 
-	if FFlagGamepadNavigationDialogABTest then
+	if FFlagGamepadNavigationDialogABTest and not FFlagTopBarDeprecateGamepadNavigationDialogRodux then
 		local UserInputService = game:GetService("UserInputService")
 		local connection = nil
 		local function disconnectGamepadConnected()
@@ -276,7 +288,9 @@ function TopBar:setGamepadMenuOpen(open)
 end
 
 function TopBar:setGamepadNavigationDialogOpen(open)
-	self.store:dispatch(SetGamepadNavigationDialogOpen(open))
+	if not FFlagTopBarDeprecateDisplayOptionsRodux then
+		self.store:dispatch(SetGamepadNavigationDialogOpen(open))
+	end
 end
 
 return TopBar.new()
