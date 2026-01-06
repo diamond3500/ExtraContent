@@ -17,6 +17,9 @@ export type StateChangedCallback = (newState: ControlState) -> ()
 local ButtonVariant = require(Foundation.Enums.ButtonVariant)
 type ButtonVariant = ButtonVariant.ButtonVariant
 
+local InputSize = require(Foundation.Enums.InputSize)
+type InputSize = InputSize.InputSize
+
 export type ActionProps = {
 	onActivated: () -> (),
 	variant: ButtonVariant?,
@@ -80,8 +83,7 @@ export type Stroke = {
 }
 
 export type ColorStyleValue = {
-	-- Adding Color3 as an option because of token stupidity
-	-- We can clean this up when we update to the new token system	Color3: Bindable<Color3>?,
+	-- Both values are optional because of token types, but should be required.
 	Color3: Color3?,
 	Transparency: number?,
 }
@@ -131,7 +133,21 @@ export type SelectionGroup = {
 
 export type Tags = string | { [string]: boolean }
 
-export type GuiObjectProps = {
+export type BaseInteractableProps = {
+	-- The state layer configuration for the element.
+	stateLayer: StateLayer?,
+	-- A callback that is called when the element is activated with the primary input object.
+	onActivated: ((self: GuiObject, inputObject: InputObject, clickCount: number) -> ())?,
+	-- A callback that is called when the element is activated with the secondary input object.
+	-- Currently, this is only used for right-click. When SecondaryActivated is enabled, this will be used for left-click.
+	onSecondaryActivated: ((self: GuiObject, inputObject: InputObject) -> ())?,
+	-- A callback that is called when the state of the element changes.
+	onStateChanged: StateChangedCallback?,
+	-- Whether or not the element is disabled. This can't be a bindable due to handling state updates.
+	isDisabled: boolean?,
+}
+
+export type BaseGuiObjectProps = {
 	aspectRatio: AspectRatio?,
 	cornerRadius: Bindable<UDim>?,
 	flexItem: FlexItem?,
@@ -144,7 +160,7 @@ export type GuiObjectProps = {
 	backgroundStyle: ColorStyle?,
 	selection: Selection?,
 	cursor: Cursor?,
-	selectionGroup: Bindable<boolean>? | SelectionGroup?,
+	selectionGroup: (Bindable<boolean> | SelectionGroup)?,
 
 	AutoLocalize: Bindable<boolean>?,
 	AutomaticSize: Bindable<Enum.AutomaticSize>?,
@@ -156,14 +172,39 @@ export type GuiObjectProps = {
 	Size: Bindable<UDim2?>,
 	SizeConstraint: Bindable<Enum.SizeConstraint>?,
 
-	stateLayer: StateLayer?, -- Can this be bindable?
-	onActivated: ((self: GuiObject, inputObject: InputObject, clickCount: number) -> ())?,
-	onSecondaryActivated: ((self: GuiObject, inputObject: InputObject) -> ())?,
-	onStateChanged: StateChangedCallback?,
-	isDisabled: boolean?, -- This can't be a bindable due to handling state updates
-
 	tag: Tags?,
 	children: React.ReactNode?,
+}
+
+export type GuiObjectProps = BaseGuiObjectProps & BaseInteractableProps
+
+export type TextInputCommonProps = {
+	-- Input text value
+	text: string,
+	-- Ran when the input text changes
+	onChanged: (text: string) -> (),
+	-- The label shown alongside the TextArea
+	label: string,
+	-- Subcaption shown below the text input, red on error
+	hint: string?,
+	-- The size of the TextArea input
+	size: InputSize?,
+	-- Defined width of the TextArea by default
+	width: UDim?,
+	-- What text should be shown in the TextArea when there is no user input
+	placeholder: string?,
+	-- Whether the TextArea should be disabled to input
+	isDisabled: boolean?,
+	-- Whether the input is required, true for "*", false for " (optional)", nil for nothing
+	isRequired: boolean?,
+	-- Whether to show the TextArea input as erroneous
+	hasError: boolean?,
+	-- Partial TextBox ref exposed via imperative handle
+	textBoxRef: React.Ref<TextInputRef>?,
+	-- Ran when textbox focus is gained
+	onFocusGained: (() -> ())?,
+	-- Ran when textbox focus is lost
+	onFocusLost: (() -> ())?,
 }
 
 export type AspectRatioTable = {
@@ -255,5 +296,10 @@ export type CursorConfig = {
 }
 
 export type Cursor = CursorType | CursorConfig
+
+export type OverlayConfig = {
+	DisplayOrder: number?,
+	gui: nil,
+}
 
 return {}

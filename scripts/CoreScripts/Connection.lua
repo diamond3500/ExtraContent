@@ -12,15 +12,15 @@ local VRService = game:GetService("VRService")
 local CorePackages = game:GetService("CorePackages")
 local TelemetryService = game:GetService("TelemetryService")
 
-CorePackages:WaitForChild("Workspace"):WaitForChild("Packages") -- WaitForChild used here because Workspace is not available on startup
+local FFlagConnectionRemoveLoadingTimeout = game:DefineFastFlag("ConnectionRemoveLoadingTimeout", false)
+
+CorePackages:WaitForChild("Workspace"):WaitForChild("Packages", if FFlagConnectionRemoveLoadingTimeout then math.huge else nil) -- WaitForChild used here because Workspace is not available on startup
 local Create = require(CorePackages.Workspace.Packages.AppCommonLib).Create
 local ErrorPrompt = require(RobloxGui.Modules.ErrorPrompt)
 local Localization = require(CorePackages.Workspace.Packages.InExperienceLocales).Localization
 local Logging = require(CorePackages.Workspace.Packages.AppCommonLib).Logging
 local Url = require(CorePackages.Workspace.Packages.CoreScriptsCommon).Url
 local mutedError = require(CorePackages.Workspace.Packages.Loggers).mutedError
-
-local FFlagDisableReconnectsForRootedKicks = game:DefineFastFlag("DisableReconnectsForRootedKicks", false)
 
 local fflagDebugEnableErrorStringTesting = game:DefineFastFlag("DebugEnableErrorStringTesting", false)
 local fflagShouldMuteUnlocalizedError = game:DefineFastFlag("ShouldMuteUnlocalizedError", false)
@@ -357,7 +357,7 @@ local reconnectDisabledList = {
 	[Enum.ConnectionError.PlacelaunchCreatorBan] = true,
 	[Enum.ConnectionError.AndroidAnticheatKick] = true,
 	[Enum.ConnectionError.AndroidEmulatorKick] = true,
-	[Enum.ConnectionError.AndroidRootedKick] = FFlagDisableReconnectsForRootedKicks,
+	[Enum.ConnectionError.AndroidRootedKick] = true,
 }
 -- When removing engine feature CoreGuiOverflowDetection, move this into the above list.
 if coreGuiOverflowDetection then

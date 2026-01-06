@@ -49,15 +49,13 @@ local CorePackages = game:GetService("CorePackages")
 local UserGameSettings = UserSettings():GetService("UserGameSettings")
 
 --------------- FLAGS ----------------
-
-local GetFFlagSettingsHubButtonCanBeDisabled = require(Settings.Flags.GetFFlagSettingsHubButtonCanBeDisabled)
 local FFlagRefactorMenuConfirmationButtons = require(RobloxGui.Modules.Settings.Flags.FFlagRefactorMenuConfirmationButtons)
 local FFlagAddNextUpContainer = require(RobloxGui.Modules.Settings.Pages.LeaveGameWithNextUp.Flags.FFlagAddNextUpContainer)
-
 local SettingsFlags = require(Settings.Flags)
 local FFlagGameSettingsRemoveTextTransparency = SettingsFlags.FFlagGameSettingsRemoveTextTransparency
 local FFlagGameSettingsRemoveMouseButton1Event = SettingsFlags.FFlagGameSettingsRemoveMouseButton1Event
 local FFlagIEMSelectorUnchangedByMouseWheel = SettingsFlags.FFlagIEMSelectorUnchangedByMouseWheel
+local FFlagRepositionDropDownScrim = game:DefineFastFlag("RepositionDropDownScrim", false)
 
 local SharedFlags = require(CorePackages.Workspace.Packages.SharedFlags)
 local FFlagIEMFocusNavToButtons = SharedFlags.FFlagIEMFocusNavToButtons
@@ -78,6 +76,8 @@ local isInExperienceUIVREnabled =
 	require(CorePackages.Workspace.Packages.SharedExperimentDefinition).isInExperienceUIVREnabled
 
 local FFlagUIBloxMigrateBuilderIcon = SharedFlags.UIBlox.FFlagUIBloxMigrateBuilderIcon
+local FFlagIncreaseLegacyPeopleRowButtonSize = game:DefineFastFlag("IncreaseLegacyPeopleRowButtonSize", false)
+
 ------------------ Modules --------------------
 local RobloxTranslator = require(CorePackages.Workspace.Packages.RobloxTranslator)
 
@@ -374,12 +374,10 @@ local function MakeDefaultButton(name, size, clickFunc, pageRef, hubRef, style)
 			clickFunc(gamepadSet[UserInputService:GetLastInputType()] or false)
 		end)
 	else
-		if GetFFlagSettingsHubButtonCanBeDisabled() then
-			if buttonUIStroke then
-				buttonUIStroke.Enabled = false
-			end
-			button.Selectable = false
+		if buttonUIStroke then
+			buttonUIStroke.Enabled = false
 		end
+		button.Selectable = false
 	end
 
 	local function isPointerInput(inputObject)
@@ -535,7 +533,7 @@ local function MakeImageButton(name, image, size, imageSize, clickFunc, pageRef,
 			Name = name .. "TextLabel",
 			BackgroundTransparency = 1,
 			Size = imageSize,
-			TextSize = imageSize.Y.Offset * (2/3), 
+			TextSize = if FFlagIncreaseLegacyPeopleRowButtonSize then imageSize.Y.Offset * (6/7) else imageSize.Y.Offset * (2/3), 
 			Position = UDim2.new(0.5, 0, 0.5, 0),
 			AnchorPoint = Vector2.new(0.5, 0.5),
 			TextColor3 = Color3.new(1, 1, 1),
@@ -678,11 +676,13 @@ local function CreateDropDown(dropDownStringTable, startPosition, settingsHub)
 	local lastStringTable = dropDownStringTable
 
 	----------------- GUI SETUP ------------------------
+	local topCornerInset, _ = GuiService:GetGuiInset()
 	local DropDownFullscreenFrame = Create("ImageButton")({
 		Name = "DropDownFullscreenFrame",
 		BackgroundTransparency = DROPDOWN_BG_TRANSPARENCY,
 		BorderSizePixel = 0,
-		Size = UDim2.new(1, 0, 1, 0),
+		Size = UDim2.new(1, 0, 1, if FFlagRepositionDropDownScrim then topCornerInset.Y else 0),
+		Position = if FFlagRepositionDropDownScrim then UDim2.new(0, 0, 0, -topCornerInset.Y) else nil,
 		BackgroundColor3 = Color3.fromRGB(0, 0, 0),
 		ZIndex = 10,
 		Active = true,
@@ -2494,7 +2494,7 @@ if isTenFootInterface() then
 end
 
 local nextPosTable = {}
-local function AddNewRow(pageToAddTo, rowDisplayName, selectionType, rowValues, rowDefault, extraSpacing, rowDisplayDescription, rowSliderLeftLabelText, rowSliderRightLabelText)
+local function AddNewRow(pageToAddTo, rowDisplayName, selectionType, rowValues, rowDefault, extraSpacing, rowDisplayDescription, rowSliderLeftLabelText, rowSliderRightLabelText, interactable)
 	local nextRowPositionY = 0
 	local isARealRow = selectionType ~= "TextBox" -- Textboxes are constructed in this function - they don't have an associated class.
 
@@ -2675,6 +2675,7 @@ local function AddNewRow(pageToAddTo, rowDisplayName, selectionType, rowValues, 
 			ZIndex = 2,
 			SelectionImageObject = SelectionOverrideObject,
 			ClearTextOnFocus = false,
+			Interactable = interactable,
 			Parent = RowFrame,
 		})
 		ValueChangerSelection = box
@@ -3114,8 +3115,8 @@ function moduleApiTable:CreateNewDropDown(dropDownStringTable, startPosition)
 	return CreateDropDown(dropDownStringTable, startPosition, nil)
 end
 
-function moduleApiTable:AddNewRow(pageToAddTo, rowDisplayName, selectionType, rowValues, rowDefault, extraSpacing, rowDisplayDescription, rowSliderLeftLabelText, rowSliderRightLabelText)
-	return AddNewRow(pageToAddTo, rowDisplayName, selectionType, rowValues, rowDefault, extraSpacing, rowDisplayDescription, rowSliderLeftLabelText, rowSliderRightLabelText)
+function moduleApiTable:AddNewRow(pageToAddTo, rowDisplayName, selectionType, rowValues, rowDefault, extraSpacing, rowDisplayDescription, rowSliderLeftLabelText, rowSliderRightLabelText, interactable)
+	return AddNewRow(pageToAddTo, rowDisplayName, selectionType, rowValues, rowDefault, extraSpacing, rowDisplayDescription, rowSliderLeftLabelText, rowSliderRightLabelText, interactable)
 end
 
 function moduleApiTable:AddNewRowObject(pageToAddTo, rowDisplayName, rowObject, extraSpacing, autoSizeLabel)

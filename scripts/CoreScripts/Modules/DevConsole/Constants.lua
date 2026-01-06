@@ -1,3 +1,5 @@
+local FFlagDevConsoleDownArrowIconFix = game:DefineFastFlag("DevConsoleDownArrowIconFix", false)
+
 local Constants = {
 	MainWindowInit = {
 		Position = UDim2.new(.5, -486, .02, 16),
@@ -54,7 +56,7 @@ local Constants = {
 		FilterUnfilled = "rbxasset://textures/DevConsole/Filter-stroke.png",
 		FilterFilled = "rbxasset://textures/DevConsole/Filter-filled.png",
 		RightArrow = "rbxasset://textures/DevConsole/Arrow.png", -- we want rotate this for the over effects
-		DownArrow = "rbxasset://textures/TerrainTools/button_arrow_down.png", -- we can't rotate so we define this
+		DownArrow = if FFlagDevConsoleDownArrowIconFix then  "rbxasset://textures/DevConsole/ArrowDown.png" else "rbxasset://textures/TerrainTools/button_arrow_down.png", -- we can't rotate so we define this
 	},
 	Padding = {
 		WindowPadding = 8,
@@ -97,6 +99,8 @@ local Constants = {
 		DropDownEntryHeight = 40,
 		DropDownEntryWidth = 375,
 		DropDownArrowHeight = 12,
+
+		NumberInputTextSize = 14,
 	},
 	TopBarFormatting = {
 		BarTransparency = .64,
@@ -219,6 +223,17 @@ local Constants = {
 		ButtonWidth = 200,
 		CellPadding = 16,
 		ButtonTextSize = 20,
+		PanelTitleHeight = 24,
+		OptionRowHeight = 32,
+		OptionCheckboxSize = 16,
+		OptionTextPadding = 10,
+		OptionTextSize = 16,
+		TabsHeight = 32,
+		TabButtonWidth = 128,
+		TabButtonPad = 5,
+		TextSizePanelTitle = 16,
+		TextSizePanelOptionLabel = 16,
+		RecentDumpPathPadding = 8,
 	},
 
 	ScriptProfilerFormatting = {

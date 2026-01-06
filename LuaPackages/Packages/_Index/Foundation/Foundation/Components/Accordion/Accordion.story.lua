@@ -8,6 +8,8 @@ local Types = require(Foundation.Components.Types)
 local Accordion = require(Foundation.Components.Accordion).Root
 local AccordionItem = require(script.Parent.Item)
 local Text = require(Foundation.Components.Text)
+local View = require(Foundation.Components.View)
+local Button = require(Foundation.Components.Button)
 
 local InputSize = require(Foundation.Enums.InputSize)
 type InputSize = InputSize.InputSize
@@ -21,24 +23,40 @@ local exampleIcons = {
 	"",
 }
 
-local contentHeights = { 50, 100, 300, 600 }
+local function content(omitDynamicContent: boolean?)
+	local padding, setPadding = React.useState(false)
 
-local function content(contentHeight)
-	return React.createElement(Text, {
-		Text = "Nice",
-		Size = UDim2.new(1, 0, 0, contentHeight),
-		AutomaticSize = Enum.AutomaticSize.X,
-		BackgroundTransparency = 1,
+	return React.createElement(View, {
+		tag = "col size-full-0 auto-y",
+	}, {
+		Text = React.createElement(Text, {
+			Text = "Our flagship product combines cutting-edge technology with sleek design.",
+			tag = "padding-y-small text-body-medium text-wrap auto-xy text-align-x-left text-align-y-center",
+		}),
+		Button = if not omitDynamicContent
+			then React.createElement(Button, {
+				LayoutOrder = 2,
+				text = "Click to expand!",
+				onActivated = function()
+					setPadding(not padding)
+				end,
+			})
+			else nil,
+		UIPadding = if not omitDynamicContent
+			then React.createElement("UIPadding", {
+				PaddingBottom = UDim.new(0, if padding then 50 else 0),
+			})
+			else nil,
 	})
 end
 
-local function getItems(controls): { React.ReactNode }
+local function getItems(controls, omitDynamicContent: boolean?): { React.ReactNode }
 	local items: any = {}
 	for i = 1, controls.numItems do
 		table.insert(
 			items,
 			React.createElement(AccordionItem, {
-				text = `Accordion Item {i}`,
+				text = `Accordion header {i}`,
 				LayoutOrder = i,
 				hasDivider = controls.divider,
 				leadingIcon = {
@@ -47,7 +65,8 @@ local function getItems(controls): { React.ReactNode }
 				},
 				-- isContained = controls.isContained,
 				id = i,
-			}, content(controls.contentHeight))
+				isExpanded = i == 1,
+			}, content(omitDynamicContent))
 		)
 	end
 	return items
@@ -63,13 +82,13 @@ return {
 					width = UDim.new(0, 400),
 					size = props.controls.size,
 				}, {
-					getItems(props.controls),
+					getItems(props.controls, true),
 				})
 			end,
 		},
 		Controlled = {
 			name = "Controlled (one expanded item at a time)",
-			story = function(props)
+			story = function()
 				local expandedItem, setExpandedItem = React.useState(1)
 				local handleActivated = function(item, isExpanded)
 					return function()
@@ -90,25 +109,25 @@ return {
 						LayoutOrder = 1,
 						id = 1,
 						isExpanded = expandedItem == 1,
-					}, content(props.controls.contentHeight)),
+					}, content()),
 					AccordionItem2 = React.createElement(AccordionItem, {
 						text = "Controlled Item 2",
 						LayoutOrder = 2,
 						id = 2,
 						isExpanded = expandedItem == 2,
-					}, content(props.controls.contentHeight)),
+					}, content()),
 					AccordionItem3 = React.createElement(AccordionItem, {
 						text = "Controlled Item 3",
 						LayoutOrder = 3,
 						id = 3,
 						isExpanded = expandedItem == 3,
-					}, content(props.controls.contentHeight)),
+					}, content()),
 				})
 			end,
 		},
 		Controlled2 = {
 			name = "Complex Controlled with unique onActivated",
-			story = function(props)
+			story = function()
 				local expandedItems, setExpandedItems = React.useState({ 1, 2, 3 } :: { Types.ItemId })
 
 				local handleActivated = function(item, isExpanded)
@@ -142,25 +161,25 @@ return {
 							end
 						end,
 						isExpanded = isExpanded(1),
-					}, content(props.controls.contentHeight)),
+					}, content()),
 					AccordionItem2 = React.createElement(AccordionItem, {
 						text = "Controlled Item 2",
 						LayoutOrder = 2,
 						id = 2,
 						isExpanded = isExpanded(2),
-					}, content(props.controls.contentHeight)),
+					}, content()),
 					AccordionItem3 = React.createElement(AccordionItem, {
 						text = "Controlled Item 3",
 						LayoutOrder = 3,
 						id = 3,
 						isExpanded = isExpanded(3),
-					}, content(props.controls.contentHeight)),
+					}, content()),
 				})
 			end,
 		},
 		Mixed = {
 			name = "Partially Controlled",
-			story = function(props)
+			story = function()
 				local expandedItem, setExpandedItem = React.useState(1)
 
 				local function onActivated(item)
@@ -183,24 +202,24 @@ return {
 						id = 1,
 						isExpanded = expandedItem == 1,
 						onActivated = onActivated(1),
-					}, content(props.controls.contentHeight)),
+					}, content()),
 					AccordionItem2 = React.createElement(AccordionItem, {
 						text = "Default Item 1",
 						LayoutOrder = 2,
 						id = 2,
-					}, content(props.controls.contentHeight)),
+					}, content()),
 					DefaultItem = React.createElement(AccordionItem, {
 						text = "Default Item 2",
 						LayoutOrder = 3,
 						id = 3,
-					}, content(props.controls.contentHeight)),
+					}, content()),
 					AccordionItem3 = React.createElement(AccordionItem, {
 						text = "Controlled Item 2",
 						LayoutOrder = 4,
 						id = 4,
 						isExpanded = expandedItem == 4,
 						onActivated = onActivated(4),
-					}, content(props.controls.contentHeight)),
+					}, content()),
 				})
 			end,
 		},
@@ -209,7 +228,6 @@ return {
 		size = Dash.values(InputSize),
 		icon = Dash.values(exampleIcons),
 		iconVariant = Dash.values(IconVariant),
-		contentHeight = Dash.values(contentHeights),
 		-- isContained = false,
 		numItems = 3,
 		divider = true,

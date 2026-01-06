@@ -27,16 +27,18 @@ local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local GuiService = game:GetService("GuiService")
 local Workspace = game:GetService("Workspace")
+local StarterPlayer = game:GetService("StarterPlayer")
 local UserGameSettings = UserSettings():GetService("UserGameSettings")
 local VRService = game:GetService("VRService")
 
 -- Roblox User Input Control Modules - each returns a new() constructor function used to create controllers as needed
 local CommonUtils = script.Parent:WaitForChild("CommonUtils")
 
-local Keyboard = require(script:WaitForChild("Keyboard"))
-local Gamepad = require(script:WaitForChild("Gamepad"))
-local DynamicThumbstick = require(script:WaitForChild("DynamicThumbstick"))
-local FlagUtil = require(CommonUtils:WaitForChild("FlagUtil"))
+local ActionController = require(script:WaitForChild("ActionController"))
+local DynamicThumbstick
+if RunService:IsClient() then
+	DynamicThumbstick = require(script:WaitForChild("DynamicThumbstick"))
+end
 
 local FFlagUserDynamicThumbstickSafeAreaUpdate do
 	local success, result = pcall(function()
@@ -74,9 +76,9 @@ local movementEnumToModuleMap = {
 	-- Current default
 	[Enum.TouchMovementMode.Default] = DynamicThumbstick,
 
-	[Enum.ComputerMovementMode.Default] = Keyboard,
-	[Enum.ComputerMovementMode.KeyboardMouse] = Keyboard,
-	[Enum.DevComputerMovementMode.KeyboardMouse] = Keyboard,
+	[Enum.ComputerMovementMode.Default] = ActionController,
+	[Enum.ComputerMovementMode.KeyboardMouse] = ActionController,
+	[Enum.DevComputerMovementMode.KeyboardMouse] = ActionController,
 	[Enum.DevComputerMovementMode.Scriptable] = nil,
 	[Enum.ComputerMovementMode.ClickToMove] = ClickToMove,
 	[Enum.DevComputerMovementMode.ClickToMove] = ClickToMove,
@@ -84,6 +86,10 @@ local movementEnumToModuleMap = {
 
 function ControlModule.new()
 	local self = setmetatable({},ControlModule)
+	if RunService:IsServer() then
+		-- ServerAuthority causes the server to require ControlModule
+		return self
+	end
 
 	-- The Modules above are used to construct controller instances as-needed, and this
 	-- table is a map from Module to the instance created from it
@@ -105,7 +111,7 @@ function ControlModule.new()
 
 	self.inputMoveVector = Vector3.new(0,0,0)
 
-	self.vehicleController = VehicleController.new(CONTROL_ACTION_PRIORITY)
+	self.vehicleController = VehicleController.new()
 
 	Players.LocalPlayer.CharacterAdded:Connect(function(char) self:OnCharacterAdded(char) end)
 	Players.LocalPlayer.CharacterRemoving:Connect(function(char) self:OnCharacterRemoving(char) end)
@@ -160,6 +166,60 @@ function ControlModule.new()
 	self:UpdateMovementMode()
 
 	return self
+end
+
+local function _fireCustomInputs(player:Player)
+	local input = player:FindFirstChild("InputContexts")
+	if input == nil then
+		return
+	end
+
+	local characterInputContext = input:FindFirstChild("Character")
+	if characterInputContext == nil then
+		return
+	end	
+
+	local cameraInput = characterInputContext:FindFirstChild("Camera")
+	if cameraInput then
+		local camera = Workspace.CurrentCamera
+		cameraInput:Fire(camera.CFrame.LookVector)
+	end
+
+	local rotationInput = characterInputContext.Rotation
+	if rotationInput then
+		rotationInput:Fire(UserGameSettings.RotationType == Enum.RotationType.CameraRelative)
+	end
+end
+
+local function _cloneInputs(player:Player)
+	local newInput = StarterPlayer.PlayerModule.InputContexts:Clone()
+	newInput.Character.Enabled = true
+	newInput.Parent = player
+end
+
+function ControlModule:InitializeServerAuthority()
+	if RunService:IsServer() then
+		-- Server Creates Inputs
+		for _, player in Players:GetPlayers() do
+			_cloneInputs(player)
+		end
+		Players.PlayerAdded:Connect(_cloneInputs)
+		-- Server processes all input
+		RunService:BindToSimulation(function(dt)
+			for _, player in Players:GetPlayers() do
+				self:ProcessInputs(player, dt)
+			end
+		end)
+	else
+		-- Fire Custom Inputs
+		RunService:BindToRenderStep("CameraInput", Enum.RenderPriority.Last.Value, function()
+			_fireCustomInputs(Players.LocalPlayer)
+		end)
+		-- Client processes local player input only
+		RunService:BindToSimulation(function(dt)
+			self:ProcessInputs(Players.LocalPlayer, dt)
+		end)
+	end
 end
 
 -- Convenience function so that calling code does not have to first get the activeController
@@ -331,17 +391,11 @@ function ControlModule:SelectComputerMovementModule(): ({}?, boolean)
 		return nil, false
 	end
 
-	local computerModule
+	local computerModule = ActionController
 	local DevMovementMode = Players.LocalPlayer.DevComputerMovementMode
 
 	if DevMovementMode == Enum.DevComputerMovementMode.UserChoice then
-		if UserInputService.PreferredInput == Enum.PreferredInput.Gamepad then
-			computerModule = Gamepad
-		elseif UserInputService.PreferredInput == Enum.PreferredInput.KeyboardAndMouse then
-			computerModule = Keyboard
-		end
-
-		if UserGameSettings.ComputerMovementMode == Enum.ComputerMovementMode.ClickToMove and computerModule == Keyboard then
+		if UserGameSettings.ComputerMovementMode == Enum.ComputerMovementMode.ClickToMove then -- TODO: Click to move needs some work still
 			-- User has ClickToMove set in Settings, prefer ClickToMove controller when using keyboard and mouse
 			computerModule = ClickToMove
 		end
@@ -453,14 +507,14 @@ end
 
 function ControlModule:OnRenderStepped(dt)
 	if self.activeController and self.activeController.enabled and self.humanoid then
-
 		-- Now retrieve info from the controller
-		local moveVector = self.activeController:GetMoveVector()
-		local cameraRelative = self.activeController:IsMoveVectorCameraRelative()
+		local moveVector = self:GetMoveVector()
+		local cameraRelative = true
 
 		local clickToMoveController = self:GetClickToMoveController()
 		if self.activeController == clickToMoveController then
 			clickToMoveController:OnRenderStepped(dt)
+			cameraRelative = clickToMoveController:IsMoveVectorCameraRelative()
 		else
 			if moveVector.magnitude > 0 then
 				-- Clean up any developer started MoveTo path
@@ -476,7 +530,7 @@ function ControlModule:OnRenderStepped(dt)
 		-- Are we driving a vehicle ?
 		local vehicleConsumedInput = false
 		if self.vehicleController then
-			moveVector, vehicleConsumedInput = self.vehicleController:Update(moveVector, cameraRelative, self.activeControlModule==Gamepad)
+			moveVector, vehicleConsumedInput = self.vehicleController:Update(moveVector, cameraRelative)
 		end
 
 		-- If not, move the player
@@ -529,7 +583,7 @@ function ControlModule:OnHumanoidSeated(active: boolean, currentSeatPart: BasePa
 	if active then
 		if currentSeatPart and currentSeatPart:IsA("VehicleSeat") then
 			if not self.vehicleController then
-				self.vehicleController = self.vehicleController.new(CONTROL_ACTION_PRIORITY)
+				self.vehicleController = self.vehicleController.new()
 			end
 			self.vehicleController:Enable(true, currentSeatPart)
 		end
@@ -666,9 +720,81 @@ end
 
 function ControlModule:GetClickToMoveController()
 	if not self.controllers[ClickToMove] then
-		self.controllers[ClickToMove] = ClickToMove.new(CONTROL_ACTION_PRIORITY)
+		self.controllers[ClickToMove] = ClickToMove.new()
 	end
 	return self.controllers[ClickToMove]
+end
+
+function ControlModule:ProcessInputs(player:Player, dt:number)
+	local character = player.Character
+	if character == nil then
+		return
+	end
+	local humanoid = character:FindFirstChild("Humanoid")
+	if humanoid == nil then
+		return
+	end
+	local input = player:FindFirstChild("InputContexts")
+	if input == nil then
+		return
+	end
+	local characterInputContext = input:FindFirstChild("Character")
+	if characterInputContext == nil then
+		return
+	end	
+
+	local moveInput = characterInputContext.Move
+	local cameraInput = characterInputContext.Camera
+	local rotationInput = characterInputContext.Rotation
+	local jumpInput = characterInputContext.Jump
+
+	local function isValidInput2D(vector2:Vector2):boolean
+		return not (
+			vector2.X ~= vector2.X or
+			vector2.Y ~= vector2.Y or
+			vector2.X == math.huge or
+			vector2.Y == math.huge)
+	end
+
+	local function isValidInput3D(vector3:Vector3):boolean
+		return not (
+			vector3.X ~= vector3.X or
+			vector3.Y ~= vector3.Y or
+			vector3.Z ~= vector3.Z or
+			vector3.X == math.huge or
+			vector3.Y == math.huge or 
+			vector3.Z == math.huge)
+	end
+
+	local moveVector2D = if moveInput ~= nil then moveInput:GetState() else Vector2.new(0.0, 0.0)
+	local cameraVector3D = if cameraInput ~= nil then cameraInput:GetState() else Vector3.new(0.0, 0.0)
+
+	if isValidInput2D(moveVector2D) and isValidInput3D(cameraVector3D) and cameraVector3D.Magnitude > 0.0 then
+		if humanoid:GetState() ~= Enum.HumanoidStateType.Swimming then
+			cameraVector3D = Vector3.new(cameraVector3D.X, 0.0, cameraVector3D.Z).Unit
+		end
+
+		local rightVector = cameraVector3D:Cross(Vector3.yAxis).Unit
+
+		local moveVector = cameraVector3D * moveVector2D.Y + rightVector * moveVector2D.X
+		humanoid:Move(moveVector)
+
+		local rotationIsCameraRelative = rotationInput:GetState()
+		if rotationIsCameraRelative then
+			humanoid.AutoRotate = false
+			if humanoid.SeatPart == nil and humanoid.RootPart ~= nil and not humanoid.Sit and not humanoid.RootPart:IsGrounded() then
+				humanoid.RootPart.CFrame = CFrame.new(
+					humanoid.RootPart.CFrame.Position,
+					humanoid.RootPart.CFrame.Position + cameraVector3D
+				)
+			end
+		else
+			humanoid.AutoRotate = true
+		end
+	end
+
+	local jumpBool = if jumpInput ~= nil then jumpInput:GetState() else false
+	humanoid.Jump = jumpBool
 end
 
 return ControlModule.new()

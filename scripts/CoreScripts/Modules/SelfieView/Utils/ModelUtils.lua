@@ -5,7 +5,6 @@ local FFlagSelfViewAvatarJointUpgrade = game:DefineFastFlag("SelfViewAvatarJoint
 local GetFFlagSelfieViewFixMigration = require(script.Parent.Parent.Flags.GetFFlagSelfieViewFixMigration)
 local GetFFlagSelfieViewMoreFixMigration =
 	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagSelfieViewMoreFixMigration
-local FFlagSelfViewFixMakeup = game:DefineFastFlag("SelfViewFixMakeup", false)
 
 --we want to trigger UpdateClone which recreates the clone fresh as rarely as possible (performance optimization),
 --so for triggering dirty on DescendantAdded or DescendantRemoving we only trigger it for things which make a visual difference
@@ -177,7 +176,7 @@ local r15bodyPartsToShow = {
 	"RightUpperArm",
 }
 
-local function updateTransparency(character: Model, partsOrgTransparency)
+local function updateTransparency(character: Model, partsOrgTransparency: any)
 	--it could happen that the head was made transparent during gameplay, which is in some experiences done when entering a car for example
 	--we still want to show the self view avatar's head in that case (also because sometimes exiting vehicles would not cause a refresh of the self view and the head would stay transparent then)
 	--but we also want to respect it if the head was transparent to begin with on first usage like for a headless head look
@@ -186,6 +185,9 @@ local function updateTransparency(character: Model, partsOrgTransparency)
 			part.Transparency = 0
 		elseif part:IsA("MeshPart") then
 			if (part.Parent and part.Parent:IsA("Accessory")) or (table.find(r15bodyPartsToShow, part.Name)) then
+				-- TODO (COMM-747): partsOrgTransparency is declared as 'any' because it highlights a strange logic here
+				-- table.find is designed to work on arrays with a numeric index, but since MeshId is a string we are making a hash map with a string index
+				-- This means 'table.find' is always nil
 				if not table.find(partsOrgTransparency, part.MeshId) then
 					partsOrgTransparency[part.MeshId] = part.Transparency
 				else
@@ -308,7 +310,7 @@ local ALLOWLISTED_INSTANCE_TYPES = {
 	Folder = if GetFFlagSelfieViewFixMigration() then "Folder" else nil,
 	--some games like Winds of Fortune connect things like hair with constraints so we keep those in
 	RigidConstraint = if GetFFlagSelfieViewFixMigration() then "RigidConstraint" else nil,
-	WrapTextureTransfer = if FFlagSelfViewFixMakeup then "WrapTextureTransfer" else nil,
+	WrapTextureTransfer = "WrapTextureTransfer",
 }
 local function disableScripts(instance: Instance)
 	for _, child in instance:GetChildren() do

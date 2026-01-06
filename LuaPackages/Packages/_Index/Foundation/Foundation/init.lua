@@ -25,10 +25,13 @@ export type FontStyle = Types.FontStyle
 export type Tokens = Tokens.Tokens
 
 -- Enums and their types
+local AlertSeverity = require(script.Enums.AlertSeverity)
+local AlertVariant = require(script.Enums.AlertVariant)
 local AvatarGroupType = require(script.Enums.AvatarGroupType)
 local BadgeSize = require(script.Enums.BadgeSize)
 local BadgeVariant = require(script.Enums.BadgeVariant)
 local ButtonVariant = require(script.Enums.ButtonVariant)
+local CheckedState = require(script.Enums.CheckedState)
 local ChipSize = require(script.Enums.ChipSize)
 local ControlState = require(script.Enums.ControlState)
 local CursorType = require(script.Enums.CursorType)
@@ -43,6 +46,7 @@ local IconPosition = require(script.Enums.IconPosition)
 local IconSize = require(script.Enums.IconSize)
 local IconVariant = BuilderIcons.IconVariant
 local InputSize = require(script.Enums.InputSize)
+local InputPlacement = require(script.Enums.InputPlacement)
 local NumberInputControlsVariant = require(script.Enums.NumberInputControlsVariant)
 local OnCloseCallbackReason = require(script.Enums.OnCloseCallbackReason)
 local InputLabelSize = require(script.Enums.InputLabelSize)
@@ -61,10 +65,13 @@ local ThumbnailSize = require(script.Enums.ThumbnailSize)
 local UserPresence = require(script.Enums.UserPresence)
 local Visibility = require(script.Enums.Visibility)
 
+export type AlertSeverity = AlertSeverity.AlertSeverity
+export type AlertVariant = AlertVariant.AlertVariant
 export type AvatarGroupType = AvatarGroupType.AvatarGroupType
 export type BadgeSize = BadgeSize.BadgeSize
 export type BadgeVariant = BadgeVariant.BadgeVariant
 export type ButtonVariant = ButtonVariant.ButtonVariant
+export type CheckedState = CheckedState.CheckedState
 export type ChipSize = ChipSize.ChipSize
 export type ControlState = ControlState.ControlState
 export type CursorType = CursorType.CursorType
@@ -78,6 +85,7 @@ export type IconPosition = IconPosition.IconPosition
 export type IconName = BuilderIcons.Icon
 export type IconSize = IconSize.IconSize
 export type InputSize = InputSize.InputSize
+export type InputPlacement = InputPlacement.InputPlacement
 export type IconVariant = BuilderIcons.IconVariant
 export type InputLabelSize = InputLabelSize.InputLabelSize
 export type NumberInputControlsVariant = NumberInputControlsVariant.NumberInputControlsVariant
@@ -189,6 +197,10 @@ export type MenuItems = Menu.MenuItems
 local NumberInput = require(script.Components.NumberInput)
 export type NumberInputProps = NumberInput.NumberInputProps
 
+local OptionSelectorGroup = require(script.Components.OptionSelectorGroup)
+export type OptionSelectorGroupProps = OptionSelectorGroup.OptionSelectorGroupProps
+export type OptionSelectorGroupItemProps = OptionSelectorGroup.OptionSelectorGroupItemProps
+
 local Popover = require(script.Components.Popover)
 export type PopoverProps = Popover.PopoverProps
 export type PopoverAnchorProps = Popover.PopoverAnchorProps
@@ -227,12 +239,18 @@ export type SnackbarAction = Snackbar.SnackbarAction
 local StatusIndicator = require(script.Components.StatusIndicator)
 export type StatusIndicatorProps = StatusIndicator.StatusIndicatorProps
 
+local SystemBanner = require(script.Components.SystemBanner)
+export type SystemBannerProps = SystemBanner.SystemBannerProps
+
 local Tabs = require(script.Components.Tabs)
 export type TabsProps = Tabs.TabsProps
 export type TabItem = Tabs.TabItem
 
 local Text = require(script.Components.Text)
 export type TextProps = Text.TextProps
+
+local TextArea = require(script.Components.TextArea)
+export type TextAreaProps = TextArea.TextAreaProps
 
 local TextInput = require(script.Components.TextInput)
 export type TextInputProps = TextInput.TextInputProps
@@ -276,6 +294,7 @@ local Foundation = strict({
 	Loading = Loading,
 	Menu = Menu,
 	NumberInput = NumberInput,
+	OptionSelectorGroup = OptionSelectorGroup,
 	Pill = Chip,
 	Popover = Popover,
 	Progress = Progress,
@@ -287,8 +306,10 @@ local Foundation = strict({
 	Slider = Slider,
 	Snackbar = Snackbar,
 	StatusIndicator = StatusIndicator,
+	SystemBanner = SystemBanner,
 	Tabs = Tabs,
 	Text = Text,
+	TextArea = TextArea,
 	TextInput = TextInput,
 	Toggle = Toggle,
 	Tooltip = Tooltip,
@@ -325,6 +346,8 @@ local Foundation = strict({
 
 	-- Enums
 	Enums = {
+		AlertSeverity = AlertSeverity,
+		AlertVariant = AlertVariant,
 		AvatarGroupType = AvatarGroupType,
 		BadgeSize = BadgeSize,
 		BadgeVariant = BadgeVariant,
@@ -333,6 +356,7 @@ local Foundation = strict({
 		ButtonVariant = ButtonVariant,
 		-- **DEPRECATED**: CheckboxSize is deprecated. Use InputSize instead.
 		CheckboxSize = require(script.Enums.InputSize),
+		CheckedState = CheckedState,
 		ControlState = ControlState,
 		ChipSize = ChipSize,
 		CursorType = CursorType,
@@ -348,6 +372,7 @@ local Foundation = strict({
 		IconSize = IconSize,
 		IconVariant = IconVariant,
 		InputSize = InputSize,
+		InputPlacement = InputPlacement,
 		InputLabelSize = InputLabelSize,
 		NumberInputControlsVariant = NumberInputControlsVariant,
 		OnCloseCallbackReason = OnCloseCallbackReason,
@@ -375,6 +400,7 @@ local Foundation = strict({
 	-- Utility
 	Utility = {
 		composeStyleVariant = require(script.Utility.composeStyleVariant),
+		getBuilderIconForKeycode = require(script.Utility.getBuilderIconForKeycode),
 		getGridMetrics = require(script.Utility.getGridMetrics),
 		getRbxThumb = require(script.Utility.getRbxThumb),
 		getIconRichText = require(script.Utility.getIconRichText),

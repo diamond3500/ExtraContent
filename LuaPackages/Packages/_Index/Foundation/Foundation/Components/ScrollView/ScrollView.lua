@@ -4,6 +4,7 @@ local Flags = require(Foundation.Utility.Flags)
 
 local React = require(Packages.React)
 local Cryo = require(Packages.Cryo)
+local Dash = require(Packages.Dash)
 
 local ScrollingFrame = require(script.Parent.ScrollingFrame)
 
@@ -12,7 +13,6 @@ local View = require(Foundation.Components.View)
 local withDefaults = require(Foundation.Utility.withDefaults)
 local useDefaultTags = require(Foundation.Utility.useDefaultTags)
 local useStyledDefaults = require(Foundation.Utility.useStyledDefaults)
-local separateLayoutTags = require(script.Parent.separateLayoutTags)
 
 local useStyleTags = require(Foundation.Providers.Style.useStyleTags)
 
@@ -65,21 +65,14 @@ local defaultTags = "gui-object-defaults"
 
 local function ScrollView(scrollViewProps: ScrollViewProps, ref: React.Ref<GuiObject>?)
 	-- Separate layout tags from other tags
-	local layoutTags, nonLayoutTags
-	if Flags.FoundationFixScrollViewTags then
-		layoutTags, nonLayoutTags = separateLayoutTags(scrollViewProps.tag)
-	end
 
 	local defaultPropsWithStyles = if not Flags.FoundationDisableStylingPolyfill
-			and not Flags.FoundationFixScrollViewTags
 		then useStyledDefaults("View", scrollViewProps.tag, defaultTags, defaultProps)
 		else nil
 	local props = withDefaults(
 		scrollViewProps,
 		(
-				if not Flags.FoundationDisableStylingPolyfill and not Flags.FoundationFixScrollViewTags
-					then defaultPropsWithStyles
-					else defaultProps
+				if not Flags.FoundationDisableStylingPolyfill then defaultPropsWithStyles else defaultProps
 			) :: typeof(defaultProps)
 	)
 
@@ -97,7 +90,7 @@ local function ScrollView(scrollViewProps: ScrollViewProps, ref: React.Ref<GuiOb
 		end
 	end
 
-	local viewProps: any = Cryo.Dictionary.union(props, {
+	local viewComponentProps = {
 		onStateChanged = onStateChanged,
 		-- Special check on props.onStateChanged since we don't want state layer on all scrolling frames
 		stateLayer = if props.onStateChanged or props.onActivated then props.stateLayer else { affordance = "None" },
@@ -107,12 +100,35 @@ local function ScrollView(scrollViewProps: ScrollViewProps, ref: React.Ref<GuiOb
 		},
 
 		ref = ref,
-		[React.Tag] = if Flags.FoundationFixScrollViewTags then nil else tag,
-		tag = if Flags.FoundationFixScrollViewTags then nonLayoutTags else nil,
-	})
+		[React.Tag] = tag,
+	}
+	local viewProps = (
+		if Flags.FoundationMigrateCryoToDash
+			then Dash.union(props, viewComponentProps)
+			else Cryo.Dictionary.union(props, viewComponentProps)
+	)
 
-	viewProps.scroll = nil
-	viewProps.layout = nil
+	-- getting around stylua inconsistencies
+	do
+		(viewProps :: any).scroll = nil
+	end
+	do
+		(viewProps :: any).layout = nil
+	end
+
+	local listChildren = {
+		ListLayout = React.createElement("UIListLayout", {
+			FillDirection = props.layout.FillDirection,
+			ItemLineAlignment = props.layout.ItemLineAlignment,
+			HorizontalAlignment = props.layout.HorizontalAlignment,
+			HorizontalFlex = props.layout.HorizontalFlex,
+			VerticalAlignment = props.layout.VerticalAlignment,
+			VerticalFlex = props.layout.VerticalFlex,
+			Padding = props.layout.Padding,
+			SortOrder = props.layout.SortOrder,
+			Wraps = props.layout.Wraps,
+		}),
+	}
 
 	return React.createElement(View, viewProps, {
 		ScrollingFrame = React.createElement(
@@ -135,24 +151,14 @@ local function ScrollView(scrollViewProps: ScrollViewProps, ref: React.Ref<GuiOb
 				VerticalScrollBarInset = props.scroll.VerticalScrollBarInset,
 				HorizontalScrollBarInset = props.scroll.HorizontalScrollBarInset,
 				ref = props.scrollingFrameRef,
-				tag = if Flags.FoundationFixScrollViewTags then layoutTags else nil,
 			},
 			if props.children
+					and typeof(props.children) == "table"
 					and props.layout ~= nil
 					and props.layout.FillDirection ~= nil
-				then Cryo.Dictionary.union({
-					ListLayout = React.createElement("UIListLayout", {
-						FillDirection = props.layout.FillDirection,
-						ItemLineAlignment = props.layout.ItemLineAlignment,
-						HorizontalAlignment = props.layout.HorizontalAlignment,
-						HorizontalFlex = props.layout.HorizontalFlex,
-						VerticalAlignment = props.layout.VerticalAlignment,
-						VerticalFlex = props.layout.VerticalFlex,
-						Padding = props.layout.Padding,
-						SortOrder = props.layout.SortOrder,
-						Wraps = props.layout.Wraps,
-					}),
-				}, props.children)
+				then if Flags.FoundationMigrateCryoToDash
+					then Dash.union(listChildren, props.children)
+					else Cryo.Dictionary.union(listChildren, props.children)
 				else props.children
 		),
 	})

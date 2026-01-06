@@ -2,7 +2,6 @@
 local root = script.Parent
 
 local Cryo = require(root.Parent.Cryo)
-local getEngineFeatureRemoveProxyWrap = require(root.flags.getEngineFeatureRemoveProxyWrap)
 
 local ValidationRulesUtil = require(root.util.ValidationRulesUtil)
 local ValidationEnums = require(root.validationSystem.ValidationEnums)
@@ -14,8 +13,6 @@ local getFFlagUGCValidationConsolidateGetMeshInfos = require(root.flags.getFFlag
 local getFFlagUGCValidationFixConstantsTypoLeg = require(root.flags.getFFlagUGCValidationFixConstantsTypoLeg)
 local getFFlagUGCValidateBindOffset = require(root.flags.getFFlagUGCValidateBindOffset)
 local getFFlagUGCValidationFixBannedNamesTypo = require(root.flags.getFFlagUGCValidationFixBannedNamesTypo)
-local getFFlagUGCValidateRestrictAnimationMovementCurvesFix =
-	require(root.flags.getFFlagUGCValidateRestrictAnimationMovementCurvesFix)
 local getFFlagUGCValidationEyebrowEyelashSupport = require(root.flags.getFFlagUGCValidationEyebrowEyelashSupport)
 local getFFlagUGCValidateCheckHSROwner = require(root.flags.getFFlagUGCValidateCheckHSROwner)
 
@@ -101,20 +98,18 @@ else
 	}
 end
 
-if getFFlagUGCValidateRestrictAnimationMovementCurvesFix() then
-	Constants.NAMED_R15_BODY_PARTS = {}
-	for _, bodyPartName in Constants.R15_BODY_PARTS do
-		Constants.NAMED_R15_BODY_PARTS[bodyPartName] = bodyPartName
-	end
-	Constants.NAMED_R15_BODY_PARTS.Head = "Head"
-
-	setmetatable(Constants.NAMED_R15_BODY_PARTS, {
-		__index = function()
-			error("NAMED_R15_BODY_PARTS key does not exist")
-			return nil
-		end,
-	})
+Constants.NAMED_R15_BODY_PARTS = {}
+for _, bodyPartName in Constants.R15_BODY_PARTS do
+	Constants.NAMED_R15_BODY_PARTS[bodyPartName] = bodyPartName
 end
+Constants.NAMED_R15_BODY_PARTS.Head = "Head"
+
+setmetatable(Constants.NAMED_R15_BODY_PARTS, {
+	__index = function()
+		error("NAMED_R15_BODY_PARTS key does not exist")
+		return nil
+	end,
+})
 
 Constants.R15_STANDARD_JOINT_NAMES = {
 	["Root"] = true,
@@ -588,9 +583,6 @@ end
 Constants.GUIDAttributeName = "RBXGUID"
 Constants.GUIDAttributeMaxLength = 100
 
-if not getEngineFeatureRemoveProxyWrap() then
-	Constants.ProxyWrapAttributeName = "RBX_WRAP_DEFORMER_PROXY"
-end
 Constants.AlternateMeshIdAttributeName = "RBX_ALT_MESH_ID"
 
 if getFFlagUGCValidationConsolidateGetMeshInfos() then

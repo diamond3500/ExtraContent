@@ -8,28 +8,50 @@ local View = require(Foundation.Components.View)
 local Text = require(Foundation.Components.Text)
 local useTokens = require(Foundation.Providers.Style.useTokens)
 
-local InputSize = require(Foundation.Enums.InputSize)
+local CheckedState = require(Foundation.Enums.CheckedState)
+type CheckedState = CheckedState.CheckedState
 
+local InputPlacement = require(Foundation.Enums.InputPlacement)
+local InputSize = require(Foundation.Enums.InputSize)
 type InputSize = InputSize.InputSize
 
 local function BasicStory(props)
 	local controls = props.controls
-	local isChecked, setIsChecked = React.useState(false)
+	local sizes: { InputSize } = { InputSize.Large, InputSize.Medium, InputSize.Small, InputSize.XSmall }
 
-	return React.createElement(Checkbox, {
-		isChecked = isChecked,
-		isDisabled = controls.isDisabled,
-		onActivated = function()
-			setIsChecked(not isChecked)
-		end,
-		size = controls.size,
-		label = controls.label or "",
-	})
+	local checkedBySize, setCheckedBySize = React.useState(function()
+		local init = {}
+		for _, size in sizes do
+			init[size] = true
+		end
+		return init
+	end)
+
+	return React.createElement(
+		View,
+		{
+			tag = "col gap-xxlarge size-3000-0",
+		},
+		Dash.map(sizes, function(size, index)
+			return React.createElement(Checkbox, {
+				isChecked = checkedBySize[size],
+				isDisabled = controls.isDisabled,
+				onActivated = function()
+					local next = Dash.join(checkedBySize, { [size] = not checkedBySize[size] })
+					setCheckedBySize(next)
+				end,
+				size = size,
+				label = controls.label or "",
+				placement = controls.placement,
+				LayoutOrder = index,
+			})
+		end)
+	)
 end
 
 local function CustomSelectionStory(props)
 	local controls = props.controls
-	local isChecked, setIsChecked = React.useState(false)
+	local isChecked, setIsChecked = React.useState(true)
 	local tokens = useTokens()
 
 	local cursor = React.useMemo(function()
@@ -55,6 +77,7 @@ local function CustomSelectionStory(props)
 			end,
 			size = controls.size,
 			label = "Enable notifications",
+			placement = controls.placement,
 			-- Make the checkbox non-selectable since the parent card handles selection
 			Selectable = false,
 			LayoutOrder = 1,
@@ -67,16 +90,43 @@ local function CustomSelectionStory(props)
 	})
 end
 
+local function IndeterminateStory(props)
+	local controls = props.controls
+
+	local isChecked, setIsChecked = React.useState(CheckedState.Indeterminate :: CheckedState)
+
+	return React.createElement(View, {
+		tag = "col auto-xy size-3000-0",
+	}, {
+		React.createElement(Checkbox, {
+			isChecked = isChecked,
+			isDisabled = controls.isDisabled,
+			onActivated = function(value)
+				setIsChecked(value)
+			end,
+			size = controls.size,
+			label = controls.label or "",
+			placement = controls.placement,
+		}),
+	})
+end
+
 local function UncontrolledStory(props)
 	local controls = props.controls
 
-	return React.createElement(Checkbox, {
-		isDisabled = controls.isDisabled,
-		onActivated = function(value)
-			print("isChecked: ", value)
-		end,
-		size = controls.size,
-		label = controls.label or "",
+	return React.createElement(View, {
+		tag = "col auto-xy size-3000-0",
+	}, {
+		React.createElement(Checkbox, {
+			isDisabled = controls.isDisabled,
+			isIndeterminate = controls.isIndeterminate,
+			onActivated = function(value)
+				print("isChecked: ", value)
+			end,
+			size = controls.size,
+			label = controls.label or "",
+			placement = controls.placement,
+		}),
 	})
 end
 
@@ -93,6 +143,11 @@ return {
 			story = CustomSelectionStory,
 		},
 		{
+			name = "Indeterminate",
+			summary = "A checkbox initialized with an indeterminate state",
+			story = IndeterminateStory,
+		},
+		{
 			name = "Uncontrolled",
 			summary = "State is controlled by the checkbox itself",
 			story = UncontrolledStory,
@@ -101,6 +156,6 @@ return {
 	controls = {
 		isDisabled = false,
 		label = "Label",
-		size = Dash.values(InputSize),
+		placement = Dash.values(InputPlacement),
 	},
 }

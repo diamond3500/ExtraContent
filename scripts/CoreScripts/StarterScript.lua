@@ -55,6 +55,7 @@ local FFlagEnableReactSessionMetrics =
 	require(CorePackages.Workspace.Packages.SharedFlags).FFlagEnableReactSessionMetrics
 local FStringReactSchedulingContext =
 	require(CorePackages.Workspace.Packages.SharedFlags).FStringReactSchedulingContext
+local FFlagAddGuiInsetToDisplayStore = require(CorePackages.Workspace.Packages.SharedFlags).FFlagAddGuiInsetToDisplayStore
 
 local FFlagLuaAppEnableToastNotificationsCoreScripts =
 	game:DefineFastFlag("LuaAppEnableToastNotificationsCoreScripts4", false)
@@ -74,13 +75,14 @@ local FFlagEnablePremiumSponsoredExperienceReporting =
 local FFlagEnableCancelSubscriptionApp = game:GetEngineFeature("EnableCancelSubscriptionApp")
 local FFlagEnableCancelSubscriptionAppLua = game:DefineFastFlag("EnableCancelSubscriptionAppLua", false)
 local AudioFocusManagementEnabled = game:GetEngineFeature("AudioFocusManagement")
-local FFlagEnableExperienceMenuSessionTracking =
-	require(RobloxGui.Modules.Flags.FFlagEnableExperienceMenuSessionTracking)
 local FFlagEnableExperienceGenericChallengeRenderingOnLoadingScript =
 	game:DefineFastFlag("EnableExperienceGenericChallengeRenderingOnLoadingScript", false)
 local FFlagEnableRobloxCommerce = game:GetEngineFeature("EnableRobloxCommerce")
 local FFlagEnableLinkSharingEvent = game:DefineFastFlag("EnableLinkSharingEvent", false)
 local FFlagPlayerFeedbackPromptEnabled = game:GetEngineFeature("PlayerFeedbackEnabled")
+local FFlagLuaAppInExperienceDetailsPrompt =
+	require(CorePackages.Workspace.Packages.SharedFlags).FFlagLuaAppInExperienceDetailsPrompt
+local FFlagEnableSystemScrim = game:DefineFastFlag("EnableSystemScrim", false)
 
 local UIBlox = require(CorePackages.Packages.UIBlox)
 local uiBloxConfig = require(CorePackages.Workspace.Packages.CoreScriptsInitializer).UIBloxInGameConfig
@@ -129,9 +131,7 @@ if GetFFlagEnableCrossExpVoice() then
 end
 
 -- Initialize SessionManager
-if FFlagEnableExperienceMenuSessionTracking then
-	local _inExperienceSessionization = require(CorePackages.Workspace.Packages.InExperienceSessionization)
-end
+local _inExperienceSessionization = require(CorePackages.Workspace.Packages.InExperienceSessionization)
 
 local FFlagAvatarChatCoreScriptSupport =
 	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagAvatarChatCoreScriptSupport()
@@ -300,6 +300,10 @@ coroutine.wrap(safeRequire)(CoreGuiModules.ExperienceEvents.ExperienceEventsApp)
 
 if FFlagPlayerFeedbackPromptEnabled then
 	coroutine.wrap(safeRequire)(CoreGuiModules.PlayerFeedback)
+end
+
+if game:GetEngineFeature("GroupServiceJoinPromptEngineAPIEnabled") then
+	coroutine.wrap(safeRequire)(CoreGuiModules.Groups.GroupsApp)
 end
 
 coroutine.wrap(safeRequire)(CoreGuiModules.AvatarGeneration.SelfieConsent)
@@ -513,11 +517,19 @@ end
 if FFlagEnableRobloxCommerce then
 	ScriptContext:AddCoreScriptLocal("CoreScripts/CommercePurchaseApp", RobloxGui)
 end
+
+if FFlagEnableSystemScrim then
+	ScriptContext:AddCoreScriptLocal("CoreScripts/SystemScrim", RobloxGui)
+end
 	
 ScriptContext:AddCoreScriptLocal("CoreScripts/CoreGuiEnableAnalytics", RobloxGui)
 
 if FFlagEnableLinkSharingEvent then
 	ScriptContext:AddCoreScriptLocal("CoreScripts/OpenShareSheetWithLink", RobloxGui)
+end
+
+if FFlagLuaAppInExperienceDetailsPrompt then
+	ScriptContext:AddCoreScriptLocal("CoreScripts/InExperienceDetailsPrompt", RobloxGui)
 end
 
 if not FFlagEnableExperienceGenericChallengeRenderingOnLoadingScript then
@@ -573,5 +585,14 @@ if FFlagEnableAEGIS2CommsFAEUpsell then
 		if SocialUpsell then
 			SocialUpsell.Overlay.initializeInExpOverlay()
 		end
+	end)()
+end
+
+if FFlagAddGuiInsetToDisplayStore then
+	coroutine.wrap(function()
+		local Display = safeRequire(CorePackages.Workspace.Packages.Display)
+		GuiService:GetPropertyChangedSignal("TopbarInset"):Connect(function()
+			Display.GetDisplayStore().setTopBarHeight(GuiService.TopbarInset.Height)
+		end)
 	end)()
 end

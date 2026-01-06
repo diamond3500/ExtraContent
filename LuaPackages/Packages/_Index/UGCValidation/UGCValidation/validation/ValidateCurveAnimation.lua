@@ -4,6 +4,7 @@ validate:
 ]]
 
 local CollectionService = game:GetService("CollectionService")
+local Players = game:GetService("Players")
 
 local root = script.Parent.Parent
 
@@ -29,26 +30,26 @@ local getFFlagUGCValidateAddObjectValueToAcceptableTypes =
 local getFFlagUGCValidateDuplicatesInAnimation = require(flags.getFFlagUGCValidateDuplicatesInAnimation)
 local getFFlagUGCValidateMaxTotalInstances = require(flags.getFFlagUGCValidateMaxTotalInstances)
 local getFIntUGCValidateMaxAnimationFPS = require(flags.getFIntUGCValidateMaxAnimationFPS)
-local getFFlagUGCValidateRestrictAnimationMovement = require(flags.getFFlagUGCValidateRestrictAnimationMovement)
-local GetFStringUGCValidateMaxAnimationMovement = require(flags.GetFStringUGCValidateMaxAnimationMovement)
 local getFIntUGCValidateMaxMarkerCurveValueLength = require(flags.getFIntUGCValidateMaxMarkerCurveValueLength)
-local getFFlagUGCValidateRestrictAnimationMovementPerPart =
-	require(flags.getFFlagUGCValidateRestrictAnimationMovementPerPart)
 local GetFStringUGCValidateMaxAnimationMovementPerPart = require(flags.GetFStringUGCValidateMaxAnimationMovementPerPart)
-local getFFlagUGCValidateRestrictAnimationMovementCurvesFix =
-	require(flags.getFFlagUGCValidateRestrictAnimationMovementCurvesFix)
 local getFFlagUGCValidateStopNaNsInfsInAnimationKeys = require(flags.getFFlagUGCValidateStopNaNsInfsInAnimationKeys)
 local getFFlagUGCValidateStopNaNsInfsInCalculatedData = require(flags.getFFlagUGCValidateStopNaNsInfsInCalculatedData)
 local getFFlagUGCValidateSingleAnimationRigData = require(flags.getFFlagUGCValidateSingleAnimationRigData)
 local getEngineFeatureEngineUGCIsValidR15AnimationRigCheck =
 	require(flags.getEngineFeatureEngineUGCIsValidR15AnimationRigCheck)
-local getFFlagUGCValidatePreciseStepThrough = require(flags.getFFlagUGCValidatePreciseStepThrough)
-local getFFlagUGCValidatePreciseCurveLimit = require(flags.getFFlagUGCValidatePreciseCurveLimit)
 local GetFStringUGCValidateFrameDeltaKeyTimeTol = require(flags.GetFStringUGCValidateFrameDeltaKeyTimeTol)
 local getEngineFeatureEngineUGCValidatePropertiesSensible =
 	require(root.flags.getEngineFeatureEngineUGCValidatePropertiesSensible)
 local getFFlagUGCValidateRestrictEmoteHeight = require(flags.getFFlagUGCValidateRestrictEmoteHeight)
 local GetFStringUGCValidateAnimationHeightTol = require(flags.GetFStringUGCValidateAnimationHeightTol)
+local getFFlagUGCValidateFixCurveAnimFrameTimeErrorMessage =
+	require(flags.getFFlagUGCValidateFixCurveAnimFrameTimeErrorMessage)
+local getFFlagUGCValidateCurveAnimRotationSpeed = require(flags.getFFlagUGCValidateCurveAnimRotationSpeed)
+local getFIntUGCValidationMaxAnimationRotationSpeedPerSecond =
+	require(flags.getFIntUGCValidationMaxAnimationRotationSpeedPerSecond)
+local getFFlagUGCValidateCurveAnimFinalFrameBug = require(flags.getFFlagUGCValidateCurveAnimFinalFrameBug)
+local getFFlagUGCValidateCurveAnimMinTimeFix = require(flags.getFFlagUGCValidateCurveAnimMinTimeFix)
+local GetFStringUGCValidateCurveAnimationMinLength = require(flags.GetFStringUGCValidateCurveAnimationMinLength)
 
 local ValidateCurveAnimation = {}
 
@@ -56,7 +57,6 @@ local PositionName = "Position"
 local RotationName = "Rotation"
 local Vector3CurveName = "Vector3Curve"
 local EulerRotationCurveName = "EulerRotationCurve"
-local RotationCurveName = "RotationCurve"
 local FloatCurveName = "FloatCurve"
 
 local function reportFailure(
@@ -192,27 +192,25 @@ local function validateBodyPartFolderChildren(parentFolder: Instance): boolean
 			return false
 		end
 
-		if getFFlagUGCValidateRestrictAnimationMovement() then
-			local faceControls = parentFolder:FindFirstChild(FaceControlsName)
-			if faceControls then
-				for _, child in faceControls:GetChildren() do
-					if not child:IsA("FloatCurve") then
-						return false
-					end
+		local faceControls = parentFolder:FindFirstChild(FaceControlsName)
+		if faceControls then
+			for _, child in faceControls:GetChildren() do
+				if not child:IsA("FloatCurve") then
+					return false
 				end
 			end
+		end
 
-			if containsGrandChildren(parentFolder:FindFirstChild("Position")) then
-				return false
-			end
+		if containsGrandChildren(parentFolder:FindFirstChild("Position")) then
+			return false
+		end
 
-			if containsGrandChildren(parentFolder:FindFirstChild("Rotation")) then
-				return false
-			end
+		if containsGrandChildren(parentFolder:FindFirstChild("Rotation")) then
+			return false
+		end
 
-			if containsGrandChildren(faceControls) then
-				return false
-			end
+		if containsGrandChildren(faceControls) then
+			return false
 		end
 
 		return true
@@ -399,17 +397,7 @@ local acceptableHierarchyInstanceTypes = {
 	"Vector3Curve",
 	"EulerRotationCurve",
 	"FloatCurve",
-	"RotationCurve",
 }
-
-if getFFlagUGCValidateRestrictAnimationMovementCurvesFix() then
-	for idx, instanceType in acceptableHierarchyInstanceTypes do
-		if instanceType == RotationCurveName then
-			table.remove(acceptableHierarchyInstanceTypes, idx)
-			break
-		end
-	end
-end
 
 if getFFlagUGCValidateAddObjectValueToAcceptableTypes() then
 	table.insert(acceptableHierarchyInstanceTypes, "ObjectValue")
@@ -549,8 +537,21 @@ local function validateAnimationHierarchy(
 end
 
 local function createDefaultCharacter(removeMotors: boolean): Model
-	local defaultCharacter =
-		game.Players:CreateHumanoidModelFromDescription(Instance.new("HumanoidDescription"), Enum.HumanoidRigType.R15)
+	local defaultCharacter
+
+	-- SBT-5736: `any` cast present due to in-flight PR to rename methods.
+	-- Will be removed when that PR is merged.
+	if game:GetEngineFeature("AsyncRenamesUsedInLuaApps") then
+		defaultCharacter = (Players :: any):CreateHumanoidModelFromDescriptionAsync(
+			Instance.new("HumanoidDescription"),
+			Enum.HumanoidRigType.R15
+		)
+	else
+		defaultCharacter = (game.Players :: any):CreateHumanoidModelFromDescription(
+			Instance.new("HumanoidDescription"),
+			Enum.HumanoidRigType.R15
+		)
+	end
 
 	for _, desc in defaultCharacter:GetDescendants() do
 		if desc:IsA("Decal") then
@@ -567,9 +568,7 @@ local function createDefaultCharacter(removeMotors: boolean): Model
 	return defaultCharacter
 end
 
-local frameDelta = if getFFlagUGCValidatePreciseStepThrough()
-	then 1.0 / getFIntUGCValidateMaxAnimationFPS()
-	else 1.0 / 30.0
+local frameDelta = 1.0 / getFIntUGCValidateMaxAnimationFPS()
 
 local function getBodyPartFolderRoot(curveAnim: CurveAnimation): Folder?
 	for _, child in curveAnim:GetChildren() do
@@ -619,7 +618,7 @@ local function calculateAnimFramesAtOriginManual(
 	local function getCurveTracks(): any
 		local tracks = {}
 
-		local instancesToCheck = nil
+		local instancesToCheck: { any } = nil
 		if getFFlagUGCValidateDuplicatesInAnimation() then
 			local bodyPartFolderRootOpt = getBodyPartFolderRoot(curveAnim)
 			assert(
@@ -635,27 +634,15 @@ local function calculateAnimFramesAtOriginManual(
 		end
 		for _, desc in instancesToCheck do
 			if desc:IsA("Folder") and getBodyPartToParentMap()[desc.Name] then
-				if getFFlagUGCValidateRestrictAnimationMovementCurvesFix() then
-					local pos = desc:FindFirstChild(PositionName)
-					local rot = desc:FindFirstChild(RotationName)
-					tracks[desc.Name] = {
-						pos = if hasPositionKeys(pos) then pos else nil,
-						rot = if hasRotationKeys(rot) then rot else nil,
-						faceControls = if desc.Name == Constants.NAMED_R15_BODY_PARTS.Head
-							then desc:FindFirstChild(FaceControlsName)
-							else nil,
-					}
-				else
-					local pos = desc:FindFirstChild("Position")
-					local rot = desc:FindFirstChild("Rotation")
-					if pos and pos:IsA("Vector3Curve") and rot and rot:IsA("EulerRotationCurve") then
-						tracks[desc.Name] = {
-							pos = pos,
-							rot = rot,
-							faceControls = if desc.Name == "Head" then desc:FindFirstChild("FaceControls") else nil,
-						}
-					end
-				end
+				local pos = desc:FindFirstChild(PositionName)
+				local rot = desc:FindFirstChild(RotationName)
+				tracks[desc.Name] = {
+					pos = if hasPositionKeys(pos) then pos else nil,
+					rot = if hasRotationKeys(rot) then rot else nil,
+					faceControls = if desc.Name == Constants.NAMED_R15_BODY_PARTS.Head
+						then desc:FindFirstChild(FaceControlsName)
+						else nil,
+				}
 			end
 		end
 		return tracks
@@ -690,14 +677,9 @@ local function calculateAnimFramesAtOriginManual(
 	local function calculateTransformsAtTime(time: number, tracks: any): any
 		local curveData = {}
 		for trackName, track in tracks do
-			if getFFlagUGCValidateRestrictAnimationMovementCurvesFix() then
-				local pos = if track.pos then Vector3.new(unpack(track.pos:GetValueAtTime(time))) else Vector3.zero
-				local rot = if track.rot then track.rot:GetRotationAtTime(time) else CFrame.new()
-				curveData[trackName] = rot + pos
-			else
-				curveData[trackName] = track.rot:GetRotationAtTime(time)
-					+ Vector3.new(unpack(track.pos:GetValueAtTime(time)))
-			end
+			local pos = if track.pos then Vector3.new(unpack(track.pos:GetValueAtTime(time))) else Vector3.zero
+			local rot = if track.rot then track.rot:GetRotationAtTime(time) else CFrame.new()
+			curveData[trackName] = rot + pos
 		end
 		return curveData
 	end
@@ -728,19 +710,35 @@ local function calculateAnimFramesAtOriginManual(
 	local result = {}
 	local positionMagnitudeResults = {}
 
-	local time = 0
-	while time <= animationLength do
-		local animationTransforms = calculateTransformsAtTime(time, tracks)
+	local function addData(trackTime: number)
+		local animationTransforms = calculateTransformsAtTime(trackTime, tracks)
 		local finalFrameTransforms =
 			AssetCalculator.calculateAllTransformsForFullBody(fullBodyAssets, animationTransforms)
 		table.insert(result, finalFrameTransforms)
 
-		if getFFlagUGCValidateRestrictAnimationMovementCurvesFix() then
+		table.insert(positionMagnitudeResults, calculatePositionMagnitudeResultsAtTime(trackTime, tracks))
+	end
+
+	local time = 0
+	while time <= animationLength do
+		if getFFlagUGCValidateCurveAnimFinalFrameBug() then
+			addData(time)
+		else
+			local animationTransforms = calculateTransformsAtTime(time, tracks)
+			local finalFrameTransforms =
+				AssetCalculator.calculateAllTransformsForFullBody(fullBodyAssets, animationTransforms)
+			table.insert(result, finalFrameTransforms)
+
 			table.insert(positionMagnitudeResults, calculatePositionMagnitudeResultsAtTime(time, tracks))
 		end
-
 		time += frameDelta
 	end
+	if getFFlagUGCValidateCurveAnimFinalFrameBug() then
+		if animationLength >= 0 then
+			addData(animationLength)
+		end
+	end
+
 	defaultCharacter:Destroy()
 	return result, animationLength, positionMagnitudeResults, tracks
 end
@@ -749,7 +747,11 @@ function ValidateCurveAnimation.validateAnimationLength(
 	length: number,
 	validationContext: Types.ValidationContext
 ): (boolean, { string }?)
-	if length <= 0 or length > GetFStringUGCValidationMaxAnimationLength.asNumber() then
+	local minLength = if getFFlagUGCValidateCurveAnimMinTimeFix()
+		then GetFStringUGCValidateCurveAnimationMinLength.asNumber()
+		else 0
+
+	if length <= minLength or length > GetFStringUGCValidationMaxAnimationLength.asNumber() then
 		return reportFailure(
 			`CurveAnimation must be between 0 and {GetFStringUGCValidationMaxAnimationLength.asString()} seconds long. Please fix the animation.`,
 			Analytics.ErrorType.validateCurveAnimation_UnacceptableLength,
@@ -812,17 +814,19 @@ function ValidateCurveAnimation.validateFrameDeltas(
 	animFrames: { { string: CFrame } },
 	validationContext: Types.ValidationContext
 ): (boolean, { string }?)
-	local maxAllowedMovement = nil
 	-- GetFStringUGCValidationMaxAnimationDeltas.asNumber() is presuming a 1/30 seconds between frames, however frameDelta may be
 	-- different to this, and we need to scale GetFStringUGCValidationMaxAnimationDeltas.asNumber() accordingly
-	if getFFlagUGCValidatePreciseStepThrough() then
-		local defaultFrameTime = 1.0 / 30.0
-		local maxMovementMultiplier = frameDelta / defaultFrameTime
-		maxAllowedMovement = GetFStringUGCValidationMaxAnimationDeltas.asNumber() * maxMovementMultiplier
+	local defaultFrameTime = 1.0 / 30.0
+	local maxMovementMultiplier = frameDelta / defaultFrameTime
+	local maxAllowedMovement = GetFStringUGCValidationMaxAnimationDeltas.asNumber() * maxMovementMultiplier
+
+	local maxStudsPerSecondSpeed = nil
+	if getFFlagUGCValidateFixCurveAnimFrameTimeErrorMessage() then
+		maxStudsPerSecondSpeed = GetFStringUGCValidationMaxAnimationDeltas.asNumber() * (1.0 / defaultFrameTime)
 	end
 
 	local prevFrame = {}
-	for _, frame in animFrames do
+	for frameNumberIdx, frame in animFrames do
 		for bodyPartName, cframe in frame do
 			local prevCFrame = prevFrame[bodyPartName]
 			if not prevCFrame then
@@ -830,20 +834,84 @@ function ValidateCurveAnimation.validateFrameDeltas(
 			end
 
 			local delta = ((cframe :: CFrame).Position - prevCFrame.Position).Magnitude
-			local maxDelta = if getFFlagUGCValidatePreciseStepThrough()
-				then maxAllowedMovement
-				else GetFStringUGCValidationMaxAnimationDeltas.asNumber()
+			if delta > maxAllowedMovement then
+				if getFFlagUGCValidateFixCurveAnimFrameTimeErrorMessage() then
+					local frameTime = (frameNumberIdx - 1) * frameDelta
+					local studsPerSecondSpeed = (delta / maxMovementMultiplier) * (1.0 / defaultFrameTime)
 
-			if delta > maxDelta then
+					local errorMessage = string.format(
+						"In CurveAnimation at time %.2f seconds, body part %s is moving at a speed of %.2f studs/second. %.2f is the maximum studs/second speed. Please fix the animation.",
+						frameTime,
+						bodyPartName :: string,
+						studsPerSecondSpeed,
+						maxStudsPerSecondSpeed
+					)
+
+					return reportFailure(
+						errorMessage,
+						Analytics.ErrorType.validateCurveAnimation_UnacceptableFrameDelta,
+						validationContext
+					)
+				else
+					return reportFailure(
+						`Body part {bodyPartName} in CurveAnimation moves more than {GetFStringUGCValidationMaxAnimationDeltas.asString()} studs between frames. Please fix the animation.`,
+						Analytics.ErrorType.validateCurveAnimation_UnacceptableFrameDelta,
+						validationContext
+					)
+				end
+			end
+		end
+
+		prevFrame = frame
+	end
+	return true
+end
+
+-- each body part cannot rotate more than a maximum degrees/second
+function ValidateCurveAnimation.validateFrameRotationDeltas(
+	animFrames: { { string: CFrame } },
+	validationContext: Types.ValidationContext
+): (boolean, { string }?)
+	assert(
+		math.abs((1 / frameDelta) - getFIntUGCValidateMaxAnimationFPS()) < 0.00001,
+		"frameDelta should be calculated as 1 / getFIntUGCValidateMaxAnimationFPS()"
+	)
+
+	-- getFIntUGCValidationMaxAnimationRotationSpeedPerSecond() >= (180 * getFIntUGCValidateMaxAnimationFPS()) means any rotation is valid (since CFrame:AngleBetween() returns values between 0 and 180)
+	local maxDegreesPerSecondRotationSpeed = getFIntUGCValidationMaxAnimationRotationSpeedPerSecond()
+	-- if maxDegreesAllowedRotationPerFrame is >= 180, then any rotation is valid
+	local maxDegreesAllowedRotationPerFrame = maxDegreesPerSecondRotationSpeed / getFIntUGCValidateMaxAnimationFPS()
+
+	local allCFramesPrevFrame = {}
+	for frameNumberIdx, frame in animFrames do
+		for bodyPartName, cframe in frame do
+			local prevCFrame = allCFramesPrevFrame[bodyPartName]
+			if not prevCFrame then
+				continue
+			end
+
+			local delta = math.deg(math.abs((cframe :: any):AngleBetween(prevCFrame)))
+			if delta > maxDegreesAllowedRotationPerFrame then
+				local frameTime = (frameNumberIdx - 1) * frameDelta
+				local degreesPerSecondSpeed = delta * getFIntUGCValidateMaxAnimationFPS()
+
+				local errorMessage = string.format(
+					"In CurveAnimation at time %.2f seconds, body part %s is moving at a rotation speed of %.2f degrees/second. %.2f is the maximum degrees/second speed. Please fix the animation.",
+					frameTime,
+					bodyPartName :: string,
+					degreesPerSecondSpeed,
+					maxDegreesPerSecondRotationSpeed
+				)
+
 				return reportFailure(
-					`Body part {bodyPartName} in CurveAnimation moves more than {GetFStringUGCValidationMaxAnimationDeltas.asString()} studs between frames. Please fix the animation.`,
-					Analytics.ErrorType.validateCurveAnimation_UnacceptableFrameDelta,
+					errorMessage,
+					Analytics.ErrorType.validateCurveAnimation_UnacceptableFrameRotationDelta,
 					validationContext
 				)
 			end
 		end
 
-		prevFrame = frame
+		allCFramesPrevFrame = frame
 	end
 	return true
 end
@@ -973,17 +1041,11 @@ function ValidateCurveAnimation.validateData(
 		return value ~= value
 	end
 
-	local maxTotalKeys =
-		math.floor(getFIntUGCValidateMaxAnimationFPS() * GetFStringUGCValidationMaxAnimationLength.asNumber())
+	local frameDeltaTol = frameDelta * GetFStringUGCValidateFrameDeltaKeyTimeTol.asNumber()
+	local fpsWithTol = 1.0 / frameDeltaTol
+	local maxTotalKeys = math.ceil(fpsWithTol * GetFStringUGCValidationMaxAnimationLength.asNumber())
 
-	local frameDeltaTol = nil
-	if getFFlagUGCValidatePreciseCurveLimit() then
-		frameDeltaTol = frameDelta * GetFStringUGCValidateFrameDeltaKeyTimeTol.asNumber()
-		local fpsWithTol = 1.0 / frameDeltaTol
-		maxTotalKeys = math.ceil(fpsWithTol * GetFStringUGCValidationMaxAnimationLength.asNumber())
-	end
-
-	for _, desc in inst:GetDescendants() do
+	for _, desc: any in inst:GetDescendants() do
 		if desc:IsA("MarkerCurve") then
 			local allMarkers = desc:GetMarkers()
 			if #allMarkers > maxTotalKeys then
@@ -1013,14 +1075,8 @@ function ValidateCurveAnimation.validateData(
 			continue
 		end
 
-		if getFFlagUGCValidatePreciseCurveLimit() then
-			if not desc:IsA("FloatCurve") then
-				continue
-			end
-		else
-			if not desc:IsA("FloatCurve") and not desc:IsA("RotationCurve") then
-				continue
-			end
+		if not desc:IsA("FloatCurve") then
+			continue
 		end
 
 		local allKeys = desc:GetKeys()
@@ -1053,27 +1109,25 @@ function ValidateCurveAnimation.validateData(
 				)
 			end
 
-			if getFFlagUGCValidatePreciseCurveLimit() then
-				if prevTime then
-					local minTimeAllowed = (prevTime :: number) + frameDeltaTol
-					if key.Time < minTimeAllowed then
-						local grandparentName = if desc.Parent.Parent then desc.Parent.Parent.Name else "-"
-						return reportFailure(
-							`CurveAnimation contains Curve {grandparentName}.{desc.Parent.Name}.{desc.Name} with keys that are too close together in time for a maximum {getFIntUGCValidateMaxAnimationFPS()} fps animation. Please fix the animation.`,
-							Analytics.ErrorType.validateCurveAnimation_IncorrectNumericalData,
-							validationContext
-						)
-					end
-				elseif key.Time < 0 then
+			if prevTime then
+				local minTimeAllowed = (prevTime :: number) + frameDeltaTol
+				if key.Time < minTimeAllowed then
 					local grandparentName = if desc.Parent.Parent then desc.Parent.Parent.Name else "-"
 					return reportFailure(
-						`CurveAnimation contains Curve {grandparentName}.{desc.Parent.Name}.{desc.Name} with a key that has a negative time. Please fix the animation.`,
+						`CurveAnimation contains Curve {grandparentName}.{desc.Parent.Name}.{desc.Name} with keys that are too close together in time for a maximum {getFIntUGCValidateMaxAnimationFPS()} fps animation. Please fix the animation.`,
 						Analytics.ErrorType.validateCurveAnimation_IncorrectNumericalData,
 						validationContext
 					)
 				end
-				prevTime = key.Time
+			elseif key.Time < 0 then
+				local grandparentName = if desc.Parent.Parent then desc.Parent.Parent.Name else "-"
+				return reportFailure(
+					`CurveAnimation contains Curve {grandparentName}.{desc.Parent.Name}.{desc.Name} with a key that has a negative time. Please fix the animation.`,
+					Analytics.ErrorType.validateCurveAnimation_IncorrectNumericalData,
+					validationContext
+				)
 			end
+			prevTime = key.Time
 		end
 	end
 	return true
@@ -1144,48 +1198,6 @@ function ValidateCurveAnimation.validatePositionMagnitudes(
 	return true
 end
 
-function ValidateCurveAnimation.validateMovement(
-	curveAnim: CurveAnimation,
-	validationContext: Types.ValidationContext
-): (boolean, { string }?)
-	for _, desc in curveAnim:GetDescendants() do
-		if not desc:IsA("FloatCurve") or not desc.Parent:IsA("Vector3Curve") or desc.Parent.Name ~= "Position" then
-			continue
-		end
-
-		if desc.Parent.Parent.Name == "LowerTorso" then
-			-- LowerTorso is allowed to move, so we skip it
-			continue
-		end
-
-		local allKeys = desc:GetKeys()
-
-		if getFFlagUGCValidateRestrictAnimationMovementPerPart() then
-			local maxMovement = GetFStringUGCValidateMaxAnimationMovementPerPart.asNumber(desc.Parent.Parent.Name)
-			for __, key in allKeys do
-				if math.abs(key.Value) > maxMovement then
-					return reportFailure(
-						`CurveAnimation contains positional separation of body parts. Only LowerTorso can change position. All other body parts can only change their orientation. {desc.Parent.Parent.Name} moves more than {maxMovement} studs from its parent. Please fix the animation.`,
-						Analytics.ErrorType.validateCurveAnimation_PositionalMovement,
-						validationContext
-					)
-				end
-			end
-		else
-			for __, key in allKeys do
-				if math.abs(key.Value) > GetFStringUGCValidateMaxAnimationMovement.asNumber() then
-					return reportFailure(
-						"CurveAnimation contains positional separation of body parts. Only LowerTorso can change position. All other body parts can only change their orientation. Please fix the animation.",
-						Analytics.ErrorType.validateCurveAnimation_PositionalMovement,
-						validationContext
-					)
-				end
-			end
-		end
-	end
-	return true
-end
-
 function ValidateCurveAnimation.validateFrames(
 	curveAnim: CurveAnimation,
 	validationContext: Types.ValidationContext
@@ -1203,24 +1215,20 @@ function ValidateCurveAnimation.validateFrames(
 
 	local reasonsAccumulator = FailureReasonsAccumulator.new()
 
-	if getFFlagUGCValidateRestrictAnimationMovementCurvesFix() then
-		reasonsAccumulator:updateReasons(
-			ValidateCurveAnimation.validateMinimumTransformations(tracks, validationContext)
-		)
-	end
+	reasonsAccumulator:updateReasons(ValidateCurveAnimation.validateMinimumTransformations(tracks, validationContext))
 
-	if getFFlagUGCValidateRestrictAnimationMovement() then
-		if getFFlagUGCValidateRestrictAnimationMovementCurvesFix() then
-			reasonsAccumulator:updateReasons(
-				ValidateCurveAnimation.validatePositionMagnitudes(positionMagnitudeFrames, validationContext)
-			)
-		else
-			reasonsAccumulator:updateReasons(ValidateCurveAnimation.validateMovement(curveAnim, validationContext))
-		end
-	end
+	reasonsAccumulator:updateReasons(
+		ValidateCurveAnimation.validatePositionMagnitudes(positionMagnitudeFrames, validationContext)
+	)
+
 	reasonsAccumulator:updateReasons(ValidateCurveAnimation.validateAnimationLength(animLength, validationContext))
 	reasonsAccumulator:updateReasons(ValidateCurveAnimation.validateBounds(animFrames, validationContext))
 	reasonsAccumulator:updateReasons(ValidateCurveAnimation.validateFrameDeltas(animFrames, validationContext))
+	if getFFlagUGCValidateCurveAnimRotationSpeed() then
+		reasonsAccumulator:updateReasons(
+			ValidateCurveAnimation.validateFrameRotationDeltas(animFrames, validationContext)
+		)
+	end
 	return reasonsAccumulator:getFinalResults()
 end
 
@@ -1253,12 +1261,6 @@ function ValidateCurveAnimation.validate(
 	local reasonsAccumulator = FailureReasonsAccumulator.new()
 	reasonsAccumulator:updateReasons(validateAttributes(curveAnim, validationContext))
 	reasonsAccumulator:updateReasons(ValidateCurveAnimation.validateAllowedTags(curveAnim, validationContext))
-
-	if not getFFlagUGCValidateRestrictAnimationMovementCurvesFix() then
-		reasonsAccumulator:updateReasons(
-			ValidateCurveAnimation.validateContainsJointManipulation(curveAnim, validationContext)
-		)
-	end
 	reasonsAccumulator:updateReasons(ValidateCurveAnimation.validateFrames(curveAnim, validationContext))
 	return reasonsAccumulator:getFinalResults()
 end

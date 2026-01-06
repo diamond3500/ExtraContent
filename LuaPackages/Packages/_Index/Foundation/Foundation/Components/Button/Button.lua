@@ -12,6 +12,7 @@ local React = require(Packages.React)
 local ReactOtter = require(Packages.ReactOtter)
 
 local Spinner = require(script.Parent.Spinner)
+local endAlignedIcons = require(script.Parent.endAlignedIcons)
 local InputSize = require(Foundation.Enums.InputSize)
 type InputSize = InputSize.InputSize
 
@@ -25,14 +26,13 @@ type SupportedButtonVariant =
 	| typeof(ButtonVariant.SoftEmphasis)
 	| typeof(ButtonVariant.Alert)
 	| typeof(ButtonVariant.Utility)
+	| typeof(ButtonVariant.Link)
 	-- **DEPRECATED** - Use `SoftEmphasis` instead
 	| typeof(ButtonVariant.SubEmphasis)
 	-- **DEPRECATED** - Use `Standard` instead
 	| typeof(ButtonVariant.Subtle)
 	-- **DEPRECATED** - Use `Utility` or `Standard` instead
 	| typeof(ButtonVariant.Text)
-	-- **DEPRECATED** - Use `Utility` or `Standard` instead
-	| typeof(ButtonVariant.Link)
 
 local FillBehavior = require(Foundation.Enums.FillBehavior)
 type FillBehavior = FillBehavior.FillBehavior
@@ -131,6 +131,8 @@ local function Button(buttonProps: ButtonProps, ref: React.Ref<GuiObject>?)
 		setIsDelaying(false)
 	end)
 
+	local isEndAligned = props.icon and endAlignedIcons[props.icon]
+
 	React.useEffect(function()
 		if isDelaying == false then
 			setGoal(ReactOtter.instant(0))
@@ -155,8 +157,12 @@ local function Button(buttonProps: ButtonProps, ref: React.Ref<GuiObject>?)
 
 	local tokens = useTokens()
 	local presentationContext = usePresentationContext()
-	local variantProps =
-		useButtonVariants(tokens, props.size, props.variant, presentationContext and presentationContext.isInverse)
+	local variantProps = useButtonVariants(
+		tokens,
+		props.size,
+		props.variant,
+		if presentationContext then presentationContext.colorMode else nil
+	)
 
 	local motionStates = useButtonMotionStates(variantProps.content.style.Transparency, Constants.DISABLED_TRANSPARENCY)
 	local disabledValues, animateDisabledValues = useMotion(motionStates.Default)
@@ -255,6 +261,8 @@ local function Button(buttonProps: ButtonProps, ref: React.Ref<GuiObject>?)
 			IconWrapper = if props.icon or props.isLoading
 				then React.createElement(if props.icon then View else "Folder", {
 					Size = if props.icon then variantProps.icon.size else nil,
+					LayoutOrder = if props.icon then if isEndAligned then 3 else 1 else nil,
+					testId = if props.icon then `{props.testId}--icon-wrapper` else nil,
 				}, {
 					PresenceWrapper = React.createElement(AnimatePresence, {}, {
 						Spinner = if props.isLoading
@@ -292,6 +300,7 @@ local function Button(buttonProps: ButtonProps, ref: React.Ref<GuiObject>?)
 										}
 									end),
 									scale = values.iconScale,
+									testId = `{props.testId}--icon`,
 								}, {
 									UITextSizeConstraint = if textSizeOffset > 0
 										then React.createElement("UITextSizeConstraint", {
@@ -316,6 +325,7 @@ local function Button(buttonProps: ButtonProps, ref: React.Ref<GuiObject>?)
 									scale = values.iconScale:map(function(iconScale: number)
 										return iconScale * scale
 									end),
+									testId = `{props.testId}--icon`,
 								})
 							else nil,
 					}),

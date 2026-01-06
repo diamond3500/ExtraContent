@@ -3,6 +3,8 @@ local Packages = Foundation.Parent
 local React = require(Packages.React)
 local ReactUtils = require(Packages.ReactUtils)
 
+local Flags = require(Foundation.Utility.Flags)
+
 local BottomSheet = require(script.Parent.BottomSheet)
 local SideSheet = require(script.Parent.SideSheet)
 local CenterSheet = require(script.Parent.CenterSheet)
@@ -52,7 +54,10 @@ local function Sheet(sheetProps: SheetProps, ref: React.Ref<GuiObject>): React.R
 		setDisplaySize(GuiService.ViewportDisplaySize)
 	end, {})
 
-	React.useEffect(function()
+	local useLandscapeEffect: typeof(React.useLayoutEffect) = if Flags.FoundationSheetFixLandscapeFlicker
+		then React.useLayoutEffect
+		else React.useEffect
+	useLandscapeEffect(function()
 		local connection
 		if overlay then
 			setIsLandscape(overlay.AbsoluteSize.X > overlay.AbsoluteSize.Y)
@@ -86,7 +91,10 @@ local function Sheet(sheetProps: SheetProps, ref: React.Ref<GuiObject>): React.R
 
 	if displaySize == Enum.DisplaySize.Small and not isLandscape then
 		return React.createElement(BottomSheet, childProps)
-	elseif props.preferCenterSheet then
+	elseif
+		props.preferCenterSheet
+		and (if Flags.FoundationSheetNoCenterSheetSmallScreens then displaySize ~= Enum.DisplaySize.Small else true)
+	then
 		return React.createElement(CenterSheet, childProps)
 	else
 		return React.createElement(SideSheet, childProps)

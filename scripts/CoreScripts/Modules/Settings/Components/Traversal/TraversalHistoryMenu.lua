@@ -7,6 +7,8 @@ local SignalsReact = require(CorePackages.Packages.SignalsReact)
 
 local CoreScriptsCommon = require(CorePackages.Workspace.Packages.CoreScriptsCommon)
 local CoreScriptsRoactCommon = require(CorePackages.Workspace.Packages.CoreScriptsRoactCommon)
+local FocusNavigationUtils = require(CorePackages.Workspace.Packages.FocusNavigationUtils)
+local Responsive = require(CorePackages.Workspace.Packages.Responsive)
 
 local TraversalLeaveConfirmation = require(script.Parent.TraversalLeaveConfirmation)
 
@@ -21,11 +23,14 @@ local ThumbnailSize = Foundation.Enums.ThumbnailSize
 local getRbxThumb = Foundation.Utility.getRbxThumb
 local SettingsShowSignal = CoreScriptsCommon.SettingsShowSignal
 local Traversal = CoreScriptsRoactCommon.Traversal
+local useLastInputMode = FocusNavigationUtils.useLastInputMode
+local useLastInput = Responsive.useLastInput
 local TraveralConstants = Traversal.Constants
 local HistoryMenu = Traversal.HistoryMenu
 local useHistoryItems = Traversal.useHistoryItems
-
 local useTokens = Foundation.Hooks.useTokens
+
+local FFlagTraversalUseFocusNavLastInput = require(script.Parent.FFlagTraversalUseFocusNavLastInput)
 
 export type TraversalHistoryMenuProps = {
 	anchorParent: GuiObject,
@@ -44,7 +49,15 @@ local function TraversalHistoryMenu(props: TraversalHistoryMenuProps, ref: React
 			icon = getRbxThumb(ThumbnailType.GameIcon, historyItem.universeId, ThumbnailSize.Small)
 		})
 	end
-
+	
+	local idleButtonStateIsDown = if props.idleButtonStateIsDown ~= nil then props.idleButtonStateIsDown else TraveralConstants.DEFAULT_CHEVRON_BUTTON_STATE
+	local lastInput
+	if FFlagTraversalUseFocusNavLastInput then 
+		lastInput = useLastInputMode()
+	else
+		lastInput = useLastInput()
+	end
+	local selectionBehaviorToMenu, setSelectionBehaviorToMenu = React.useBinding(Enum.SelectionBehavior.Stop)
 	local tokens = useTokens()
 	local selectedUniverseId, setSelectedUniverseId = React.useState(TraveralConstants.NO_UNIVERSE_ID)
 	local reactPageSignal = SignalsReact.useSignalState(ReactPageSignal)
@@ -82,7 +95,19 @@ local function TraversalHistoryMenu(props: TraversalHistoryMenuProps, ref: React
 
 	local closeDialog = React.useCallback(function()
 		setSelectedUniverseId(TraveralConstants.NO_UNIVERSE_ID)
-	end, { setSelectedUniverseId })
+		local isUsingFocus = if FFlagTraversalUseFocusNavLastInput then lastInput == "Focus" else lastInput == Responsive.Input.Directional
+		if isUsingFocus and anchorRef.current then
+			GuiService.SelectedCoreObject = anchorRef.current
+		end
+	end, { setSelectedUniverseId, lastInput } :: { unknown })
+
+	local onMenuToggled = React.useCallback(function(isOpen: boolean)
+		if isOpen then
+			setSelectionBehaviorToMenu(Enum.SelectionBehavior.Escape)
+		else
+			setSelectionBehaviorToMenu(Enum.SelectionBehavior.Stop)
+		end
+	end, { setSelectionBehaviorToMenu })
 
 	local dividerLeftStyle = React.useMemo(function()
 		-- matches button border style
@@ -97,6 +122,10 @@ local function TraversalHistoryMenu(props: TraversalHistoryMenuProps, ref: React
 	-- only render when there are previous places
 	return next(items) ~= nil and React.createElement(View, {
 		tag = "auto-xy row align-y-center size-0-full",
+		selectionGroup = {
+			SelectionBehaviorUp = if idleButtonStateIsDown then selectionBehaviorToMenu else Enum.SelectionBehavior.Stop,
+			SelectionBehaviorDown = if not idleButtonStateIsDown then selectionBehaviorToMenu else Enum.SelectionBehavior.Stop,
+		},
 	}, {
 		DividerLeft = React.createElement(View, {
 			Size = UDim2.new(0, tokens.Stroke.Thick, 1, 0),
@@ -112,8 +141,9 @@ local function TraversalHistoryMenu(props: TraversalHistoryMenuProps, ref: React
 				reactPageSignal.setCurrentReactPage(EnumReactPage.TraversalHistory)
 			end,
 			onMenuItemSelected = openDialog,
+			onMenuToggled = onMenuToggled,
 			forceMenuClose = forceMenuClose,
-			idleButtonStateIsDown = props.idleButtonStateIsDown,
+			idleButtonStateIsDown = idleButtonStateIsDown,
 
 			ref = anchorRef,
 		})

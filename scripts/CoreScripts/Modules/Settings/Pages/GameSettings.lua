@@ -63,6 +63,7 @@ local GetFFlagSelfViewCameraSettings = SharedFlags.GetFFlagSelfViewCameraSetting
 local GetFFlagAlwaysShowVRToggle = require(RobloxGui.Modules.Flags.GetFFlagAlwaysShowVRToggle)
 local GetFFlagEnableCrossExpVoiceVolumeIXPCheck = SharedFlags.GetFFlagEnableCrossExpVoiceVolumeIXPCheck
 local GetFFlagDebounceConnectDisconnectButton = require(RobloxGui.Modules.Flags.GetFFlagDebounceConnectDisconnectButton)
+local GetFFlagDebounceConnectDisconnectSelector = require(RobloxGui.Modules.Settings.Flags.GetFFlagDebounceConnectDisconnectSelector)
 local GetFIntDebounceDisconnectButtonDelay = require(RobloxGui.Modules.Flags.GetFIntDebounceDisconnectButtonDelay)
 local FFlagInExperienceMenuReorderFirstVariant =
 	require(RobloxGui.Modules.Settings.Flags.FFlagInExperienceMenuReorderFirstVariant)
@@ -85,6 +86,10 @@ local GetFFlagEnableVoiceUxUpdates = SharedFlags.GetFFlagEnableVoiceUxUpdates
 local GetFFlagEnableVrVoiceConnectDisconnect = SharedFlags.GetFFlagEnableVrVoiceConnectDisconnect
 local FFlagEnableNewBadgeVisibilityCopy = game:DefineFastFlag("EnableNewBadgeVisibilityCopy", false)
 local FFlagEnableVoiceSelectorTranslations = game:DefineFastFlag("EnableVoiceSelectorTranslations_AEGIS2", false)
+local FFlagHideVoiceChatSelectorForFae = game:DefineFastFlag("HideVoiceChatSelectorForFae_AEGIS2", false)
+local FFlagCenterShiftLockOverride = game:DefineFastFlag("CenterShiftLockOverride", true)
+local FFlagVoiceChatSelectorReconnectFocus = game:DefineFastFlag("VoiceChatSelectorReconnectFocus2_AEGIS2", false)
+local FFlagMicroProfilerReadOnlyInformationLabel = game:DefineFastFlag("MicroProfilerReadOnlyInformationLabel", false)
 
 local RobloxTranslator = require(CorePackages.Workspace.Packages.RobloxTranslator)
 
@@ -990,8 +995,9 @@ local function Initialize()
 			Font = Theme.font(Enum.Font.SourceSans, "GameSettings"),
 			FontSize = Theme.fontSize(Enum.FontSize.Size24, "GameSettings"),
 			BackgroundTransparency = 1,
-			Size = UDim2.new(0, 200, 1, 0),
-			Position = UDim2.new(1, -350, 0, 0),
+			Size = if FFlagCenterShiftLockOverride then UDim2.new(0.6, 0, 1, 0) else UDim2.new(0, 200, 1, 0),
+			Position = if FFlagCenterShiftLockOverride then UDim2.new(1, 0, 0.5, 0) else UDim2.new(1, -350, 0, 0),
+			AnchorPoint = if FFlagCenterShiftLockOverride then Vector2.new(1, 0.5) else nil,
 			Visible = false,
 			ZIndex = 2,
 			Parent = this.PerformanceStatsFrame,
@@ -1031,7 +1037,7 @@ local function Initialize()
 	-- web server for micro profiler
 	local function createWebServerInformationRow()
 		this.InformationFrame, this.InformationLabel, this.InformationTextBox =
-			utility:AddNewRow(this, "MicroProfiler Information", "TextBox", nil, nil, 5)
+			utility:AddNewRow(this, "MicroProfiler Information", "TextBox", nil, nil, 5, nil, nil, nil, if FFlagMicroProfilerReadOnlyInformationLabel then false else nil)
 		this.InformationFrame.LayoutOrder = SETTINGS_MENU_LAYOUT_ORDER["InformationFrame"]
 
 		-- Override the default position
@@ -1233,8 +1239,9 @@ local function Initialize()
 			Font = Theme.font(Enum.Font.SourceSans, "GameSettings"),
 			FontSize = Theme.fontSize(Enum.FontSize.Size24, "GameSettings"),
 			BackgroundTransparency = 1,
-			Size = UDim2.new(0, 200, 1, 0),
-			Position = UDim2.new(1, -350, 0, 0),
+			Size = if FFlagCenterShiftLockOverride then UDim2.new(0.6, 0, 1, 0) else UDim2.new(0, 200, 1, 0),
+			Position = if FFlagCenterShiftLockOverride then UDim2.new(1, 0, 0.5, 0) else UDim2.new(1, -350, 0, 0),
+			AnchorPoint = if FFlagCenterShiftLockOverride then Vector2.new(1, 0.5) else nil,
 			Visible = false,
 			ZIndex = 2,
 			Parent = this.ShiftLockFrame,
@@ -3627,7 +3634,10 @@ local function Initialize()
 		local disconnectedIndex = 1
 		local connectedIndex = 2
 
-		this.VoiceConnectDisconnectSelector.IndexChanged:connect(function(newIndex)
+		local debounceDelay = GetFIntDebounceDisconnectButtonDelay()
+		local useDebounce = GetFFlagDebounceConnectDisconnectSelector() and debounceDelay > 0
+
+		local onSelectorIndexChanged = function(newIndex)
 			if newIndex == previousIndex then
 				return
 			end
@@ -3655,7 +3665,19 @@ local function Initialize()
 					end
 				end)
 			end
-		end)
+		end
+
+		this.VoiceConnectDisconnectSelector.IndexChanged:connect(
+			if useDebounce then throttle(debounceDelay, onSelectorIndexChanged) else onSelectorIndexChanged
+		)
+
+    	if FFlagVoiceChatSelectorReconnectFocus then
+			this.VoiceConnectDisconnectFrame.SelectionChanged:Connect(function(_, previousSelection, newSelection)
+				if (newSelection and previousSelection and previousSelection.Parent) and previousSelection.Parent.Name == frameText .. "Frame" and newSelection.Name == "ImageButton" and this.Active then
+					GuiService.SelectedCoreObject = previousSelection
+				end
+			end)
+		end
 
 		VoiceChatServiceManager:subscribe("OnStateChanged", function(oldState, newState)
 			if newState == (Enum :: any).VoiceChatState.Failed then
@@ -3960,7 +3982,8 @@ local function Initialize()
 	if game:GetEngineFeature("VoiceChatSupported") and (GetFFlagEnableVrVoiceConnectDisconnect() or (if isInExperienceUIVREnabled then not isSpatial() else true)) then
 		spawn(function()
 			if GetFFlagEnableVoiceUxUpdates()
-				and (VoiceChatServiceManager:EligibleForFaeUpsell() or VoiceChatServiceManager:IsSeamlessVoice())
+				and ((not FFlagHideVoiceChatSelectorForFae and VoiceChatServiceManager:EligibleForFaeUpsell())
+					or VoiceChatServiceManager:IsSeamlessVoice())
 				and VoiceChatServiceManager:verifyUniverseAndPlaceCanUseVoice() then
 				createVoiceChatSelector()
 

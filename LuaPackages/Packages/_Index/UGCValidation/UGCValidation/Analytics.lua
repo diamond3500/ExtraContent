@@ -41,7 +41,6 @@ local getFFlagReportVisibilityAndIslandTelemetry = require(root.flags.getFFlagRe
 local getEngineFeatureUGCValidationFullBodyFacs = require(root.flags.getEngineFeatureUGCValidationFullBodyFacs)
 local getEngineFeatureEngineUGCValidateBodyPartsSkinnedToR15 =
 	require(root.flags.getEngineFeatureEngineUGCValidateBodyPartsSkinnedToR15)
-local getFFlagUGCValidateRestrictAnimationMovement = require(root.flags.getFFlagUGCValidateRestrictAnimationMovement)
 local getEngineUGCValidateRelativeSkinningTransfer = require(root.flags.getEngineUGCValidateRelativeSkinningTransfer)
 local getEngineFeatureEngineUGCIsValidR15AnimationRigCheck =
 	require(root.flags.getEngineFeatureEngineUGCIsValidR15AnimationRigCheck)
@@ -50,6 +49,7 @@ local getEngineFeatureEngineUGCValidatePropertiesSensible =
 local getFFlagUGCValidateCheckHSRFileDataFix = require(root.flags.getFFlagUGCValidateCheckHSRFileDataFix)
 
 local getFFlagUGCValidationEyebrowEyelashSupport = require(root.flags.getFFlagUGCValidationEyebrowEyelashSupport)
+local getFFlagUGCValidateCurveAnimRotationSpeed = require(root.flags.getFFlagUGCValidateCurveAnimRotationSpeed)
 
 local function joinTables(...)
 	local result = {}
@@ -162,8 +162,6 @@ Analytics.ErrorType = {
 	validateTextureTransparency_TransparentTexture = "validateTextureTransparency_TransparentTexture",
 	validateThumbnailConfiguration_InvalidTarget = "validateThumbnailConfiguration_InvalidTarget",
 	validateThumbnailConfiguration_OutsideView = "validateThumbnailConfiguration_OutsideView",
-	validateUVSpace_FailedToExecute = "validateUVSpace_FailedToExecute",
-	validateUVSpace_InvalidUVSpace = "validateUVSpace_InvalidUVSpace",
 	validateVertexDensity_FailedToExecute = "validateVertexDensity_FailedToExecute",
 	validateVertexDensity_MaxDensityExceeded = "validateVertexDensity_MaxDensityExceeded",
 	validateDynamicHeadMeshPartFormat_ValidateDynamicHeadMeshControls = "validateDynamicHeadMeshPartFormat_ValidateDynamicHeadMeshControls",
@@ -184,6 +182,7 @@ Analytics.ErrorType = {
 	validateBodyPartCage_FailedToExecute = "validateBodyPartCage_FailedToExecute",
 	validateBodyPartCage_VertsAreTooFarInFrontOfRenderMesh = "validateBodyPartCage_VertsAreTooFarInFrontOfRenderMesh",
 	validateCurveAnimation_IncorrectNumericalData = "validateCurveAnimation_IncorrectNumericalData",
+	validateCurveAnimation_PositionalMovement = "validateCurveAnimation_PositionalMovement",
 }
 
 if getFFlagUGCValidateMeshBBoxIsCentered() then
@@ -273,8 +272,9 @@ Analytics.ErrorType.validateCurveAnimation_UnacceptableLength = "validateCurveAn
 Analytics.ErrorType.validateCurveAnimation_UnacceptableSizeBounds = "validateCurveAnimation_UnacceptableSizeBounds"
 Analytics.ErrorType.validateCurveAnimation_UnacceptableFrameDelta = "validateCurveAnimation_UnacceptableFrameDelta"
 
-if getFFlagUGCValidateRestrictAnimationMovement() then
-	Analytics.ErrorType.validateCurveAnimation_PositionalMovement = "validateCurveAnimation_PositionalMovement"
+if getFFlagUGCValidateCurveAnimRotationSpeed() then
+	Analytics.ErrorType.validateCurveAnimation_UnacceptableFrameRotationDelta =
+		"validateCurveAnimation_UnacceptableFrameRotationDelta"
 end
 
 if getEngineFeatureEngineUGCIsValidR15AnimationRigCheck() then

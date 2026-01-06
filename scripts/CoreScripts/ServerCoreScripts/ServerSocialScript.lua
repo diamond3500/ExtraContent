@@ -34,8 +34,9 @@ local FIntProfileSettingsRateLimitSeconds = game:DefineFastInt("ProfileSettingsR
 local FIntProfileSettingsMaxRequestsPerWindow = game:DefineFastInt("ProfileSettingsMaxRequestsPerWindow", 3)
 local FIntProfileSettingsRateLimitWindowSeconds = game:DefineFastInt("ProfileSettingsRateLimitWindowSeconds", 60)
 local FFlagDisableRCCAntiHarrasmentAllowList = game:DefineFastFlag("DisableRCCAntiHarrasmentAllowList", false)
-local FFlagEnablePartyNudgeNotification = require(CorePackages.Workspace.Packages.SharedFlags).FFlagEnablePartyNudgeNotification
 local FFlagUseGetCanManageAsync = game:DefineFastFlag("UseGetCanManageAsync", false) and game:GetEngineFeature("LuaGetCanManageAsync")
+
+local FFlagGatePrivateServerNudge = game:DefineFastFlag("GatePrivateServerNudge", false)
 
 local GET_MULTI_FOLLOW = "user/multi-following-exists"
 
@@ -124,12 +125,10 @@ if FFlagEnablePartyNudgeAfterJoin then
 	RemoteEvent_ShowFriendJoinedPlayerToast.Parent = RobloxReplicatedStorage
 end
 
-local RemoteEvent_CreateOrJoinParty
-if FFlagEnablePartyNudgeNotification then
-	RemoteEvent_CreateOrJoinParty = Instance.new("RemoteEvent")
-	RemoteEvent_CreateOrJoinParty.Name = "CreateOrJoinParty"
-	RemoteEvent_CreateOrJoinParty.Parent = RobloxReplicatedStorage
-end
+
+local RemoteEvent_CreateOrJoinParty = Instance.new("RemoteEvent")
+RemoteEvent_CreateOrJoinParty.Name = "CreateOrJoinParty"
+RemoteEvent_CreateOrJoinParty.Parent = RobloxReplicatedStorage
 
 -- Map: { UserId -> { UserId -> NumberOfNotificationsSent } }
 local FollowNotificationsBetweenMap = {}
@@ -159,10 +158,28 @@ local function getPlayerGroupDetails(player)
 	local newGroupDetails = {}
 	for groupKey, groupInfo in pairs(SPECIAL_GROUPS) do
 		if groupInfo.GroupRank ~= nil then
-			local isInGroupSuccess, isInGroupValue = pcall(function() return player:GetRankInGroup(groupInfo.GroupId) >= groupInfo.GroupRank end)
+			local isInGroupSuccess, isInGroupValue = pcall(function()
+				-- SBT-5736: `any` cast present due to in-flight PR to rename methods.
+				-- Will be removed when that PR is merged.
+				if game:GetEngineFeature("AsyncRenamesUsedInLuaApps") then
+					return (player :: any):GetRankInGroupAsync(groupInfo.GroupId) >= groupInfo.GroupRank
+				else
+					return (player :: any):GetRankInGroup(groupInfo.GroupId) >= groupInfo.GroupRank
+				end
+			end)
+
 			newGroupDetails[groupKey] = isInGroupSuccess and isInGroupValue
 		else
-			local isInGroupSuccess, isInGroupValue = pcall(function() return player:IsInGroup(groupInfo.GroupId) end)
+			local isInGroupSuccess, isInGroupValue = pcall(function()
+				-- SBT-5736: `any` cast present due to in-flight PR to rename methods.
+				-- Will be removed when that PR is merged.
+				if game:GetEngineFeature("AsyncRenamesUsedInLuaApps") then
+					return (player :: any):IsInGroupAsync(groupInfo.GroupId)
+				else
+					return (player :: any):IsInGroup(groupInfo.GroupId)
+				end
+			end)
+			
 			newGroupDetails[groupKey] = isInGroupSuccess and isInGroupValue
 		end
 	end
@@ -374,6 +391,8 @@ local createPartyNudge = function(inviterUserId, inviteeUserId, nudgeType)
 				gameInstanceId = game.JobId,
 				universeId = game.GameId,
 				version = if FFlagEnableCreatePartyNudgeWithVersion then 1 else nil,
+				privateServerId = if FFlagGatePrivateServerNudge then game.PrivateServerId else nil,
+				privateServerOwnerId = if FFlagGatePrivateServerNudge then game.PrivateServerOwnerId else nil,
 			}
 		)
 
@@ -423,8 +442,7 @@ local sendFriendExperienceJoinToast = function(newPlayer)
 		local response
 		createPartyNudgeSuccess, response = createPartyNudge(newPlayer.UserId, followedPlayer.UserId, "OneToOneNudgeInExperience")
 		if
-			FFlagEnablePartyNudgeNotification
-			and createPartyNudgeSuccess
+			createPartyNudgeSuccess
 			and response
 			and response.shouldAutoCreateOrJoinGroupUp
 		then

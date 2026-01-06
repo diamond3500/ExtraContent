@@ -20,10 +20,8 @@ local VoiceChatServiceManager = require(RobloxGui.Modules.VoiceChat.VoiceChatSer
 ----------- UTILITIES --------------
 local CoreGuiModules = RobloxGui:WaitForChild("Modules")
 CoreGuiModules:WaitForChild("TenFootInterface")
-local ApolloClient = require(CoreGui.RobloxGui.Modules.ApolloClient)
 local UserProfiles = require(CorePackages.Workspace.Packages.UserProfiles)
 local formatUsername = UserProfiles.Formatters.formatUsername
-local getInExperienceCombinedNameFromId = UserProfiles.Selectors.getInExperienceCombinedNameFromId
 local Cryo = require(CorePackages.Packages.Cryo)
 local React = require(CorePackages.Packages.React)
 local ReactRoblox = require(CorePackages.Packages.ReactRoblox)
@@ -65,15 +63,14 @@ local GetFFlagLuaAppEnableOpenTypeSupport = SharedFlags.GetFFlagLuaAppEnableOpen
 local FFlagIEMFocusNavToButtons = SharedFlags.FFlagIEMFocusNavToButtons
 local FFlagRelocateMobileMenuButtons = require(RobloxGui.Modules.Settings.Flags.FFlagRelocateMobileMenuButtons)
 local FIntRelocateMobileMenuButtonsVariant = require(RobloxGui.Modules.Settings.Flags.FIntRelocateMobileMenuButtonsVariant)
+local FFlagMenuButtonsMountWithIEM = require(RobloxGui.Modules.Settings.Flags.FFlagMenuButtonsMountWithIEM)
 local FFlagBuilderIcons = SharedFlags.UIBlox.FFlagUIBloxMigrateBuilderIcon
-local FFlagFixFriendStatusImageLabelAccess = game:DefineFastFlag("FixFriendStatusImageLabelAccess", false)
 local EngineFeatureRbxAnalyticsServiceExposePlaySessionId = game:GetEngineFeature("RbxAnalyticsServiceExposePlaySessionId")
 
 local SettingsFlags = require(script.Parent.Parent.Flags)
 local FFlagIEMButtonsResponsiveLayout = SettingsFlags.FFlagIEMButtonsResponsiveLayout
 
 local UserProfileStore = UserProfiles.Stores.UserProfileStore
-local GetFFlagUseUserProfileStore = SharedFlags.GetFFlagUseUserProfileStore
 
 local _, PlatformFriendsService = pcall(function()
 	return game:GetService("PlatformFriendsService")
@@ -157,6 +154,7 @@ local LuaFlagVoiceChatDisableSubscribeRetryForMultistream =
 	game:DefineFastFlag("LuaFlagVoiceChatDisableSubscribeRetryForMultistream", true)
 local FFlagPlayerListRefactorUsernameFormatting = game:DefineFastFlag("PlayerListRefactorUsernameFormatting", false)
 local FFlagCorrectlyPositionMuteButton = game:DefineFastFlag("CorrectlyPositionMuteButton", false)
+local FFlagOnlyCaptureFocusIfOnPlayerPage = game:DefineFastFlag("OnlyCaptureFocusIfOnPlayerPage", false)
 local FIntSettingsHubPlayersButtonsResponsiveThreshold =
 	game:DefineFastInt("SettingsHubPlayersButtonsResponsiveThreshold", 200)
 local FFlagNullCheckPlayersNameLabel = game:DefineFastFlag("NullCheckPlayersNameLabel", false)
@@ -325,7 +323,7 @@ local function Initialize()
 			addFriendButton.Name = "FriendStatus"
 			addFriendButton.Selectable = false
 
-			if FFlagBuilderIcons and FFlagFixFriendStatusImageLabelAccess then
+			if FFlagBuilderIcons then
 				addFriendButton.FriendStatusTextLabel.TextTransparency = imgTrans
 			else
 				addFriendButton.FriendStatusImageLabel.ImageTransparency = imgTrans
@@ -341,7 +339,7 @@ local function Initialize()
 			local addFriendFunc = function()
 				if addFriendButton and addFriendImage and addFriendButton.ImageTransparency ~= 1 then
 					addFriendButton.ImageTransparency = 1
-					if FFlagBuilderIcons and FFlagFixFriendStatusImageLabelAccess then
+					if FFlagBuilderIcons then
 						addFriendImage.TextTransparency = 1
 					else
 						addFriendImage.ImageTransparency = 1
@@ -451,11 +449,23 @@ local function Initialize()
 			end
 
 			for property, value in buttonFrameLayoutProperties do
-				buttonFrameLayout[property] = value
+				if GetFFlagCleanupMuteSelfButton() then
+					if buttonFrameLayout then
+						buttonFrameLayout[property] = value
+					end
+				else
+					buttonFrameLayout[property] = value
+				end
 			end
 
 			for property, value in buttonFrameProperties do
-				buttonFrame[property] = value
+				if GetFFlagCleanupMuteSelfButton() then
+					if buttonFrame then
+						buttonFrame[property] = value
+					end
+				else
+					buttonFrame[property] = value
+				end
 			end
 		else
 			if FFlagCheckButtonFrameBeforeDestroy then
@@ -752,7 +762,7 @@ local function Initialize()
 		this.ButtonsContainer = buttonsContainer
 	end
 
-	if FFlagRelocateMobileMenuButtons and (FIntRelocateMobileMenuButtonsVariant == 1 or FIntRelocateMobileMenuButtonsVariant == 3 or (FIntRelocateMobileMenuButtonsVariant == 2 and not utility:IsSmallTouchScreen())) then
+	if FFlagRelocateMobileMenuButtons and (FIntRelocateMobileMenuButtonsVariant == 1 or FIntRelocateMobileMenuButtonsVariant == 3) then
 		buttonsContainer.Parent = nil
 	end
 
@@ -1341,11 +1351,17 @@ local function Initialize()
 			icon.AnchorPoint = Vector2.new(0, 0.5)
 			icon.Position = UDim2.new(0, 18, 0.5, 0)
 
-			local iconImg = Theme.Images["icons/controls/publicAudioJoin"]
+			local isMigrated = FFlagBuilderIcons and migrationLookup["icons/controls/publicAudioJoin"]
+			local iconImg = if isMigrated then migrationLookup["icons/controls/publicAudioJoin"] else Theme.Images["icons/controls/publicAudioJoin"]
 			if iconImg then
-				icon.Image = iconImg.Image
-				icon.ImageRectOffset = iconImg.ImageRectOffset
-				icon.ImageRectSize = iconImg.ImageRectSize
+				if isMigrated then
+					icon.Text = iconImg.name
+					icon.FontFace = BuilderIcons.Font[iconImg.variant]
+				else
+					icon.Image = iconImg.Image
+					icon.ImageRectOffset = iconImg.ImageRectOffset
+					icon.ImageRectSize = iconImg.ImageRectSize
+				end
 			end
 
 			local function setIsHighlighted(isHighlighted)
@@ -1657,41 +1673,22 @@ local function Initialize()
 			if FFlagCheckForNilUserIdOnPlayerList and not player.UserId then
 				reportFlagChanged(reportFlag, "AbsolutePosition")
 			else
-				if GetFFlagUseUserProfileStore() then
-					UserProfileStore.get().fetchNamesByUserIds({ tostring(player.UserId) }, function(result)
-						local displayNameLabel = getDisplayNameLabel(frame)
-						if displayNameLabel == nil then
-							return
-						end
-						local combinedName = getInExperienceCombinedName(result.data)
-						if string.len(combinedName) > 0 and combinedName ~= displayNameLabel.Text then
-							reportFlagChanged(
-								reportFlag,
-								"AbsolutePosition",
-								combinedName
-							)
-						elseif player.DisplayName ~= displayNameLabel.Text then
-							reportFlagChanged(reportFlag, "AbsolutePosition")
-						end
-					end)
-				else
-					ApolloClient:query({
-						query = UserProfiles.Queries.userProfilesInExperienceNamesByUserIds,
-						variables = {
-							userIds = { tostring(player.UserId) },
-						},
-					})
-						:andThen(function(result)
-							reportFlagChanged(
-								reportFlag,
-								"AbsolutePosition",
-								getInExperienceCombinedNameFromId(result.data, player.UserId)
-							)
-						end)
-						:catch(function()
-							reportFlagChanged(reportFlag, "AbsolutePosition")
-						end)
-				end
+				UserProfileStore.get().fetchNamesByUserIds({ tostring(player.UserId) }, function(result)
+					local displayNameLabel = getDisplayNameLabel(frame)
+					if displayNameLabel == nil then
+						return
+					end
+					local combinedName = getInExperienceCombinedName(result.data)
+					if string.len(combinedName) > 0 and combinedName ~= displayNameLabel.Text then
+						reportFlagChanged(
+							reportFlag,
+							"AbsolutePosition",
+							combinedName
+						)
+					elseif player.DisplayName ~= displayNameLabel.Text then
+						reportFlagChanged(reportFlag, "AbsolutePosition")
+					end
+				end)
 			end
 		end
 
@@ -1730,36 +1727,21 @@ local function Initialize()
 					if FFlagCheckForNilUserIdOnPlayerList and not player.UserId then
 						frame.DisplayNameLabel.Text = player.DisplayName
 					else
-						if GetFFlagUseUserProfileStore() then
-							UserProfileStore.get().fetchNamesByUserIds({ tostring(player.UserId) }, function(result)
-								local displayNameLabel = getDisplayNameLabel(frame)
-								if displayNameLabel == nil then
-									return
+						UserProfileStore.get().fetchNamesByUserIds({ tostring(player.UserId) }, function(result)
+							local displayNameLabel = getDisplayNameLabel(frame)
+							if displayNameLabel == nil then
+								return
+							end
+							local combinedName = getInExperienceCombinedName(result.data)
+							if string.len(combinedName) > 0 and combinedName ~= displayNameLabel.Text then
+								displayNameLabel.Text = combinedName
+							else
+								local displayName = player.DisplayName
+								if displayName ~= displayNameLabel.Text then
+									displayNameLabel.Text = displayName
 								end
-								local combinedName = getInExperienceCombinedName(result.data)
-								if string.len(combinedName) > 0 and combinedName ~= displayNameLabel.Text then
-									displayNameLabel.Text = combinedName
-								else
-									local displayName = player.DisplayName
-									if displayName ~= displayNameLabel.Text then
-										displayNameLabel.Text = displayName
-									end
-								end
-							end)
-						else
-							ApolloClient:query({
-								query = UserProfiles.Queries.userProfilesInExperienceNamesByUserIds,
-								variables = {
-									userIds = { tostring(player.UserId) },
-								},
-							})
-								:andThen(function(result)
-									frame.DisplayNameLabel.Text = getInExperienceCombinedNameFromId(result.data, player.UserId)
-								end)
-								:catch(function()
-									frame.DisplayNameLabel.Text = player.DisplayName
-								end)
-						end
+							end
+						end)
 					end
 				end
 			end)
@@ -1810,36 +1792,21 @@ local function Initialize()
 			if FFlagCheckForNilUserIdOnPlayerList and not player.UserId then
 				frame.DisplayNameLabel.Text = player.DisplayName
 			else
-				if GetFFlagUseUserProfileStore() then
-					UserProfileStore.get().fetchNamesByUserIds({ tostring(player.UserId) }, function(result)
-						local displayNameLabel = getDisplayNameLabel(frame)
-						if displayNameLabel == nil then
-							return
+				UserProfileStore.get().fetchNamesByUserIds({ tostring(player.UserId) }, function(result)
+					local displayNameLabel = getDisplayNameLabel(frame)
+					if displayNameLabel == nil then
+						return
+					end
+					local combinedName = getInExperienceCombinedName(result.data)
+					if string.len(combinedName) > 0 and combinedName ~= displayNameLabel.Text then
+						displayNameLabel.Text = combinedName
+					else
+						local displayName = player.DisplayName
+						if displayName ~= displayNameLabel.Text then
+							displayNameLabel.Text = displayName
 						end
-						local combinedName = getInExperienceCombinedName(result.data)
-						if string.len(combinedName) > 0 and combinedName ~= displayNameLabel.Text then
-							displayNameLabel.Text = combinedName
-						else
-							local displayName = player.DisplayName
-							if displayName ~= displayNameLabel.Text then
-								displayNameLabel.Text = displayName
-							end
-						end
-					end)
-				else
-					ApolloClient:query({
-						query = UserProfiles.Queries.userProfilesInExperienceNamesByUserIds,
-						variables = {
-							userIds = { tostring(player.UserId) },
-						},
-					})
-						:andThen(function(result)
-							frame.DisplayNameLabel.Text = getInExperienceCombinedNameFromId(result.data, player.UserId)
-						end)
-						:catch(function()
-							frame.DisplayNameLabel.Text = player.DisplayName
-						end)
-				end
+					end
+				end)
 			end
 		end
 
@@ -2221,82 +2188,41 @@ local function Initialize()
 				return tostring(player.UserId)
 			end)
 		end
-		if GetFFlagUseUserProfileStore() then
-			for _, player in ipairs(sortedPlayers) do
-				local labelFrame = existingPlayerLabels[player.Name]
-				labelFrame.DisplayNameLabel.Text = player.DisplayName
-			end
-			UserProfileStore.get().fetchNamesByUserIds(playerIds, function(result)
-				local profiles = result.data
-				for _, profile in profiles do
-					local username = profile.names.getUsername(false)
-					local labelFrame = existingPlayerLabels[username]
-					if labelFrame then
-						local combinedName = profile.names.getInExperienceCombinedName(false)
-						if string.len(combinedName) > 0 and combinedName ~= labelFrame.DisplayNameLabel.Text then
-							labelFrame.DisplayNameLabel.Text = combinedName
+
+		for _, player in ipairs(sortedPlayers) do
+			local labelFrame = existingPlayerLabels[player.Name]
+			labelFrame.DisplayNameLabel.Text = player.DisplayName
+		end
+		UserProfileStore.get().fetchNamesByUserIds(playerIds, function(result)
+			local profiles = result.data
+			for _, profile in profiles do
+				local username = profile.names.getUsername(false)
+				local labelFrame = existingPlayerLabels[username]
+				if labelFrame then
+					local combinedName = profile.names.getInExperienceCombinedName(false)
+					if string.len(combinedName) > 0 and combinedName ~= labelFrame.DisplayNameLabel.Text then
+						labelFrame.DisplayNameLabel.Text = combinedName
+					end
+					if FFlagEnablePlatformName then
+						local rightSideButtons = labelFrame:FindFirstChild("RightSideButtons")
+						local platformName = nil
+
+						if profile.names.getPlatformName(false) ~= "" then
+							platformName = profile.names.getPlatformName(false)
 						end
-						if FFlagEnablePlatformName then
-							local rightSideButtons = labelFrame:FindFirstChild("RightSideButtons")
-							local platformName = nil
 
-							if profile.names.getPlatformName(false) ~= "" then
-								platformName = profile.names.getPlatformName(false)
-							end
-
-							if
-								game:GetEngineFeature("PlatformFriendsService")
-								and game:GetEngineFeature("PlatformFriendsProfile")
-							then
-								resizePlatformName(rightSideButtons, platformName, profile.getPlatformProfileId(false))
-							else
-								resizePlatformName(rightSideButtons, platformName)
-							end
+						if
+							game:GetEngineFeature("PlatformFriendsService")
+							and game:GetEngineFeature("PlatformFriendsProfile")
+						then
+							resizePlatformName(rightSideButtons, platformName, profile.getPlatformProfileId(false))
+						else
+							resizePlatformName(rightSideButtons, platformName)
 						end
 					end
 				end
-			end)
-		else
-			ApolloClient:query({
-				query = UserProfiles.Queries.userProfilesInExperienceNamesByUserIds,
-				variables = {
-					userIds = playerIds,
-				},
-			})
-				:andThen(function(response)
-					Cryo.List.map(response.data.userProfiles, function(userProfile)
-						local labelFrame = existingPlayerLabels[userProfile.names.username]
-
-						if labelFrame then
-							labelFrame.DisplayNameLabel.Text = userProfile.names.inExperienceCombinedName
-
-							if FFlagEnablePlatformName then
-								local rightSideButtons = labelFrame:FindFirstChild("RightSideButtons")
-								local platformName = nil
-
-								if userProfile.names.platformName ~= "" then
-									platformName = userProfile.names.platformName
-								end
-
-								if
-									game:GetEngineFeature("PlatformFriendsService")
-									and game:GetEngineFeature("PlatformFriendsProfile")
-								then
-									resizePlatformName(rightSideButtons, platformName, userProfile.platformProfileId)
-								else
-									resizePlatformName(rightSideButtons, platformName)
-								end
-							end
-						end
-					end)
-				end)
-				:catch(function()
-					Cryo.List.map(sortedPlayers, function(player)
-						local labelFrame = existingPlayerLabels[player.Name]
-						labelFrame.DisplayNameLabel.Text = player.DisplayName
-					end)
-				end)
-		end
+			end
+		end)
 
 		local frame = 0
 		if voiceChatServiceConnected and not renderSteppedConnected then
@@ -2320,7 +2246,19 @@ local function Initialize()
 		end
 
 		if UserInputService.GamepadEnabled then
-			GuiService.SelectedCoreObject = shareGameButton
+			if GetFFlagCleanupMuteSelfButton() then
+				pcall(function()
+					if FFlagOnlyCaptureFocusIfOnPlayerPage then
+						if this.Active then
+							GuiService.SelectedCoreObject = shareGameButton
+						end
+					else
+						GuiService.SelectedCoreObject = shareGameButton
+					end
+				end)
+			else
+				GuiService.SelectedCoreObject = shareGameButton
+			end
 		end
 
 		utility:OnResized("MenuPlayerListExtraPageSize", function(newSize, isPortrait)
@@ -2526,9 +2464,13 @@ local function Initialize()
 
 	function this:CreateMenuButtonsContainer()
 		if FIntRelocateMobileMenuButtonsVariant == 2 then
-			local buttonsContainerRoot = ReactRoblox.createRoot(buttonsContainer)
+			if this.buttonsContainerRoot then
+				return
+			end
+
+			this.buttonsContainerRoot = ReactRoblox.createRoot(buttonsContainer)
 			local experienceControlStore = this.HubRef:GetExperienceControlStore()
-			buttonsContainerRoot:render(React.createElement(MenuButtonsContainer, {
+			this.buttonsContainerRoot:render(React.createElement(MenuButtonsContainer, {
 				onLeaveGame = experienceControlStore.onLeaveGame,
 				onRespawn = experienceControlStore.onRespawn,
 				onResume = experienceControlStore.onResume,
@@ -2539,6 +2481,15 @@ local function Initialize()
 				end,
 				getCanRespawn = experienceControlStore.getCanRespawn,
 			}))
+		end
+	end
+
+	function this:UnmountMenuButtonsContainer()
+		if FFlagMenuButtonsMountWithIEM and FIntRelocateMobileMenuButtonsVariant == 2 then
+			if this.buttonsContainerRoot then
+				this.buttonsContainerRoot:unmount()
+				this.buttonsContainerRoot = nil
+			end
 		end
 	end
 
