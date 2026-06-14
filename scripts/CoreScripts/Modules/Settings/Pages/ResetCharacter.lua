@@ -10,6 +10,7 @@
 local RESET_CHARACTER_GAME_ACTION = "ResetCharacterAction"
 
 -------------- SERVICES --------------
+local AvatarEditorService = game:GetService("AvatarEditorService")
 local CoreGui = game:GetService("CoreGui")
 local ContextActionService = game:GetService("ContextActionService")
 local RobloxGui = CoreGui:WaitForChild("RobloxGui")
@@ -40,7 +41,7 @@ local useLocalization = require(CorePackages.Workspace.Packages.Localization).Ho
 
 local Foundation = require(CorePackages.Packages.Foundation)
 
-local ChromeEnabled = require(RobloxGui.Modules.Chrome.Enabled)()
+local ChromeEnabled = require(CorePackages.Workspace.Packages.Chrome).Enabled()
 local ChromeService = if ChromeEnabled then require(RobloxGui.Modules.Chrome.Service) else nil
 local ChromeConstants = if ChromeEnabled then require(RobloxGui.Modules.Chrome.ChromeShared.Unibar.Constants) else nil
 
@@ -54,6 +55,8 @@ local FFlagEnableConsoleExpControls = SharedFlags.FFlagEnableConsoleExpControls
 local FFlagChromeShortcutRemoveLeaveOnRespawnPage = SharedFlags.FFlagChromeShortcutRemoveLeaveOnRespawnPage
 local FFlagRespawnActionChromeShortcutTelemetry = require(RobloxGui.Modules.Chrome.Flags.FFlagRespawnActionChromeShortcutTelemetry)
 local FFlagRefactorMenuConfirmationButtons = require(RobloxGui.Modules.Settings.Flags.FFlagRefactorMenuConfirmationButtons)
+local FFlagConfirmationButtonsUseGreyButtons = require(RobloxGui.Modules.Settings.Flags.FFlagConfirmationButtonsUseGreyButtons)
+local FFlagMenuButtonsFixConfirmationScrolling = require(RobloxGui.Modules.Settings.Flags.FFlagMenuButtonsFixConfirmationScrolling)
 local FFlagRenameRespawnConfirmationPage = SharedFlags.FFlagRenameRespawnConfirmationPage
 
 local Constants = require(RobloxGui.Modules:WaitForChild("InGameMenu"):WaitForChild("Resources"):WaitForChild("Constants"))
@@ -88,9 +91,9 @@ local function ResetCharacterButtonsContainer(props: Props)
 		ConfirmResetCharacter = Constants.ConfirmResetCharacterLocalizedKey,
 		ResetCharacter = if FFlagRenameRespawnConfirmationPage then Constants.RespawnLocalizedKey else Constants.ResetCharacterLocalizedKey,
 		DontResetCharacter = Constants.DontResetCharacterLocalizedKey,
-	}) 
+	})
 
-	React.useEffect(function() 
+	React.useEffect(function()
 		if lastInput ~= Input.Touch then
 			focusGuiObject(resetCharacterButtonRef.current)
 		else
@@ -124,7 +127,7 @@ local function ResetCharacterButtonsContainer(props: Props)
 			ResetCharacterButton = React.createElement(Button, {
 				text = localizedText.ResetCharacter,
 				size = InputSize.Large,
-				variant = ButtonVariant.SoftEmphasis,
+				variant = if FFlagConfirmationButtonsUseGreyButtons then ButtonVariant.Standard else ButtonVariant.SoftEmphasis,
 				width = UDim.new(0, if isTenFootInterface then 300 else 200),
 				LayoutOrder = 1,
 				ref = resetCharacterButtonRef,
@@ -263,6 +266,8 @@ local function Initialize()
 	this.ResetBindable = true
 
 	local onResetFunction = function(props: ResetProps?)
+		AvatarEditorService:BustAvatarFetchCache()
+
 		if this.ResetBindable == true then
 			resetCharFunc(props)
 		elseif this.ResetBindable then
@@ -303,6 +308,10 @@ local function Initialize()
 				this.PageRoot:unmount()
 			end
 		end
+
+		if FFlagMenuButtonsFixConfirmationScrolling then
+			this.Page.Size = UDim2.new(1,0,0,0)
+		end
 	end
 
 	return this
@@ -321,8 +330,8 @@ PageInstance.Displayed.Event:connect(function()
 	if not FFlagRefactorMenuConfirmationButtons then
 		GuiService.SelectedCoreObject = PageInstance.ResetCharacterButton
 	end
-	if FFlagEnableConsoleExpControls then 
-		if ChromeEnabled then 
+	if FFlagEnableConsoleExpControls then
+		if ChromeEnabled then
 			if FFlagChromeShortcutRemoveLeaveOnRespawnPage then
 				ChromeService:setShortcutBar(ChromeConstants.TILTMENU_RESPAWN_DIALOG_SHORTCUTBAR_ID)
 			else

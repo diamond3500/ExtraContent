@@ -10,11 +10,8 @@ local VoiceChatServiceManager = require(RobloxGui.Modules.VoiceChat.VoiceChatSer
 
 local CrossExperienceVoice = require(CorePackages.Workspace.Packages.CrossExperienceVoice)
 local CrossExperience = require(CorePackages.Workspace.Packages.CrossExperience)
-local RoactUtils = require(CorePackages.Workspace.Packages.RoactUtils)
 
-local dependencyArray = RoactUtils.Hooks.dependencyArray
-
-local ChromeEnabled = require(Chrome.Enabled)
+local ChromeEnabled = require(CorePackages.Workspace.Packages.Chrome).Enabled
 local ChromeService = if ChromeEnabled() then require(Chrome.ChromeShared.Service) else nil
 local isCEVFocused = CrossExperience.Utils.isVoiceFocused
 local useIsVoiceFocused = CrossExperienceVoice.Hooks.useIsVoiceFocused
@@ -29,6 +26,7 @@ local GetFFlagEnableConnectDisconnectInSettingsAndChrome =
 local GetFFlagIntegratePhoneUpsellJoinVoice =
 	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagIntegratePhoneUpsellJoinVoice
 local GetFFlagEnableVoiceUxUpdates = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagEnableVoiceUxUpdates
+local FFlagVoiceRewarmTelemetry = require(CorePackages.Workspace.Packages.SharedFlags).FFlagVoiceRewarmTelemetry
 
 local Once = function(fn)
 	local called = false
@@ -43,7 +41,10 @@ end
 
 -- This will ensure we only send the "show" event once per session, for some reason it get's called twice on initialization
 local sendVoiceJoinUpsellShownEvent = Once(function()
-	VoiceChatServiceManager:reportJoinVoiceUpsellEvent("Shown")
+	VoiceChatServiceManager:reportJoinVoiceUpsellEvent(
+		"Shown",
+		if FFlagVoiceRewarmTelemetry then VoiceChatServiceManager.joinVoiceButtonContext else nil
+	)
 end)
 
 local function JoinVoiceBinder()
@@ -51,7 +52,7 @@ local function JoinVoiceBinder()
 	local isVoiceConnecting = useIsVoiceConnecting()
 	local isVoiceActive = React.useMemo(function()
 		return isVoiceFocused or isVoiceConnecting
-	end, dependencyArray(isVoiceConnecting, isVoiceFocused))
+	end, { isVoiceConnecting :: any, isVoiceFocused })
 
 	local integration = React.useMemo(function()
 		if ChromeService then
@@ -95,7 +96,7 @@ local function JoinVoiceBinder()
 				setAvailability(ChromeService.AvailabilitySignal.Available)
 			end
 		end
-	end, dependencyArray(integration, isVoiceActive))
+	end, { integration :: any, isVoiceActive })
 
 	local hideOrShowJoinVoiceButton = React.useCallback(function(state)
 		if not integration then
@@ -116,11 +117,11 @@ local function JoinVoiceBinder()
 				VoiceChatServiceManager:showPrompt(VoiceChatPromptType.VoiceConsentAcceptedToast)
 			end
 		end
-	end, dependencyArray(integration, isVoiceActive))
+	end, { integration :: any, isVoiceActive })
 
 	local onShowVoiceUI = React.useCallback(function()
 		integration.availability:unavailable()
-	end, dependencyArray(integration))
+	end, { integration })
 
 	local onHideVoiceUI = React.useCallback(function()
 		if isVoiceActive or isCEVFocused() then
@@ -128,7 +129,7 @@ local function JoinVoiceBinder()
 		else
 			integration.availability:available()
 		end
-	end, dependencyArray(integration, isVoiceActive))
+	end, { integration :: any, isVoiceActive })
 
 	local registerEventListeners = React.useCallback(function()
 		local showVoiceUIConnection

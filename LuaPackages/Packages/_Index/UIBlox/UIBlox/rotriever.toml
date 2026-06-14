@@ -1,6 +1,6 @@
 [package]
 name = "UIBlox"
-version = "0.2.223"
+version = "0.2.257"
 readme = "README.md"
 content_root = "src"
 files = [
@@ -14,7 +14,7 @@ files = [
 publish = true
 authors = ["Roblox"]
 [dependencies.BuilderIcons]
-version = "^0.1.20"
+version = "^0.1.35"
 
 [dependencies.Cryo]
 target = "https://github.com/roblox/cryo"
@@ -26,10 +26,10 @@ package = "RoactFitComponents"
 version = "^2.0.0"
 
 [dependencies.Foundation]
-version = "^1.55.2"
+version = "^1.87.0"
 
 [dependencies.FoundationImages]
-version = "^1.25.0"
+version = "^2.0.0"
 
 [dependencies.LazyRequire]
 target = "https://github.com/roblox/lua-lazy-require"
@@ -56,7 +56,7 @@ version = "^1.1.107"
 
 [dependencies.RbxDesignFoundationsV2]
 package = "RbxDesignFoundations"
-version = "^2.0.163"
+version = "^3.0.5"
 
 [dependencies.React]
 target = "https://github.com/roblox/roact-alignment"
@@ -101,10 +101,6 @@ version = "^1.0.0"
 [dependencies.t]
 target = "https://github.com/roblox/t"
 version = "^1.2.6"
-[dev_dependencies.ChalkLua]
-target = "https://github.com/roblox/chalk-lua"
-version = "^0.2.2"
-
 [dev_dependencies.CollisionMatchers2D]
 target = "https://github.com/roblox/collision-matchers-2d"
 version = "^1.1.0"

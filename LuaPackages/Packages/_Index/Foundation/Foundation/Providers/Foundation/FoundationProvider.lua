@@ -7,13 +7,17 @@ local ContextStack = require(Packages.ReactUtils).ContextStack
 
 local CursorProvider = require(Providers.Cursor)
 local OverlayProvider = require(Providers.Overlay)
+local PanelsProvider = require(Providers.StudioPanels.PanelsProvider)
+local PluginProvider = require(Providers.Plugin.PluginProvider)
 local PreferencesProvider = require(Providers.Preferences.PreferencesProvider)
 local ResponsiveContext = require(Providers.Responsive.ResponsiveContext)
 local ResponsiveProvider = require(Providers.Responsive.ResponsiveProvider)
 local StyleProvider = require(Providers.Style.StyleProvider)
 local Types = require(Foundation.Components.Types)
+local WidgetsProvider = require(Providers.StudioWidgets.WidgetsProvider)
 local ElevationProvider = require(Providers.Elevation.ElevationProvider).ElevationProvider
 local Flags = require(Foundation.Utility.Flags)
+local isPluginElevated = require(Providers.Plugin.isPluginElevated)
 
 type OverlayConfig = Types.OverlayConfig
 type StyleProps = StyleProvider.StyleProviderProps
@@ -25,6 +29,7 @@ export type FoundationProviderProps = {
 	overlayGui: (OverlayConfig | GuiBase2d)?,
 	preferences: Preferences?,
 	responsiveConfig: ResponsiveConfig?,
+	plugin: Plugin?,
 } & StyleProps
 
 local function FoundationProvider(props: FoundationProviderProps)
@@ -32,25 +37,43 @@ local function FoundationProvider(props: FoundationProviderProps)
 	local preferences: any = if props.preferences then props.preferences else {}
 	local responsiveConfig = if props.responsiveConfig then props.responsiveConfig else {} :: ResponsiveConfig
 
+	local providers: { React.ReactElement } = {
+		React.createElement(PluginProvider, {
+			plugin = props.plugin,
+		}),
+		React.createElement(ElevationProvider, nil),
+		React.createElement(PreferencesProvider, preferences),
+		React.createElement(StyleProvider, {
+			theme = props.theme,
+			device = props.device,
+			derives = props.derives,
+			scale = preferences.scale,
+			tokenOverrides = props.tokenOverrides,
+		}),
+		React.createElement(ResponsiveProvider, { config = responsiveConfig }),
+		React.createElement(
+			OverlayProvider,
+			if typeof(props.overlayGui) == "table"
+				then { DisplayOrder = props.overlayGui.DisplayOrder }
+				else { gui = props.overlayGui }
+		),
+		React.createElement(CursorProvider),
+	}
+
+	if Flags.FoundationFixUserLevelPlugins then
+		if props.plugin and isPluginElevated(props.plugin) and Flags.FoundationPopoverPluginSupport then
+			table.insert(providers, React.createElement(WidgetsProvider, {}))
+			table.insert(providers, React.createElement(PanelsProvider, {}))
+		end
+	else
+		if props.plugin and Flags.FoundationPopoverPluginSupport then
+			table.insert(providers, React.createElement(WidgetsProvider, {}))
+			table.insert(providers, React.createElement(PanelsProvider, {}))
+		end
+	end
+
 	return React.createElement(ContextStack, {
-		providers = {
-			React.createElement(ElevationProvider, nil),
-			React.createElement(PreferencesProvider, preferences),
-			React.createElement(StyleProvider, {
-				theme = props.theme,
-				device = props.device,
-				derives = props.derives,
-				scale = preferences.scale,
-			}),
-			React.createElement(ResponsiveProvider, { config = responsiveConfig }),
-			React.createElement(
-				OverlayProvider,
-				if Flags.FoundationOverlayDisplayOrder and typeof(props.overlayGui) == "table"
-					then { DisplayOrder = props.overlayGui.DisplayOrder }
-					else { gui = props.overlayGui }
-			),
-			React.createElement(CursorProvider),
-		},
+		providers = providers,
 	}, props.children)
 end
 

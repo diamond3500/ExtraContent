@@ -3,15 +3,21 @@ local Packages = Foundation.Parent
 
 local React = require(Packages.React)
 
-local function useScrollBarPadding(): (number, (instance: ScrollingFrame) -> ())
-	local scrollBarPadding, setScrollBarPadding = React.useState(0)
+local isScrollingFrameOverflowingY = require(Foundation.Utility.isScrollingFrameOverflowingY)
+local useTokens = require(Foundation.Providers.Style.useTokens)
+
+local function useScrollBarPadding(): (boolean, React.Binding<number>, (instance: ScrollingFrame) -> ())
+	local hasOverflowY, setHasOverflowY = React.useState(false)
+	local tokens = useTokens()
+	local scrollBarPaddingBinding, setScrollBarPadding = React.useBinding(0)
 
 	local updateScrollBarPadding = React.useCallback(function(instance: ScrollingFrame)
-		local hasOverflowY = instance.AbsoluteCanvasSize.Y > instance.AbsoluteSize.Y
-		setScrollBarPadding(if hasOverflowY then instance.ScrollBarThickness else 0)
-	end, {})
+		local isOverflowingY = isScrollingFrameOverflowingY(instance, 1)
+		setHasOverflowY(isOverflowingY)
+		setScrollBarPadding(if isOverflowingY then tokens.Size.Size_150 else 0)
+	end, { tokens.Size.Size_150 })
 
-	return scrollBarPadding, updateScrollBarPadding
+	return hasOverflowY, scrollBarPaddingBinding, updateScrollBarPadding
 end
 
 return useScrollBarPadding

@@ -12,7 +12,7 @@ local Constants = require(Settings.Integrations.Constants)
 local SettingsServiceLib = require(CorePackages.Workspace.Packages.SettingsService)
 local ValueChangedSignal = SettingsServiceLib.ValueChangedSignal
 local AvailabilitySignal = SettingsServiceLib.AvailabilitySignal
-local FieldType = SettingsServiceLib.FieldType
+local SettingEnum = SettingsServiceLib.SettingEnum
 local devConsoleMaster = require(script.Parent.Parent.Parent.Parent.DevConsoleMaster)
 
 -- Constants
@@ -58,7 +58,7 @@ local value = DeveloperConsoleValue()
 local available = DeveloperConsoleAvailability()
 
 local DeveloperConsoleConfig = {
-    field_type = FieldType.TextButton,
+    field_type = SettingEnum.TextButton,
     id = "developer-console",
     onActivated = value,
     label = "CoreScripts.InGameMenu.GameSettings.DeveloperConsole",
@@ -66,6 +66,6 @@ local DeveloperConsoleConfig = {
     layoutOrder = SettingsLayoutOrder.DeveloperConsoleButton,
     alreadyLocalized = false,
     availability = available,
-} :: SettingsServiceLib.TextButtonRegisterConfig
+}
 
 return DeveloperConsoleConfig

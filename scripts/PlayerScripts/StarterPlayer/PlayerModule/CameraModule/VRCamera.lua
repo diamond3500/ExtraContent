@@ -8,7 +8,6 @@
 
 local PlayersService = game:GetService("Players")
 local VRService = game:GetService("VRService")
-local UserGameSettings = UserSettings():GetService("UserGameSettings")
 
 -- Local private variables and constants
 local CAMERA_BLACKOUT_TIME = 0.1
@@ -19,6 +18,10 @@ local NECK_OFFSET = -0.7
 -- requires
 local CameraInput = require(script.Parent:WaitForChild("CameraInput"))
 local Util = require(script.Parent:WaitForChild("CameraUtils"))
+local CommonUtils = require(script.Parent.Parent:WaitForChild("CommonUtils"))
+local FlagUtil = CommonUtils.get("FlagUtil")
+
+local FFlagUserPSVRCameraInputMoveVector = FlagUtil.getUserFlag("UserPSVRCameraInputMoveVector")
 
 --[[ The Module ]]--
 local VRBaseCamera = require(script.Parent:WaitForChild("VRBaseCamera"))
@@ -32,7 +35,7 @@ function VRCamera.new()
 	self.focusOffset = CFrame.new()
 	self:Reset()
 
-	self.controlModule = require(PlayersService.LocalPlayer:WaitForChild("PlayerScripts").PlayerModule:WaitForChild("ControlModule"))
+	self.controlModule = require(script.Parent.Parent:WaitForChild("ControlModule"))
 	self.savedAutoRotate = true 
 
 	return self
@@ -53,8 +56,6 @@ function VRCamera:Update(timeDelta)
 	local newCameraFocus = camera.Focus
 
 	local player = PlayersService.LocalPlayer
-	local humanoid = self:GetHumanoid()
-	local cameraSubject = camera.CameraSubject
 
 	if self.lastUpdate == nil or timeDelta > 1 then
 		self.lastCameraTransform = nil
@@ -138,7 +139,7 @@ function VRCamera:UpdateFirstPersonTransform(timeDelta, newCameraCFrame, newCame
 		self:StartVREdgeBlur(player)
 	end
 	-- straight view, not angled down
-	local cameraFocusP = newCameraFocus.p
+	local cameraFocusP = newCameraFocus.Position
 	local cameraLookVector = self:GetCameraLookVector()
 	cameraLookVector = Vector3.new(cameraLookVector.X, 0, cameraLookVector.Z).Unit
 
@@ -270,9 +271,8 @@ function VRCamera:UpdateThirdPersonComfortTransform(timeDelta, newCameraCFrame, 
 
 	if lastSubjPos ~= nil and self.lastCameraFocus ~= nil then
 		-- compute delta of subject since last update
-		local player = PlayersService.LocalPlayer
 		local subjectDelta = lastSubjPos - subjectPosition
-		local moveVector = self.controlModule:GetMoveVector()
+		local moveVector = if FFlagUserPSVRCameraInputMoveVector then self.controlModule.inputMoveVector else self.controlModule:GetMoveVector()
 
 		-- is the subject still moving?
 		local isMoving = subjectDelta.magnitude > 0.01 or moveVector.magnitude > 0.01
@@ -361,10 +361,9 @@ function VRCamera:UpdateThirdPersonFollowTransform(timeDelta, newCameraCFrame, n
 	local trackCameraCFrame = vrFocus:ToWorldSpace(self.focusOffset)
 	
 	-- figure out if the player is moving
-	local player = PlayersService.LocalPlayer
 	local subjectDelta = lastSubjPos - subjectPosition
 	local controlModule = self.controlModule
-	local moveVector = controlModule:GetMoveVector()
+	local moveVector = if FFlagUserPSVRCameraInputMoveVector then controlModule.inputMoveVector else controlModule:GetMoveVector()
 
 	-- while moving, slowly adjust camera so the avatar is in front of your head
 	if subjectDelta.magnitude > 0.01 or moveVector.magnitude > 0 then -- is the subject moving?

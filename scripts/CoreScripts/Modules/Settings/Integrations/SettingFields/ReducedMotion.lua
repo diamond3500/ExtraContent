@@ -10,7 +10,7 @@ local UserGameSettings = UserSettings.GameSettings
 -- Modules
 local SettingsServiceLib = require(CorePackages.Workspace.Packages.SettingsService)
 local ValueChangedSignal = SettingsServiceLib.ValueChangedSignal
-local FieldType = SettingsServiceLib.FieldType
+local SettingEnum = SettingsServiceLib.SettingEnum
 local Constants = require(Settings.Integrations.Constants)
 
 -- Constants
@@ -36,12 +36,12 @@ end
 
 local ReducedMotion = {
 	id = 'reduced-motion',
-	field_type = FieldType.Toggle,
+	field_type = SettingEnum.Toggle,
 	label = "CoreScripts.InGameMenu.GameSettings.ReduceMotionLabel",
 	description = "CoreScripts.InGameMenu.GameSettings.ReduceMotionDescription",
 	alreadyLocalized = false,
 	onChanged = ReducedMotionValue(),
 	layoutOrder = SettingsLayoutOrder.ReducedMotionFrame,
-} :: SettingsServiceLib.ToggleRegisterConfig
+}
 
 return ReducedMotion

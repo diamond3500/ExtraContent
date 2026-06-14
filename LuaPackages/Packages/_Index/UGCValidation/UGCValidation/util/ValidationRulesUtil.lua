@@ -9,6 +9,8 @@ type ValidationRulesUtil = {
 	getAccessoryRules: (self: ValidationRulesUtil, dest: { [Enum.AssetType]: any }) -> (),
 	getBodyPartRules: (self: ValidationRulesUtil, dest: { [Enum.AssetType]: any }) -> (),
 	getFullBodyRulesBounds: (self: ValidationRulesUtil) -> { [string]: { minSize: number, maxSize: number } },
+	getMakeupRules: (self: ValidationRulesUtil) -> any,
+	getLCSizeLimit: (self: ValidationRulesUtil, assetType: Enum.AssetType, handle: BasePart) -> (boolean, Vector3?),
 }
 
 local ValidationRulesUtilImpl = {}
@@ -41,6 +43,47 @@ end
 
 function ValidationRulesUtilImpl:getBodyPartMaxTrianglesRule(assetTypeEnum)
 	return self:getRules().MeshRules.BodyPartMaxTriangles[assetTypeEnum]
+end
+
+function ValidationRulesUtilImpl:getMakeupRules()
+	local makeupRules = self:getRules().MakeupRules
+	local makeupRulesNewFormat = {}
+	for key, value in makeupRules do
+		if key ~= "ExcludeUVBounds" and key ~= "IncludeUVBounds" then
+			makeupRulesNewFormat[key] = value
+		end
+	end
+
+	local assetUVBounds = {}
+	for assetType, boundsTable in makeupRules.ExcludeUVBounds do
+		if not assetUVBounds[assetType] then
+			assetUVBounds[assetType] = {}
+		end
+
+		for _, bounds in boundsTable do
+			table.insert(assetUVBounds[assetType], {
+				isIncludeBound = false,
+				MinBound = bounds.MinBound,
+				MaxBound = bounds.MaxBound,
+			})
+		end
+	end
+
+	for assetType, boundsTable in makeupRules.IncludeUVBounds do
+		if not assetUVBounds[assetType] then
+			assetUVBounds[assetType] = {}
+		end
+
+		table.insert(assetUVBounds[assetType], {
+			isIncludeBound = true,
+			MinBound = boundsTable.MinBound,
+			MaxBound = boundsTable.MaxBound,
+		})
+	end
+
+	makeupRulesNewFormat.AssetUVBounds = assetUVBounds
+
+	return makeupRulesNewFormat
 end
 
 function ValidationRulesUtilImpl:getAccessoryRules(dest)
@@ -115,6 +158,15 @@ function ValidationRulesUtilImpl:getFullBodyRulesBounds()
 	return result
 end
 
+function ValidationRulesUtilImpl:getLCSizeLimit(assetType: Enum.AssetType, handle: BasePart): (boolean, Vector3?)
+	local accessoryRules = ValidationRulesUtilImpl:getRules().AccessoryRules[assetType]
+	for _, attachmentInfo in accessoryRules.Attachments do
+		if handle:FindFirstChild(attachmentInfo.Name) then
+			return true, attachmentInfo.Size
+		end
+	end
+	return false, nil
+end
 local ValidationRulesUtil: ValidationRulesUtil = ValidationRulesUtilImpl
 
 return ValidationRulesUtil

@@ -18,6 +18,8 @@ type Props = {
 	setRemoveMenuKeyBindings: (removeMenuKeyBindings: () -> ()) -> (),
 	getVisibility: () -> boolean,
 	getCanRespawn: Signals.getter<boolean>,
+	currentPageChangeSignal: any,
+	setResumeMenuButton: ((GuiObject?) -> ())?,
 }
 
 local MenuButtons = require(script.Parent.MenuButtons)

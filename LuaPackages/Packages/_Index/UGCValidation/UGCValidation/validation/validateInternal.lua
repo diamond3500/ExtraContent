@@ -1,10 +1,10 @@
 local root = script.Parent.Parent
 
 local Types = require(root.util.Types)
-
-local getFFlagAddUGCValidationForPackage = require(root.flags.getFFlagAddUGCValidationForPackage)
-
+local Constants = require(root.Constants)
 local ConstantsInterface = require(root.ConstantsInterface)
+
+local getFFlagUGCValidationAnimationPackSupport = require(root.flags.getFFlagUGCValidationAnimationPackSupport)
 
 local isMeshPartAccessory = require(root.util.isMeshPartAccessory)
 local isLayeredClothing = require(root.util.isLayeredClothing)
@@ -12,6 +12,7 @@ local isLayeredClothing = require(root.util.isLayeredClothing)
 local validateLayeredClothingAccessory = require(root.validation.validateLayeredClothingAccessory)
 local validateLegacyAccessory = require(root.validation.validateLegacyAccessory)
 local validateMeshPartAccessory = require(root.validation.validateMeshPartAccessory)
+local validateMakeupAsset = require(root.validation.validateMakeupAsset)
 local validateLimbsAndTorso = require(root.validation.validateLimbsAndTorso)
 local validateDynamicHeadMeshPartFormat = require(root.validation.validateDynamicHeadMeshPartFormat)
 local validatePackage = require(root.validation.validatePackage)
@@ -35,15 +36,27 @@ local function validateInternal(validationContext: Types.ValidationContext): (bo
 	local assetTypeEnum = validationContext.assetTypeEnum
 	local validateMeshPartAccessories = validationContext.validateMeshPartAccessories
 
+	if
+		getFFlagUGCValidationAnimationPackSupport()
+		and Constants.ANIMATION_ASSET_INFO
+		and Constants.ANIMATION_ASSET_INFO[assetTypeEnum]
+	then
+		return true
+	end
+
 	if assetTypeEnum == Enum.AssetType.EmoteAnimation then
 		return ValidateEmoteAnimation.validate(validationContext)
+	end
+
+	if ConstantsInterface.isMakeupAsset(assetTypeEnum) then
+		return validateMakeupAsset(validationContext)
 	end
 
 	if ConstantsInterface.isBodyPart(assetTypeEnum) then
 		return validateBodyPartInternal(validationContext)
 	end
 
-	if getFFlagAddUGCValidationForPackage() and assetTypeEnum == Enum.AssetType.Model then
+	if assetTypeEnum == Enum.AssetType.Model then
 		return validatePackage(validationContext)
 	end
 

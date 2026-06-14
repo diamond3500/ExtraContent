@@ -20,9 +20,6 @@ return {
 	-- Enable OpenType support
 	enableOpenTypeSupport = false,
 
-	-- Use new Foundation components
-	useFoundationSkeleton = false,
-
 	-- Use Foundation button
 	useFoundationButton = false,
 
@@ -35,9 +32,6 @@ return {
 	-- Pass gridInfo to renderItem when using GridView
 	passRowAndColumnDataToItemInGridView = false,
 
-	-- Always use provided ref for button
-	useProvidedRefForButton = false,
-
 	-- Add button override to ActionBar
 	enableActionBarButtonOverride = false,
 
@@ -47,15 +41,13 @@ return {
 	-- Enable icon scaling for some icons used by experience details
 	enableScalingForSomeEdpIcons = false,
 
-	-- Enable SurfaceGui ref exposure through Panel3D
-	enablePanel3DSurfaceGuiRef = false,
+	-- Disable token scaling so scale is always 1
+	disableTokenScaling = false,
 
-	-- Use StatusIndicator instead of Badge, where applicable
-	useFoundationStatusIndicator = false,
+	-- Use Color tokens (Surface, Content) instead of Semantic.Color tokens for theme mapping
+	-- This enables surface color overrides to work through the theme system
+	useColorTokensForThemeMapping = false,
 
-	-- Enable rich text support for TooltipV2 header and body text
-	enableTooltipRichText = false,
-
-	-- Fix stale closure issue in Table Cell onActivated callback
-	tableCellStaleClosureFix = false,
+	-- Use tokens to color themed assets baked into PlayerTile and ItemTile
+	useTokensToColorThemedAssets = false,
 }

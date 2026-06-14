@@ -9,6 +9,7 @@ local SharedFlags = require(CorePackages.Workspace.Packages.SharedFlags)
 local FFlagEnableConsoleExpControls = SharedFlags.FFlagEnableConsoleExpControls
 local FFlagAddUILessMode = SharedFlags.FFlagAddUILessMode
 local FIntAddUILessModeVariant = SharedFlags.FIntAddUILessModeVariant
+local FFlagTiltSelection = SharedFlags.FFlagTiltSelection
 
 local Roact = require(CorePackages.Packages.Roact)
 local React = require(CorePackages.Packages.React)
@@ -35,7 +36,7 @@ local TopBar = script.Parent.Parent.Parent
 local FlashingDot = require(script.Parent.FlashingDot)
 local FlashingDotV2 = require(script.Parent.FlashingDotV2)
 local GetFFlagFlashingDotUseAsyncInit = require(CoreGui.RobloxGui.Modules.Flags.GetFFlagFlashingDotUseAsyncInit)
-local ChromeEnabled = require(CoreGui.RobloxGui.Modules.Chrome.Enabled)()
+local ChromeEnabled = require(CorePackages.Workspace.Packages.Chrome).Enabled()
 local isNewTiltIconEnabled = require(CoreGui.RobloxGui.Modules.isNewTiltIconEnabled)
 local Constants = require(script.Parent.Parent.Parent.Constants)
 
@@ -153,9 +154,13 @@ function IconButton:renderWithCursor(getCursor)
 			Size = UDim2.fromOffset(backgroundSize, backgroundSize),
 			Image = if not isNewTiltIconEnabled() then "rbxasset://textures/ui/TopBar/iconBase.png" else nil,
 			BackgroundColor3 = style.Theme.BackgroundUIContrast.Color,
-			SelectionImageObject = if isNewTiltIconEnabled() then 
-				getCursor.refCache[ICON_BUTTON_CURSOR]
-			else nil,
+			SelectionImageObject = if isNewTiltIconEnabled()
+				then 
+					if FFlagTiltSelection then
+						getCursor.getCursor(ICON_BUTTON_CURSOR)
+					else
+						getCursor.refCache[ICON_BUTTON_CURSOR]
+				else nil,
 			NextSelectionRight = if ChromeEnabled and FFlagEnableConsoleExpControls then self.props.nextSelectionRightRef else nil :: never,
 			[Roact.Event.Activated] = self.props.onActivated,
 			[Roact.Event.SelectionChanged] = if ChromeEnabled and FFlagEnableConsoleExpControls then self.props.onSelectionChanged else nil,
@@ -231,7 +236,6 @@ function IconButton:renderWithCursor(getCursor)
 		})
 	end)
 end
-
 
 function IconButton:willUnmount()
 	if self.disposeUiScaleEffect then

@@ -52,9 +52,10 @@ local UserInputService = game:GetService("UserInputService")
 local VRService = game:GetService("VRService")
 local UserGameSettings = UserSettings():GetService("UserGameSettings")
 
-local CommonUtils = script.Parent:WaitForChild("CommonUtils")
-local ConnectionUtil = require(CommonUtils:WaitForChild("ConnectionUtil"))
-local FlagUtil = require(CommonUtils:WaitForChild("FlagUtil"))
+local CommonUtils = require(script.Parent:WaitForChild("CommonUtils"))
+local ConnectionUtil = CommonUtils.get("ConnectionUtil")
+local FlagUtil = CommonUtils.get("FlagUtil")
+
 
 -- Static camera utils
 local CameraUtils = require(script:WaitForChild("CameraUtils"))
@@ -102,6 +103,7 @@ end
 
 local FFlagUserPlayerConnectionMemoryLeak = FlagUtil.getUserFlag("UserPlayerConnectionMemoryLeak")
 local FFlagUserPSFixCameraControllerReset = FlagUtil.getUserFlag("UserPSFixCameraControllerReset")
+local FFlagUserPlayerScriptsCameraTouchUsesIAS = FlagUtil.getUserFlag("UserPlayerScriptsCameraTouchUsesIAS")
 
 -- Change this later as types are added for more classes
 type Generic = any
@@ -189,8 +191,6 @@ function CameraModule.new()
 	self:ActivateCameraController()
 	self:ActivateOcclusionModule(Players.LocalPlayer.DevCameraOcclusionMode)
 	self:OnCurrentCameraChanged() -- Does initializations and makes first camera controller
-	RunService:BindToRenderStep("cameraRenderUpdate", Enum.RenderPriority.Camera.Value, function(dt) self:Update(dt) end)
-
 	-- Connect listeners to camera-related properties
 	for _, propertyName in pairs(PLAYER_CAMERA_PROPERTIES) do
 		Players.LocalPlayer:GetPropertyChangedSignal(propertyName):Connect(function()
@@ -548,7 +548,7 @@ end
 	The camera and occlusion modules should only return CFrames, not set the CFrame property of
 	CurrentCamera directly.
 --]]
-function CameraModule:Update(dt)
+function CameraModule:Update(data, dt)
 	if self.activeCameraController then
 		self.activeCameraController:UpdateMouseBehavior()
 
@@ -568,7 +568,7 @@ function CameraModule:Update(dt)
 			self.activeTransparencyController:Update(dt)
 		end
 
-		if CameraInput.getInputEnabled() then
+		if not FFlagUserPlayerScriptsCameraTouchUsesIAS and CameraInput.getInputEnabled() then
 			CameraInput.resetInputForFrameEnd()
 		end
 	end
@@ -626,6 +626,8 @@ function CameraModule:OnMouseLockToggled()
 	end
 end
 
-CameraModule.new()
-
-return {}
+if RunService:IsClient() then
+	return CameraModule.new()
+else
+	return CameraModule
+end

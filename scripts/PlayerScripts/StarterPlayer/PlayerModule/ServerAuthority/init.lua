@@ -11,12 +11,19 @@ local ControlModule = require(script.Parent:WaitForChild("ControlModule"))
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 
-function ServerAuthority.new()
-	local self = setmetatable({}, ServerAuthority)
-	return self
-end
+local CommonUtils = require(script.Parent:WaitForChild("CommonUtils"))
+local FlagUtil = CommonUtils.get("FlagUtil")
+local PlayerModuleEventBus = CommonUtils.get("PlayerModuleEventBus")
+local FFlagUserDisableForceLocalHumanoidPrediction = FlagUtil.getUserFlag("UserDisableForceLocalHumanoidPrediction")
 
-function ServerAuthority:PredictLocalHumanoid()
+local CONNECTIONS = {
+	SERVER_AUTHORITY_CHANGED = "SERVER_AUTHORITY_CHANGED",
+	INPUTS_SETUP = "INPUTS_SETUP",
+}
+
+local isServerAuthority = false
+
+function ServerAuthority.PredictLocalHumanoid()
 	local predictHumanoidRootPart = function(character:Model)
 		local rootPart = character:WaitForChild("HumanoidRootPart")
 		RunService:SetPredictionMode(rootPart, Enum.PredictionMode.On)
@@ -28,11 +35,24 @@ function ServerAuthority:PredictLocalHumanoid()
 	end
 end
 
-function ServerAuthority:Initialize()
-	if RunService:IsClient() then
-		self:PredictLocalHumanoid()
-	end
-	ControlModule:InitializeServerAuthority()
+function ServerAuthority.initialize(data)
+	data.isServerAuthority = isServerAuthority
 end
 
-return ServerAuthority.new()
+function ServerAuthority.Initialize()
+	if not FFlagUserDisableForceLocalHumanoidPrediction then
+		if RunService:IsClient() then
+			ServerAuthority.PredictLocalHumanoid()
+		end
+	end
+	if not PlayerModuleEventBus.data.inputsSetupComplete then
+		if RunService:IsServer() then 
+			PlayerModuleEventBus:subscribe(CONNECTIONS.INPUTS_SETUP):Wait()
+		end
+	end
+	ControlModule:InitializeServerAuthority()
+	
+	isServerAuthority = true
+end
+
+return ServerAuthority

@@ -11,8 +11,12 @@ local View = require(Components.View)
 type InternalTextInputRef = Types.InternalTextInputRef
 type TextInputRef = Types.TextInputRef
 
+local useScaledValue = require(Foundation.Utility.useScaledValue)
 local withCommonProps = require(Foundation.Utility.withCommonProps)
 local withDefaults = require(Foundation.Utility.withDefaults)
+
+local Constants = require(Foundation.Constants)
+local Flags = require(Foundation.Utility.Flags)
 
 local InputLabelSize = require(Foundation.Enums.InputLabelSize)
 type InputLabelSize = InputLabelSize.InputLabelSize
@@ -35,13 +39,13 @@ type InputFieldProps = {
 } & Types.CommonProps
 
 local defaultProps = {
-	width = UDim.new(0, 400),
 	size = InputLabelSize.Small,
 	testId = "--foundation-input-field",
 }
 
 local function InputField(inputFieldProps: InputFieldProps, ref: React.Ref<GuiObject>?)
 	local props = withDefaults(inputFieldProps, defaultProps)
+	local defaultWidth = useScaledValue(Constants.DEFAULT_INPUT_FIELD_WIDTH_PIXELS)
 	local textBoxRef = React.useRef(nil :: InternalTextInputRef?)
 
 	local focusTextBox = React.useCallback(function()
@@ -50,11 +54,13 @@ local function InputField(inputFieldProps: InputFieldProps, ref: React.Ref<GuiOb
 		end
 	end, {})
 
-	local onLabelHover = React.useCallback(function(isHovered)
-		if textBoxRef.current then
-			textBoxRef.current.setHover(isHovered)
-		end
-	end, {})
+	local onLabelHover = if Flags.FoundationTextInputsBetaUpdate
+		then nil
+		else React.useCallback(function(isHovered)
+			if textBoxRef.current then
+				textBoxRef.current.setHover(isHovered)
+			end
+		end, {})
 
 	React.useImperativeHandle(props.textBoxRef, function(): TextInputRef?
 		if not textBoxRef.current then
@@ -75,7 +81,9 @@ local function InputField(inputFieldProps: InputFieldProps, ref: React.Ref<GuiOb
 	return React.createElement(
 		View,
 		withCommonProps(props, {
-			Size = UDim2.new(props.width, UDim.new(0, 0)),
+			Size = if not props.width
+				then UDim2.fromOffset(defaultWidth, 0)
+				else UDim2.new(props.width :: UDim, UDim.new(0, 0)),
 			tag = "col gap-small auto-y",
 			ref = ref,
 		}),
@@ -85,8 +93,9 @@ local function InputField(inputFieldProps: InputFieldProps, ref: React.Ref<GuiOb
 					Text = props.label,
 					size = props.size,
 					isRequired = props.isRequired,
+					isDisabled = props.isDisabled,
 					onActivated = focusTextBox,
-					onHover = onLabelHover,
+					onHover = if Flags.FoundationTextInputsBetaUpdate then nil else onLabelHover,
 					LayoutOrder = 1,
 					testId = `{props.testId}--label`,
 				})
@@ -102,6 +111,7 @@ local function InputField(inputFieldProps: InputFieldProps, ref: React.Ref<GuiOb
 				then React.createElement(HintText, {
 					text = props.hint,
 					hasError = props.hasError,
+					isDisabled = props.isDisabled,
 					LayoutOrder = 3,
 					testId = `{props.testId}--hint`,
 				})

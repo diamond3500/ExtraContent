@@ -23,18 +23,16 @@ local CursorKind = UIBlox.App.SelectionImage.CursorKind
 local useVoiceState = require(RobloxGui.Modules.VoiceChat.Hooks.useVoiceState)
 local Constants = require(RobloxGui.Modules.VoiceChat.Constants)
 local VoiceChatServiceManager = require(RobloxGui.Modules.VoiceChat.VoiceChatServiceManager).default
-local FFlagVoiceToggleShowConnectingIconWhenHidden =
-	game:DefineFastFlag("VoiceToggleShowConnectingIconWhenHidden", false)
 local FFlagVoiceIndicatorPerformanceOptimizations =
-	game:DefineFastFlag("VoiceIndicatorPerformanceOptimizations", false)
+	game:DefineFastFlag("VoiceIndicatorPerformanceOptimizationsV2", false)
 local FIntMicTalkingUpdateFrequency = game:DefineFastInt("MicTalkingUpdateFrequency", 3)
 
 local DEFAULT_SIZE = UDim2.fromOffset(28, 28)
 
-local function useJoinBinding(bindings)
+local function useJoinBinding(voiceStateBinding, levelBinding)
 	return React.useMemo(function()
-		return Roact.joinBindings(bindings)
-	end, {})
+		return Roact.joinBindings({ voiceStateBinding, levelBinding })
+	end, { voiceStateBinding, levelBinding })
 end
 
 local function mapLevelToIcon(iconStyle, showShimmer)
@@ -44,11 +42,7 @@ local function mapLevelToIcon(iconStyle, showShimmer)
 		local level = values[2]
 		if voiceState == Constants.VOICE_STATE.MUTED or voiceState == Constants.VOICE_STATE.LOCAL_MUTED then
 			return VoiceChatServiceManager:GetIcon("Muted", iconStyle)
-		elseif voiceState == Constants.VOICE_STATE.CONNECTING or
-			if FFlagVoiceToggleShowConnectingIconWhenHidden
-				then voiceState == Constants.VOICE_STATE.HIDDEN
-				else nil
-		then
+		elseif voiceState == Constants.VOICE_STATE.CONNECTING or voiceState == Constants.VOICE_STATE.HIDDEN then
 			if showShimmer and iconStyle == "MicLight" then
 				return VoiceChatServiceManager:GetIcon("Connecting", "MicDark")
 			else
@@ -99,7 +93,7 @@ local function VoiceIndicator(props: VoiceIndicatorProps)
 	local level, setLevel = React.useBinding(0)
 	local selectable = if props.selectable ~= nil then props.selectable else true
 	local voiceStateBinding, setVoiceStateBinding = React.useBinding(voiceState)
-	local voiceStateAndLevel = useJoinBinding({ voiceStateBinding, level })
+	local voiceStateAndLevel = useJoinBinding(voiceStateBinding, level)
 	local renderStepName = React.useRef(GenerateGUID()).current or ""
 	setVoiceStateBinding(voiceState)
 
@@ -122,12 +116,12 @@ local function VoiceIndicator(props: VoiceIndicatorProps)
 
 	if FFlagVoiceIndicatorPerformanceOptimizations then
 		local isTalkingRef = React.useRef(false)
-		isTalkingRef.current = (voiceState == Constants.VOICE_STATE.TALKING) 
+		isTalkingRef.current = (voiceState == Constants.VOICE_STATE.TALKING)
 
 		React.useEffect(function()
 			local frameCounter = 0
 
-			RunService:BindToRenderStep("VoiceIndicatorUpdate", 1, function()
+			RunService:BindToRenderStep(renderStepName, 1, function()
 				if not isTalkingRef.current then
 					return
 				end
@@ -140,9 +134,9 @@ local function VoiceIndicator(props: VoiceIndicatorProps)
 			end)
 
 			return function()
-				RunService:UnbindFromRenderStep("VoiceIndicatorUpdate")
+				RunService:UnbindFromRenderStep(renderStepName)
 			end
-		end, {})
+		end, { renderStepName })
 	else
 		React.useEffect(function()
 			if isTalking then
@@ -155,7 +149,7 @@ local function VoiceIndicator(props: VoiceIndicatorProps)
 					RunService:UnbindFromRenderStep(renderStepName)
 				end
 			end
-		end, { isTalking })
+		end, { isTalking, renderStepName } :: { any })
 	end
 
 	local visible = not (props.hideOnError and (not voiceState or HIDE_ON_ERROR_STATES[voiceState]))
@@ -174,7 +168,9 @@ local function VoiceIndicator(props: VoiceIndicatorProps)
 
 	local imageMapFunc = React.useMemo(function()
 		return voiceStateAndLevel:map(mapLevelToIcon(props.iconStyle, showShimmer))
-	end, { props.iconStyle })
+	end, { props.iconStyle, showShimmer } :: { any })
+
+	local selectionCursor = useSelectionCursor(CursorKind.RoundedRectNoInset)
 
 	return Roact.createElement("ImageButton", {
 		Size = props.size or DEFAULT_SIZE,
@@ -183,7 +179,7 @@ local function VoiceIndicator(props: VoiceIndicatorProps)
 		Image = imageMapFunc,
 		ImageTransparency = imageTransparency,
 		Selectable = selectable,
-		SelectionImageObject = useSelectionCursor(CursorKind.RoundedRectNoInset),
+		SelectionImageObject = selectionCursor,
 		Visible = visible,
 		[Roact.Event.Activated] = props.onClicked,
 	}, {

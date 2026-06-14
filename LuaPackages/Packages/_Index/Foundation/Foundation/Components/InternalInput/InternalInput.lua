@@ -54,6 +54,9 @@ export type InputVariantProps = {
 type Props = {
 	-- Whether the input is currently checked.
 	isChecked: boolean,
+	-- Whether the input is in an indeterminate state.
+	-- Will override the filled state that isChecked contributes to.
+	isIndeterminate: boolean?,
 	-- Whether the input is disabled. When `true`, the `onActivated` callback
 	-- will not be invoked, even if the user interacts with the input.
 	isDisabled: boolean?,
@@ -86,6 +89,8 @@ local function InternalInput(inputProps: Props, ref: React.Ref<GuiObject>?)
 	local isHovering, setIsHovering = React.useState(false)
 	local tokens = useTokens()
 
+	local isFilled = props.isChecked or props.isIndeterminate
+
 	local variantProps = useInputVariants(tokens, props.size, labelPosition)
 
 	local cursor = React.useMemo(function()
@@ -106,14 +111,14 @@ local function InternalInput(inputProps: Props, ref: React.Ref<GuiObject>?)
 	local values, animate = useMotion(motionStates.Default)
 
 	React.useEffect(function()
-		if props.isChecked then
+		if isFilled then
 			animate(motionStates.Checked)
 		elseif isHovering then
 			animate(motionStates.Hover)
 		else
 			animate(motionStates.Default)
 		end
-	end, { props.isChecked, isHovering, motionStates } :: { unknown })
+	end, { isFilled, isHovering, motionStates } :: { unknown })
 
 	local onInputStateChanged = React.useCallback(function(newState: ControlState)
 		setIsHovering(newState == ControlState.Hover)
@@ -172,6 +177,7 @@ local function InternalInput(inputProps: Props, ref: React.Ref<GuiObject>?)
 				end
 			end),
 			Thickness = strokeThickness,
+			BorderStrokePosition = Enum.BorderStrokePosition.Inner,
 		},
 		selection = selectionProps,
 		cursor = (if hasLabel then cursor else nil),

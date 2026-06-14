@@ -25,7 +25,7 @@ local INGAME_SELFVIEW_CURSOR_OVERRIDE_KEY = Symbol.named("SelfieViewCursorOverri
 local debounce = require(Root.Utility.debounce)
 local ChromeService = require(Root.Service)
 local Constants = require(Root.Unibar.Constants)
-local ChromeTypes = require(Root.Service.Types)
+local ChromePackage = require(CorePackages.Workspace.Packages.Chrome)
 local ChromeAnalytics = require(Root.Analytics.ChromeAnalytics)
 local shouldRejectMultiTouch = require(Root.Utility.shouldRejectMultiTouch)
 
@@ -36,19 +36,19 @@ local FFlagTopBarSignalizeMenuOpen = CoreGuiCommon.Flags.FFlagTopBarSignalizeMen
 local useSelector = require(CorePackages.Workspace.Packages.RoactUtils).Hooks.RoactRodux.useSelector
 -- APPEXP-2053 TODO: Remove all use of RobloxGui from ChromeShared
 local FIntChromeWindowLayoutOrder = game:DefineFastInt("ChromeWindowLayoutOrder", 2)
-local FFlagWindowDragDetection = game:DefineFastFlag("WindowDragDetection", false)
-local FIntWindowMinDragDistance = game:DefineFastInt("WindowMinDragDistance", 25)
 
-local FFlagFixWindowStyleSheets = game:DefineFastFlag("FixWindowStyleSheets", false)
 local FFlagFixWindowDragError = game:DefineFastFlag("FixWindowDragError", false)
+local FFlagFixWindowDragStaleConnection = game:DefineFastFlag("FixWindowDragStaleConnection", false)
 
 local ChromeSharedFlags = require(Root.Flags)
 local FFlagTokenizeUnibarConstantsWithStyleProvider = ChromeSharedFlags.FFlagTokenizeUnibarConstantsWithStyleProvider
 
 local useWindowSize = require(Root.Hooks.useWindowSize)
 
+type IntegrationComponentProps = ChromePackage.IntegrationComponentProps
+
 export type WindowHostProps = {
-	integration: ChromeTypes.IntegrationComponentProps,
+	integration: IntegrationComponentProps,
 	position: UDim2?,
 }
 
@@ -266,7 +266,18 @@ local WindowHost = function(props: WindowHostProps)
 			)
 
 			-- Handle dragging
-			if not connection.current and not isRepositioning:getValue() then
+			-- Clean up stale drag state from a previous gesture whose InputEnded
+			-- was captured by the InputShield instead of reaching InputWrapper
+			if FFlagFixWindowDragStaleConnection and connection.current then
+				connection.current:Disconnect()
+				connection.current = nil
+				setDragging(false)
+			end
+
+			if
+				(if FFlagFixWindowDragStaleConnection then true else not connection.current)
+				and not isRepositioning:getValue()
+			then
 				-- The dragging callback might never be called when a single tap is registered
 				-- Assign the position to the frame ref itself to ensure we have the most current
 				local newPosition = {
@@ -293,11 +304,12 @@ local WindowHost = function(props: WindowHostProps)
 
 					local inputPosition = inputChangedObj.Position
 					local delta = inputPosition - dragStartPosition
-					if FFlagWindowDragDetection then
-						dragDistance += delta.Magnitude
-					end
+					-- Use absolute distance from start to avoid false activation from micro-jitter
+					dragDistance = if FFlagFixWindowDragStaleConnection
+						then delta.Magnitude
+						else dragDistance + delta.Magnitude
 
-					if not FFlagWindowDragDetection or dragDistance > FIntWindowMinDragDistance then
+					if dragDistance > Constants.WINDOW_MIN_DRAG_DISTANCE then
 						setDragging(true)
 
 						local newPosition = {
@@ -416,9 +428,7 @@ local WindowHost = function(props: WindowHostProps)
 	end, { calculateAnchorPoint })
 
 	local touchEnded = React.useCallback(function(_: Frame, inputObj: InputObject)
-		if FFlagWindowDragDetection then
-			dragDistance = 0
-		end
+		dragDistance = 0
 		if
 			inputObj.UserInputType == Enum.UserInputType.MouseButton1
 			or inputObj.UserInputType == Enum.UserInputType.Touch
@@ -500,11 +510,9 @@ local WindowHost = function(props: WindowHostProps)
 					}),
 				}),
 			}),
-			FoundationStyleLink = if FFlagFixWindowStyleSheets
-				then React.createElement("StyleLink", {
-					StyleSheet = styleSheet,
-				})
-				else nil,
+			FoundationStyleLink = React.createElement("StyleLink", {
+				StyleSheet = styleSheet,
+			}),
 		}),
 	}, CoreGui)
 end

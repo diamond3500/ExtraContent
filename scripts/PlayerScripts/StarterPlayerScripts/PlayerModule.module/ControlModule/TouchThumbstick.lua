@@ -10,6 +10,15 @@ local UserInputService = game:GetService("UserInputService")
 
 local UserGameSettings = UserSettings():GetService("UserGameSettings")
 
+local CommonUtils = script.Parent.Parent:WaitForChild("CommonUtils")
+local FlagUtil = require(CommonUtils:WaitForChild("FlagUtil"))
+local FFlagUserAllowAbilityControls = FlagUtil.getUserFlag("UserAllowAbilityControls")
+
+local AvatarAbilitiesInterface
+if FFlagUserAllowAbilityControls then
+	AvatarAbilitiesInterface = require(script.Parent:WaitForChild("AvatarAbilitiesInterface"))
+end
+
 --[[ Constants ]]--
 local ZERO_VECTOR3 = Vector3.new(0,0,0)
 local TOUCH_CONTROL_SHEET = "rbxasset://textures/ui/TouchControlsSheet.png"
@@ -78,6 +87,12 @@ function TouchThumbstick:Create(parentFrame)
 			self.absoluteSizeChangedConn:Disconnect()
 			self.absoluteSizeChangedConn = nil
 		end
+		if FFlagUserAllowAbilityControls then		
+			if self.avatarAbilitiesEnabledChangedConn then
+				self.avatarAbilitiesEnabledChangedConn:Disconnect()
+				self.avatarAbilitiesEnabledChangedConn = nil
+			end
+		end
 	end
 
 	self.thumbstickFrame = Instance.new("Frame")
@@ -105,9 +120,18 @@ function TouchThumbstick:Create(parentFrame)
 	local function ResizeThumbstick()
 		local minAxis = math.min(parentFrame.AbsoluteSize.X, parentFrame.AbsoluteSize.Y)
 		local isSmallScreen = minAxis <= 500
-		self.thumbstickSize = isSmallScreen and 70 or 120
-		self.screenPos = isSmallScreen and UDim2.new(0, (self.thumbstickSize/2) - 10, 1, -self.thumbstickSize - 20) or
-			UDim2.new(0, self.thumbstickSize/2, 1, -self.thumbstickSize * 1.75)
+
+		if FFlagUserAllowAbilityControls and AvatarAbilitiesInterface.isEnabled() then
+			local buttonInsetX = isSmallScreen and 64 or 100
+			local buttonInsetY = isSmallScreen and 64 or 112
+			self.thumbstickSize = isSmallScreen and 72 or 120
+			self.screenPos = UDim2.new(0, buttonInsetX, 1, -self.thumbstickSize - buttonInsetY)
+		else
+			self.thumbstickSize = isSmallScreen and 70 or 120
+			self.screenPos = isSmallScreen and UDim2.new(0, (self.thumbstickSize/2) - 10, 1, -self.thumbstickSize - 20) or
+				UDim2.new(0, self.thumbstickSize/2, 1, -self.thumbstickSize * 1.75)
+		end
+
 		self.thumbstickFrame.Size = UDim2.new(0, self.thumbstickSize, 0, self.thumbstickSize)
 		self.thumbstickFrame.Position = self.screenPos
 		outerImage.Size = UDim2.new(0, self.thumbstickSize, 0, self.thumbstickSize)
@@ -117,7 +141,10 @@ function TouchThumbstick:Create(parentFrame)
 
 	ResizeThumbstick()
 	self.absoluteSizeChangedConn = parentFrame:GetPropertyChangedSignal("AbsoluteSize"):Connect(ResizeThumbstick)
-	
+	if FFlagUserAllowAbilityControls then
+		self.avatarAbilitiesEnabledChangedConn = AvatarAbilitiesInterface.GetEnabledChangedSignal():Connect(ResizeThumbstick)
+	end
+
 	outerImage.Parent = self.thumbstickFrame
 	self.stickImage.Parent = self.thumbstickFrame
 

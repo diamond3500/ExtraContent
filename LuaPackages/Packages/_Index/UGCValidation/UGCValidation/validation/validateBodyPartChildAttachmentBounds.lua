@@ -1,3 +1,6 @@
+-- TEMPORARY: Uses getAttachmentCFrameInPartSpace to fix HRD bone-nested attachment CFrame interpretation.
+-- All bounds/transform calculation in this file must be refactored in the new validation system.
+
 local root = script.Parent.Parent
 
 local Types = require(root.util.Types)
@@ -6,14 +9,13 @@ local Constants = require(root.Constants)
 
 local FailureReasonsAccumulator = require(root.util.FailureReasonsAccumulator)
 local prettyPrintVector3 = require(root.util.prettyPrintVector3)
-local floatEquals = require(root.util.floatEquals)
 local BoundsCalculator = require(root.util.BoundsCalculator)
 local BoundsDataUtils = require(root.util.BoundsDataUtils)
 local MeshSpaceUtils = require(root.util.MeshSpaceUtils)
 
 local getFStringUGCValidationAttachmentErrorLink = require(root.flags.getFStringUGCValidationAttachmentErrorLink)
-local getFFlagRefactorBodyAttachmentOrientationsCheck =
-	require(root.flags.getFFlagRefactorBodyAttachmentOrientationsCheck)
+local R15plusUtils = require(root.util.R15plusUtils)
+local getAttachmentCFrameInPartSpace = require(root.util.getAttachmentCFrameInPartSpace)
 
 -- this function relies on validateMeshIsAtOrigin() in validateDescendantMeshMetrics.lua to catch meshes not built at the origin
 local function validateInMeshSpace(
@@ -23,7 +25,7 @@ local function validateInMeshSpace(
 	validationContext: Types.ValidationContext,
 	transformData: any
 ): (boolean, { string }?)
-	local world = transformData.cframe * att.CFrame
+	local world = transformData.cframe * getAttachmentCFrameInPartSpace(att)
 	local meshCenterOpt = BoundsDataUtils.calculateBoundsCenters(transformData.boundsData)
 	local meshDimensionsOpt = BoundsDataUtils.calculateBoundsDimensions(transformData.boundsData)
 	if not meshCenterOpt or not meshDimensionsOpt then
@@ -92,8 +94,10 @@ local function checkAll(
 ): (boolean, { string }?)
 	local reasonsAccumulator = FailureReasonsAccumulator.new()
 
-	local rigAttachmentToParent: Attachment? =
-		meshHandle:FindFirstChild(partData.rigAttachmentToParent.name) :: Attachment
+	local rigAttachmentToParent: Attachment? = meshHandle:FindFirstChild(
+		partData.rigAttachmentToParent.name,
+		R15plusUtils.checkFlagEnabledForAllowHrd()
+	) :: Attachment
 	assert(rigAttachmentToParent)
 
 	reasonsAccumulator:updateReasons(
@@ -107,7 +111,8 @@ local function checkAll(
 	)
 
 	for childAttachmentName, childAttachmentInfo in pairs(partData.otherAttachments) do
-		local childAttachment: Attachment? = meshHandle:FindFirstChild(childAttachmentName) :: Attachment
+		local childAttachment: Attachment? =
+			meshHandle:FindFirstChild(childAttachmentName, R15plusUtils.checkFlagEnabledForAllowHrd()) :: Attachment
 		assert(childAttachment)
 
 		reasonsAccumulator:updateReasons(
@@ -120,39 +125,6 @@ local function checkAll(
 			)
 		)
 	end
-	return reasonsAccumulator:getFinalResults()
-end
-
-local function validateAttachmentRotation(
-	inst: Instance,
-	validationContext: Types.ValidationContext
-): (boolean, { string }?)
-	-- remove function when cleaning up FFlagRefactorBodyAttachmentOrientationsCheck
-	assert(Analytics.ErrorType.validateBodyPartChildAttachmentBounds_AttachmentRotated)
-	local reasonsAccumulator = FailureReasonsAccumulator.new()
-
-	for _, desc: Attachment in inst:GetDescendants() :: { any } do
-		local isRigAttachment = desc.ClassName == "Attachment" and string.find(desc.Name, "RigAttachment")
-		if not isRigAttachment then
-			continue
-		end
-
-		local x, y, z = desc.CFrame:ToOrientation()
-		if not floatEquals(x, 0) or not floatEquals(y, 0) or not floatEquals(z, 0) then
-			Analytics.reportFailure(
-				Analytics.ErrorType.validateBodyPartChildAttachmentBounds_AttachmentRotated,
-				nil,
-				validationContext
-			)
-			reasonsAccumulator:updateReasons(false, {
-				string.format(
-					"Detected rotation in Attachment '%s'. You must reset all rotation values for this attachment to zero.",
-					desc:GetFullName()
-				),
-			})
-		end
-	end
-
 	return reasonsAccumulator:getFinalResults()
 end
 
@@ -170,10 +142,6 @@ local function validateBodyPartChildAttachmentBounds(
 	assert(assetInfo)
 
 	local reasonsAccumulator = FailureReasonsAccumulator.new()
-
-	if not getFFlagRefactorBodyAttachmentOrientationsCheck() then
-		reasonsAccumulator:updateReasons(validateAttachmentRotation(inst, validationContext))
-	end
 
 	local successData, failureReasonsData, boundsTransformDataOpt =
 		BoundsCalculator.calculateIndividualAssetPartsData(inst, validationContext)

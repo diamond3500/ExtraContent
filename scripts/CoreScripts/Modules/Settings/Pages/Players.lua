@@ -60,13 +60,14 @@ end
 local SharedFlags = require(CorePackages.Workspace.Packages.SharedFlags)
 local GetFFlagLuaAppEnableOpenTypeSupport = SharedFlags.GetFFlagLuaAppEnableOpenTypeSupport
 local FFlagIEMFocusNavToButtons = SharedFlags.FFlagIEMFocusNavToButtons
+local FFlagIEMTabFocusNav = SharedFlags.FFlagIEMTabFocusNav
+local FFlagEnableSideSheet = SharedFlags.FFlagEnableSideSheet
 local FFlagRelocateMobileMenuButtons = require(RobloxGui.Modules.Settings.Flags.FFlagRelocateMobileMenuButtons)
 local FIntRelocateMobileMenuButtonsVariant = require(RobloxGui.Modules.Settings.Flags.FIntRelocateMobileMenuButtonsVariant)
 local FFlagMenuButtonsMountWithIEM = require(RobloxGui.Modules.Settings.Flags.FFlagMenuButtonsMountWithIEM)
 local EngineFeatureRbxAnalyticsServiceExposePlaySessionId = game:GetEngineFeature("RbxAnalyticsServiceExposePlaySessionId")
-
-local SettingsFlags = require(script.Parent.Parent.Flags)
-local FFlagIEMButtonsResponsiveLayout = SettingsFlags.FFlagIEMButtonsResponsiveLayout
+local FFlagConnectionsToFriendsRename = SharedFlags.FFlagConnectionsToFriendsRename
+local GetFFlagVoiceChatLogConnectionSource = SharedFlags.GetFFlagVoiceChatLogConnectionSource
 
 local UserProfileStore = UserProfiles.Stores.UserProfileStore
 
@@ -113,17 +114,11 @@ while not localPlayer do
 end
 
 ------------ FAST FLAGS -------------------
-local success, result = pcall(function()
-	return settings():GetFFlag("UseNotificationsLocalization")
-end)
-local FFlagUseNotificationsLocalization = success and result
 local GetFFlagVoiceChatUILogging = require(RobloxGui.Modules.Flags.GetFFlagVoiceChatUILogging)
 local GetFFlagDefaultFriendingLabelTextNonEmpty =
 	require(RobloxGui.Modules.Settings.Flags.GetFFlagDefaultFriendingLabelTextNonEmpty)
 local GetFFlagEnableLeaveGameUpsellEntrypoint =
 	require(RobloxGui.Modules.Settings.Flags.GetFFlagEnableLeaveGameUpsellEntrypoint)
-local GetFFlagDisableMuteAllCheckForIsMuted =
-	require(RobloxGui.Modules.Settings.Flags.GetFFlagDisableMuteAllCheckForIsMuted)
 local GetFFlagDestroyPlayerCardOnLeave =
 	require(RobloxGui.Modules.Settings.Flags.GetFFlagDestroyPlayerCardOnLeave)
 local GetFFlagEnableConsoleJoinVoice =
@@ -142,12 +137,11 @@ local FFlagCorrectlyPositionMuteButton = game:DefineFastFlag("CorrectlyPositionM
 local FFlagOnlyCaptureFocusIfOnPlayerPage = game:DefineFastFlag("OnlyCaptureFocusIfOnPlayerPage", false)
 local FIntSettingsHubPlayersButtonsResponsiveThreshold =
 	game:DefineFastInt("SettingsHubPlayersButtonsResponsiveThreshold", 200)
-local FFlagNullCheckPlayersNameLabel = game:DefineFastFlag("NullCheckPlayersNameLabel", false)
 local GetFFlagCleanupMuteSelfButton = require(RobloxGui.Modules.Settings.Flags.GetFFlagCleanupMuteSelfButton)
 local BUTTON_ROW_HORIZONTAL_PADDING = 20
 local BUTTON_ROW_VERTICAL_PADDING = 16
 local FFlagCheckForNilUserIdOnPlayerList = game:DefineFastFlag("CheckForNilUserIdOnPlayerList", false)
-local ChromeEnabled = require(RobloxGui.Modules.Chrome.Enabled)()
+local ChromeEnabled = require(CorePackages.Workspace.Packages.Chrome).Enabled()
 
 local MuteStatusIcons = VoiceChatServiceManager.MuteStatusIcons
 local PlayerMuteStatusIcons = VoiceChatServiceManager.PlayerMuteStatusIcons
@@ -224,7 +218,9 @@ local function Initialize()
 			friendLabel.TextColor3 = Color3.new(1, 1, 1)
 			friendLabel.SelectionImageObject = fakeSelection
 			if status == Enum.FriendStatus.Friend then
-				friendLabel.Text = LocalizationStrings[localeId]:Format(Constants.ConnectionLocalizedKey)
+				friendLabel.Text = if FFlagConnectionsToFriendsRename
+					then LocalizationStrings[localeId]:Format(Constants.FriendLocalizedKey)
+					else LocalizationStrings[localeId]:Format(Constants.ConnectionLocalizedKey)
 			else
 				friendLabel.Text = "Request Sent"
 			end
@@ -238,7 +234,9 @@ local function Initialize()
 					friendLabel.ImageTransparency = 1
 					friendLabelText.Text = ""
 					if GetFFlagDefaultFriendingLabelTextNonEmpty() then
-						friendLabelText.Text = LocalizationStrings[localeId]:Format(Constants.AddConnectionLocalizedKey)
+						friendLabelText.Text = if FFlagConnectionsToFriendsRename
+							then LocalizationStrings[localeId]:Format(Constants.AddFriendLocalizedKey)
+							else LocalizationStrings[localeId]:Format(Constants.AddConnectionLocalizedKey)
 					end
 					if localPlayer and player then
 						AnalyticsService:ReportCounter("PlayersMenu-RequestFriendship")
@@ -257,7 +255,9 @@ local function Initialize()
 
 			friendLabel, friendLabelText = utility:MakeStyledButton(
 				"FriendStatus",
-				LocalizationStrings[localeId]:Format(Constants.AddConnectionLocalizedKey),
+				if FFlagConnectionsToFriendsRename
+					then LocalizationStrings[localeId]:Format(Constants.AddFriendLocalizedKey)
+					else LocalizationStrings[localeId]:Format(Constants.AddConnectionLocalizedKey),
 				UDim2.new(0, 182, 0, Theme.ButtonHeight),
 				addFriendFunc
 			)
@@ -720,12 +720,9 @@ local function Initialize()
 
 		Visible = false,
 	})
+	this.ButtonsContainer = buttonsContainer
 
-	if FFlagIEMButtonsResponsiveLayout then
-		this.ButtonsContainer = buttonsContainer
-	end
-
-	if FFlagRelocateMobileMenuButtons and (FIntRelocateMobileMenuButtonsVariant == 1 or FIntRelocateMobileMenuButtonsVariant == 3) then
+	if FFlagEnableSideSheet or (FFlagRelocateMobileMenuButtons and (FIntRelocateMobileMenuButtonsVariant == 1 or FIntRelocateMobileMenuButtonsVariant == 3)) then
 		buttonsContainer.Parent = nil
 	end
 
@@ -757,27 +754,25 @@ local function Initialize()
 	leaveButton.Position = UDim2.new(0, 0, 0, 0)
 	leaveLabel.Size = UDim2.new(1, -4, 1, 0)
 	leaveLabel.Position = UDim2.new(0, 2, 0, 0)
-	if FFlagIEMButtonsResponsiveLayout then
-		Create "UIListLayout" {
-			FillDirection = Enum.FillDirection.Horizontal,
-			SortOrder = Enum.SortOrder.LayoutOrder,
-			VerticalAlignment = Enum.VerticalAlignment.Center,
+	Create "UIListLayout" {
+		FillDirection = Enum.FillDirection.Horizontal,
+		SortOrder = Enum.SortOrder.LayoutOrder,
+		VerticalAlignment = Enum.VerticalAlignment.Center,
 
-			Parent = leaveButton,
-		}
-		Create "UIPadding" {
-			PaddingLeft = UDim.new(0.025, 0),
+		Parent = leaveButton,
+	}
+	Create "UIPadding" {
+		PaddingLeft = UDim.new(0.025, 0),
 
-			Parent = leaveButton,
-		}
-		-- replacing full width with flex grow width
-		leaveLabel.Size = UDim2.new(0, 0, 1, 0)
+		Parent = leaveButton,
+	}
+	-- replacing full width with flex grow width
+	leaveLabel.Size = UDim2.new(0, 0, 1, 0)
 
-		Create "UIFlexItem" {
-			FlexMode = Enum.UIFlexMode.Grow,
-			Parent = leaveLabel,
-		}
-	end
+	Create "UIFlexItem" {
+		FlexMode = Enum.UIFlexMode.Grow,
+		Parent = leaveLabel,
+	}
 
 	if not FFlagRelocateMobileMenuButtons or FIntRelocateMobileMenuButtonsVariant == 0 then
 		leaveButton.Parent = buttonsContainer
@@ -806,8 +801,8 @@ local function Initialize()
 			Constants.AnalyticsTargetName,
 			Constants.AnalyticsResumeGameName,
 			Constants.AnalyticsMenuActionName,
-			{ 
-				source = Constants.AnalyticsResumeButtonSource, 
+			{
+				source = Constants.AnalyticsResumeButtonSource,
 				playsessionid = this.playSessionId ,
 				universeid = tostring(game.GameId) ,
 			}
@@ -825,15 +820,20 @@ local function Initialize()
 
 	if not FFlagRelocateMobileMenuButtons or FIntRelocateMobileMenuButtonsVariant == 0 then
 		resumeButton.Parent = buttonsContainer
+
+		if FFlagIEMTabFocusNav then
+			this.FirstSelectableObjects = {resumeButton, resetButton, leaveButton}
+			this.FirstSelectableObjectsUpdated:fire()
+		end
 	end
 
 	local function pollImage()
 		local newMuted = VoiceChatServiceManager.localMuted
 		local image
 		if newMuted == nil then
-			image = PlayerMuteStatusIcons.Loading 
+			image = PlayerMuteStatusIcons.Loading
 		elseif newMuted then
-			image = PlayerMuteStatusIcons.MicOff 
+			image = PlayerMuteStatusIcons.MicOff
 		elseif VoiceChatServiceManager.isTalking then
 			local level = math.random()
 			local roundedLevel = 20 * math.floor(0.5 + 5 * level)
@@ -907,10 +907,7 @@ local function Initialize()
 	utility:OnResized(buttonsContainer, function(newSize, isPortrait)
 		if (isPortrait or utility:IsSmallTouchScreen()) and (not Theme.AlwaysShowBottomBar()) then
 			local buttonsFontSize = isPortrait and Theme.textSize(18) or Theme.textSize(24)
-			if Theme.UseBiggerText then
-				buttonsFontSize = Theme.textSize(20)
-			end
-			buttonsContainer.Visible = not Theme.EnableVerticalBottomBar
+			buttonsContainer.Visible = true
 			buttonsContainer.Size = UDim2.new(1, 0, 0, Theme.ButtonHeight)
 			if not FFlagRelocateMobileMenuButtons or FIntRelocateMobileMenuButtonsVariant == 0 then
 				resetLabel.TextSize = buttonsFontSize
@@ -922,19 +919,6 @@ local function Initialize()
 			buttonsContainer.Size = UDim2.new(1, 0, 0, 0)
 		end
 	end)
-
-	if FFlagUseNotificationsLocalization then
-		local function ApplyLocalizeTextSettingsToLabel(label)
-			label.AnchorPoint = Vector2.new(0.5, 0.5)
-			label.Position = UDim2.new(0.5, 0, 0.5, -3)
-			label.Size = UDim2.new(0.75, 0, 0.5, 0)
-		end
-		if not FFlagRelocateMobileMenuButtons or FIntRelocateMobileMenuButtonsVariant == 0 then
-			ApplyLocalizeTextSettingsToLabel(leaveLabel)
-			ApplyLocalizeTextSettingsToLabel(resetLabel)
-			ApplyLocalizeTextSettingsToLabel(resetLabel)
-		end
-	end
 
 	local function reportAbuseButtonCreate(playerLabel, player)
 		local rightSideButtons = playerLabel:FindFirstChild("RightSideButtons")
@@ -1094,7 +1078,7 @@ local function Initialize()
 
 		textLabel.Font = Theme.font(Enum.Font.SourceSansSemibold, "Semibold")
 		textLabel.AutoLocalize = false
-		textLabel.Text = LocalizationStrings[localeId]:Format(Constants.InviteConnectionsLocalizedKey)
+		textLabel.Text = LocalizationStrings[localeId]:Format(if FFlagConnectionsToFriendsRename then Constants.InviteFriendsLocalizedKey else Constants.InviteConnectionsLocalizedKey)
 
 		icon.AnchorPoint = Vector2.new(0, 0.5)
 		icon.Position = UDim2.new(0, 18, 0.5, 0)
@@ -1371,6 +1355,9 @@ local function Initialize()
 			utility:MakeFocusState(frame, renderName)
 
 			frame.Activated:Connect(function()
+				if GetFFlagVoiceChatLogConnectionSource() then
+					VoiceChatServiceManager.pendingConnectionSource = VoiceConstants.VOICE_CONNECTION_SOURCE.SETTINGS_TOGGLE_ON
+				end
 				VoiceChatServiceManager:JoinVoice()
 			end)
 
@@ -1692,7 +1679,7 @@ local function Initialize()
 						reportFlagChangedWithCombinedName(reportFlag, "AbsolutePosition")
 					end
 				else
-					if FFlagNullCheckPlayersNameLabel and not frame:FindFirstChild("NameLabel") then
+					if not frame:FindFirstChild("NameLabel") then
 						return
 					end
 					frame.NameLabel.Text = "@" .. player.Name
@@ -1818,14 +1805,8 @@ local function Initialize()
 				local status = VoiceChatServiceManager.participants[tostring(player.UserId)]
 				-- Check if a player is not muted to update the Mute All button.
 				if status then
-					if GetFFlagDisableMuteAllCheckForIsMuted() then
-						if not status.isMutedLocally then
-							allMuted = false
-						end
-					else
-						if not status.isMutedLocally and not status.isMuted then
-							allMuted = false
-						end
+					if not status.isMutedLocally then
+						allMuted = false
 					end
 				end
 				muteButtonUpdate(frame, status)
@@ -1849,7 +1830,7 @@ local function Initialize()
 		muteAllButton.Icon.Image =
 			VoiceChatServiceManager:GetIcon(muteAllState and "MuteAll" or "UnmuteAll", "Misc")
 	end
-	
+
 
 	local function destroyAllUserMuteButtons()
 		local players = PlayersService:GetPlayers()
@@ -1877,6 +1858,9 @@ local function Initialize()
 	local rebuildPlayerList = function(switchedFromGamepadInput)
 		if FFlagIEMFocusNavToButtons then
 			this.LastSelectableObjects = {}
+		end
+		if FFlagIEMTabFocusNav and not this.ButtonsContainer.Visible then
+			this.FirstSelectableObjects = {}
 		end
 		sortedPlayers = PlayersService:GetPlayers()
 
@@ -1980,6 +1964,18 @@ local function Initialize()
 		then
 			addJoinVoiceButton()
 			updateButtonsLayout()
+		end
+
+		if FFlagIEMTabFocusNav then
+			if showMuteAllButton then 
+				table.insert(this.FirstSelectableObjects, muteAllButton)
+			end
+			if showShareGameButton then
+				table.insert(this.FirstSelectableObjects, shareGameButton)
+			end
+			if showMuteAllButton or showShareGameButton then
+				this.FirstSelectableObjectsUpdated:fire()
+			end
 		end
 
 		local inspectMenuEnabled = GuiService:GetInspectMenuEnabled()
@@ -2113,6 +2109,17 @@ local function Initialize()
 						this.LastSelectableObjectsUpdated:fire()
 					end
 				end
+				if FFlagIEMTabFocusNav and index == 1 and #this.FirstSelectableObjects == 0 then
+					local rightSideButtons = frame:FindFirstChild("RightSideButtons")
+					if rightSideButtons then
+						for _, button in rightSideButtons:GetChildren() do
+							if button:IsA("ImageButton") then
+								table.insert(this.FirstSelectableObjects, button)
+							end
+						end
+						this.FirstSelectableObjectsUpdated:fire()
+					end
+				end
 			end
 		end
 
@@ -2215,7 +2222,7 @@ local function Initialize()
 			end
 		end
 
-		if UserInputService.GamepadEnabled then
+		if UserInputService.GamepadEnabled and not (FFlagIEMTabFocusNav and GuiService.SelectedCoreObject) then
 			if GetFFlagCleanupMuteSelfButton() then
 				pcall(function()
 					if FFlagOnlyCaptureFocusIfOnPlayerPage then
@@ -2402,7 +2409,7 @@ local function Initialize()
 			inspectButton:Destroy()
 		end
 
-		if GetFFlagDestroyPlayerCardOnLeave() then 
+		if GetFFlagDestroyPlayerCardOnLeave() then
 			existingPlayerLabels[player.Name] = nil
 			playerLabel:Destroy()
 		end

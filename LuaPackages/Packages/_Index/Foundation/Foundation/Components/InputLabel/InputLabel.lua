@@ -24,6 +24,8 @@ export type InputLabelProps = {
 	textStyle: Types.ColorStyle?,
 	-- Whether the input is required or not. Leave nil for the majority case
 	isRequired: boolean?,
+	-- Whether the input is disabled
+	isDisabled: boolean?,
 	-- Size of the input label
 	size: InputLabelSize?,
 	-- Callback for when the input label is activated.
@@ -76,12 +78,14 @@ local function InputLabel(inputLabelProps: InputLabelProps, ref: React.Ref<GuiOb
 			selection = {
 				Selectable = false,
 			},
-			onActivated = props.onActivated,
-			onStateChanged = onStateChanged,
+			onActivated = if not props.isDisabled then props.onActivated else nil,
+			onStateChanged = if not props.isDisabled then onStateChanged else nil,
 			stateLayer = { affordance = StateLayerAffordance.None },
 			textStyle = props.textStyle,
 			tag = {
-				["size-0 auto-xy content-default text-align-x-left text-align-y-top text-wrap"] = true,
+				["size-0 auto-xy text-wrap text-align-x-left text-align-y-top"] = true,
+				["content-muted"] = props.isDisabled,
+				["content-default"] = not props.isDisabled,
 				["text-title-small"] = props.size == InputLabelSize.Small,
 				["text-title-medium"] = props.size == InputLabelSize.Medium,
 				["text-title-large"] = props.size == InputLabelSize.Large,

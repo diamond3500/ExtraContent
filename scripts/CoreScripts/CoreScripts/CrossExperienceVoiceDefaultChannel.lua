@@ -9,8 +9,6 @@ local Promise = require(CorePackages.Packages.Promise)
 local AnalyticsService = game:GetService("RbxAnalyticsService")
 
 local CrossExperience = require(CorePackages.Workspace.Packages.CrossExperience)
-local GetFFlagPartyVoiceMuteScopeFix =
-	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagPartyVoiceMuteScopeFix
 local FStringTimeoutLoadingLocalPlayerInBackgroundDM =
 	require(CorePackages.Workspace.Packages.SharedFlags).FStringTimeoutLoadingLocalPlayerInBackgroundDM
 
@@ -20,7 +18,6 @@ local LOCAL_PLAYER_LOADING_TIMEOUT_ENUM = CrossExperience.Constants.LOCAL_PLAYER
 
 local FIntBackgroundDMLocalPlayerLoadingTimeoutSeconds =
 	game:DefineFastInt("BackgroundDMLocalPlayerLoadingTimeoutSeconds", 12)
-local FFlagDelayBackgroundDMLocalPlayerLoading = game:DefineFastFlag("DelayBackgroundDMLocalPlayerLoading", false)
 local FFlagDelayAudioFocusReplication = game:DefineFastFlag("DelayAudioFocusReplication", false)
 local FIntPlayerAudioFocusReplicationTimeoutSeconds =
 	game:DefineFastInt("PlayerAudioFocusReplicationTimeoutSeconds", 10)
@@ -37,7 +34,8 @@ local function sendAnalyticsEvent(eventName: string, args: { [string]: any }?)
 	local cevJoinAttemptId = getMemStorageKey(CEV_JOIN_ATTEMPT_ID_KEY)
 	analyticsPayload.cevJoinAttemptId = cevJoinAttemptId
 	analyticsPayload.clientTimeStamp = os.time()
-	analyticsPayload.userId = if FStringTimeoutLoadingLocalPlayerInBackgroundDM ~= LOCAL_PLAYER_LOADING_TIMEOUT_ENUM.Disable
+	analyticsPayload.userId = if FStringTimeoutLoadingLocalPlayerInBackgroundDM
+			~= LOCAL_PLAYER_LOADING_TIMEOUT_ENUM.Disable
 		then nil
 		else localUserId
 
@@ -116,12 +114,8 @@ local function ensureLocalPlayerWithTimeout()
 end
 
 if FStringTimeoutLoadingLocalPlayerInBackgroundDM ~= LOCAL_PLAYER_LOADING_TIMEOUT_ENUM.Disable then
-	if FFlagDelayBackgroundDMLocalPlayerLoading then
-		-- Delay loading local player until we need it much later
-		localUserId = -1
-	else
-		localUserId = ensureLocalPlayerWithTimeout()
-	end
+	-- Delay loading local player until we need it much later
+	localUserId = -1
 end
 
 if FStringTimeoutLoadingLocalPlayerInBackgroundDM == LOCAL_PLAYER_LOADING_TIMEOUT_ENUM.Disable then
@@ -155,11 +149,7 @@ local GetFFlagVoiceChatClientRewriteMasterLua = SharedFlags.GetFFlagVoiceChatCli
 
 local FFlagUseNotificationServiceIsConnected = game:DefineFastFlag("UseNotificationServiceIsConnected", false)
 local FFlagDefaultChannelEnableDefaultVoice = game:DefineFastFlag("DefaultChannelEnableDefaultVoice", true)
-local FFlagAlwaysJoinWhenUsingAudioAPI = game:DefineFastFlag("AlwaysJoinWhenUsingAudioAPI", false)
-local FFlagDefaultChannelDontWaitOnCharacterWithAudioApi =
-	game:DefineFastFlag("DefaultChannelDontWaitOnCharacterWithAudioApi", false)
 local FFlagEnableCrossExpVoiceDebug = game:DefineFastFlag("EnableCrossExpVoiceDebug", false)
-local GetFFlagEnableLuaVoiceChatAnalytics = require(VoiceChatCore.Flags.GetFFlagEnableLuaVoiceChatAnalytics)
 local GetFFlagFixSeamlessVoiceIntegrationWithPrivateVoice =
 	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagFixSeamlessVoiceIntegrationWithPrivateVoice
 local GetFFlagEnableCrossExperienceVoiceCaptureMute =
@@ -190,6 +180,7 @@ local VOICE_STATUS = Constants.VOICE_STATUS
 
 local FFlagFixPartyVoiceGetPermissions = SharedFlags.GetFFlagFixPartyVoiceGetPermissions()
 local FFlagEnablePartyVoiceChangersInLua = SharedFlags.FFlagEnablePartyVoiceChangersInLua
+local FFlagEnableCEVPersistMuteStateForAFM = game:DefineFastFlag("EnableCEVPersistMuteStateForAFM", false)
 
 local undeafenTimerHandle: thread? = nil
 
@@ -381,7 +372,9 @@ local onLocalPlayerActiveChanged = function(result)
 end
 
 local onLocalPlayerMuteChanged = function(isMuted)
-	coreVoiceManagerState.previousMutedState = isMuted
+	if not FFlagEnableCEVPersistMuteStateForAFM then
+		coreVoiceManagerState.previousMutedState = isMuted
+	end
 	local eventName = if isMuted
 		then CrossExperience.Constants.EVENTS.PARTY_VOICE_PARTICIPANT_WAS_MUTED
 		else CrossExperience.Constants.EVENTS.PARTY_VOICE_PARTICIPANT_WAS_UNMUTED
@@ -463,6 +456,9 @@ local toggleMutePlayer = function(params)
 	if FFlagPartyVoiceExecuteVoiceActionsPostAsyncInit then
 		executePostVoiceAsyncInit(function()
 			if isLocalPlayer then
+				if FFlagEnableCEVPersistMuteStateForAFM then
+					coreVoiceManagerState.previousMutedState = not CoreVoiceManager.localMuted
+				end
 				CoreVoiceManager:ToggleMic("Squads")
 			else
 				CoreVoiceManager:ToggleMutePlayer(userId)
@@ -652,13 +648,10 @@ local function initializeDefaultChannel(defaultMuted)
 	log:info("Joining default channel")
 
 	local success = VoiceChatInternal:JoinByGroupIdToken("default", defaultMuted)
-
-	if GetFFlagEnableLuaVoiceChatAnalytics() then
-		if success then
-			Analytics:reportVoiceChatJoinResult(true, "defaultJoinSuccess")
-		else
-			Analytics:reportVoiceChatJoinResult(false, "defaultJoinFailed", "error")
-		end
+	if success then
+		Analytics:reportVoiceChatJoinResult(true, "defaultJoinSuccess")
+	else
+		Analytics:reportVoiceChatJoinResult(false, "defaultJoinFailed", "error")
 	end
 
 	return success
@@ -673,7 +666,7 @@ local function validateSetup()
 		log:debug("NotificationService connected")
 	end
 
-	if not FFlagDefaultChannelDontWaitOnCharacterWithAudioApi or not VoiceChatService.UseNewAudioApi then
+	if not VoiceChatService.UseNewAudioApi then
 		if not Players.LocalPlayer.Character then
 			Players.LocalPlayer.CharacterAdded:Wait()
 			log:debug("Player character loaded")
@@ -684,29 +677,13 @@ local function validateSetup()
 
 	if EnableDefaultVoiceAvailable and FFlagDefaultChannelEnableDefaultVoice then
 		local VoiceChatService = game:FindService("VoiceChatService")
-		if FFlagAlwaysJoinWhenUsingAudioAPI then
-			if not VoiceChatService then
-				log:info("VoiceChatService not found. Assuming default values.")
-				-- We only don't want to early out when the new audio API is enabled
-			elseif not VoiceChatService.EnableDefaultVoice and not VoiceChatService.UseNewAudioApi then
-				log:debug("Default channel is disabled.")
-				if GetFFlagEnableLuaVoiceChatAnalytics() then
-					Analytics:reportVoiceChatJoinResult(false, "defaultDisabled")
-					notifyVoiceStatusChange(Constants.VOICE_STATUS.ERROR_VOICE_SETUP, "Default channel disabled")
-				end
-				return false
-			end
-		else
-			if not VoiceChatService then
-				log:info("VoiceChatService not found. Assuming default values.")
-			elseif not VoiceChatService.EnableDefaultVoice then
-				log:debug("Default channel is disabled.")
-				if GetFFlagEnableLuaVoiceChatAnalytics() then
-					Analytics:reportVoiceChatJoinResult(false, "defaultDisabled")
-					notifyVoiceStatusChange(Constants.VOICE_STATUS.ERROR_VOICE_SETUP, "Default channel disabled")
-				end
-				return false
-			end
+		if not VoiceChatService then
+			log:info("VoiceChatService not found. Assuming default values.")
+		elseif not VoiceChatService.EnableDefaultVoice and not VoiceChatService.UseNewAudioApi then
+			log:debug("Default channel is disabled.")
+			Analytics:reportVoiceChatJoinResult(false, "defaultDisabled")
+			notifyVoiceStatusChange(Constants.VOICE_STATUS.ERROR_VOICE_SETUP, "Default channel disabled")
+			return false
 		end
 	end
 	return true
@@ -787,12 +764,6 @@ local function setupListeners()
 				CoreVoiceManager:MuteAll(false, params.context)
 			end)
 		end)
-	end
-
-	-- Always start party voice muted to prevent updateRecording race conditions
-	-- Audio focus management will safely unmute after all transitions are complete
-	if not GetFFlagPartyVoiceMuteScopeFix() then
-		unmuteMicrophoneOnce()
 	end
 
 	if FFlagEnableCrossExpVoiceDebug then
@@ -901,19 +872,17 @@ function initializeAFM()
 				end
 
 				if (FFlagPartyVoiceFixCaptureVideoCheck and not isCapturingVideo()) or not isCapturingVideo then
-					if GetFFlagPartyVoiceMuteScopeFix() then
-						CoreVoiceManager:MuteAll(true, "AudioFocusManagement - CEV deafenAll")
-					else
-						CoreVoiceManager:MuteAll(true, "AudioFocusManagement CEV")
-					end
+					CoreVoiceManager:MuteAll(true, "AudioFocusManagement - CEV deafenAll")
 				end
 
-				if not CoreVoiceManager.localMuted then
-					if GetFFlagPartyVoiceMuteScopeFix() then
-						CoreVoiceManager:ToggleMic("AudioFocusManagement - CEV deafenAll")
-					else
-						CoreVoiceManager:ToggleMic()
-					end
+				if
+					not CoreVoiceManager.localMuted
+					and (
+						not FFlagEnableCEVPersistMuteStateForAFM
+						or coreVoiceManagerState.previousMutedState == CoreVoiceManager.localMuted
+					)
+				then
+					CoreVoiceManager:ToggleMic("AudioFocusManagement - CEV deafenAll")
 				end
 			end
 
@@ -927,18 +896,18 @@ function initializeAFM()
 					CoreVoiceManager:MuteAll(false, "AudioFocusManagement - CEV Mute All")
 				end
 
-				if GetFFlagPartyVoiceMuteScopeFix() then
-					if CoreVoiceManager.localMuted == nil then
-						log:info("CEV undeafenAll - Voice not connected yet - calling unmuteMicrophoneOnce")
-						unmuteMicrophoneOnce()
-					elseif CoreVoiceManager.localMuted then
-						log:info("CEV undeafenAll - Voice connected and muted - unmuting immediately")
-						CoreVoiceManager:ToggleMic("AudioFocusManagement - CEV undeafenAll")
-					end
-				else
-					if CoreVoiceManager.localMuted then
-						CoreVoiceManager:ToggleMic()
-					end
+				if CoreVoiceManager.localMuted == nil then
+					log:info("CEV undeafenAll - Voice not connected yet - calling unmuteMicrophoneOnce")
+					unmuteMicrophoneOnce()
+				elseif
+					CoreVoiceManager.localMuted
+					and (
+						not FFlagEnableCEVPersistMuteStateForAFM
+						or coreVoiceManagerState.previousMutedState ~= CoreVoiceManager.localMuted
+					)
+				then
+					log:info("CEV undeafenAll - Voice connected and muted - unmuting immediately")
+					CoreVoiceManager:ToggleMic("AudioFocusManagement - CEV undeafenAll")
 				end
 			end
 
@@ -955,13 +924,11 @@ function initializeAFM()
 
 			AudioFocusService.OnUndeafenVoiceAudio:Connect(function(serviceContextId)
 				if serviceContextId == contextId then
-					if GetFFlagPartyVoiceMuteScopeFix() then
-						log:info(
-							"CEV OnUndeafenVoiceAudio fired for context: {} - expected: {}",
-							serviceContextId,
-							contextId
-						)
-					end
+					log:info(
+						"CEV OnUndeafenVoiceAudio fired for context: {} - expected: {}",
+						serviceContextId,
+						contextId
+					)
 					if FIntPartyVoiceUndeafenDelayMS > 0 then
 						if undeafenTimerHandle then
 							task.cancel(undeafenTimerHandle)
@@ -979,21 +946,15 @@ function initializeAFM()
 			end)
 
 			local requestAudioFocusWithPromise = function(id, prio)
-				if GetFFlagPartyVoiceMuteScopeFix() then
-					log:info("CEV requestAudioFocusWithPromise - id: {} - priority: {}", id, prio)
-				end
+				log:info("CEV requestAudioFocusWithPromise - id: {} - priority: {}", id, prio)
 				return Promise.new(function(resolve, reject)
 					local requestSuccess, focusGranted =
 						pcall(AudioFocusService.RequestFocus, AudioFocusService, id, prio)
 					if requestSuccess then
-						if GetFFlagPartyVoiceMuteScopeFix() then
-							log:info("CEV requestAudioFocusWithPromise - focusGranted: {}", focusGranted)
-						end
+						log:info("CEV requestAudioFocusWithPromise - focusGranted: {}", focusGranted)
 						resolve(focusGranted) -- Still resolve, but indicate failure to grant focus
 					else
-						if GetFFlagPartyVoiceMuteScopeFix() then
-							log:info("CEV requestAudioFocusWithPromise - rejected")
-						end
+						log:info("CEV requestAudioFocusWithPromise - rejected")
 						reject("Failed to call RequestFocus due to an error") -- Reject the promise in case of an error
 					end
 				end)
@@ -1002,9 +963,7 @@ function initializeAFM()
 			requestAudioFocusWithPromise(contextId, focusPriority)
 				:andThen(function(focusGranted)
 					if focusGranted then
-						if GetFFlagPartyVoiceMuteScopeFix() then
-							log:info("CEV audio focus request granted, preparing to undeafen.")
-						end
+						log:info("CEV audio focus request granted, preparing to undeafen.")
 						CoreVoiceManager.muteChanged.Event:Once(function(muted)
 							if
 								muted ~= nil and (FFlagPartyVoiceFixCaptureVideoCheck and not isCapturingVideo())
@@ -1075,12 +1034,10 @@ end
 
 function startVoice()
 	if validateSetup() then
-		if FFlagDelayBackgroundDMLocalPlayerLoading then
-			-- Call it here instead, right before we actually need the LocalPlayer
-			if FStringTimeoutLoadingLocalPlayerInBackgroundDM ~= LOCAL_PLAYER_LOADING_TIMEOUT_ENUM.Disable then
-				localUserId = ensureLocalPlayerWithTimeout()
-				log:info("Delayed loading of LocalPlayer loaded with UserId: {}", localUserId)
-			end
+		-- Call it here instead, right before we actually need the LocalPlayer
+		if FStringTimeoutLoadingLocalPlayerInBackgroundDM ~= LOCAL_PLAYER_LOADING_TIMEOUT_ENUM.Disable then
+			localUserId = ensureLocalPlayerWithTimeout()
+			log:info("Delayed loading of LocalPlayer loaded with UserId: {}", localUserId)
 		end
 		setupListeners()
 		initializeVoice()

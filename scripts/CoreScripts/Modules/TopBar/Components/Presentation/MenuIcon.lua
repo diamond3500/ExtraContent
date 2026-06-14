@@ -6,13 +6,11 @@ local GamepadService = game:GetService("GamepadService")
 local ContextActionService = game:GetService("ContextActionService")
 
 local SharedFlags = require(CorePackages.Workspace.Packages.SharedFlags)
-local FFlagEnableUnibarFtuxTooltips = SharedFlags.FFlagEnableUnibarFtuxTooltips
 local FFlagEnableConsoleExpControls = SharedFlags.FFlagEnableConsoleExpControls
 local FFlagReduceTopBarInsetsWhileHidden = SharedFlags.FFlagReduceTopBarInsetsWhileHidden
 local FFlagShowUnibarOnVirtualCursor = SharedFlags.FFlagShowUnibarOnVirtualCursor
 local FFlagAddUILessMode = SharedFlags.FFlagAddUILessMode
 local FIntAddUILessModeVariant = SharedFlags.FIntAddUILessModeVariant
-local FFlagFixChromeConsoleNilRefs = SharedFlags.FFlagFixChromeConsoleNilRefs
 
 local Signals = require(CorePackages.Packages.Signals)
 local Display = require(CorePackages.Workspace.Packages.Display)
@@ -28,7 +26,7 @@ local TooltipOrientation = UIBlox.App.Dialog.Enum.TooltipOrientation
 local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 local Chrome = RobloxGui.Modules.Chrome
 local ChromeFocusUtils = require(CorePackages.Workspace.Packages.Chrome).FocusUtils
-local ChromeEnabled = require(Chrome.Enabled)
+local ChromeEnabled = require(CorePackages.Workspace.Packages.Chrome).Enabled
 local isInExperienceUIVREnabled =
 	require(CorePackages.Workspace.Packages.SharedExperimentDefinition).isInExperienceUIVREnabled
 local ChromeService = if ChromeEnabled() and (FFlagEnableConsoleExpControls or isInExperienceUIVREnabled) then require(Chrome.Service) else nil :: never
@@ -45,7 +43,7 @@ local Signals = require(CorePackages.Packages.Signals)
 local SettingsShowSignal = require(CorePackages.Workspace.Packages.CoreScriptsCommon).SettingsShowSignal
 local createEffect = Signals.createEffect
 
-local VRHub = require(RobloxGui.Modules.VR.VRHub)
+local VRHub = require(CorePackages.Workspace.Packages.VrCommon).VRHub
 
 local isSubjectToDesktopPolicies = SharedFlags.isSubjectToDesktopPolicies
 
@@ -203,9 +201,7 @@ function MenuIcon:init()
 			self:setState({
 				isHovering = true,
 			})
-			if FFlagEnableUnibarFtuxTooltips then
-				self.fireMenuIconHoveredSignal(true)
-			end
+			self.fireMenuIconHoveredSignal(true)
 
 			delay(DEFAULT_DELAY_TIME, function()
 				if self.state.isHovering and not self.state.clickLatched then
@@ -218,9 +214,7 @@ function MenuIcon:init()
 				end
 			end)
 		else
-			if FFlagEnableUnibarFtuxTooltips then
-				self.fireMenuIconHoveredSignal(false)
-			end
+			self.fireMenuIconHoveredSignal(false)
 		end
 
 		if isNewInGameMenuEnabled() then
@@ -253,6 +247,9 @@ function MenuIcon:init()
 	if ChromeEnabled() and FFlagEnableConsoleExpControls then
 	self.onMenuIconSelectionChanged = function(MenuIcon: GuiObject, isMenuIconSelected: boolean, oldSelection: GuiObject, newSelection: GuiObject)
 			if FFlagEnableConsoleExpControls then 
+				if GamepadService.GamepadCursorEnabled then
+					return
+				end
 				if not (FFlagShowUnibarOnVirtualCursor and GamepadService.GamepadCursorEnabled) and newSelection and string.find(newSelection.Name, UnibarConstants.ICON_NAME_PREFIX :: string) then
 					ChromeService:enableFocusNav()
 				end
@@ -491,7 +488,7 @@ function MenuIcon:render()
 			end
 
 			local IconHitArea
-			if ChromeEnabled() and FFlagEnableConsoleExpControls and (not FFlagFixChromeConsoleNilRefs or self.props.unibarMenuRef and self.props.unibarMenuRef.current) then
+			if ChromeEnabled() and FFlagEnableConsoleExpControls and (self.props.unibarMenuRef and self.props.unibarMenuRef.current) then
 				local leftmostUnibarIcon = ChromeService:menuList():get()[1]
 				local leftmostUnibarIconId = if leftmostUnibarIcon then (UnibarConstants.ICON_NAME_PREFIX::string) .. leftmostUnibarIcon.id else nil
 				local nextSelectionRight = if self.props.unibarMenuRef.current and leftmostUnibarIconId then 
@@ -530,7 +527,7 @@ function MenuIcon:render()
 				[Roact.Change.AbsolutePosition] = onChange,
 			}, {
 				BadgeOver12 = badgeOver12,
-				Background = if ChromeEnabled() and FFlagEnableConsoleExpControls and (not FFlagFixChromeConsoleNilRefs or self.props.unibarMenuRef and self.props.unibarMenuRef.current) then nil else background,
+				Background = if ChromeEnabled() and FFlagEnableConsoleExpControls and (self.props.unibarMenuRef and self.props.unibarMenuRef.current) then nil else background,
 				IconHitArea = if ChromeEnabled() and FFlagEnableConsoleExpControls then IconHitArea else nil ,
 				ShowTopBarListener = showTopBarListener,
 			})

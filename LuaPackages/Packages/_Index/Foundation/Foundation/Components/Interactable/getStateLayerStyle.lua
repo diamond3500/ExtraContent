@@ -40,10 +40,10 @@ end
 
 local function getStateLayerStyle(
 	tokens: Tokens,
-	stateLayer: StateLayer?,
+	mode: StateLayerMode?,
 	guiState: ControlState
 ): { Color3: Color3, Transparency: number }
-	local colorNamespace = stateLayerModeToTokenNamespace(stateLayer and stateLayer.mode)
+	local colorNamespace = stateLayerModeToTokenNamespace(mode)
 	local stateLayerState = guiStateToStateLayer(guiState)
 
 	local stateLayerStyle = (tokens[colorNamespace] :: typeof(tokens.Color)).State[stateLayerState]

@@ -1,7 +1,5 @@
 local Foundation = script:FindFirstAncestor("Foundation")
 
-local Flags = require(Foundation.Utility.Flags)
-
 local IconSize = require(Foundation.Enums.IconSize)
 
 local Input = require(Foundation.Components.InternalInput)
@@ -41,18 +39,16 @@ type OptionSelectorGroupItemVariantProps = {
 local function variantsFactory(tokens: Tokens)
 	local common = {
 		container = {
-			tag = "col align-y-center align-x-left radius-medium gap-xsmall wrap stroke-standard",
+			tag = "col wrap align-x-left align-y-center gap-xsmall radius-medium",
 			radius = tokens.Radius.Medium,
 		},
 		content = tokens.Color.Content.Default,
 		itemInner = {
-			tag = if Flags.FoundationFixOptionSelectorGroupItemSize
-				then "col size-full-0 auto-y gap-xsmall"
-				else "col auto-xy gap-xsmall",
+			tag = "col gap-xsmall size-full-0 auto-y",
 		},
-		label = { tag = "auto-xy fill" },
-		metadata = { tag = "auto-xy shrink" },
-		description = { tag = "auto-xy grow" },
+		label = { tag = "fill auto-xy" },
+		metadata = { tag = "shrink auto-xy" },
+		description = { tag = "grow auto-xy" },
 	}
 
 	local sizes: { [InputSize]: VariantProps } = {

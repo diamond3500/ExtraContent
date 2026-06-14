@@ -4,7 +4,9 @@ local BuilderIcons = require(Packages.BuilderIcons)
 local Dash = require(Packages.Dash)
 local React = require(Packages.React)
 
+local ThumbnailType = require(Foundation.Enums.ThumbnailType)
 local Types = require(Foundation.Components.Types)
+local getRbxThumb = require(Foundation.Utility.getRbxThumb)
 type ItemId = Types.ItemId
 local BaseMenu = require(Foundation.Components.BaseMenu)
 local InputSize = require(Foundation.Enums.InputSize)
@@ -23,8 +25,8 @@ end
 local function useMultiselect(items: { BaseMenuItem })
 	local state, setState = React.useState(items)
 	local onActivated = React.useCallback(function(id: ItemId)
-		setState(function()
-			local newValue = table.clone(state)
+		setState(function(prevState)
+			local newValue = table.clone(prevState)
 			for _, value in newValue do
 				if value.id == id then
 					value.isChecked = not value.isChecked
@@ -54,6 +56,14 @@ local BASE_ITEMS: { BaseMenuItem } = {
 		isDisabled = true,
 		text = "Item",
 	},
+}
+
+local EXPERIENCE_DATA: { { name: string, universeId: number } } = {
+	{ name = "[💘] RIVALS", universeId = 6035872082 },
+	{ name = "[❤️ Event] Blox Fruits", universeId = 994732206 },
+	{ name = "Bee Swarm Simulator", universeId = 601130232 },
+	{ name = "Murder Mystery 2", universeId = 66654135 },
+	{ name = "[❤️‍🔥] Adopt Me!", universeId = 383310974 },
 }
 
 return {
@@ -156,7 +166,7 @@ return {
 			story = function()
 				return React.createElement(
 					View,
-					{ tag = "row gap-xxlarge size-full-0 auto-y wrap" },
+					{ tag = "row wrap gap-xxlarge size-full-0 auto-y" },
 					Dash.map(InputSize, function(size)
 						return React.createElement(BaseMenu.Root, {
 							size = size,
@@ -264,6 +274,30 @@ return {
 					items = items,
 					maxHeight = 500,
 					onActivated = Dash.noop(),
+				})
+			end,
+		},
+		{
+			name = "Experience Icons",
+			story = function(props)
+				local selectedItem, setSelectedItem = React.useState(EXPERIENCE_DATA[1].name :: ItemId)
+
+				local items = {}
+				for _, experience in EXPERIENCE_DATA do
+					table.insert(items, {
+						id = experience.name,
+						icon = getRbxThumb(ThumbnailType.GameIcon, experience.universeId),
+						isChecked = selectedItem == experience.name,
+						text = experience.name,
+					})
+				end
+
+				return React.createElement(BaseMenu.Root, {
+					size = props.controls.size,
+					onActivated = function(id)
+						setSelectedItem(id)
+					end,
+					items = items,
 				})
 			end,
 		},

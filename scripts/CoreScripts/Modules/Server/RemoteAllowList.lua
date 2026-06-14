@@ -1,3 +1,8 @@
+local CorePackages = game:GetService("CorePackages")
+local FFlagEnableModerateChatRemoteEvent = require(CorePackages.Workspace.Packages.SharedFlags).FFlagEnableModerateChatRemoteEvent
+local FFlagRemoteAllowListAddExpChatFeatureValueChanged =
+	game:DefineFastFlag("RemoteAllowListAddExpChatFeatureValueChanged", false)
+
 return function()
 	assert(game:FindService("NetworkServer") ~= nil)
 	local networkPeer = game:GetService("NetworkServer")
@@ -14,13 +19,13 @@ return function()
 
 	-- modules/social/exp-chat/exp-chat-server/src/createDispatchRemoteFunction.lua
 	table.insert(allowList, "WhisperChat")
-	
+
 	-- content/scripts/CoreScripts/ServerCoreScripts/ServerInGameMenu.lua
 	table.insert(allowList, "GetServerType")
-	
+
 	-- content/scripts/CoreScripts/ServerCoreScripts/ServerBulkPurchaseEvent.lua
 	table.insert(allowList, "ServerSideBulkPurchaseEvent")
-	
+
 	-- content/scripts/CoreScripts/ServerCoreScripts/ServerSocialScript.lua
 	table.insert(allowList, "CanChatWith")
 	table.insert(allowList, "SetPlayerBlockList")
@@ -34,6 +39,15 @@ return function()
 	table.insert(allowList, "ShowPlayerJoinedFriendsToast")
 	table.insert(allowList, "ShowFriendJoinedPlayerToast")
 	table.insert(allowList, "CreateOrJoinParty")
+	if game:DefineFastFlag("RemoteAllowListAddSocial", false) then
+		table.insert(allowList, "RequestPlayerProfileSettings")
+	end
+	if FFlagEnableModerateChatRemoteEvent then
+		table.insert(allowList, "ModerateChatSettingUpdated")
+	end
+	if FFlagRemoteAllowListAddExpChatFeatureValueChanged then
+		table.insert(allowList, "ExpChatFeatureValueChanged")
+	end
 
 	-- content/scripts/CoreScripts/ServerCoreScripts/ServerDialog.lua
 	table.insert(allowList, "SetDialogInUse")
@@ -51,11 +65,16 @@ return function()
 	-- content/scripts/CoreScripts/ServerCoreScripts/ReferredByPlayerRemoteEvent.lua
 	table.insert(allowList, "ReferredPlayerJoin")
 
+	-- content/scripts/CoreScripts/ServerCoreScripts/ServerBuildExperiencePlaytestTeleport.lua
+	table.insert(allowList, "BuildExperiencePlaytestTeleport")
+
 	-- content/scripts/CoreScripts/ServerCoreScripts/VoiceDefault.lua
 	table.insert(allowList, "SetUserActive")
-	table.insert(allowList, "SendLikelySpeakingUsers")
-	table.insert(allowList, "ReceiveLikelySpeakingUsers")
+
+	-- content/scripts/CoreScripts/Modules/Server/VR/VRAvatarGesturesServer.lua
+	if game:DefineFastFlag("RemoteAllowListAddVR", false) then
+		table.insert(allowList, "AvatarGesturesVRPlayer")
+	end
 
 	networkPeer:InitializeRemoteAllowList(allowList)
 end
-

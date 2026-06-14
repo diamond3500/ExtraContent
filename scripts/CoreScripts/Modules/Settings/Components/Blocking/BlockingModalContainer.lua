@@ -12,7 +12,8 @@ local Toast = UIBlox.App.Dialog.Toast
 
 local ActionModal = require(script.Parent.ActionModal)
 
-local FFlagEnableToastForBlockingModal = require(Modules.Common.Flags.FFlagEnableToastForBlockingModal)
+local FFlagConnectionsToFriendsRename =
+	require(CorePackages.Workspace.Packages.SharedFlags).FFlagConnectionsToFriendsRename
 
 type Props = {
 	analytics: any,
@@ -38,11 +39,8 @@ local function BlockingModalContainer(props: Props)
 	local onBlockingSuccess = props.onBlockingSuccess
 
 	local screenSize, setScreenSize = React.useState(Vector2.new(1000, 1000))
-	local showError, setShowError
+	local showError, setShowError = React.useState(false)
 
-	if FFlagEnableToastForBlockingModal then
-		showError, setShowError = React.useState(false)
-	end
 
 	local onBlock = React.useCallback(function()
 		local success = blockingUtility:BlockPlayerAsync(player)
@@ -55,17 +53,9 @@ local function BlockingModalContainer(props: Props)
 			if onBlockingSuccess then
 				onBlockingSuccess()
 			end
-			if FFlagEnableToastForBlockingModal then
-				closeModal()
-			end
-		else
-			if FFlagEnableToastForBlockingModal then
-				setShowError(true)
-			end
-		end
-
-		if not FFlagEnableToastForBlockingModal then
 			closeModal()
+		else
+			setShowError(true)
 		end
 	end, { closeModal, player, analytics, source, onBlockingSuccess } :: { any })
 
@@ -88,26 +78,24 @@ local function BlockingModalContainer(props: Props)
 			"Feature.BlockingModal.Heading.BlockUser",
 			DisplayName = player.DisplayName,
 		},
-		bodyKey = "Feature.BlockingModal.Message.BlockConfirmation",
+		bodyKey = if FFlagConnectionsToFriendsRename 
+			then "Feature.BlockingModal.Message.BlockConfirmation.FriendsRename"
+			else "Feature.BlockingModal.Message.BlockConfirmation",
 		cancelTextKey = "Feature.BlockingModal.Action.Cancel",
 		blockTextKey = "Feature.BlockingModal.Action.Block",
 		blockAndReportTextKey = "Feature.BlockingModal.Action.BlockAndReport",
-		blockingFailed = if FFlagEnableToastForBlockingModal
-			then "Feature.Toast.NetworkingError.SomethingIsWrong"
-			else nil,
+		blockingFailed = "Feature.Toast.NetworkingError.SomethingIsWrong",
 	})
 
-	if FFlagEnableToastForBlockingModal then
-		if showError then
-			return React.createElement(Toast, {
-				duration = 3,
-				show = showError,
-				toastContent = {
-					toastTitle = localized.blockingFailed,
-					onDismissed = closeModal,
-				}
-			})
-		end
+	if showError then
+		return React.createElement(Toast, {
+			duration = 3,
+			show = showError,
+			toastContent = {
+				toastTitle = localized.blockingFailed,
+				onDismissed = closeModal,
+			}
+		})
 	end
 
 	return React.createElement("Frame", {

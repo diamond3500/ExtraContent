@@ -42,9 +42,9 @@ local useTooltipDismissal = require(script.Parent.Parent.Hooks.useTooltipDismiss
 local useScreenSize = require(CoreGui.RobloxGui.Modules.Common.Hooks.useScreenSize)
 local Constants = require(script.Parent.Parent.Parent.Chrome.ChromeShared.Unibar.Constants)
 local Chrome = script.Parent.Parent.Parent.Chrome
-local ChromeEnabled = require(Chrome.Enabled)
+local ChromeEnabled = require(CorePackages.Workspace.Packages.Chrome).Enabled
 local ChromeService = if ChromeEnabled() then require(Chrome.Service) else nil
-local UnibarStyle = require(Chrome.ChromeShared.Unibar.UnibarStyle)
+local UnibarStyle = require(CorePackages.Workspace.Packages.Chrome).UnibarStyle
 
 local ChromeSharedFlags = require(Chrome.ChromeShared.Flags)
 local FFlagTokenizeUnibarConstantsWithStyleProvider = ChromeSharedFlags.FFlagTokenizeUnibarConstantsWithStyleProvider

@@ -4,10 +4,8 @@
 local root = script.Parent.Parent
 local createEditableInstancesForContext = {}
 
-local getEngineFeatureEngineEditableMeshAvatarPublish =
-	require(root.flags.getEngineFeatureEngineEditableMeshAvatarPublish)
-
 local AssetService = game:GetService("AssetService")
+local UGCValidationService = game:GetService("UGCValidationService")
 
 local Types = require(root.util.Types)
 local destroyEditableInstances = require(root.util.destroyEditableInstances)
@@ -28,13 +26,9 @@ end
 local function createEditableInstanceFromId(content, contentIdMap, contentType)
 	local success, result = pcall(function()
 		if contentType == "EditableMesh" then
-			if getEngineFeatureEngineEditableMeshAvatarPublish() then
-				return AssetService:CreateEditableMeshAsync(content)
-			else
-				return AssetService:CreateEditableMeshStripSkinningAsync(content.Uri) :: any
-			end
+			return AssetService:CreateEditableMeshAsync(content)
 		else
-			return (AssetService :: any):CreateEditableImageAsync(content) :: any
+			return UGCValidationService:CreateEditableImageOriginalSizeAsync(content.Uri)
 		end
 	end)
 
@@ -93,24 +87,29 @@ local function getTextureContentMap(instance, contentIdToContentMap)
 			Content.fromUri((instance :: SpecialMesh).TextureId),
 			"EditableImage"
 		)
-	elseif instance:IsA("SurfaceAppearance") then
-		addContent(contentIdToContentMap, "ColorMap", (instance :: SurfaceAppearance).ColorMapContent, "EditableImage")
+	elseif instance:IsA("SurfaceAppearance") or instance:IsA("Decal") then
+		addContent(
+			contentIdToContentMap,
+			"ColorMap",
+			(instance :: SurfaceAppearance | Decal).ColorMapContent,
+			"EditableImage"
+		)
 		addContent(
 			contentIdToContentMap,
 			"MetalnessMap",
-			(instance :: SurfaceAppearance).MetalnessMapContent,
+			(instance :: SurfaceAppearance | Decal).MetalnessMapContent,
 			"EditableImage"
 		)
 		addContent(
 			contentIdToContentMap,
 			"NormalMap",
-			(instance :: SurfaceAppearance).NormalMapContent,
+			(instance :: SurfaceAppearance | Decal).NormalMapContent,
 			"EditableImage"
 		)
 		addContent(
 			contentIdToContentMap,
 			"RoughnessMap",
-			(instance :: SurfaceAppearance).RoughnessMapContent,
+			(instance :: SurfaceAppearance | Decal).RoughnessMapContent,
 			"EditableImage"
 		)
 	end
@@ -131,6 +130,13 @@ local function getMeshContentMap(instance, contentIdToContentMap)
 	elseif instance:IsA("SpecialMesh") then
 		-- selene: allow(undefined_variable) | Content global will be added later
 		addContent(contentIdToContentMap, "MeshId", Content.fromUri((instance :: SpecialMesh).MeshId), "EditableMesh")
+	elseif instance:IsA("WrapTextureTransfer") then
+		addContent(
+			contentIdToContentMap,
+			"ReferenceCageMeshContent",
+			(instance :: WrapTextureTransfer).ReferenceCageMeshContent,
+			"EditableMesh"
+		)
 	end
 end
 

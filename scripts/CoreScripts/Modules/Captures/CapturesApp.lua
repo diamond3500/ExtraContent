@@ -3,8 +3,7 @@ local CorePackages = game:GetService("CorePackages")
 
 local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 
-local Modules = CoreGui.RobloxGui.Modules
-local ChromeEnabled = require(Modules.Chrome.Enabled)
+local ChromeEnabled = require(CorePackages.Workspace.Packages.Chrome).Enabled
 
 local CapturesInExperience = require(CorePackages.Workspace.Packages.CapturesInExperience)
 
@@ -32,9 +31,18 @@ OverlayScreenGui.ResetOnSpawn = false
 OverlayScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 OverlayScreenGui.Parent = CoreGui
 
+local MomentsCreationFlowScreenGui = Instance.new("ScreenGui")
+MomentsCreationFlowScreenGui.DisplayOrder = CapturesInExperience.Constants.CreationFlowDisplayOrder
+MomentsCreationFlowScreenGui.Name = "MomentsCreationFlow"
+MomentsCreationFlowScreenGui.ResetOnSpawn = false
+MomentsCreationFlowScreenGui.ScreenInsets = Enum.ScreenInsets.None
+MomentsCreationFlowScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+MomentsCreationFlowScreenGui.Parent = CoreGui
+
 CapturesApp.mountCaptureManager(CaptureManagerScreenGui)
 CapturesApp.mountCarousel(CarouselScreenGui)
 CapturesApp.mountCoreUI(RobloxGui, ChromeEnabled())
 CapturesApp.mountCaptureOverlay(OverlayScreenGui)
+CapturesApp.mountMomentsCreationFlow(MomentsCreationFlowScreenGui)
 
 return CapturesApp

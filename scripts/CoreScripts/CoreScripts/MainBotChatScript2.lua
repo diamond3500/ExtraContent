@@ -61,11 +61,6 @@ end
 game:GetService("UserInputService").InputBegan:Connect(setUsingGamepad)
 game:GetService("UserInputService").InputChanged:Connect(setUsingGamepad)
 
-local goodbyeChoiceActiveFlagSuccess, goodbyeChoiceActiveFlagValue = pcall(function()
-	return settings():GetFFlag("GoodbyeChoiceActiveProperty")
-end)
-local goodbyeChoiceActiveFlag = (goodbyeChoiceActiveFlagSuccess and goodbyeChoiceActiveFlagValue)
-
 local mainFrame
 local choices = {}
 local lastChoice
@@ -94,6 +89,7 @@ local messageDialog
 local dialogMap = {}
 local dialogConnections = {}
 local touchControlGui = nil
+local hideBottomLeftControlOnDialogEnd = false
 
 local gui = nil
 
@@ -297,6 +293,10 @@ function endDialog()
 		touchControlGui.Visible = true
 	end
 
+	if hideBottomLeftControlOnDialogEnd then
+		gui.BottomLeftControl.Visible = false
+	end
+
 	if guiService.SelectedCoreObject and
 		guiService.SelectedCoreObject.Parent == mainFrame then
 		guiService.SelectedCoreObject = nil
@@ -482,7 +482,7 @@ function presentDialogChoices(talkingPart, dialogChoices, parentDialog)
 	lastChoice.Position = UDim2.new(0, XPOS_OFFSET, 0, YPOS_OFFSET + yPosition)
 	lastChoice.Visible = true
 
-	if goodbyeChoiceActiveFlag and not parentDialog.GoodbyeChoiceActive then
+	if not parentDialog.GoodbyeChoiceActive then
 		lastChoice.Visible = false
 		mainFrame.Size = UDim2.new(0, FRAME_WIDTH, 0, yPosition + (STYLE_PADDING * 2) + (YPOS_OFFSET * 2))
 	else
@@ -499,6 +499,11 @@ function presentDialogChoices(talkingPart, dialogChoices, parentDialog)
 			end
 		end
 		mainFrame.Position = UDim2.new(0, 10, 1.0, -mainFrame.Size.Y.Offset)
+	else
+		if not touchEnabled and not gui.BottomLeftControl.Visible then
+			gui.BottomLeftControl.Visible = true
+			hideBottomLeftControlOnDialogEnd = true
+		end
 	end
 	styleMainFrame(currentTone())
 	mainFrame.Visible = true

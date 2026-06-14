@@ -2,13 +2,13 @@
 local root = script:FindFirstAncestor("AbuseReportMenu")
 local CorePackages = game:GetService("CorePackages")
 
+local GuiService = game:GetService("GuiService")
 local IXPService = game:GetService("IXPService")
 local LocalizationService = game:GetService("LocalizationService")
 local PlayersService = game:GetService("Players")
 local SafetyService = game:GetService("SafetyService")
 local Foundation = require(CorePackages.Packages.Foundation)
 local React = require(CorePackages.Packages.React)
-local Style = require(CorePackages.Workspace.Packages.Style)
 local CoreScriptsRootProvider = require(CorePackages.Workspace.Packages.CoreScriptsRoactCommon).CoreScriptsRootProvider
 
 local ReportTypeSelector = require(root.Components.ReportTypeSelector)
@@ -45,15 +45,14 @@ local isShowUKOSAIllegalContentReportingLink = DSAReportingPackage.isShowUKOSAIl
 local OSAReportLink = DSAReportingPackage.OSAReportLink
 local isShowGenericIllegalContentReportingLink = DSAReportingPackage.isShowGenericIllegalContentReportingLink
 local GenericReportLink = DSAReportingPackage.GenericReportLink
-local StyleProviderWithDefaultTheme = Style.StyleProviderWithDefaultTheme
+local getTakeItDownReportLinkVisibility = DSAReportingPackage.getTakeItDownReportLinkVisibility
+local TakeItDownReportLink = DSAReportingPackage.TakeItDownReportLink
 
 local FocusNavigationUtils = require(CorePackages.Workspace.Packages.FocusNavigationUtils)
 local FocusRoot = FocusNavigationUtils.FocusRoot
 local FocusNavigableSurfaceIdentifierEnum = FocusNavigationUtils.FocusNavigableSurfaceIdentifierEnum
 local isAbuseReportMenuOpenCloseSignalEnabled = require(root.Flags.isAbuseReportMenuOpenCloseSignalEnabled)
 local GetFFlagWHAM1707ExperimentForceEnabled = require(root.Flags.GetFFlagWHAM1707ExperimentForceEnabled)
-local FFlagAbuseReportTabSelectionHighlightCutoffFixEnabled =
-	require(root.Flags.FFlagAbuseReportTabSelectionHighlightCutoffFixEnabled)
 
 local SharedFlags = require(CorePackages.Workspace.Packages.SharedFlags)
 local FStringReportMenuIXPLayer = SharedFlags.FStringReportMenuIXPLayer
@@ -62,12 +61,16 @@ local IXPField = game:DefineFastString("SelectInSceneIXPField", "EnableSelectInS
 local IXPFieldWHAM1707 = game:DefineFastString("WHAM1707IXPField", "EnableWHAM1707")
 local FFlagHighlightModePreciseSelectionEnabled = SharedFlags.FFlagHighlightModePreciseSelectionEnabled
 local FFlagHideShortcutsOnReportDropdown = require(root.Flags.FFlagHideShortcutsOnReportDropdown)
-local FFlagFixDuplicateFoundationStylesheets = game:DefineFastFlag("FixDuplicateFoundationStylesheets", false)
-local FFlagUKOSAUpdatedCopy = SharedFlags.FFlagUKOSAUpdatedCopy
 local FFlagAbuseReportTabClearCapturedScreenshotOnCloseFix =
 	game:DefineFastFlag("AbuseReportTabClearCapturedScreenshotOnCloseFix", false)
 local FIntAbuseReportTabClearCapturedScreenshotOnCloseFixDelay =
 	game:DefineFastInt("AbuseReportTabClearCapturedScreenshotOnCloseFixDelay", 500)
+local FFlagMigrateAllOsaMessagingToCentralService =
+	require(CorePackages.Workspace.Packages.SharedFlags).FFlagMigrateAllOsaMessagingToCentralService
+local FFlagIEMReportScrollingFix = game:DefineFastFlag("IEMReportScrollingFix", false)
+local FFlagReportFocusNavIEMButtons = require(root.Flags.FFlagReportFocusNavIEMButtons)
+local FFlagIEMTabFocusNav = SharedFlags.FFlagIEMTabFocusNav
+local FFlagAddTakeItDownReportLinkToSurfaces = SharedFlags.FFlagAddTakeItDownReportLinkToSurfaces
 
 local isShowSelectInSceneReportMenu = require(root.Utility.isShowSelectInSceneReportMenu)
 
@@ -91,6 +94,9 @@ export type Props = {
 	registerOnMenuWidthChange: ((width: number) -> ()) -> (),
 	onReportComplete: (text: string) -> (),
 	onDropdownMenuOpenChange: (isOpen: boolean) -> (),
+	getSettingsHubRef: (() -> any)?,
+	setFirstSelectableObjects: ((selectableList: { GuiObject }) -> ())?,
+	setLastSelectableObjects: ((selectableList: { GuiObject }) -> ())?,
 }
 
 local function isInSelectInSceneExperiment(): boolean
@@ -133,6 +139,9 @@ local AbuseReportMenuNew = function(props: Props)
 	local menuWidth, setMenuWidth = React.useState(0)
 	local isOnlyPlayerInGame, setIsOnlyPlayerInGame = React.useState(false)
 	local shouldSelectorRender, setShouldSelectorRender = React.useState(false)
+	local isAutoFocusEnabled, setIsAutoFocusEnabled = React.useState(true)
+	local modeSelectorRef = React.useRef(nil :: GuiObject?)
+	local abuseMenuFrameRef = React.useRef(nil :: GuiObject?)
 
 	local viewportDimension, setViewportDimension = React.useState({ width = 0, height = 0 })
 	local isSmallPortraitViewport = viewportDimension.width < viewportDimension.height and viewportDimension.width < 700
@@ -257,6 +266,55 @@ local AbuseReportMenuNew = function(props: Props)
 		end
 	end, { isReportTabVisible, menuWidth } :: { any })
 
+	if FFlagReportFocusNavIEMButtons then
+		React.useEffect(function()
+			if not isReportTabVisible then
+				return
+			end
+
+			local function isMenuSelected()
+				local getSettingsHubRef = props.getSettingsHubRef
+				local hub = getSettingsHubRef and getSettingsHubRef()
+				local menuContainer = hub and hub.MenuContainer
+				return GuiService.SelectedCoreObject ~= nil
+					and menuContainer ~= nil
+					and GuiService.SelectedCoreObject:IsDescendantOf(menuContainer)
+			end
+
+			setIsAutoFocusEnabled(not isMenuSelected())
+
+			local conn = GuiService:GetPropertyChangedSignal("SelectedCoreObject"):Connect(function()
+				setIsAutoFocusEnabled(not isMenuSelected())
+			end)
+
+			return function()
+				conn:Disconnect()
+			end
+		end, { isReportTabVisible, props.getSettingsHubRef } :: { any })
+	end
+
+	if FFlagIEMTabFocusNav then
+		React.useEffect(
+			function()
+				if not isReportTabVisible then
+					return
+				end
+
+				local firstItems = nil
+				if modeSelectorRef.current and modeSelectorRef.current.tabRefs then
+					firstItems = {
+						modeSelectorRef.current.tabRefs[1].current:FindFirstChild("Tab"),
+						modeSelectorRef.current.tabRefs[2].current:FindFirstChild("Tab"),
+					}
+				end
+				if props.setFirstSelectableObjects and firstItems then
+					props.setFirstSelectableObjects(firstItems)
+				end
+			end,
+			{ isReportTabVisible, modeSelectorRef, props.setFirstSelectableObjects, shouldSelectorRender } :: { unknown }
+		)
+	end
+
 	if not isReportTabVisible then
 		return nil
 	end
@@ -278,6 +336,7 @@ local AbuseReportMenuNew = function(props: Props)
 		setPreselectedPlayer = setPreselectedPlayer,
 		menuWidth = menuWidth,
 		viewportDimension = viewportDimension,
+		setLastSelectableObjects = if FFlagReportFocusNavIEMButtons then props.setLastSelectableObjects else nil,
 	}
 
 	if reportType == ReportTypes.Person then
@@ -293,6 +352,7 @@ local AbuseReportMenuNew = function(props: Props)
 	end
 
 	return React.createElement("Frame", {
+		ref = abuseMenuFrameRef,
 		BackgroundTransparency = 1,
 		AutomaticSize = Enum.AutomaticSize.Y,
 		Size = UDim2.new(1, 0, 0, 0),
@@ -304,8 +364,9 @@ local AbuseReportMenuNew = function(props: Props)
 				Size = UDim2.new(1, 0, 0, 0),
 				AutomaticSize = Enum.AutomaticSize.Y,
 			},
-			isIsolated = true,
-			isAutoFocusRoot = true,
+			isIsolated = if FFlagIEMReportScrollingFix then nil else true,
+			isAutoFocusRoot = if FFlagReportFocusNavIEMButtons then isAutoFocusEnabled else true,
+			shouldRestoreFocus = if FFlagReportFocusNavIEMButtons then false else true,
 		}, {
 			-- placeholder frame added to attach our modal selector and screenshot dialog
 			-- necessary for proper selection UI behavior (console)
@@ -325,12 +386,10 @@ local AbuseReportMenuNew = function(props: Props)
 						HorizontalAlignment = 0,
 						Padding = UDim.new(0, 12),
 					}),
-					Padding = if FFlagAbuseReportTabSelectionHighlightCutoffFixEnabled
-						then React.createElement("UIPadding", {
-							PaddingTop = UDim.new(0, sizings.ItemPadding),
-							PaddingBottom = UDim.new(0, sizings.ItemPadding),
-						})
-						else nil,
+					Padding = React.createElement("UIPadding", {
+						PaddingTop = UDim.new(0, sizings.ItemPadding),
+						PaddingBottom = UDim.new(0, sizings.ItemPadding),
+					}),
 					SelectInSceneToggleFrame = if shouldSelectorRender
 						then React.createElement("Frame", {
 							BackgroundTransparency = 1,
@@ -353,6 +412,7 @@ local AbuseReportMenuNew = function(props: Props)
 									},
 								},
 								width = UDim.new(0, menuWidth),
+								ref = if FFlagIEMTabFocusNav then modeSelectorRef else nil,
 							}),
 						})
 						else nil,
@@ -411,55 +471,62 @@ local AbuseReportMenuNew = function(props: Props)
 							}, {
 								MenuItems = menuItems,
 							}),
-							FooterFrame = if FFlagUKOSAUpdatedCopy
-								then React.createElement(View, {
-									tag = "size-full-0 auto-y",
-									LayoutOrder = 2,
+							FooterFrame = React.createElement(View, {
+								tag = "size-full-0 auto-y",
+								LayoutOrder = 2,
+							}, {
+								TextFrame = React.createElement(View, {
+									tag = "size-full col align-x-left gap-small padding-top-medium",
 								}, {
-									TextFrame = React.createElement(View, {
-										tag = "size-full col align-x-left gap-small padding-top-medium",
-									}, {
-										Divider = React.createElement(View, {
-											tag = "size-full-0 stroke-muted padding-top-medium",
-											LayoutOrder = 1,
-										}),
-										InfoText = React.createElement(Text, {
-											Text = if isShowUKOSAIllegalContentReportingLink()
-												then localizedText.FooterInformation2
-												else localizedText.FooterInformation1,
-											fontStyle = tokens.Typography.BodySmall,
-											textStyle = tokens.Color.Content.Muted,
-											TextWrapped = true,
-											TextXAlignment = Enum.TextXAlignment.Left,
-											tag = "auto-xy",
-											LayoutOrder = 2,
-										}),
+									Divider = React.createElement(View, {
+										tag = "size-full-0 stroke-muted padding-top-medium",
+										LayoutOrder = 1,
 									}),
-								})
-								else nil,
-							DSALinkFrame = if isShowEUDSAIllegalContentReportingLink()
+									InfoText = React.createElement(Text, {
+										Text = if isShowUKOSAIllegalContentReportingLink()
+											then localizedText.FooterInformation2
+											else localizedText.FooterInformation1,
+										fontStyle = tokens.Typography.BodySmall,
+										textStyle = tokens.Color.Content.Muted,
+										TextWrapped = true,
+										TextXAlignment = Enum.TextXAlignment.Left,
+										tag = "auto-xy",
+										LayoutOrder = 2,
+									}),
+								}),
+							}),
+							DSALinkFrame = if not FFlagMigrateAllOsaMessagingToCentralService
+									and isShowEUDSAIllegalContentReportingLink()
 								then React.createElement("Frame", {
 									BackgroundTransparency = 1,
-									LayoutOrder = if FFlagUKOSAUpdatedCopy then 3 else 2,
+									LayoutOrder = 3,
 									AutomaticSize = Enum.AutomaticSize.Y,
 									Size = UDim2.new(1, 0, 0, 0),
 								}, {
 									DSALink = React.createElement(DSAReportLink),
 								})
 								else nil,
-							OSALinkFrame = if isShowUKOSAIllegalContentReportingLink()
+							OSALinkFrame = if not FFlagMigrateAllOsaMessagingToCentralService
+									and isShowUKOSAIllegalContentReportingLink()
 								then React.createElement(View, {
 									tag = "size-full-0 auto-y",
-									LayoutOrder = if FFlagUKOSAUpdatedCopy then 3 else 2,
+									LayoutOrder = 3,
 								}, {
 									OSALink = React.createElement(OSAReportLink),
 								})
 								else nil,
-							GenericIllegalContentReportLink = if isShowGenericIllegalContentReportingLink()
+							GenericIllegalContentReportLink = if FFlagMigrateAllOsaMessagingToCentralService
+									and isShowGenericIllegalContentReportingLink()
 								then React.createElement(View, {
 									tag = "size-full-0 auto-y",
-									LayoutOrder = if FFlagUKOSAUpdatedCopy then 3 else 2,
+									LayoutOrder = 3,
 								}, React.createElement(GenericReportLink))
+								else nil,
+							TakeItDownReportLink = if FFlagAddTakeItDownReportLinkToSurfaces
+									and getTakeItDownReportLinkVisibility()
+								then React.createElement(TakeItDownReportLink, {
+									layoutOrder = 4,
+								})
 								else nil,
 						})
 						else nil,
@@ -471,30 +538,11 @@ end
 
 local MenuContainer = function(props: Props)
 	local localization = Localization.new(LocalizationService.RobloxLocaleId)
-
-	if FFlagFixDuplicateFoundationStylesheets then
-		return React.createElement(CoreScriptsRootProvider, {}, {
-			LocalizationProvider = React.createElement(LocalizationProvider, {
-				localization = localization,
-			}, {
-				[Constants.AbuseReportMenuRootName] = React.createElement(AbuseReportMenuNew, props),
-			}),
-		})
-	end
-
-	return React.createElement(StyleProviderWithDefaultTheme, {
-		withDarkTheme = true,
-	}, {
-		CoreScriptsRootProvider = React.createElement(CoreScriptsRootProvider, {}, {
-			LocalizationProvider = React.createElement(LocalizationProvider, {
-				localization = localization,
-			}, {
-				FoundationProvider = React.createElement(Foundation.FoundationProvider, {
-					theme = Foundation.Enums.Theme.Dark,
-				}, {
-					[Constants.AbuseReportMenuRootName] = React.createElement(AbuseReportMenuNew, props),
-				}),
-			}),
+	return React.createElement(CoreScriptsRootProvider, {}, {
+		LocalizationProvider = React.createElement(LocalizationProvider, {
+			localization = localization,
+		}, {
+			[Constants.AbuseReportMenuRootName] = React.createElement(AbuseReportMenuNew, props),
 		}),
 	})
 end

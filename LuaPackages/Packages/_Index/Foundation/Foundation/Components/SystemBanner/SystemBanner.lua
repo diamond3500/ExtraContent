@@ -5,64 +5,64 @@ local Dash = require(Packages.Dash)
 local React = require(Packages.React)
 local ReactUtils = require(Packages.ReactUtils)
 
+local AlertActions = require(Foundation.Components.AlertActions)
+local AlertConstants = require(Foundation.Components.AlertActions.AlertConstants)
 local AlertSeverity = require(Foundation.Enums.AlertSeverity)
 local AlertVariant = require(Foundation.Enums.AlertVariant)
+local Breakpoint = require(Foundation.Enums.Breakpoint)
+local BuilderIcons = require(Packages.BuilderIcons)
 local Button = require(Foundation.Components.Button)
 local ButtonVariant = require(Foundation.Enums.ButtonVariant)
 local CloseAffordance = require(Foundation.Components.CloseAffordance)
+local CloseAffordanceVariant = require(Foundation.Enums.CloseAffordanceVariant)
+local Flags = require(Foundation.Utility.Flags)
 local Icon = require(Foundation.Components.Icon)
+local IconSize = require(Foundation.Enums.IconSize)
+local IconVariant = BuilderIcons.IconVariant
+local InputSize = require(Foundation.Enums.InputSize)
+local Logger = require(Foundation.Utility.Logger)
 local PresentationContext = require(Foundation.Providers.Style.PresentationContext)
 local Text = require(Foundation.Components.Text)
 local Types = require(Foundation.Components.Types)
 local View = require(Foundation.Components.View)
+local useBreakpoint = require(Foundation.Providers.Responsive.Hooks.useBreakpoint)
 local useTokens = require(Foundation.Providers.Style.useTokens)
 local withCommonProps = require(Foundation.Utility.withCommonProps)
 local withDefaults = require(Foundation.Utility.withDefaults)
-type ButtonVariant = ButtonVariant.ButtonVariant
-local BuilderIcons = require(Packages.BuilderIcons)
-local CloseAffordanceVariant = require(Foundation.Enums.CloseAffordanceVariant)
-local IconSize = require(Foundation.Enums.IconSize)
-local InputSize = require(Foundation.Enums.InputSize)
-local IconVariant = BuilderIcons.IconVariant
-local Breakpoint = require(Foundation.Enums.Breakpoint)
-local Logger = require(Foundation.Utility.Logger)
-local useBreakpoint = require(Foundation.Providers.Responsive.Hooks.useBreakpoint)
 
 local useSystemBannerVariants = require(script.Parent.useSystemBannerVariants)
 
 type Breakpoint = Breakpoint.Breakpoint
+type ButtonVariant = ButtonVariant.ButtonVariant
 type CloseAffordanceVariant = CloseAffordanceVariant.CloseAffordanceVariant
 type AlertVariant = AlertVariant.AlertVariant
 type AlertSeverity = AlertSeverity.AlertSeverity
+type AlertAction = AlertActions.AlertAction
+
+-- Remove with FoundationSystemBannerUseSharedAlertActions
+local MAX_BUTTON_COUNT = 3
+
+local SEVERITY_TO_ICON: { [AlertSeverity]: string } = if Flags.FoundationSystemBannerUseSharedAlertActions
+	then AlertConstants.SEVERITY_TO_ICON
+	else {
+		[AlertSeverity.Info] = "circle-i",
+		[AlertSeverity.Warning] = "triangle-exclamation",
+		[AlertSeverity.Success] = "circle-check",
+		[AlertSeverity.Error] = "circle-x",
+	}
 
 export type SystemBannerProps = {
 	variant: AlertVariant?,
 	severity: AlertSeverity,
 	title: string,
 	description: string?,
-	actions: {
-		{
-			onActivated: () -> (),
-			-- Only `Standard` and `Utility` variants are supported
-			variant: (typeof(ButtonVariant.Standard) | typeof(ButtonVariant.Utility))?,
-			text: string,
-		}
-	}?,
+	actions: { AlertAction }?,
 	onClose: (() -> ())?,
 } & Types.CommonProps
 
 local defaultProps = {
 	variant = AlertVariant.Standard,
 	testId = "--foundation-system-banner",
-}
-
-local MAX_BUTTON_COUNT = 3
-
-local SEVERITY_TO_ICON: { [AlertSeverity]: string } = {
-	[AlertSeverity.Info] = "circle-i",
-	[AlertSeverity.Warning] = "triangle-exclamation",
-	[AlertSeverity.Success] = "circle-check",
-	[AlertSeverity.Error] = "circle-x",
 }
 
 local function SystemBanner(systemBannerProps: SystemBannerProps, ref: React.Ref<Instance>)
@@ -77,31 +77,45 @@ local function SystemBanner(systemBannerProps: SystemBannerProps, ref: React.Ref
 	local breakpoint = useBreakpoint(container)
 	local shouldWrapActions = breakpoint == Breakpoint.XSmall or breakpoint == Breakpoint.Small
 
-	local actions: { [string]: React.Node }? = React.useMemo(function()
-		local buttons = nil
-		if props.actions and #props.actions > 0 then
-			buttons = {} :: { [string]: React.Node }
-			for i, action in props.actions do
-				if i > MAX_BUTTON_COUNT then
-					Logger:warning(`SystemBanner only supports up to {MAX_BUTTON_COUNT} actions`)
-					break
+	local actions = React.useMemo(function()
+		if Flags.FoundationSystemBannerUseSharedAlertActions then
+			return React.createElement(AlertActions, {
+				actions = props.actions,
+				testId = `{props.testId}--actions`,
+				LayoutOrder = 3,
+				tag = {
+					["row gap-small auto-xy"] = true,
+					["align-x-left"] = shouldWrapActions,
+					["align-x-right"] = not shouldWrapActions,
+				},
+				padding = if shouldWrapActions then { top = UDim.new(0, tokens.Gap.Small) } else nil,
+			}) :: any
+		else
+			local buttons = nil
+			if props.actions and #props.actions > 0 then
+				buttons = {} :: { [string]: React.Node }
+				for i, action in props.actions do
+					if i > MAX_BUTTON_COUNT then
+						Logger:warning(`SystemBanner only supports up to {MAX_BUTTON_COUNT} actions`)
+						break
+					end
+
+					local buttonProps = Dash.join(action, {
+						LayoutOrder = i,
+						size = InputSize.Small,
+						testId = `{props.testId}--action-{i}`,
+					})
+					buttons["ActionButton" .. i] = React.createElement(Button, buttonProps)
 				end
-
-				local buttonProps = Dash.join(action, {
-					LayoutOrder = i,
-					size = InputSize.Small,
-					testId = `{props.testId}--action-{i}`,
-				})
-				buttons["ActionButton" .. i] = React.createElement(Button, buttonProps)
 			end
+			return buttons
 		end
-		return buttons
-	end, { props.actions })
+	end, { props.actions, props.testId, shouldWrapActions, tokens.Gap.Small } :: { unknown })
 
-	local actionsContainer = if actions
+	local actionsContainer = if not Flags.FoundationSystemBannerUseSharedAlertActions and actions
 		then React.createElement(View, {
 			tag = {
-				["auto-xy row gap-small"] = true,
+				["row gap-small auto-xy"] = true,
 				["align-x-left"] = shouldWrapActions,
 				["align-x-right"] = not shouldWrapActions,
 			},
@@ -116,8 +130,12 @@ local function SystemBanner(systemBannerProps: SystemBannerProps, ref: React.Ref
 		withCommonProps(props, {
 			tag = {
 				[variantProps.container.tag] = true,
-				["align-y-center"] = props.description == nil,
-				["align-y-top"] = props.description ~= nil,
+				["align-y-center"] = if Flags.FoundationSystemBannerOptionalTitle
+					then props.title == "" or props.description == nil
+					else props.description == nil,
+				["align-y-top"] = if Flags.FoundationSystemBannerOptionalTitle
+					then props.title ~= "" and props.description ~= nil
+					else props.description ~= nil,
 			},
 			ref = composedRef,
 		}),
@@ -135,7 +153,7 @@ local function SystemBanner(systemBannerProps: SystemBannerProps, ref: React.Ref
 			Content = React.createElement(View, {
 				LayoutOrder = 2,
 				tag = {
-					["auto-xy fill"] = true,
+					["fill auto-xy"] = true,
 					["col"] = shouldWrapActions,
 					["row"] = not shouldWrapActions,
 				},
@@ -143,15 +161,25 @@ local function SystemBanner(systemBannerProps: SystemBannerProps, ref: React.Ref
 			}, {
 				Text = React.createElement(View, {
 					LayoutOrder = 2,
-					tag = "auto-xy col",
+					tag = "col auto-xy",
 				}, {
-					Title = React.createElement(Text, {
-						Text = props.title,
-						textStyle = variantProps.title.style,
-						tag = variantProps.title.tag,
-						LayoutOrder = 1,
-						testId = `{props.testId}--title`,
-					}),
+					Title = if Flags.FoundationSystemBannerOptionalTitle
+						then if props.title ~= ""
+							then React.createElement(Text, {
+								Text = props.title,
+								textStyle = variantProps.title.style,
+								tag = variantProps.title.tag,
+								LayoutOrder = 1,
+								testId = `{props.testId}--title`,
+							})
+							else nil
+						else React.createElement(Text, {
+							Text = props.title,
+							textStyle = variantProps.title.style,
+							tag = variantProps.title.tag,
+							LayoutOrder = 1,
+							testId = `{props.testId}--title`,
+						}),
 					Description = if props.description
 						then React.createElement(Text, {
 							Text = props.description,
@@ -161,10 +189,14 @@ local function SystemBanner(systemBannerProps: SystemBannerProps, ref: React.Ref
 							testId = `{props.testId}--description`,
 						})
 						else nil,
-					Actions = if shouldWrapActions then actionsContainer else nil,
+					Actions = if shouldWrapActions
+						then (if Flags.FoundationSystemBannerUseSharedAlertActions then actions else actionsContainer)
+						else nil,
 				}),
 			}),
-			Actions = if not shouldWrapActions then actionsContainer else nil,
+			Actions = if not shouldWrapActions
+				then (if Flags.FoundationSystemBannerUseSharedAlertActions then actions else actionsContainer)
+				else nil,
 			Close = if props.onClose ~= nil
 				then React.createElement(CloseAffordance, {
 					onActivated = props.onClose,

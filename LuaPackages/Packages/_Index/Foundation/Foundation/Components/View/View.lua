@@ -1,8 +1,6 @@
 local Foundation = script:FindFirstAncestor("Foundation")
 local Packages = Foundation.Parent
-local Flags = require(Foundation.Utility.Flags)
 
-local Dash = require(Packages.Dash)
 local React = require(Packages.React)
 
 local Logger = require(Foundation.Utility.Logger)
@@ -12,7 +10,6 @@ local Interactable = require(Foundation.Components.Interactable)
 local GuiObjectChildren = require(Foundation.Utility.GuiObjectChildren)
 local Types = require(Foundation.Components.Types)
 local useDefaultTags = require(Foundation.Utility.useDefaultTags)
-local useStyledDefaults = require(Foundation.Utility.useStyledDefaults)
 local withDefaults = require(Foundation.Utility.withDefaults)
 local withGuiObjectProps = require(Foundation.Utility.withGuiObjectProps)
 
@@ -43,14 +40,7 @@ local DEFAULT_TAGS = "gui-object-defaults"
 local DEFAULT_TAGS_WITH_BG = `{DEFAULT_TAGS} x-default-transparency`
 
 local function View(viewProps: ViewProps, ref: React.Ref<GuiObject>?)
-	local defaultPropsWithStyles = if not Flags.FoundationDisableStylingPolyfill
-		then useStyledDefaults("View", viewProps.tag, DEFAULT_TAGS, defaultProps)
-		else nil
-
-	local props = withDefaults(
-		viewProps,
-		if not Flags.FoundationDisableStylingPolyfill then defaultPropsWithStyles else defaultProps
-	)
+	local props = withDefaults(viewProps, defaultProps)
 
 	local defaultTags = if props.backgroundStyle ~= nil then DEFAULT_TAGS_WITH_BG else DEFAULT_TAGS
 
@@ -91,21 +81,19 @@ local function View(viewProps: ViewProps, ref: React.Ref<GuiObject>?)
 		ref = ref,
 		[React.Tag] = tag,
 	})
+	local component: any = engineComponent
+	local componentProps: any = engineComponentProps
 
-	local component = if isInteractable then Interactable else engineComponent
-
-	local viewComponentProps = {
-		component = engineComponent,
-		onActivated = props.onActivated,
-		onSecondaryActivated = props.onSecondaryActivated,
-		onStateChanged = props.onStateChanged,
-		stateLayer = props.stateLayer,
-		isDisabled = props.isDisabled,
-		cursor = props.cursor,
-	}
-	local componentProps = if isInteractable
-		then Dash.union(engineComponentProps, viewComponentProps)
-		else engineComponentProps
+	if isInteractable then
+		component = Interactable
+		componentProps.component = engineComponent
+		componentProps.onActivated = props.onActivated
+		componentProps.onSecondaryActivated = props.onSecondaryActivated
+		componentProps.onStateChanged = props.onStateChanged
+		componentProps.stateLayer = props.stateLayer
+		componentProps.isDisabled = props.isDisabled
+		componentProps.cursor = props.cursor
+	end
 
 	return React.createElement(component, componentProps, GuiObjectChildren(props))
 end

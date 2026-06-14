@@ -1,11 +1,12 @@
 local Style = script.Parent
 local Foundation = script:FindFirstAncestor("Foundation")
 local Packages = Foundation.Parent
-local Flags = require(Foundation.Utility.Flags)
 
 local React = require(Packages.React)
 local TagsContext = require(Style.TagsContext)
 local getFormattedTags = require(Foundation.Utility.getFormattedTags)
+
+local Flags = require(Foundation.Utility.Flags)
 
 local Types = require(Foundation.Components.Types)
 type Tags = Types.Tags
@@ -13,16 +14,16 @@ type Tags = Types.Tags
 local function useStyleTags(tags: Tags?): string?
 	local formattedTags = getFormattedTags(tags)
 
-	if not Flags.FoundationDisableStylingPolyfill then
-		return formattedTags
-	end
-
 	local addTags = React.useContext(TagsContext)
 	React.useLayoutEffect(function()
 		if formattedTags ~= nil then
-			addTags(formattedTags)
+			if Flags.FoundationUseStyleSheetRegistry then
+				addTags(string.split(formattedTags, " "))
+			else
+				addTags(formattedTags)
+			end
 		end
-	end, { formattedTags })
+	end, { formattedTags, if Flags.FoundationUseStyleSheetRegistry then addTags else nil } :: { unknown })
 	return formattedTags
 end
 

@@ -3,6 +3,9 @@ local Foundation = script:FindFirstAncestor("Foundation")
 local ChipSize = require(Foundation.Enums.ChipSize)
 type ChipSize = ChipSize.ChipSize
 
+local ChipVariant = require(Foundation.Enums.ChipVariant)
+type ChipVariant = ChipVariant.ChipVariant
+
 local composeStyleVariant = require(Foundation.Utility.composeStyleVariant)
 type VariantProps = composeStyleVariant.VariantProps
 
@@ -19,8 +22,8 @@ local function variantsFactory(tokens: Tokens)
 	}
 
 	local common = {
-		chip = { tag = "row auto-x align-y-center align-x-center clip radius-circle" },
-		text = { tag = "auto-x size-0-full shrink text-truncate-end" },
+		chip = { tag = "row align-x-center align-y-center auto-x radius-circle clip" },
+		text = { tag = "shrink size-0-full auto-x text-truncate-end" },
 	}
 
 	local sizes: { [ChipSize]: VariantProps } = {
@@ -38,32 +41,52 @@ local function variantsFactory(tokens: Tokens)
 		},
 	}
 
-	local isChecked: { [boolean]: VariantProps } = {
-		[true] = {
-			chip = { backgroundStyle = tokens.Inverse.Surface.Surface_0 },
-			text = { contentStyle = tokens.Inverse.Content.Emphasis },
+	local types: { [ChipVariant]: { [boolean]: VariantProps } } = {
+		[ChipVariant.Utility] = {
+			[true] = {
+				chip = { backgroundStyle = tokens.Inverse.Surface.Surface_0 },
+				text = { contentStyle = tokens.Inverse.Content.Emphasis },
+			},
+			[false] = {
+				chip = { backgroundStyle = tokens.Color.ActionUtility.Background },
+				text = { contentStyle = tokens.Color.ActionUtility.Foreground },
+			},
 		},
-		[false] = {
-			chip = { backgroundStyle = tokens.Color.ActionStandard.Background },
-			text = { contentStyle = tokens.Color.ActionStandard.Foreground },
+		[ChipVariant.Standard] = {
+			[true] = {
+				chip = { backgroundStyle = tokens.Inverse.Surface.Surface_0 },
+				text = { contentStyle = tokens.Inverse.Content.Emphasis },
+			},
+			[false] = {
+				chip = { backgroundStyle = tokens.Color.ActionStandard.Background },
+				text = { contentStyle = tokens.Color.ActionStandard.Foreground },
+			},
 		},
 	}
+
 	return {
 		common = common,
 		sizes = sizes,
-		isChecked = isChecked,
+		types = types,
 		textSpacing = textSpacing,
 	}
 end
 
-return function(tokens: Tokens, size: ChipSize, isChecked: boolean, hasLeading: boolean, hasTrailing: boolean)
+return function(
+	tokens: Tokens,
+	size: ChipSize,
+	variant: ChipVariant,
+	isChecked: boolean,
+	hasLeading: boolean,
+	hasTrailing: boolean
+)
 	local props = VariantsContext.useVariants("Chip", variantsFactory, tokens)
-	return composeStyleVariant(props.common, props.sizes[size], {
+	return composeStyleVariant(props.common, props.sizes[size], props.types[variant][isChecked], {
 		text = {
 			padding = {
 				left = if hasLeading then nil else props.textSpacing[size],
 				right = if hasTrailing then nil else props.textSpacing[size],
 			},
 		},
-	}, props.isChecked[isChecked])
+	})
 end

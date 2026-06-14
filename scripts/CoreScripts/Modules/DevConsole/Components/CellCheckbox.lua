@@ -1,14 +1,14 @@
 local CorePackages = game:GetService("CorePackages")
-local React = require(CorePackages.Packages.React)
 local Roact = require(CorePackages.Packages.Roact)
 
 local Constants = require(script.Parent.Parent.Constants)
+local Checkbox = require(script.Parent.Checkbox)
 local TEXT_SIZE = Constants.DefaultFontSize.MainWindow
 local TEXT_COLOR = Constants.Color.Text
 local MAIN_FONT = Constants.Font.MainWindow
 local MAIN_FONT_BOLD = Constants.Font.MainWindowBold
-local CHECK_BOX_HEIGHT = Constants.UtilityBarFormatting.CheckBoxHeight
-local PADDING = Constants.UtilityBarFormatting.CheckBoxInnerPadding
+local CHECK_BOX_HEIGHT = Constants.UtilityBarFormatting.CheckboxHeight
+local PADDING = Constants.UtilityBarFormatting.CheckboxInnerPadding
 local FRAME_HEIGHT = 2
 
 export type Props = {
@@ -17,7 +17,7 @@ export type Props = {
 	size: UDim2?,
 	pos: UDim2?,
 	LayoutOrder: number?,
-	OnCheckBoxClicked: (name: string?, selected: boolean) -> (),
+	OnCheckboxClicked: (name: string?, selected: boolean) -> (),
 }
 
 local function CellCheckbox(props: Props)
@@ -26,40 +26,18 @@ local function CellCheckbox(props: Props)
 	local pos = props.pos
 	local layoutOrder = props.LayoutOrder
 
-	local selectedColor = Constants.Color.SelectedBlue
-	local unselectedColor = Constants.Color.UnselectedGray
-
-	-- this can be replaced with default values once that releases
-	local image = ""
-	local borderSize = 1
-	local backgroundColor = unselectedColor
-
-	if isSelected then
-		image = Constants.Image.Check
-		borderSize = 0
-		backgroundColor = selectedColor
-	end
-
-	local onActivated = React.useCallback(function()
-		props.OnCheckBoxClicked(props.name, not isSelected)
-	end, { props.OnCheckBoxClicked, props.name, isSelected } :: { any })
-
-	return Roact.createElement("ImageButton", {
+	return Roact.createElement("Frame", {
 		Size = size,
 		Position = pos,
 		BackgroundTransparency = 1,
 		LayoutOrder = layoutOrder,
-
-		[Roact.Event.Activated] = onActivated,
 	}, {
-		Icon = Roact.createElement("ImageLabel", {
-			Image = image,
+		Checkbox = Roact.createElement(Checkbox, {
+			Name = props.name,
+			IsSelected = isSelected,
 			Size = UDim2.new(0, CHECK_BOX_HEIGHT, 0, CHECK_BOX_HEIGHT),
 			Position = UDim2.new(0, 0, 0.5, -CHECK_BOX_HEIGHT / 2),
-			BackgroundColor3 = backgroundColor,
-			BackgroundTransparency = 0,
-			BorderColor3 = Constants.Color.Text,
-			BorderSizePixel = borderSize,
+			OnSelectedStateChanged = props.OnCheckboxClicked,
 		}),
 	})
 end

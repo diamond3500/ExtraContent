@@ -1,16 +1,19 @@
 --!nonstrict
 -- Remove with FFlagTopBarDeprecateRespawnRodux
+local AvatarEditorService = game:GetService("AvatarEditorService")
 local Players = game:GetService("Players")
 
 local TopBar = script.Parent.Parent
 local FFlagTopBarDeprecateRespawnRodux = require(TopBar.Flags.FFlagTopBarDeprecateRespawnRodux)
 
-if FFlagTopBarDeprecateRespawnRodux then 
-	return nil :: never 
+if FFlagTopBarDeprecateRespawnRodux then
+	return nil :: never
 end
 
 return function(store)
 	local state = store:getState()
+
+	AvatarEditorService:BustAvatarFetchCache()
 
 	if state.respawn.customCallback then
 		state.respawn.customCallback:Fire()

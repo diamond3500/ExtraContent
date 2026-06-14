@@ -11,7 +11,7 @@ type _Messages = {
 }
 local messages: _Messages = {} :: _Messages
 
-local _roblox_apppageplatform_shared_v1beta1_roblox_component_type = require(script.Parent.roblox_component_type)
+local _roblox_apppageplatform_shared_v1beta1_surfacing = require(script.Parent.surfacing)
 
 type _PageEntryImpl = {
 	__index: _PageEntryImpl,
@@ -24,15 +24,19 @@ type _PageEntryImpl = {
 }
 
 type _PageEntryFields = {
-	roblox_component: _roblox_apppageplatform_shared_v1beta1_roblox_component_type.RobloxComponentType,
+	roblox_component: string,
 	identifier: string,
 	title: string,
+	category: string,
+	surfacing: _roblox_apppageplatform_shared_v1beta1_surfacing.Surfacing?,
 }
 
 type _PageEntryPartialFields = {
-	roblox_component: _roblox_apppageplatform_shared_v1beta1_roblox_component_type.RobloxComponentType?,
+	roblox_component: string?,
 	identifier: string?,
 	title: string?,
+	category: string?,
+	surfacing: _roblox_apppageplatform_shared_v1beta1_surfacing.Surfacing?,
 }
 
 export type PageEntry = typeof(setmetatable({} :: _PageEntryFields, {} :: _PageEntryImpl))
@@ -44,14 +48,11 @@ do
 
 	function _PageEntryImpl.new(data: _PageEntryPartialFields?): PageEntry
 		return setmetatable({
-			roblox_component = if data == nil or data.roblox_component == nil
-				then assert(
-					_roblox_apppageplatform_shared_v1beta1_roblox_component_type.RobloxComponentType.fromNumber(0),
-					"Enum has no 0 default"
-				)
-				else data.roblox_component,
+			roblox_component = if data == nil or data.roblox_component == nil then "" else data.roblox_component,
 			identifier = if data == nil or data.identifier == nil then "" else data.identifier,
 			title = if data == nil or data.title == nil then "" else data.title,
+			category = if data == nil or data.category == nil then "" else data.category,
+			surfacing = if data == nil or data.surfacing == nil then nil else data.surfacing,
 		}, _PageEntryImpl :: _PageEntryImpl)
 	end
 
@@ -59,22 +60,9 @@ do
 		local output = buffer.create(0)
 		local cursor = 0
 
-		if
-			self.roblox_component ~= nil
-			and (
-				self.roblox_component ~= nil and self.roblox_component ~= 0
-				or self.roblox_component
-					~= _roblox_apppageplatform_shared_v1beta1_roblox_component_type.RobloxComponentType.fromNumber(0)
-			)
-		then
-			output, cursor = proto.writeTag(output, cursor, 1, proto.wireTypes.varint)
-			output, cursor = proto.writeVarInt(
-				output,
-				cursor,
-				_roblox_apppageplatform_shared_v1beta1_roblox_component_type.RobloxComponentType.toNumber(
-					self.roblox_component :: any
-				)
-			)
+		if self.roblox_component ~= nil and self.roblox_component ~= "" then
+			output, cursor = proto.writeTag(output, cursor, 1, proto.wireTypes.lengthDelimited)
+			output, cursor = proto.writeString(output, cursor, self.roblox_component)
 		end
 
 		if self.identifier ~= nil and self.identifier ~= "" then
@@ -85,6 +73,17 @@ do
 		if self.title ~= nil and self.title ~= "" then
 			output, cursor = proto.writeTag(output, cursor, 3, proto.wireTypes.lengthDelimited)
 			output, cursor = proto.writeString(output, cursor, self.title)
+		end
+
+		if self.category ~= nil and self.category ~= "" then
+			output, cursor = proto.writeTag(output, cursor, 4, proto.wireTypes.lengthDelimited)
+			output, cursor = proto.writeString(output, cursor, self.category)
+		end
+
+		if self.surfacing ~= nil then
+			local encoded = self.surfacing:encode()
+			output, cursor = proto.writeTag(output, cursor, 5, proto.wireTypes.lengthDelimited)
+			output, cursor = proto.writeBuffer(output, cursor, encoded, buffer.len(encoded))
 		end
 
 		local shrunkBuffer = buffer.create(cursor)
@@ -101,21 +100,17 @@ do
 			field, wireType, cursor = proto.readTag(input, cursor)
 
 			if wireType == proto.wireTypes.varint then
-				if field == 1 then
-					local value
-					value, cursor = proto.readVarIntI32(input, cursor)
-					self.roblox_component = (
-						_roblox_apppageplatform_shared_v1beta1_roblox_component_type.RobloxComponentType.fromNumber(
-							value
-						) or value
-					) :: any --[[ Luau: Enums are a string intersection which Luau is quick to dismantle ]]
-					continue
-				end
+				-- No fields
 
 				local _
 				_, cursor = proto.readVarInt(input, cursor)
 			elseif wireType == proto.wireTypes.lengthDelimited then
-				if field == 2 then
+				if field == 1 then
+					local value
+					value, cursor = proto.readBuffer(input, cursor)
+					self.roblox_component = buffer.tostring(value)
+					continue
+				elseif field == 2 then
 					local value
 					value, cursor = proto.readBuffer(input, cursor)
 					self.identifier = buffer.tostring(value)
@@ -124,6 +119,16 @@ do
 					local value
 					value, cursor = proto.readBuffer(input, cursor)
 					self.title = buffer.tostring(value)
+					continue
+				elseif field == 4 then
+					local value
+					value, cursor = proto.readBuffer(input, cursor)
+					self.category = buffer.tostring(value)
+					continue
+				elseif field == 5 then
+					local value
+					value, cursor = proto.readBuffer(input, cursor)
+					self.surfacing = _roblox_apppageplatform_shared_v1beta1_surfacing.Surfacing.decode(value)
 					continue
 				end
 
@@ -152,19 +157,8 @@ do
 	function _PageEntryImpl.jsonEncode(self: PageEntry): any
 		local output = {}
 
-		if
-			self.roblox_component ~= nil
-			and (
-				self.roblox_component ~= nil and self.roblox_component ~= 0
-				or self.roblox_component
-					~= _roblox_apppageplatform_shared_v1beta1_roblox_component_type.RobloxComponentType.fromNumber(0)
-			)
-		then
-			output.robloxComponent = if typeof(self.roblox_component) == "number"
-				then self.roblox_component
-				else _roblox_apppageplatform_shared_v1beta1_roblox_component_type.RobloxComponentType.toNumber(
-					self.roblox_component :: any
-				)
+		if self.roblox_component ~= nil and self.roblox_component ~= "" then
+			output.robloxComponent = self.roblox_component
 		end
 
 		if self.identifier ~= nil and self.identifier ~= "" then
@@ -175,6 +169,14 @@ do
 			output.title = self.title
 		end
 
+		if self.category ~= nil and self.category ~= "" then
+			output.category = self.category
+		end
+
+		if self.surfacing ~= nil then
+			output.surfacing = self.surfacing:jsonEncode()
+		end
+
 		return output
 	end
 
@@ -182,23 +184,11 @@ do
 		local self = _PageEntryImpl.new()
 
 		if input.roblox_component ~= nil then
-			self.roblox_component = if typeof(input.roblox_component) == "number"
-				then (_roblox_apppageplatform_shared_v1beta1_roblox_component_type.RobloxComponentType.fromNumber(
-					input.roblox_component
-				) or input.roblox_component)
-				else (_roblox_apppageplatform_shared_v1beta1_roblox_component_type.RobloxComponentType.fromName(
-					input.roblox_component
-				) or input.roblox_component)
+			self.roblox_component = input.roblox_component
 		end
 
 		if input.robloxComponent ~= nil then
-			self.roblox_component = if typeof(input.robloxComponent) == "number"
-				then (_roblox_apppageplatform_shared_v1beta1_roblox_component_type.RobloxComponentType.fromNumber(
-					input.robloxComponent
-				) or input.robloxComponent)
-				else (_roblox_apppageplatform_shared_v1beta1_roblox_component_type.RobloxComponentType.fromName(
-					input.robloxComponent
-				) or input.robloxComponent)
+			self.roblox_component = input.robloxComponent
 		end
 
 		if input.identifier ~= nil then
@@ -207,6 +197,14 @@ do
 
 		if input.title ~= nil then
 			self.title = input.title
+		end
+
+		if input.category ~= nil then
+			self.category = input.category
+		end
+
+		if input.surfacing ~= nil then
+			self.surfacing = _roblox_apppageplatform_shared_v1beta1_surfacing.Surfacing.jsonDecode(input.surfacing)
 		end
 
 		return self

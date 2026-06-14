@@ -1,6 +1,6 @@
 --[[
 We will validate two things:
-    - All rig attachments have no orientation
+    - All rig attachments have ~0 orientation (within a tiny tolerance to ignore float drift)
     - Grip attachments are oriented to best align tools along the arm. We base this off the vector from ElbowAtt to WristAtt 
 
 
@@ -16,90 +16,16 @@ local FailureReasonsAccumulator = require(root.util.FailureReasonsAccumulator)
 local getDiffBetweenOrientations = require(root.util.getDiffBetweenOrientations)
 local floatEquals = require(root.util.floatEquals)
 local valueToString = require(root.util.valueToString)
-local getFFlagRefactorBodyAttachmentOrientationsCheck =
-	require(root.flags.getFFlagRefactorBodyAttachmentOrientationsCheck)
+local R15plusUtils = require(root.util.R15plusUtils)
+local getAttachmentCFrameInPartSpace = require(root.util.getAttachmentCFrameInPartSpace)
+local AttachmentRotationFInts = require(root.util.AttachmentRotationFInts)
 
 local ValidateBodyPartChildAttachmentOrientations = {}
 
-game:DefineFastInt("UGCValidationAttRotLimitRootAttachment", 30)
-game:DefineFastInt("UGCValidationAttRotLimitFaceFrontAttachment", 30)
-game:DefineFastInt("UGCValidationAttRotLimitHatAttachment", 30)
-game:DefineFastInt("UGCValidationAttRotLimitHairAttachment", 30)
-game:DefineFastInt("UGCValidationAttRotLimitFaceCenterAttachment", 30)
-game:DefineFastInt("UGCValidationAttRotLimitRightFootAttachment", 30)
-game:DefineFastInt("UGCValidationAttRotLimitLeftFootAttachment", 30)
-game:DefineFastInt("UGCValidationAttRotLimitBodyFrontAttachment", 30)
-game:DefineFastInt("UGCValidationAttRotLimitBodyBackAttachment", 30)
-game:DefineFastInt("UGCValidationAttRotLimitLeftCollarAttachment", 30)
-game:DefineFastInt("UGCValidationAttRotLimitRightCollarAttachment", 30)
-game:DefineFastInt("UGCValidationAttRotLimitNeckAttachment", 30)
-game:DefineFastInt("UGCValidationAttRotLimitWaistCenterAttachment", 30)
-game:DefineFastInt("UGCValidationAttRotLimitWaistFrontAttachment", 30)
-game:DefineFastInt("UGCValidationAttRotLimitWaistBackAttachment", 30)
-game:DefineFastInt("UGCValidationAttRotLimitLeftShoulderAttachment", 30)
-game:DefineFastInt("UGCValidationAttRotLimitLeftGripAttachment", 30)
-game:DefineFastInt("UGCValidationAttRotLimitRightShoulderAttachment", 30)
-game:DefineFastInt("UGCValidationAttRotLimitRightGripAttachment", 30)
+local FFlagUGCValidateRigAttachmentRotationUsesDiff =
+	game:DefineFastFlag("UGCValidateRigAttachmentRotationUsesDiff", false)
 
-local thresholdTable = {
-	RootAttachment = function()
-		return game:GetFastInt("UGCValidationAttRotLimitRootAttachment")
-	end,
-	FaceFrontAttachment = function()
-		return game:GetFastInt("UGCValidationAttRotLimitFaceFrontAttachment")
-	end,
-	HatAttachment = function()
-		return game:GetFastInt("UGCValidationAttRotLimitHatAttachment")
-	end,
-	HairAttachment = function()
-		return game:GetFastInt("UGCValidationAttRotLimitHairAttachment")
-	end,
-	FaceCenterAttachment = function()
-		return game:GetFastInt("UGCValidationAttRotLimitFaceCenterAttachment")
-	end,
-	RightFootAttachment = function()
-		return game:GetFastInt("UGCValidationAttRotLimitRightFootAttachment")
-	end,
-	LeftFootAttachment = function()
-		return game:GetFastInt("UGCValidationAttRotLimitLeftFootAttachment")
-	end,
-	BodyFrontAttachment = function()
-		return game:GetFastInt("UGCValidationAttRotLimitBodyFrontAttachment")
-	end,
-	BodyBackAttachment = function()
-		return game:GetFastInt("UGCValidationAttRotLimitBodyBackAttachment")
-	end,
-	LeftCollarAttachment = function()
-		return game:GetFastInt("UGCValidationAttRotLimitLeftCollarAttachment")
-	end,
-	RightCollarAttachment = function()
-		return game:GetFastInt("UGCValidationAttRotLimitRightCollarAttachment")
-	end,
-	NeckAttachment = function()
-		return game:GetFastInt("UGCValidationAttRotLimitNeckAttachment")
-	end,
-	WaistCenterAttachment = function()
-		return game:GetFastInt("UGCValidationAttRotLimitWaistCenterAttachment")
-	end,
-	WaistFrontAttachment = function()
-		return game:GetFastInt("UGCValidationAttRotLimitWaistFrontAttachment")
-	end,
-	WaistBackAttachment = function()
-		return game:GetFastInt("UGCValidationAttRotLimitWaistBackAttachment")
-	end,
-	LeftShoulderAttachment = function()
-		return game:GetFastInt("UGCValidationAttRotLimitLeftShoulderAttachment")
-	end,
-	LeftGripAttachment = function()
-		return game:GetFastInt("UGCValidationAttRotLimitLeftGripAttachment")
-	end,
-	RightShoulderAttachment = function()
-		return game:GetFastInt("UGCValidationAttRotLimitRightShoulderAttachment")
-	end,
-	RightGripAttachment = function()
-		return game:GetFastInt("UGCValidationAttRotLimitRightGripAttachment")
-	end,
-}
+local thresholdTable = AttachmentRotationFInts.thresholdGetters
 
 -- The expected CFrame for an arm that is modeled in I pose
 local GRIP_CFRAME_IPOSE = CFrame.new(Vector3.zero, Vector3.new(0, 0, -1))
@@ -122,19 +48,28 @@ function ValidateBodyPartChildAttachmentOrientations.expectedGripAttCFrameRotati
 	assert(lowerArm)
 	assert(hand)
 
-	local armElbowAtt = lowerArm:FindFirstChild(armPrefix .. "ElbowRigAttachment") :: Attachment
-	local armWristAtt = lowerArm:FindFirstChild(armPrefix .. "WristRigAttachment") :: Attachment
-	local handWristAtt = hand:FindFirstChild(armPrefix .. "WristRigAttachment") :: Attachment
-	local gripAtt = hand:FindFirstChild(armPrefix .. "GripAttachment") :: Attachment
+	local armElbowAtt = lowerArm:FindFirstChild(
+		armPrefix .. "ElbowRigAttachment",
+		R15plusUtils.checkFlagEnabledForAllowHrd()
+	) :: Attachment
+	local armWristAtt = lowerArm:FindFirstChild(
+		armPrefix .. "WristRigAttachment",
+		R15plusUtils.checkFlagEnabledForAllowHrd()
+	) :: Attachment
+	local handWristAtt =
+		hand:FindFirstChild(armPrefix .. "WristRigAttachment", R15plusUtils.checkFlagEnabledForAllowHrd()) :: Attachment
+	local gripAtt =
+		hand:FindFirstChild(armPrefix .. "GripAttachment", R15plusUtils.checkFlagEnabledForAllowHrd()) :: Attachment
 	assert(armElbowAtt)
 	assert(armWristAtt)
 	assert(handWristAtt)
 	assert(gripAtt)
 
 	-- We need to know where the wrist and elbow attachments end up if we were to reset hand to (0,0,0) orientation
-	local wristAttImportCFrame: CFrame = handWristAtt.CFrame
-	local lowerArmCFrameInHandSpace: CFrame = wristAttImportCFrame * armWristAtt.CFrame:Inverse()
-	local elbowAttImportCFrame: CFrame = lowerArmCFrameInHandSpace * armElbowAtt.CFrame
+	local wristAttImportCFrame: CFrame = getAttachmentCFrameInPartSpace(handWristAtt)
+	local lowerArmCFrameInHandSpace: CFrame = wristAttImportCFrame
+		* getAttachmentCFrameInPartSpace(armWristAtt):Inverse()
+	local elbowAttImportCFrame: CFrame = lowerArmCFrameInHandSpace * getAttachmentCFrameInPartSpace(armElbowAtt)
 	local elbowRigBone = wristAttImportCFrame.Position - elbowAttImportCFrame.Position
 
 	local fixedRigBone = Vector3.new(elbowRigBone.X, math.max(0, -elbowRigBone.Y), 0).Unit
@@ -155,11 +90,10 @@ function ValidateBodyPartChildAttachmentOrientations.runValidation(
 ): (boolean, { string }?)
 	-- If schema is not valid, this test can error
 	-- We run three validations:
-	-- Rig attachments must be (0,0,0),
+	-- Rig attachments must be ~(0,0,0) (tiny tolerance to ignore float drift),
 	-- Grip attachments must be perpendicular to the bone, facing with the character
 	-- Non-rig and non-grip attachments must be within 30 degrees of (0,0,0)
 
-	assert(getFFlagRefactorBodyAttachmentOrientationsCheck())
 	local reasonsAccumulator = FailureReasonsAccumulator.new()
 
 	for _, desc: Attachment in inst:GetDescendants() :: { any } do
@@ -168,8 +102,15 @@ function ValidateBodyPartChildAttachmentOrientations.runValidation(
 			local isGripAttachment = string.sub(desc.Name, -string.len(GRIP_ATT_SUFFIX)) == GRIP_ATT_SUFFIX
 
 			if isRigAttachment then
-				local x, y, z = desc.CFrame:ToOrientation()
-				if not floatEquals(x, 0) or not floatEquals(y, 0) or not floatEquals(z, 0) then
+				local isRotated
+				if FFlagUGCValidateRigAttachmentRotationUsesDiff then
+					isRotated = getDiffBetweenOrientations(CFrame.identity, getAttachmentCFrameInPartSpace(desc))
+						> thresholdTable.RigAttachment()
+				else
+					local x, y, z = getAttachmentCFrameInPartSpace(desc):ToOrientation()
+					isRotated = not floatEquals(x, 0) or not floatEquals(y, 0) or not floatEquals(z, 0)
+				end
+				if isRotated then
 					Analytics.reportFailure(
 						Analytics.ErrorType.validateBodyPartChildAttachmentOrientations_RotatedRig,
 						nil,
@@ -192,7 +133,10 @@ function ValidateBodyPartChildAttachmentOrientations.runValidation(
 					)
 				end
 
-				if getDiffBetweenOrientations(expectedCFrame, desc.CFrame) > thresholdTable[desc.Name]() then
+				if
+					getDiffBetweenOrientations(expectedCFrame, getAttachmentCFrameInPartSpace(desc))
+					> thresholdTable[desc.Name]()
+				then
 					Analytics.reportFailure(
 						isGripAttachment and Analytics.ErrorType.validateBodyPartChildAttachmentOrientations_RotatedGrip
 							or Analytics.ErrorType.validateBodyPartChildAttachmentOrientations_RotatedBasic,

@@ -3,15 +3,16 @@ local Packages = Foundation.Parent
 
 local React = require(Packages.React)
 
-local Flags = require(Foundation.Utility.Flags)
 local OverlayContext = require(script.Parent.OverlayContext)
+
+local Flags = require(Foundation.Utility.Flags)
 
 local function useOverlay(): GuiBase2d?
 	local overlayContext = React.useContext(OverlayContext)
-	local effectHook = (if Flags.FoundationOverlayMountReorder then React.useLayoutEffect else React.useEffect) :: any
-	effectHook(function()
+
+	React.useLayoutEffect(function()
 		overlayContext.requestOverlay()
-	end, {})
+	end, if Flags.FoundationOverlayKeyboardAwarenessHardened then { overlayContext.requestOverlay } else {})
 
 	return overlayContext.instance
 end

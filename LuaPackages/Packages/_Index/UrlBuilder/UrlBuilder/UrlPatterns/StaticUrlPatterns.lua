@@ -45,6 +45,10 @@ return function(UrlBuilder)
 			-- so we send that as a query parameter instead and handle it in the portal
 			violation = UrlBuilder.fromString("www:report-appeals?vid={id}&t_source={source|app}"),
 		},
+		supportCenter = {
+			main = UrlBuilder.fromString("www:support-center"),
+			ticket = UrlBuilder.fromString("www:support-center#!/tickets/{universeId}/{ticketId}"),
+		},
 		email = {
 			getSetEmail = UrlBuilder.fromString("accountSettings:v1/email"),
 			sendVerificationEmail = UrlBuilder.fromString("accountSettings:v1/email/verify"),
@@ -90,6 +94,7 @@ return function(UrlBuilder)
 			parentalControls = UrlBuilder.fromString("www:my/account#!/parental-controls"),
 			billing = UrlBuilder.fromString("www:my/account#!/billing"),
 			subscriptions = UrlBuilder.fromString("www:my/account#!/subscriptions"),
+			robux = UrlBuilder.fromString("www:my/account#!/robux"),
 			notifications = UrlBuilder.fromString("www:my/account#!/notifications"),
 			appPermissions = UrlBuilder.fromString("www:my/account#!/app-permissions"),
 			screentimeSettings = UrlBuilder.fromString("www:my/account#!/privacy/Screentime"),
@@ -99,6 +104,7 @@ return function(UrlBuilder)
 			blockedUsersSettings = UrlBuilder.fromString("www:my/account#!/privacy/BlockedUsers"),
 			experienceChatSettings = UrlBuilder.fromString("www:my/account#!/privacy/Communication/ExperienceChat"),
 			partySettings = UrlBuilder.fromString("www:my/account#!/privacy/Communication/Party"),
+			partySettingsV2 = UrlBuilder.fromString("www:my/account#!/privacy/Communication/PartyAndPartyChat"),
 			communicationSettings = UrlBuilder.fromString("www:my/account#!/privacy/Communication"),
 			voiceSettings = UrlBuilder.fromString("www:my/account#!/privacy/Communication/Voice"),
 			tradingInventorySettings = UrlBuilder.fromString("www:my/account#!/privacy/TradingAndInventory"),

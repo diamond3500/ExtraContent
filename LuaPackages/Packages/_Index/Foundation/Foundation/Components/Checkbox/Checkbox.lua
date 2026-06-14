@@ -12,16 +12,11 @@ local Text = require(Components.Text)
 local Types = require(Components.Types)
 local useUncontrolledState = require(Components.InternalInput.useUncontrolledState)
 
-local Flags = require(Foundation.Utility.Flags)
-
 local useTokens = require(Foundation.Providers.Style.useTokens)
 local withCommonProps = require(Foundation.Utility.withCommonProps)
 local withDefaults = require(Foundation.Utility.withDefaults)
 
 local useCheckboxVariants = require(script.Parent.useCheckboxVariants)
-
-local CheckedState = require(Foundation.Enums.CheckedState)
-type CheckedState = CheckedState.CheckedState
 
 local InputSize = require(Foundation.Enums.InputSize)
 type InputSize = InputSize.InputSize
@@ -32,10 +27,13 @@ type InputPlacement = InputPlacement.InputPlacement
 export type CheckboxProps = {
 	-- Whether the checkbox is currently checked. If it is left `nil`,
 	-- the checkbox will be considered uncontrolled.
-	isChecked: CheckedState?,
+	isChecked: boolean?,
 	-- Whether the checkbox is disabled. When `true`, the `onActivated` callback
 	-- will not be invoked, even if the user interacts with the checkbox.
 	isDisabled: boolean?,
+	-- A visual property that, if true, will show an indeterminate state
+	-- over the checkbox
+	isIndeterminate: boolean?,
 	-- A function that will be called whenever the checkbox is activated.
 	-- Returns the new value of the checkbox when uncontrolled.
 	onActivated: (boolean) -> (),
@@ -57,22 +55,14 @@ local function Checkbox(checkboxProps: CheckboxProps, ref: React.Ref<GuiObject>?
 	local tokens = useTokens()
 	local variantProps = useCheckboxVariants(tokens, props.size)
 
-	local isChecked, onActivated
-	local isIndeterminate
-
-	if Flags.FoundationCheckboxIndeterminate then
-		isIndeterminate = props.isChecked == CheckedState.Indeterminate
-		local isCheckedBool: boolean? = if isIndeterminate then true else props.isChecked
-
-		isChecked, onActivated = useUncontrolledState(isCheckedBool, props.onActivated)
-	else
-		isChecked, onActivated = useUncontrolledState(props.isChecked, props.onActivated)
-	end
+	local isChecked, onActivated = useUncontrolledState(props.isChecked, props.onActivated)
+	local isIndeterminate = props.isIndeterminate or false
 
 	return React.createElement(
 		Input,
 		withCommonProps(props, {
 			isChecked = isChecked,
+			isIndeterminate = isIndeterminate,
 			isDisabled = props.isDisabled,
 			onActivated = onActivated,
 			label = {
@@ -89,11 +79,9 @@ local function Checkbox(checkboxProps: CheckboxProps, ref: React.Ref<GuiObject>?
 			ref = ref,
 		}),
 		{
-			Checkmark = if isChecked or (Flags.FoundationCheckboxIndeterminate and isIndeterminate)
+			Checkmark = if isChecked or isIndeterminate
 				then React.createElement(Text, {
-					Text = if Flags.FoundationCheckboxIndeterminate and isIndeterminate
-						then BuilderIcons.Icon.Minus
-						else BuilderIcons.Icon.Check,
+					Text = if isIndeterminate then BuilderIcons.Icon.Minus else BuilderIcons.Icon.Check,
 					fontStyle = {
 						Font = BuilderIcons.Font[BuilderIcons.IconVariant.Filled],
 					},

@@ -1,12 +1,12 @@
---!nonstrict
 local Stories = script.Parent
 local Foundation = script:FindFirstAncestor("Foundation")
 local Packages = Foundation.Parent
 
--- local DocUtils = require(Packages.Dev.DocUtils)
--- local DocParser = require(DocUtils.DocParser)
-local GetStories = require(Stories.GetStories)
+local React = require(Packages.React)
+local ReactRoblox = require(Packages.ReactRoblox)
 local Roact = require(Packages.Roact)
+
+local GetStories = require(Stories.GetStories)
 local StoryMiddleware = require(Stories.StoryMiddleware)
 
 return {
@@ -15,14 +15,8 @@ return {
 	roact = Roact,
 	storyRoots = GetStories(true),
 	mapStory = StoryMiddleware,
-	-- mapDefinition = function(definition)
-	-- 	local parser = DocParser.new(definition.name, definition.source)
-	-- 	local ok, result = pcall(function()
-	-- 		return parser:parse()
-	-- 	end)
-	-- 	if ok then
-	-- 		definition.docs = result
-	-- 	end
-	-- 	return definition
-	-- end,
+	packages = {
+		React = React,
+		ReactRoblox = ReactRoblox,
+	},
 }

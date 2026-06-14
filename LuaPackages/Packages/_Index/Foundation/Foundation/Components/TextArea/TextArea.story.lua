@@ -10,7 +10,9 @@ local useTokens = require(Foundation.Providers.Style.useTokens)
 local Button = require(Foundation.Components.Button)
 
 local ButtonVariant = require(Foundation.Enums.ButtonVariant)
+local InputFocusBehavior = require(Foundation.Enums.InputFocusBehavior)
 local InputSize = require(Foundation.Enums.InputSize)
+local InputVariant = require(Foundation.Enums.InputVariant)
 
 local TextArea = require(Foundation.Components.TextArea)
 
@@ -39,11 +41,14 @@ local function Story(props)
 			isDisabled = controls.isDisabled,
 			isRequired = controls.isRequired,
 			resizable = controls.resizable,
+			variant = controls.variant,
+			focusBehavior = if controls.focusBehavior ~= React.None then controls.focusBehavior else nil,
 			onChanged = handleChange,
 			label = controls.label,
 			hint = controls.hint,
 			size = controls.size,
-			width = UDim.new(0, controls.width),
+			width = if controls.width == 0 then nil else UDim.new(0, controls.width),
+			hasClearButton = if controls.hasClearButton == React.None then nil else controls.hasClearButton,
 			numLines = controls.numLines,
 			placeholder = controls.placeholder,
 			text = text,
@@ -54,7 +59,7 @@ local function Story(props)
 			LayoutOrder = 2,
 			Text = text,
 			textStyle = tokens.Color.System.Alert,
-			tag = "auto-y size-full-0 text-wrap text-align-x-left",
+			tag = "size-full-0 auto-y text-wrap text-align-x-left",
 		}),
 
 		FocusButton = React.createElement(Button, {
@@ -73,7 +78,10 @@ return {
 		hasError = false,
 		isDisabled = false,
 		numLines = 4,
-		width = 400,
+		variant = Dash.values(InputVariant),
+		focusBehavior = { React.None, unpack(Dash.values(InputFocusBehavior)) },
+		hasClearButton = { React.None, false, true },
+		width = 0,
 		size = Dash.values(InputSize),
 		label = "Biography",
 		hint = "1000 characters maximum",

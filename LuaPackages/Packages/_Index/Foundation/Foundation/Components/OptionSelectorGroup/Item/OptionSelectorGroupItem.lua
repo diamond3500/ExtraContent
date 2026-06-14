@@ -3,8 +3,6 @@ local Packages = Foundation.Parent
 
 local React = require(Packages.React)
 
-local Flags = require(Foundation.Utility.Flags)
-
 local Motion = require(Packages.Motion)
 local useMotion = Motion.useMotion
 
@@ -106,9 +104,7 @@ local function OptionSelectorGroupItem(
 	local fillBehavior = if orientation == Orientation.Horizontal
 		then FillBehavior.Fit
 		else (props.fillBehavior or FillBehavior.Fill)
-	local containerSize = if Flags.FoundationFixOptionSelectorGroupItemSize
-		then UDim2.fromScale(1, 0)
-		else UDim2.new(if fillBehavior == FillBehavior.Fill then UDim.new(1, 0) else props.width, UDim.new())
+	local containerSize = UDim2.fromScale(1, 0)
 
 	local tokens = useTokens()
 	local variantProps = useOptionSelectorGroupItemVariants(tokens, props.size)
@@ -171,18 +167,11 @@ local function OptionSelectorGroupItem(
 			cursor = cursor,
 			onActivated = onActivated,
 			isDisabled = props.isDisabled,
-			tag = if Flags.FoundationFixOptionSelectorGroupItemSize
-				then {
-					["auto-xy"] = fillBehavior ~= FillBehavior.Fill,
-					["auto-y fill"] = fillBehavior == FillBehavior.Fill,
-					[variantProps.container.tag] = true,
-				}
-				else {
-					["auto-xy"] = props.width.Scale == 0 or (fillBehavior and fillBehavior ~= FillBehavior.Fill),
-					["auto-y"] = props.width.Scale ~= 0,
-					["fill"] = fillBehavior and fillBehavior == FillBehavior.Fill,
-					[variantProps.container.tag] = true,
-				},
+			tag = {
+				["auto-xy"] = fillBehavior ~= FillBehavior.Fill,
+				["fill auto-y"] = fillBehavior == FillBehavior.Fill,
+				[variantProps.container.tag] = true,
+			},
 			ref = ref,
 		}),
 		{
@@ -191,7 +180,7 @@ local function OptionSelectorGroupItem(
 				Size = containerSize,
 			}, {
 				IconRow = React.createElement(View, {
-					tag = "size-full-0 auto-y row gap-small align-y-center",
+					tag = "row align-y-center gap-small size-full-0 auto-y",
 					LayoutOrder = 1,
 				}, {
 					Icon = if props.icon

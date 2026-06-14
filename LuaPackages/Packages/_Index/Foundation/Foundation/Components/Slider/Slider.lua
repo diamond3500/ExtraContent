@@ -18,7 +18,6 @@ local calculateNextStepValue = require(script.Parent.calculateNextStepValue)
 local calculatePixelsPerStep = require(script.Parent.calculatePixelsPerStep)
 local calculateSliderPositionDelta = require(script.Parent.calculateSliderPositionDelta)
 local calculateSliderStepValue = require(script.Parent.calculateSliderStepValue)
-local calculateSliderValueFromDelta = require(script.Parent.calculateSliderValueFromDelta)
 local calculateSliderValueFromPosition = require(script.Parent.calculateSliderValueFromPosition)
 
 local InputSize = require(Foundation.Enums.InputSize)
@@ -90,7 +89,9 @@ local function Slider(sliderProps: SliderProps, forwardRef: React.Ref<GuiObject>
 	local controlState, setControlState = React.useState(ControlState.Initialize :: ControlState)
 	local isDragging, setIsDragging = React.useState(false)
 	local isKnobVisible, setIsKnobVisible = React.useState(false)
-	local value: React.Binding<number> = useBindable(props.value)
+	local value: React.Binding<number> = useBindable(props.value):map(function(currValue)
+		return math.clamp(currValue, props.range.Min, props.range.Max)
+	end)
 
 	local lastDragPosition = React.useRef(nil :: Vector2?)
 	local lastInputMode = useLastInputMode()
@@ -219,8 +220,8 @@ local function Slider(sliderProps: SliderProps, forwardRef: React.Ref<GuiObject>
 					return
 				end
 
-				-- Calculate the new value from the delta
-				local unsteppedValue = calculateSliderValueFromDelta(value:getValue(), delta, props.range)
+				-- Calculate the new value from the position
+				local unsteppedValue = calculateValueFromAbsPosition(position)
 
 				updateValue(unsteppedValue)
 			end
@@ -289,7 +290,7 @@ local function Slider(sliderProps: SliderProps, forwardRef: React.Ref<GuiObject>
 				}, {
 					Knob = if props.knob
 						then React.createElement(View, {
-							tag = "auto-xy size-0-0",
+							tag = "size-0-0 auto-xy",
 							AnchorPoint = knobAnchorPoint,
 							Position = knobPosition,
 							Visible = isKnobVisible,

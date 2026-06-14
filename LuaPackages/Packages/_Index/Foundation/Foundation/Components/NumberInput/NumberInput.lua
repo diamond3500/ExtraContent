@@ -2,6 +2,8 @@ local Foundation = script:FindFirstAncestor("Foundation")
 local Packages = Foundation.Parent
 
 local React = require(Packages.React)
+local ReactIs = require(Packages.ReactIs)
+local ReactUtils = require(Packages.ReactUtils)
 
 local Components = Foundation.Components
 local withCommonProps = require(Foundation.Utility.withCommonProps)
@@ -13,8 +15,14 @@ type InputSize = InputSize.InputSize
 local InputLabelSize = require(Foundation.Enums.InputLabelSize)
 type InputLabelSize = InputLabelSize.InputLabelSize
 
+local InputVariant = require(Foundation.Enums.InputVariant)
+type InputVariant = InputVariant.InputVariant
+
 local NumberInputControlsVariant = require(Foundation.Enums.NumberInputControlsVariant)
 type NumberInputControlsVariant = NumberInputControlsVariant.NumberInputControlsVariant
+
+local OnChangeCallbackReason = require(Foundation.Enums.OnChangeCallbackReason)
+type OnChangeCallbackReason = OnChangeCallbackReason.OnChangeCallbackReason
 
 local Flags = require(Foundation.Utility.Flags)
 local Icon = require(Components.Icon)
@@ -22,7 +30,10 @@ local InputField = require(Components.InputField)
 local InternalTextInput = require(Components.InternalTextInput)
 local Types = require(Components.Types)
 local View = require(Components.View)
+local getBindableValue = require(Foundation.Utility.getBindableValue)
 local getInputTextSize = require(Foundation.Utility.getInputTextSize)
+local joinBindables = require(Foundation.Utility.joinBindables)
+local mapBindable = require(Foundation.Utility.mapBindable)
 local useTextInputVariants = require(Components.TextInput.useTextInputVariants)
 local useTokens = require(Foundation.Providers.Style.useTokens)
 
@@ -30,6 +41,11 @@ local NumberInputControls = require(script.Parent.NumberInputControls)
 local useNumberInputVariants = require(script.Parent.useNumberInputVariants)
 
 local calculateNumberInputValueFromPositions = require(script.Parent.calculateNumberInputValueFromPositions)
+
+type Bindable<T> = Types.Bindable<T>
+
+local InputFocusBehavior = require(Foundation.Enums.InputFocusBehavior)
+type InputFocusBehavior = InputFocusBehavior.InputFocusBehavior
 
 export type NumberInputRef = Types.TextInputRef
 
@@ -40,11 +56,13 @@ end
 
 export type NumberInputProps = {
 	-- Input number value
-	value: number?,
+	value: Bindable<number>?,
 	-- Variant of controls to use
 	controlsVariant: NumberInputControlsVariant?,
 	-- Whether the input shows an error state. Always shows while true, if false then invalid input will still render an error state.
 	hasError: boolean?,
+	-- Style variant of the input
+	variant: InputVariant?,
 	-- Size of the number input
 	size: InputSize?,
 	-- Whether the input is disabled
@@ -52,7 +70,7 @@ export type NumberInputProps = {
 	-- Whether the input is required, true for "*", false for " (optional)", nil for nothing
 	isRequired: boolean?,
 	-- The callback that processes the new value
-	onChanged: (number: number) -> (),
+	onChanged: (number: number, reason: OnChangeCallbackReason) -> (),
 	-- Input label text. To omit, set to an empty string
 	label: string,
 	-- Hint text below the input, is red on error
@@ -73,13 +91,16 @@ export type NumberInputProps = {
 	formatAsString: ((value: number) -> string)?,
 	-- Whether the input can be dragged to change the value
 	isScrubbable: boolean?,
-} & Types.CommonProps
+	-- Behavior of the text input when focused. Mobile does not yet support Highlight behavior.
+	focusBehavior: InputFocusBehavior?,
+} & Types.SelectionProps & Types.CommonProps
 
 local function defaultFormatAsString(value: number)
 	return tostring(value)
 end
 
 local defaultProps = {
+	variant = InputVariant.Standard,
 	controlsVariant = NumberInputControlsVariant.Stacked,
 	size = InputSize.Large,
 	minimum = -math.huge,
@@ -88,14 +109,14 @@ local defaultProps = {
 	precision = 3,
 	value = 0,
 	formatAsString = defaultFormatAsString,
-	width = UDim.new(0, 400),
 	isScrubbable = false,
 	testId = "--foundation-number-input",
 }
 
 local function NumberInput(numberInputProps: NumberInputProps, ref: React.Ref<GuiObject>?)
 	local props = withDefaults(numberInputProps, defaultProps) :: {
-		controlsVariant: NumberInputControlsVariant?,
+		variant: InputVariant,
+		controlsVariant: NumberInputControlsVariant,
 		hasError: boolean?,
 		isDisabled: boolean?,
 		size: InputSize,
@@ -103,39 +124,41 @@ local function NumberInput(numberInputProps: NumberInputProps, ref: React.Ref<Gu
 		maximum: number,
 		minimum: number,
 		precision: number,
-		value: number,
-		onChanged: (number: number) -> (),
+		value: Bindable<number>,
+		onChanged: (number: number, reason: OnChangeCallbackReason) -> (),
 		formatAsString: (value: number) -> string,
 		isRequired: boolean?,
 		label: string,
 		hint: string?,
-		width: UDim,
+		width: UDim?,
 		leadingIcon: string?,
 		isScrubbable: boolean?,
 		testId: string,
 		-- Partial TextBox ref exposed via imperative handle
 		textBoxRef: React.Ref<NumberInputRef>?,
 		onFocusGained: (() -> ())?,
-		onFocusLost: (() -> ())?,
+		-- Called when focus is lost. The InputObject that caused focus to be lost is passed if available.
+		onFocusLost: ((inputObject: InputObject?) -> ())?,
 		onReturnPressed: (() -> ())?,
-	} & Types.CommonProps
+	} & Types.SelectionProps & Types.CommonProps
 
 	local tokens = useTokens()
-	local variantProps = useTextInputVariants(tokens, props.size)
-	local NumberInputControlsVariantProps = useNumberInputVariants(tokens, props.size)
+	local variantProps = useTextInputVariants(tokens, props.size, props.variant)
+	local NumberInputControlsVariantProps = useNumberInputVariants(tokens, props.size, props.controlsVariant)
 
-	local focused, setFocused = React.useState(false)
-	-- Remove with Flag.FoundationNumberInputDraggingDeltaFix
-	local lastDragPosition = if Flags.FoundationNumberInputDraggingDeltaFix
-		then nil :: never
-		else React.useRef(nil :: Vector2?)
-	local dragStartTable = if Flags.FoundationNumberInputDraggingDeltaFix
-		then React.useRef(nil :: { position: number, value: number }?)
-		else nil :: never
-	local isDisabledUp, isDisabledDown, upValue, downValue
+	local internalTextBoxRef = React.useRef(nil)
+	local numberInputRef = (
+		ReactUtils.useComposedRef(internalTextBoxRef, (props.textBoxRef :: unknown) :: React.Ref<Instance>) :: unknown
+	) :: React.Ref<NumberInputRef>
+	local dragStartTable = React.useRef(nil :: { position: number, value: number }?)
+
+	local isFocused = React.useCallback(function()
+		return if internalTextBoxRef.current then internalTextBoxRef.current.getIsFocused() else false
+	end, {})
 
 	local hasInvalidInput, setHasInvalidInput = React.useState(false)
 	local hasError = props.hasError or hasInvalidInput
+	local controlsVariant = props.controlsVariant
 
 	local clampValueToRange = React.useCallback(function(value: number)
 		return math.clamp(value, props.minimum, props.maximum)
@@ -145,70 +168,79 @@ local function NumberInput(numberInputProps: NumberInputProps, ref: React.Ref<Gu
 		return roundFunction(value / props.step) * props.step
 	end, { props.step })
 
-	if not focused then
-		local roundedValue = round(props.value, props.precision)
-		local newUpValue = round(props.value + props.step, props.precision)
-		local newDownValue = round(props.value - props.step, props.precision)
-
-		local snapUpValue = round(snapToStep(props.value, math.ceil), props.precision)
-		local snapDownValue = round(snapToStep(props.value, math.floor), props.precision)
-		if roundedValue ~= snapUpValue then
-			newUpValue = snapUpValue
-		end
-		if roundedValue ~= snapDownValue then
-			newDownValue = snapDownValue
-		end
-
-		upValue = clampValueToRange(newUpValue)
-		downValue = clampValueToRange(newDownValue)
-
-		isDisabledUp = props.value == props.maximum
-		isDisabledDown = props.value == props.minimum
-	end
-
-	-- Should we have a default value?
-	local roundedValue = if props.value then round(props.value, props.precision) else 0
-	local currentText = if focused then tostring(props.value) else props.formatAsString(roundedValue)
-	local controlsVariant = props.controlsVariant
-
-	local currentTextRef = React.useRef(currentText)
-	currentTextRef.current = tostring(props.value)
-
-	-- Get percentage of where the value is between min and max
-	local percentage = React.useMemo(function()
-		if props.value and props.maximum and props.minimum then
-			local currentValue = clampValueToRange(props.value)
-			if props.maximum == props.minimum then
-				return 1
-			else
-				return (currentValue - props.minimum) / (props.maximum - props.minimum)
+	local upValue = React.useMemo(function()
+		return mapBindable(props.value, function(value)
+			local roundedValue = round(value, props.precision)
+			local newUpValue = round(value + props.step, props.precision)
+			local snapUpValue = round(snapToStep(value, math.ceil), props.precision)
+			if roundedValue ~= snapUpValue then
+				newUpValue = snapUpValue
 			end
-		end
-		return 0
-	end, { props.value, props.maximum, props.minimum })
+			return clampValueToRange(newUpValue)
+		end)
+	end, { props.value, props.step, props.precision, clampValueToRange, snapToStep } :: { unknown })
+
+	local downValue = React.useMemo(function()
+		return mapBindable(props.value, function(value)
+			local roundedValue = round(value, props.precision)
+			local newDownValue = round(value - props.step, props.precision)
+			local snapDownValue = round(snapToStep(value, math.floor), props.precision)
+			if roundedValue ~= snapDownValue then
+				newDownValue = snapDownValue
+			end
+			return clampValueToRange(newDownValue)
+		end)
+	end, { props.value, props.step, props.precision, clampValueToRange, snapToStep } :: { unknown })
+
+	local isUpDisabled = React.useMemo(function()
+		return mapBindable(props.value, function(value)
+			return props.isDisabled or value == props.maximum
+		end)
+	end, { props.isDisabled, props.value, props.maximum } :: { unknown })
+
+	local isDownDisabled = React.useMemo(function()
+		return mapBindable(props.value, function(value)
+			return props.isDisabled or value == props.minimum
+		end)
+	end, { props.isDisabled, props.value, props.minimum } :: { unknown })
+
+	local constrainValue = React.useCallback(function(value: number)
+		return round(math.clamp(value, props.minimum, props.maximum), props.precision)
+	end, { props.minimum, props.maximum, props.precision } :: { unknown })
+
+	local textInput, setTextInput =
+		React.useBinding(props.formatAsString(constrainValue(getBindableValue(props.value))))
+
+	local width = if props.width
+		then props.width :: UDim
+		else UDim.new(0, NumberInputControlsVariantProps.container.width)
 
 	local onFocus = React.useCallback(function()
-		setFocused(true)
+		setTextInput(tostring(getBindableValue(props.value)))
+
 		if props.onFocusGained then
 			props.onFocusGained()
 		end
-	end, { setFocused, props.onFocusGained } :: { unknown })
+	end, { props.onFocusGained, props.value } :: { unknown })
 
-	local onFocusLost = React.useCallback(
-		function()
-			setFocused(false)
-			setHasInvalidInput(false)
-			local v = math.clamp(props.value, props.minimum, props.maximum)
-			props.onChanged(round(v, props.precision))
-			if props.onFocusLost then
-				props.onFocusLost()
-			end
-		end,
-		{ setFocused, props.onChanged, props.onFocusLost, props.maximum, props.minimum, props.precision, props.value } :: { unknown }
-	)
+	local valueChanged = React.useCallback(function(value: number, reason: OnChangeCallbackReason)
+		value = constrainValue(value)
+		setTextInput(if isFocused() then tostring(value) else props.formatAsString(value))
+		props.onChanged(value, reason)
+	end, { props.onChanged, props.formatAsString, constrainValue, isFocused } :: { unknown })
 
-	local onChanged = React.useCallback(function(text)
-		if not focused then
+	local onFocusLost = React.useCallback(function(inputObject: InputObject?)
+		setHasInvalidInput(false)
+		valueChanged(getBindableValue(props.value), OnChangeCallbackReason.FocusLost)
+
+		if props.onFocusLost then
+			props.onFocusLost(inputObject)
+		end
+	end, { valueChanged, props.onFocusLost, props.value, constrainValue } :: { unknown })
+
+	local onTextChanged = React.useCallback(function(text)
+		setTextInput(text)
+		if not isFocused() then
 			return
 		end
 
@@ -219,179 +251,196 @@ local function NumberInput(numberInputProps: NumberInputProps, ref: React.Ref<Gu
 		else
 			setHasInvalidInput(false)
 		end
-		props.onChanged(n :: number)
-	end, { focused, props.onChanged } :: { unknown })
+		props.onChanged(n :: number, OnChangeCallbackReason.Keyboard)
+	end, { isFocused, props.onChanged } :: { unknown })
 
 	local onIncrement = React.useCallback(function()
-		if props.isDisabled or isDisabledUp then
+		if getBindableValue(isUpDisabled) then
 			return
 		end
-		props.onChanged(upValue)
-	end, { props.isDisabled, isDisabledUp, upValue, props.onChanged } :: { unknown })
+		valueChanged(getBindableValue(upValue), OnChangeCallbackReason.Activate)
+	end, { isUpDisabled, upValue, valueChanged } :: { unknown })
 
 	local onDecrement = React.useCallback(function()
-		if props.isDisabled or isDisabledDown then
+		if getBindableValue(isDownDisabled) then
 			return
 		end
-		props.onChanged(downValue)
-	end, { props.isDisabled, isDisabledDown, downValue, props.onChanged } :: { unknown })
+		valueChanged(getBindableValue(downValue), OnChangeCallbackReason.Activate)
+	end, { isDownDisabled, downValue, valueChanged } :: { unknown })
 
 	local controls = React.createElement(NumberInputControls, {
-		variant = controlsVariant :: NumberInputControlsVariant,
+		variant = props.variant,
+		controlsVariant = controlsVariant :: NumberInputControlsVariant,
 		size = props.size,
 		increment = {
-			isDisabled = props.isDisabled or isDisabledUp,
+			isDisabled = isUpDisabled,
 			onClick = onIncrement,
 		},
 		decrement = {
-			isDisabled = props.isDisabled or isDisabledDown,
+			isDisabled = isDownDisabled,
 			onClick = onDecrement,
 		},
 		testId = props.testId,
 	})
 
-	local widthOffset = React.useMemo(function()
-		if controlsVariant == NumberInputControlsVariant.Split then
-			return UDim.new(0, (2 * NumberInputControlsVariantProps.splitButton.size) + (2 * tokens.Gap.XSmall))
-		end
+	local widthOffset = React.useMemo(
+		function()
+			if controlsVariant == NumberInputControlsVariant.Split then
+				return UDim.new(0, (2 * NumberInputControlsVariantProps.splitButton.size) + (2 * tokens.Gap.XSmall))
+			end
 
-		return UDim.new()
-	end, { tokens, controlsVariant } :: { any })
+			return UDim.new()
+		end,
+		{ tokens, controlsVariant, NumberInputControlsVariantProps.splitButton.size, tokens.Gap.XSmall } :: { unknown }
+	)
 
 	local onDragStarted = React.useCallback(function(_rbx, position: Vector2)
-		if not props.isScrubbable then
-			return
+		local value = props.value
+		if value then
+			dragStartTable.current = {
+				position = position.X,
+				value = getBindableValue(value),
+			}
 		end
-		if Flags.FoundationNumberInputDraggingDeltaFix then
-			local value = tonumber(currentTextRef.current)
-			if dragStartTable and value then
-				dragStartTable.current = { position = position.X, value = value }
-			end
-		else
-			lastDragPosition.current = position
-		end
-	end, { props.isScrubbable } :: { unknown })
+	end, { props.value } :: { unknown })
 
 	local onDrag = React.useCallback(function(_rbx, position: Vector2)
-		if not props.isScrubbable then
-			return
+		if dragStartTable.current then
+			local newValue = calculateNumberInputValueFromPositions(
+				dragStartTable.current.value,
+				dragStartTable.current.position,
+				position.X,
+				props.step
+			)
+			valueChanged(newValue, OnChangeCallbackReason.Drag)
 		end
-		if Flags.FoundationNumberInputDraggingDeltaFix then
-			if dragStartTable and dragStartTable.current then
-				local newValue = calculateNumberInputValueFromPositions(
-					dragStartTable.current.value,
-					dragStartTable.current.position,
-					position.X,
-					props.step
-				)
-				newValue = math.clamp(round(newValue, props.precision), props.minimum, props.maximum)
-				props.onChanged(newValue)
-			end
-		else
-			if lastDragPosition.current then
-				local delta = (position - lastDragPosition.current).X
-				local normalize = delta / math.abs(delta)
-
-				if normalize ~= normalize then
-					-- Check for normalize being NaN
-					normalize = 0
-				end
-
-				lastDragPosition.current = position
-
-				local current = tonumber(currentTextRef.current) :: number
-				if current then
-					local newValue = round(current + normalize * props.step, props.precision)
-					newValue = math.clamp(newValue, props.minimum, props.maximum)
-					props.onChanged(newValue)
-				end
-			end
-		end
-	end, { props.isScrubbable, props.onChanged } :: { unknown })
+	end, { valueChanged, props.step, constrainValue } :: { unknown })
 
 	local onDragEnded = React.useCallback(function()
-		if not props.isScrubbable then
-			return
+		if dragStartTable.current then
+			dragStartTable.current = nil
 		end
-		if Flags.FoundationNumberInputDraggingDeltaFix then
-			if dragStartTable and dragStartTable.current then
-				dragStartTable.current = nil
-			end
-		else
-			lastDragPosition.current = nil
-		end
-	end, { props.isScrubbable } :: { unknown })
+	end, {})
 
-	local numberSequence = React.useMemo(function()
-		if percentage == 0 then
-			return NumberSequence.new(1)
-		elseif percentage == 1 then
-			return NumberSequence.new(0)
-		elseif percentage > 0 or percentage < 1 then
-			local numberSequenceKeypoints = {
-				NumberSequenceKeypoint.new(0, 0),
-				NumberSequenceKeypoint.new(percentage, 0),
-				NumberSequenceKeypoint.new(math.min(percentage + 0.001, 1), 1),
-			}
-			if percentage < 0.999 then
-				table.insert(numberSequenceKeypoints, NumberSequenceKeypoint.new(1, 1))
-			end
+	local filledStyleTransparency = tokens.Color.Shift.Shift_300.Transparency
+	local unfilledStyleTransparency = tokens.Color.Shift.Shift_100.Transparency
+	local scrubbableTransparencySequence = React.useMemo(
+		function()
+			return mapBindable(props.value, function(value)
+				local percentageScrubbed = 0
+				if value and props.maximum and props.minimum then
+					local currentValue = clampValueToRange(value)
+					if props.maximum == props.minimum then
+						percentageScrubbed = 1
+					else
+						percentageScrubbed = (currentValue - props.minimum) / (props.maximum - props.minimum)
+					end
+				end
 
-			return NumberSequence.new(numberSequenceKeypoints)
+				if percentageScrubbed == 0 then
+					return NumberSequence.new(unfilledStyleTransparency)
+				elseif percentageScrubbed == 1 then
+					return NumberSequence.new(filledStyleTransparency)
+				elseif percentageScrubbed > 0 or percentageScrubbed < 1 then
+					local numberSequenceKeypoints = {
+						NumberSequenceKeypoint.new(0, filledStyleTransparency),
+						NumberSequenceKeypoint.new(percentageScrubbed :: number, filledStyleTransparency),
+						NumberSequenceKeypoint.new(
+							math.min((percentageScrubbed :: number) + 0.001, 1),
+							unfilledStyleTransparency
+						),
+					}
+					if percentageScrubbed < 0.999 then
+						table.insert(numberSequenceKeypoints, NumberSequenceKeypoint.new(1, unfilledStyleTransparency))
+					end
+
+					return NumberSequence.new(numberSequenceKeypoints)
+				end
+				return NumberSequence.new(unfilledStyleTransparency)
+			end)
+		end,
+		{
+			filledStyleTransparency,
+			unfilledStyleTransparency,
+			props.value,
+			clampValueToRange,
+			props.maximum,
+			props.minimum,
+		} :: { unknown }
+	)
+
+	React.useEffect(function()
+		if not isFocused() and not ReactIs.isBinding(props.value) then
+			setTextInput(props.formatAsString(constrainValue(props.value :: number)))
 		end
-		return NumberSequence.new(1)
-	end, { percentage } :: { any })
+	end, { props.value, props.formatAsString, constrainValue, isFocused } :: { unknown })
 
 	return React.createElement(
 		InputField,
 		withCommonProps(props, {
-			width = props.width,
+			width = width,
 			ref = ref,
 			hasError = hasError,
 			label = props.label,
 			size = getInputTextSize(props.size),
 			isRequired = props.isRequired,
+			isDisabled = props.isDisabled,
 			hint = props.hint,
-			textBoxRef = props.textBoxRef,
+			textBoxRef = numberInputRef,
 			input = function(inputRef)
 				local isSplitVariant = controlsVariant == NumberInputControlsVariant.Split
 
 				local input = React.createElement(InternalTextInput, {
-					text = currentText,
+					text = joinBindables({
+						text = textInput,
+						value = props.value,
+					}, function(bindables)
+						if isFocused() then
+							return bindables.text
+						else
+							return props.formatAsString(constrainValue(bindables.value))
+						end
+					end) :: any, -- TODO: fix in new solver?,
 					hasError = hasError,
+					variant = props.variant,
 					size = props.size,
+					Selectable = (if Flags.FoundationInputSelectionProps then props.Selectable else nil) :: any,
+					NextSelectionUp = (
+							if Flags.FoundationInputSelectionProps then props.NextSelectionUp else nil
+						) :: any,
+					NextSelectionDown = (
+							if Flags.FoundationInputSelectionProps then props.NextSelectionDown else nil
+						) :: any,
+					NextSelectionLeft = (
+							if Flags.FoundationInputSelectionProps then props.NextSelectionLeft else nil
+						) :: any,
+					NextSelectionRight = (
+							if Flags.FoundationInputSelectionProps then props.NextSelectionRight else nil
+						) :: any,
 					horizontalPadding = {
-						left = variantProps.innerContainer.horizontalPadding,
+						left = variantProps.container.horizontalPadding,
 					},
-					onChanged = onChanged,
+					focusBehavior = numberInputProps.focusBehavior,
+					onChanged = onTextChanged,
 					onFocusLost = onFocusLost,
 					onFocus = onFocus,
-					onDragStarted = onDragStarted,
-					onDrag = onDrag,
-					onDragEnded = onDragEnded,
+					onDragStarted = if props.isScrubbable then onDragStarted else nil,
+					onDrag = if props.isScrubbable then onDrag else nil,
+					onDragEnded = if props.isScrubbable then onDragEnded else nil,
 					onReturnPressed = props.onReturnPressed,
 					ref = inputRef,
-					backgroundElement = if props.isScrubbable and numberSequence
-						then React.createElement(View, {
-							backgroundStyle = tokens.Color.Shift.Shift_300,
-							tag = {
-								["size-full"] = true,
-								["radius-medium"] = props.size ~= InputSize.XSmall,
-								["radius-small"] = props.size == InputSize.XSmall,
-							},
-						}, {
-							Gradient = React.createElement("UIGradient", {
-								Color = ColorSequence.new(tokens.Color.Shift.Shift_300.Color3),
-								Transparency = numberSequence,
-								Rotation = 0,
-							}),
+					backgroundGradient = if props.isScrubbable and scrubbableTransparencySequence
+						then React.createElement("UIGradient", {
+							Color = ColorSequence.new(tokens.Color.Shift.Shift_300.Color3),
+							Transparency = scrubbableTransparencySequence,
+							Rotation = 0,
 						})
 						else nil,
 					trailingElement = if controlsVariant == NumberInputControlsVariant.Stacked then controls else nil,
 					leadingElement = if props.leadingIcon
 						then React.createElement(
 							View,
-							{ tag = "size-0-full auto-x row align-y-center" },
+							{ tag = "row align-y-center size-0-full auto-x" },
 							React.createElement(Icon, {
 								name = props.leadingIcon,
 								style = variantProps.icon.style,
@@ -405,8 +454,8 @@ local function NumberInput(numberInputProps: NumberInputProps, ref: React.Ref<Gu
 
 				return if isSplitVariant
 					then React.createElement(View, {
-						Size = UDim2.fromOffset(props.width.Offset - widthOffset.Offset, 0),
-						tag = "row gap-xsmall auto-y align-y-center",
+						Size = UDim2.fromOffset(width.Offset - widthOffset.Offset, 0),
+						tag = "row align-y-center gap-xsmall auto-y",
 					}, {
 						InputField = input,
 						Controls = if isSplitVariant then controls else nil,

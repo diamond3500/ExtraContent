@@ -3,7 +3,7 @@ local Chrome = script:FindFirstAncestor("Chrome")
 local CorePackages = game:GetService("CorePackages")
 local GuiService = game:GetService("GuiService")
 
-local ChromeEnabled = require(Chrome.Enabled)
+local ChromeEnabled = require(CorePackages.Workspace.Packages.Chrome).Enabled
 if not ChromeEnabled() then
 	return nil
 end
@@ -17,10 +17,18 @@ local isInExperienceUIVREnabled =
 local ConfigureShortcuts = require(Chrome.ChromeShared.Shortcuts.ConfigureShortcuts)
 local Constants = require(Chrome.ChromeShared.Unibar.Constants)
 
+local SideSheet = require(CorePackages.Workspace.Packages.InExperienceSideSheet)
+
 local SharedFlags = require(CorePackages.Workspace.Packages.SharedFlags)
 local GetFFlagDebugEnableUnibarDummyIntegrations = SharedFlags.GetFFlagDebugEnableUnibarDummyIntegrations
 local FFlagEnableConsoleExpControls = SharedFlags.FFlagEnableConsoleExpControls
 local FFlagEnableInExperienceAvatarSwitcher = SharedFlags.FFlagEnableInExperienceAvatarSwitcher
+local FFlagEnableSideSheet = SharedFlags.FFlagEnableSideSheet
+local FFlagAddIGMToSideSheet = SharedFlags.FFlagAddIGMToSideSheet
+local FFlagSideSheetSwapGalleryOrder = SharedFlags.FFlagSideSheetSwapGalleryOrder
+local FFlagEnableInExperienceShop = SharedFlags.FFlagEnableInExperienceShop
+
+local FFlagReverseUnibar = require(Chrome.Flags.FFlagReverseUnibar)
 
 local isSpatial = require(CorePackages.Workspace.Packages.AppCommonLib).isSpatial
 
@@ -38,8 +46,11 @@ local function configureUnibar()
 	-- ie. Voice Mute integration will only be shown is voice is enabled/active
 	local nineDot = { "leaderboard", "emotes", "backpack" }
 
-	-- append to end of nine-dot
-	table.insert(nineDot, "respawn")
+	if not FFlagEnableSideSheet then
+		-- append to end of nine-dot
+		table.insert(nineDot, "respawn")
+	end
+
 	-- prepend trust_and_safety to nine-dot menu
 	table.insert(nineDot, 1, "trust_and_safety")
 
@@ -47,21 +58,40 @@ local function configureUnibar()
 		table.insert(nineDot, 1, "connect_dropdown")
 	end
 
-	local v4Ordering = { "toggle_mic_mute", "chat", "nine_dot" }
-	table.insert(v4Ordering, 2, "join_voice")
+	local v4Ordering = { "nine_dot", "chat", "toggle_mic_mute" }
+	if FFlagReverseUnibar then
+		table.insert(v4Ordering, 3, "join_voice")
 
-	if GetFFlagDebugEnableUnibarDummyIntegrations() then
-		table.insert(v4Ordering, 1, "dummy_window")
-		table.insert(v4Ordering, 1, "dummy_window_2")
-	end
+		if GetFFlagDebugEnableUnibarDummyIntegrations() then
+			table.insert(v4Ordering, "dummy_window")
+			table.insert(v4Ordering, "dummy_window_2")
+		end
 
-	if isConnectUnibarEnabled() then
-		table.insert(v4Ordering, 1, "connect_unibar")
-	end
+		if isConnectUnibarEnabled() then
+			table.insert(v4Ordering, "connect_unibar")
+		end
 
-	local toggleMicIndex = table.find(v4Ordering, "toggle_mic_mute")
-	if toggleMicIndex then
-		table.insert(v4Ordering, toggleMicIndex + 1, PartyConstants.TOGGLE_MIC_INTEGRATION_ID)
+		local toggleMicIndex = table.find(v4Ordering, "toggle_mic_mute")
+		if toggleMicIndex then
+			table.insert(v4Ordering, toggleMicIndex, PartyConstants.TOGGLE_MIC_INTEGRATION_ID)
+		end
+	else
+		v4Ordering = { "toggle_mic_mute", "chat", "nine_dot" }
+		table.insert(v4Ordering, 2, "join_voice")
+
+		if GetFFlagDebugEnableUnibarDummyIntegrations() then
+			table.insert(v4Ordering, 1, "dummy_window")
+			table.insert(v4Ordering, 1, "dummy_window_2")
+		end
+
+		if isConnectUnibarEnabled() then
+			table.insert(v4Ordering, 1, "connect_unibar")
+		end
+
+		local toggleMicIndex = table.find(v4Ordering, "toggle_mic_mute")
+		if toggleMicIndex then
+			table.insert(v4Ordering, toggleMicIndex + 1, PartyConstants.TOGGLE_MIC_INTEGRATION_ID)
+		end
 	end
 
 	if isInExperienceUIVREnabled and isSpatial() then
@@ -90,6 +120,34 @@ local function configureUnibar()
 	local isNotVROrConsole = not isSpatial() and not GuiService:IsTenFootInterface()
 	if isNotVROrConsole then
 		table.insert(nineDot, 4, "music_entrypoint")
+	end
+
+	if FFlagEnableSideSheet then
+		if FFlagAddIGMToSideSheet then
+			table.insert(nineDot, "people")
+			table.insert(nineDot, "settings")
+
+			if FFlagSideSheetSwapGalleryOrder then
+				table.insert(nineDot, "gallery")
+
+				table.remove(nineDot, table.find(nineDot, "trust_and_safety"))
+				table.insert(nineDot, "trust_and_safety")
+			else
+				table.remove(nineDot, table.find(nineDot, "trust_and_safety"))
+				table.insert(nineDot, "trust_and_safety")
+
+				table.insert(nineDot, "gallery")
+			end
+
+			table.insert(nineDot, "help")
+		end
+		table.insert(nineDot, SideSheet.Enums.ActionBinding.Leave)
+		table.insert(nineDot, SideSheet.Enums.ActionBinding.Respawn)
+	end
+
+	if FFlagEnableInExperienceShop then
+		-- Pin Shop to the 2nd position in the nine-dot menu.
+		table.insert(nineDot, 2, Constants.IN_EXPERIENCE_SHOP_ID)
 	end
 
 	ChromeService:configureSubMenu("nine_dot", nineDot)

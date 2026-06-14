@@ -1,11 +1,11 @@
 local Chrome = script:FindFirstAncestor("Chrome")
 
+local CorePackages = game:GetService("CorePackages")
+
 local ChromeService = require(Chrome.Service)
 local Constants = require(Chrome.ChromeShared.Unibar.Constants)
-local useMappedSignal = require(Chrome.ChromeShared.Hooks.useMappedSignal)
+local useMappedSignal = require(CorePackages.Workspace.Packages.Chrome).Hooks.useMappedSignal
 local CommonFtuxTooltip = require(Chrome.Integrations.CommonFtuxTooltip)
-
-local FFlagEnableUnibarTooltipQueue = require(Chrome.Flags.FFlagEnableUnibarTooltipQueue)()
 local FIntAvatarSwitcherTooltipPriority = game:DefineFastInt("AvatarSwitcherTooltipPriority", 3000)
 local FStringAvatarSwitcherTooltipStorageKey =
 	game:DefineFastString("AvatarSwitcherTooltipStorageKey", "AvatarSwitcherTooltipStorageKey")
@@ -28,8 +28,8 @@ local function AvatarSwitcherFtuxTooltip(props: Props)
 
 	return avatarSwitcherAvailable
 		and CommonFtuxTooltip({
-			id = if FFlagEnableUnibarTooltipQueue then "AVATAR_SWITCHER_TOOLTIP" else nil,
-			priority = if FFlagEnableUnibarTooltipQueue then FIntAvatarSwitcherTooltipPriority else nil,
+			id = "AVATAR_SWITCHER_TOOLTIP",
+			priority = FIntAvatarSwitcherTooltipPriority,
 			isIconVisible = props.visible,
 			headerKey = "CoreScripts.FTUX.Heading.NewAvatarSwitcher",
 			bodyKey = "CoreScripts.FTUX.Label.AvatarSwitcherDescription",

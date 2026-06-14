@@ -4,6 +4,7 @@ local CorePackages = game:GetService("CorePackages")
 local GuiService = game:GetService("GuiService")
 
 local Chrome = require(CorePackages.Workspace.Packages.Chrome)
+local SideSheetPlacement = Chrome.Enums.SideSheetPlacement
 local Foundation = require(CorePackages.Packages.Foundation)
 local React = require(CorePackages.Packages.React)
 local Songbird = require(CorePackages.Workspace.Packages.Songbird)
@@ -18,8 +19,8 @@ local SignalsReact = require(CorePackages.Packages.SignalsReact)
 local ChromeUtils = require(Root.ChromeShared.Service.ChromeUtils)
 local MappedSignal = ChromeUtils.MappedSignal
 
-local GetFFlagChromeMusicWindowDirectionalInput =
-	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagChromeMusicWindowDirectionalInput
+local SharedFlags = require(CorePackages.Workspace.Packages.SharedFlags)
+local FFlagChromeActivatedMappedSignal = SharedFlags.FFlagChromeActivatedMappedSignal
 
 local MUSIC_WINDOW_MAX_SIZE = MusicConstants.MUSIC_WINDOW_MAX_SIZE
 
@@ -31,63 +32,53 @@ local mappedMusicOpenSignal = MappedSignal.new(ChromeService:onIntegrationStatus
 	return ChromeService:isWindowOpen("music_entrypoint")
 end)
 
-local getIsMusicFocused, setIsMusicFocused
-if GetFFlagChromeMusicWindowDirectionalInput() then
-	getIsMusicFocused, setIsMusicFocused = Signals.createSignal(false)
+local getIsMusicFocused, setIsMusicFocused = Signals.createSignal(false)
+
+local function focusMusicWindow()
+	GuiService:SetMenuIsOpen(true, "music_entrypoint")
+	setIsMusicFocused(true)
 end
 
-local focusMusicWindow
-local unfocusMusicWindow
-if GetFFlagChromeMusicWindowDirectionalInput() then
-	function focusMusicWindow()
-		GuiService:SetMenuIsOpen(true, "music_entrypoint")
-		setIsMusicFocused(true)
-	end
-
-	function unfocusMusicWindow()
-		setIsMusicFocused(false)
-		GuiService:SetMenuIsOpen(false, "music_entrypoint")
-	end
+local function unfocusMusicWindow()
+	setIsMusicFocused(false)
+	GuiService:SetMenuIsOpen(false, "music_entrypoint")
 end
 
 return ChromeService:register({
 	initialAvailability = ChromeService.AvailabilitySignal.Available,
 	id = "music_entrypoint",
+	sideSheetPlacement = SideSheetPlacement.Vertical,
 	draggable = true,
 	cachePosition = true,
 	windowSize = windowSize,
 	label = "CoreScripts.TopBar.Music",
 	activated = function()
-		if GetFFlagChromeMusicWindowDirectionalInput() then
-			local inputModeStore = Responsive.GetInputModeStore(false)
+		local inputModeStore = Responsive.GetInputModeStore(false)
 
-			if inputModeStore.getLastInputType(false) == Responsive.Input.Directional then
-				Chrome.FocusUtils.FocusOffChrome(focusMusicWindow)
+		if inputModeStore.getLastInputType(false) == Responsive.Input.Directional then
+			Chrome.FocusUtils.FocusOffChrome(focusMusicWindow)
 
-				-- On gamepad we only open the window on the first interaction.
-				-- Subsequent interactions should instead reselect the window
-				-- element
-				if not mappedMusicOpenSignal:get() then
-					ChromeService:toggleWindow("music_entrypoint")
-				end
-			else
+			-- On gamepad we only open the window on the first interaction.
+			-- Subsequent interactions should instead reselect the window
+			-- element
+			if not mappedMusicOpenSignal:get() then
 				ChromeService:toggleWindow("music_entrypoint")
 			end
 		else
 			ChromeService:toggleWindow("music_entrypoint")
 		end
 	end,
-	isActivated = function()
-		return mappedMusicOpenSignal:get()
-	end,
+	isActivated = if FFlagChromeActivatedMappedSignal
+		then mappedMusicOpenSignal
+		else function()
+			return mappedMusicOpenSignal:get()
+		end,
 	components = {
 		Icon = function(props)
 			return CommonIcon("icons/common/music", "icons/common/musicFilled_medium", mappedMusicOpenSignal)
 		end,
 		Window = function()
-			local isMusicFocused = if GetFFlagChromeMusicWindowDirectionalInput()
-				then useSignalState(getIsMusicFocused)
-				else nil :: never
+			local isMusicFocused = useSignalState(getIsMusicFocused)
 
 			return React.createElement(Foundation.View, {
 				tag = "auto-xy",
@@ -96,16 +87,12 @@ return ChromeService:register({
 				end,
 			}, {
 				ChromeWindowWrapper = React.createElement(Songbird.ChromeWindowWrapper, {
-					isFocused = if GetFFlagChromeMusicWindowDirectionalInput() then isMusicFocused else nil,
+					isFocused = isMusicFocused,
 					onClose = function()
-						if GetFFlagChromeMusicWindowDirectionalInput() then
-							unfocusMusicWindow()
-						end
+						unfocusMusicWindow()
 						ChromeService:toggleWindow("music_entrypoint")
 					end,
-					onUnfocus = if GetFFlagChromeMusicWindowDirectionalInput()
-						then unfocusMusicWindow
-						else nil :: never,
+					onUnfocus = unfocusMusicWindow,
 				}),
 			})
 		end,

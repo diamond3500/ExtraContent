@@ -6,22 +6,17 @@ local Foundation = require(CorePackages.Packages.Foundation)
 local React = require(CorePackages.Packages.React)
 local ChromeConstants = require(Chrome.ChromeShared.Unibar.Constants)
 local ChromeUtils = require(Chrome.ChromeShared.Service.ChromeUtils)
-local useMappedSignal = require(Chrome.ChromeShared.Hooks.useMappedSignal)
+local useMappedSignal = require(CorePackages.Workspace.Packages.Chrome).Hooks.useMappedSignal
 local usePartyIcon = require(Chrome.Integrations.Party.usePartyIcon)
-
-local RoactUtils = require(CorePackages.Workspace.Packages.RoactUtils)
-local dependencyArray = RoactUtils.Hooks.dependencyArray
 
 local MappedSignal = ChromeUtils.MappedSignal
 local useTokens = Foundation.Hooks.useTokens
-local UnibarStyle = require(Chrome.ChromeShared.Unibar.UnibarStyle)
+local UnibarStyle = require(CorePackages.Workspace.Packages.Chrome).UnibarStyle
 
 local SubMenuContext = require(Chrome.ChromeShared.Unibar.SubMenuContext)
+local InExperienceAppChatModal = require(CorePackages.Workspace.Packages.AppChat.InExperienceAppChatModal)
 
-local AppChat = require(CorePackages.Workspace.Packages.AppChat)
-local InExperienceAppChatModal = AppChat.App.InExperienceAppChatModal
-
-local getAppChatNavbarItemConfig = AppChat.Utils.getAppChatNavbarItemConfig
+local getAppChatNavbarItemConfig = require(CorePackages.Workspace.Packages.AppChat.getAppChatNavbarItemConfig)
 
 local ChromeSharedFlags = require(Chrome.ChromeShared.Flags)
 local FFlagTokenizeUnibarConstantsWithStyleProvider = ChromeSharedFlags.FFlagTokenizeUnibarConstantsWithStyleProvider
@@ -89,7 +84,7 @@ local function ConnectIcon(_props: Props): React.ReactElement
 			end
 		end
 		return function() end
-	end, dependencyArray(props.isSquadIndicatorEnabled, setCurrentSquadId))
+	end, { props.isSquadIndicatorEnabled :: any, setCurrentSquadId })
 
 	if props.isSquadIndicatorEnabled then
 		if currentSquadId ~= "" then

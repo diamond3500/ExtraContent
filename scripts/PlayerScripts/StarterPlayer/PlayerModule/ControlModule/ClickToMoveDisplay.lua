@@ -45,10 +45,10 @@ local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 
-local CommonUtils = script.Parent.Parent:WaitForChild("CommonUtils")
-local FlagUtil = require(CommonUtils:WaitForChild("FlagUtil"))
+local CommonUtils = require(script.Parent.Parent:WaitForChild("CommonUtils"))
+local FlagUtil = CommonUtils.get("FlagUtil")
 
-local FFlagUserRaycastUpdateAPI = FlagUtil.getUserFlag("UserRaycastUpdateAPI")
+local FFlagUserRaycastUpdateAPI = FlagUtil.getUserFlag("UserRaycastUpdateAPI2")
 
 local LocalPlayer = PlayersService.LocalPlayer
 
@@ -427,7 +427,7 @@ function ClickToMoveDisplay.CreatePathDisplay(wayPoints, originalEndWaypoint)
 			RunService:UnbindFromRenderStep(reiszeTrailDotsUpdateName)
 			return
 		end
-		local cameraPos = Workspace.CurrentCamera.CFrame.p
+		local cameraPos = Workspace.CurrentCamera.CFrame.Position
 		for i = 1, #trailDots do
 			local trailDotImage: ImageHandleAdornment = trailDots[i].DisplayModel:FindFirstChild("TrailDotImage")
 			if trailDotImage then

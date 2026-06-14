@@ -19,6 +19,10 @@ return React.createContext({
 	setHasActionsDivider = function(_: boolean)
 		error("No SheetContext available")
 	end,
+	sheetContentHeight = nil :: React.Binding<number>?,
+	setSheetContentHeight = function(_: number)
+		error("No SheetContext available")
+	end,
 	safeAreaPadding = nil :: number?,
 	bottomPadding = nil :: number?,
 	innerScrollingEnabled = nil :: React.Binding<boolean>?,
@@ -30,10 +34,19 @@ return React.createContext({
 	setHasHeader = function(_: boolean)
 		error("No SheetContext available")
 	end,
+	hasFullBleed = false,
+	fullBleedHeight = nil :: React.Binding<number>?,
+	setFullBleedHeight = function(_: number)
+		error("No SheetContext available")
+	end,
+	hasRadius = true :: boolean,
 	closeSheet = nil :: (() -> ())?,
 	sheetType = nil :: SheetType?,
 	innerSurface = nil :: GuiObject?,
 	testId = nil :: string?,
+	closeAffordanceRef = nil :: React.Ref<GuiObject>?,
+	contentStartRef = nil :: React.Ref<GuiObject>?,
+	setContentStartRef = function(_ref: React.Ref<GuiObject>) end,
 } :: {
 	sheetHeightAvailable: React.Binding<number>?,
 	setSheetHeightAvailable: ((number) -> nil)?,
@@ -41,6 +54,8 @@ return React.createContext({
 	setActionsHeight: ((number) -> nil)?,
 	hasActionsDivider: React.Binding<boolean>?,
 	setHasActionsDivider: ((boolean) -> nil)?,
+	sheetContentHeight: React.Binding<number>?,
+	setSheetContentHeight: ((number) -> nil)?,
 	safeAreaPadding: number?,
 	bottomPadding: number?,
 	innerScrollingEnabled: React.Binding<boolean>?,
@@ -48,8 +63,15 @@ return React.createContext({
 	setInnerScrollY: ((number) -> nil)?,
 	hasHeader: React.Binding<boolean>?,
 	setHasHeader: ((boolean) -> nil)?,
+	hasFullBleed: boolean,
+	fullBleedHeight: React.Binding<number>?,
+	setFullBleedHeight: ((number) -> nil)?,
+	hasRadius: boolean,
 	closeSheet: (() -> ())?,
 	sheetType: SheetType?,
 	innerSurface: GuiObject?,
 	testId: string?,
+	closeAffordanceRef: React.Ref<GuiObject>?,
+	contentStartRef: React.Ref<GuiObject>?,
+	setContentStartRef: ((React.Ref<GuiObject>) -> ())?,
 })

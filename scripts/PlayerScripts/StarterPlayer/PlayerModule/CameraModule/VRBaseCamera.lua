@@ -29,9 +29,12 @@ local UserGameSettings = UserSettings():GetService("UserGameSettings")
 
 local CameraInput = require(script.Parent:WaitForChild("CameraInput"))
 local ZoomController = require(script.Parent:WaitForChild("ZoomController"))
-local CommonUtils = script.Parent.Parent:WaitForChild("CommonUtils")
-local FlagUtil = require(CommonUtils:WaitForChild("FlagUtil"))
-local FFlagUserCameraInputDt = FlagUtil.getUserFlag("UserCameraInputDt")
+local CommonUtils = require(script.Parent.Parent:WaitForChild("CommonUtils"))
+local FlagUtil = CommonUtils.get("FlagUtil")
+
+local inputContexts = script.Parent.Parent:WaitForChild("InputContexts")
+local cameraContext = inputContexts:WaitForChild("CameraContext")
+local cameraGamepadResetAction = cameraContext:WaitForChild("CameraGamepadResetAction") :: InputAction
 
 --[[ The Module ]]--
 local BaseCamera = require(script.Parent:WaitForChild("BaseCamera"))
@@ -54,10 +57,13 @@ function VRBaseCamera.new()
 	self.VREdgeBlurTimer = 0
 
 	-- initialize vr specific variables
-	self.gamepadResetConnection = nil
 	self.needsReset = true
 	self.recentered = false
-	
+
+	self.gamepadResetConnection = cameraGamepadResetAction.Pressed:Connect(function()
+		self:GamepadReset()
+	end)
+
 	-- timer for step rotation
 	self:Reset()
 	
@@ -94,10 +100,8 @@ function VRBaseCamera:OnEnabledChanged()
 	BaseCamera.OnEnabledChanged(self)
 
 	if self.enabled then
-		self.gamepadResetConnection = CameraInput.gamepadReset:Connect(function()
-			self:GamepadReset()
-		end)
-		
+		cameraGamepadResetAction.Enabled = true
+
 		-- reset on options change
 		self.thirdPersonOptionChanged = VRService:GetPropertyChangedSignal("ThirdPersonFollowCamEnabled"):Connect(function()
 			if FFlagUserVRVehicleCamera then
@@ -137,10 +141,7 @@ function VRBaseCamera:OnEnabledChanged()
 			self.cameraHeadScaleChangedConn = nil
 		end
 
-		if self.gamepadResetConnection then
-			self.gamepadResetConnection:Disconnect()
-			self.gamepadResetConnection = nil
-		end
+		cameraGamepadResetAction.Enabled = false
 
 		-- reset VR effects
 		self.VREdgeBlurTimer = 0
@@ -255,7 +256,7 @@ function VRBaseCamera:StartVREdgeBlur(player)
 		RunService.RenderStepped:Connect(function(step)
 			local userHeadCF = VRService:GetUserCFrame(Enum.UserCFrame.Head)
 
-			local vrCF = (workspace.CurrentCamera :: Camera).CFrame * (CFrame.new(userHeadCF.p * (workspace.CurrentCamera :: Camera).HeadScale) * (userHeadCF - userHeadCF.p))
+			local vrCF = (workspace.CurrentCamera :: Camera).CFrame * (CFrame.new(userHeadCF.Position * (workspace.CurrentCamera :: Camera).HeadScale) * (userHeadCF - userHeadCF.Position))
 			blurPart.CFrame = (vrCF * CFrame.Angles(0, math.rad(180), 0)) + vrCF.LookVector * (1.05 * (workspace.CurrentCamera :: Camera).HeadScale)
 			blurPart.Size = basePartSize * (workspace.CurrentCamera :: Camera).HeadScale
 		end)
@@ -269,7 +270,7 @@ function VRBaseCamera:StartVREdgeBlur(player)
 
 	if not VRBlur then
 		if not VRScreen then
-			VRScreen = Instance.new("SurfaceGui") or Instance.new("ScreenGui")
+			VRScreen = Instance.new("SurfaceGui")
 		end
 
 		VRScreen.Name = "VRBlurScreen"
@@ -375,7 +376,7 @@ function VRBaseCamera:GetSubjectPosition(): Vector3?
 			end
 		elseif cameraSubject:IsA("VehicleSeat") then
 			local offset = VR_SEAT_OFFSET
-			result = cameraSubject.CFrame.p + cameraSubject.CFrame:vectorToWorldSpace(offset)
+			result = cameraSubject.CFrame.Position + cameraSubject.CFrame:vectorToWorldSpace(offset)
 		end
 	else
 		return nil
@@ -393,11 +394,7 @@ function VRBaseCamera:getRotation(dt)
 	local yawDelta = 0
 	
 	if UserGameSettings.VRSmoothRotationEnabled then
-		if FFlagUserCameraInputDt then
-			yawDelta = rotateInput.X
-		else
-			yawDelta = rotateInput.X * 40 * dt
-		end
+		yawDelta = rotateInput.X
 	else
 		-- ignore the magnitude of the input, use just the direction and
 		-- a timer to rotate 30 degrees each step

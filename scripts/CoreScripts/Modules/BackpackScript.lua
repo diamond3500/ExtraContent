@@ -12,19 +12,24 @@ local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 local CorePackages = game:GetService("CorePackages")
 local Modules = RobloxGui.Modules
 local Signals = require(CorePackages.Packages.Signals)
-local CoreGuiCommon = require(CorePackages.Workspace.Packages.CoreGuiCommon)
+local InExperienceTopBar = require(CorePackages.Workspace.Packages.InExperienceTopBar)
+local CoreScriptsCommon = require(CorePackages.Workspace.Packages.CoreScriptsCommon)
+local SettingsShowSignal = CoreScriptsCommon.SettingsShowSignal
 
-local InExperienceAppChatModal = require(CorePackages.Workspace.Packages.AppChat).App.InExperienceAppChatModal
+local InExperienceAppChatModal = require(CorePackages.Workspace.Packages.AppChat.InExperienceAppChatModal)
 local FFlagMountCoreGuiBackpack = require(Modules.Flags.FFlagMountCoreGuiBackpack)
 local isInExperienceUIVREnabled =
 	require(CorePackages.Workspace.Packages.SharedExperimentDefinition).isInExperienceUIVREnabled
 local InExperienceUIVRIXP =
 	require(CorePackages.Workspace.Packages.SharedExperimentDefinition).InExperienceUIVRIXP
 
-local FFlagTopBarSignalizeSetCores = CoreGuiCommon.Flags.FFlagTopBarSignalizeSetCores
+local FFlagTopBarSignalizeSetCores = InExperienceTopBar.Flags.FFlagTopBarSignalizeSetCores
 
 local RobloxTranslator = require(CorePackages.Workspace.Packages.RobloxTranslator)
-
+local Responsive = require(CorePackages.Workspace.Packages.Responsive)
+local FFlagBackpackResponsiveUnits = require(CorePackages.Workspace.Packages.SharedFlags).FFlagBackpackResponsiveUnits
+local FFlagEnableHotbarHide = game:DefineFastFlag("EnableHotbarHide", false)
+local featureDeprecateOldGuiObjectProperties = game:GetEngineFeature("DeprecateOldGuiObjectProperties")
 
 local BackpackScript = {}
 BackpackScript.OpenClose = nil -- Function to toggle open/close
@@ -129,7 +134,13 @@ end
 
 local GamepadActionsBound = false
 
-local IS_PHONE = UserInputService.TouchEnabled and GuiService:GetScreenResolution().X < HOTBAR_SLOTS_WIDTH_CUTOFF
+local IS_PHONE
+if FFlagBackpackResponsiveUnits then
+	local preferredInput = Responsive.GetInputModeStore().getPreferredInputType()
+	IS_PHONE = preferredInput == Responsive.Input.Touch and GuiService:GetScreenResolution().X < HOTBAR_SLOTS_WIDTH_CUTOFF
+else
+	IS_PHONE = UserInputService.TouchEnabled and GuiService:GetScreenResolution().X < HOTBAR_SLOTS_WIDTH_CUTOFF
+end
 
 local Player = PlayersService.LocalPlayer
 
@@ -231,15 +242,16 @@ local function UseGazeSelection()
 	return false -- disabled in new VR system
 end
 
-local function AdjustHotbarFrames()
+local function AdjustHotbarFrames(forceClose)
 	local inventoryOpen = InventoryFrame.Visible -- (Show all)
 	local visualTotal = (inventoryOpen) and NumberOfHotbarSlots or FullHotbarSlots
 	local visualIndex = 0
-	local hotbarIsVisible = (visualTotal >= 1)
+	local hotbarIsVisible = if FFlagEnableHotbarHide then (visualTotal >= 1) and not forceClose else (visualTotal >= 1)
 
 	for i = 1, NumberOfHotbarSlots do
 		local slot = Slots[i]
-		if slot.Tool or inventoryOpen then
+		local showTool = if FFlagEnableHotbarHide then (slot.Tool and not forceClose) else slot.Tool
+		if showTool or inventoryOpen then
 			visualIndex = visualIndex + 1
 			slot:Readjust(visualIndex, visualTotal)
 			slot.Frame.Visible = true
@@ -1253,7 +1265,11 @@ function changeSlot(slot)
 		else
 			local startSize = slot.Frame.Size
 			local startPosition = slot.Frame.Position
-			slot.Frame:TweenSizeAndPosition(startSize + UDim2.new(0, 10, 0, 10), startPosition - UDim2.new(0, 5, 0, 5), Enum.EasingDirection.Out, Enum.EasingStyle.Quad, .1, true, function() slot.Frame:TweenSizeAndPosition(startSize, startPosition, Enum.EasingDirection.In, Enum.EasingStyle.Quad, .1, true) end)
+			if featureDeprecateOldGuiObjectProperties then
+				slot.Frame:TweenSizeAndPositionInternal(startSize + UDim2.new(0, 10, 0, 10), startPosition - UDim2.new(0, 5, 0, 5), Enum.EasingDirection.Out, Enum.EasingStyle.Quad, .1, true, function() slot.Frame:TweenSizeAndPositionInternal(startSize, startPosition, Enum.EasingDirection.In, Enum.EasingStyle.Quad, .1, true) end)
+			else
+				slot.Frame:TweenSizeAndPosition(startSize + UDim2.new(0, 10, 0, 10), startPosition - UDim2.new(0, 5, 0, 5), Enum.EasingDirection.Out, Enum.EasingStyle.Quad, .1, true, function() slot.Frame:TweenSizeAndPosition(startSize, startPosition, Enum.EasingDirection.In, Enum.EasingStyle.Quad, .1, true) end)
+			end
 			slot.Frame.BorderSizePixel = 3
 			VRInventorySelector.SelectionImageObject.Visible = true
 		end
@@ -1871,7 +1887,7 @@ end
 
 if FFlagTopBarSignalizeSetCores then 
 	BackpackScript.disposeEffect = Signals.createEffect(function(scope)
-		local getTopBarStore = CoreGuiCommon.Stores.GetTopBarStore
+		local getTopBarStore = InExperienceTopBar.Stores.GetTopBarStore
 		if getTopBarStore then
 			BackpackScript:TopbarEnabledChanged(getTopBarStore(scope).getTopBarCoreGuiEnabled(scope))
 		end
@@ -1883,6 +1899,18 @@ StarterGui.CoreGuiChangedSignal:connect(OnCoreGuiChanged)
 local backpackType, healthType = Enum.CoreGuiType.Backpack, Enum.CoreGuiType.Health
 OnCoreGuiChanged(backpackType, StarterGui:GetCoreGuiEnabled(backpackType))
 OnCoreGuiChanged(healthType, StarterGui:GetCoreGuiEnabled(healthType))
+
+if FFlagEnableHotbarHide then
+	SettingsShowSignal:connect(function(isOpen)
+		if isOpen then
+			if BackpackScript.IsHotbarVisible then
+				AdjustHotbarFrames(true)
+			end
+		else
+			AdjustHotbarFrames(false)
+		end
+	end)
+end
 
 GuiService.MenuOpened:Connect(function()
 	if

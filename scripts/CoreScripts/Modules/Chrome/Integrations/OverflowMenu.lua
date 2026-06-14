@@ -8,7 +8,10 @@ local ChromeUtils = require(Chrome.ChromeShared.Service.ChromeUtils)
 local ChromeIntegrationUtils = require(Chrome.Integrations.ChromeIntegrationUtils)
 local RespawnUtils = require(Chrome.Integrations.RespawnUtils)
 local MappedSignal = ChromeUtils.MappedSignal
-local UnibarStyle = require(Chrome.ChromeShared.Unibar.UnibarStyle)
+local UnibarStyle = require(CorePackages.Workspace.Packages.Chrome).UnibarStyle
+
+local ChromePackage = require(CorePackages.Workspace.Packages.Chrome)
+local SideSheetPlacement = ChromePackage.Enums.SideSheetPlacement
 
 local CommonIcon = require(Chrome.Integrations.CommonIcon)
 local CommonFtuxTooltip = require(Chrome.Integrations.CommonFtuxTooltip)
@@ -18,14 +21,25 @@ local CoreGui = game:GetService("CoreGui")
 local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 local PlayerListMaster = require(RobloxGui.Modules.PlayerList.PlayerListManager)
 local EmotesMenuMaster = require(RobloxGui.Modules.EmotesMenu.EmotesMenuMaster)
-local BackpackModule = require(RobloxGui.Modules.BackpackScript)
-local useMappedSignal = require(Chrome.ChromeShared.Hooks.useMappedSignal)
+local FFlagEnableNewBackpack = require(CorePackages.Workspace.Packages.SharedFlags).FFlagEnableNewBackpack
+local FFlagChromeActivatedMappedSignal =
+	require(CorePackages.Workspace.Packages.SharedFlags).FFlagChromeActivatedMappedSignal
+local Signal = require(CorePackages.Workspace.Packages.AppCommonLib).Signal
+local Features: any = if FFlagEnableNewBackpack then require(CorePackages.Workspace.Packages.System).Features else nil
+local BackpackModule: any = if not FFlagEnableNewBackpack then require(RobloxGui.Modules.BackpackScript) else nil
+local useMappedSignal = ChromePackage.Hooks.useMappedSignal
 local GetFFlagIsSquadEnabled = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagIsSquadEnabled
+
+local UniversalAppPolicy = require(CorePackages.Workspace.Packages.UniversalAppPolicy)
+local useAppPolicy = UniversalAppPolicy.useAppPolicy
+
+local MenuIcon = require(RobloxGui.Modules.TopBar.ComponentsV2.MenuIcon)
 
 local UIBlox = require(CorePackages.Packages.UIBlox)
 local Images = UIBlox.App.ImageSet.Images
 local useStyle = UIBlox.Core.Style.useStyle
 local ImageSetLabel = UIBlox.Core.ImageSet.ImageSetLabel
+local SelectionCursorProvider = UIBlox.App.SelectionImage.SelectionCursorProvider
 
 local Constants = require(Chrome.ChromeShared.Unibar.Constants)
 local isSpatial = require(CorePackages.Workspace.Packages.AppCommonLib).isSpatial
@@ -33,7 +47,6 @@ local isSpatial = require(CorePackages.Workspace.Packages.AppCommonLib).isSpatia
 local SelfieView = require(RobloxGui.Modules.SelfieView)
 
 local GetFStringConnectTooltipLocalStorageKey = require(Chrome.Flags.GetFStringConnectTooltipLocalStorageKey)
-local FFlagEnableUnibarFtuxTooltips = require(CorePackages.Workspace.Packages.SharedFlags).FFlagEnableUnibarFtuxTooltips
 local GetFIntRobloxConnectFtuxShowDelayMs = require(Chrome.Flags.GetFIntRobloxConnectFtuxShowDelayMs)
 local GetFIntRobloxConnectFtuxDismissDelayMs = require(Chrome.Flags.GetFIntRobloxConnectFtuxDismissDelayMs)
 local GetFFlagEnableAppChatInExperience =
@@ -41,22 +54,27 @@ local GetFFlagEnableAppChatInExperience =
 local GetShouldShowPlatformChatBasedOnPolicy = require(Chrome.Flags.GetShouldShowPlatformChatBasedOnPolicy)
 local FFlagFixIntegrationActivated = game:DefineFastFlag("FixIntegrationActivated1", false)
 local FFlagFixInventoryFilledIcon = game:DefineFastFlag("FixInventoryFilledIcon", false)
-local FFlagEnableUnibarTooltipQueue = require(Chrome.Flags.FFlagEnableUnibarTooltipQueue)()
-local FFlagRemoveUnusedTopBarNotifications = game:DefineFastFlag("RemoveUnusedTopBarNotifications", false)
 
 local ChromeSharedFlags = require(Chrome.ChromeShared.Flags)
 local FFlagTokenizeUnibarConstantsWithStyleProvider = ChromeSharedFlags.FFlagTokenizeUnibarConstantsWithStyleProvider
 
 local SharedFlags = require(CorePackages.Workspace.Packages.SharedFlags)
-local GetFFlagAppChatRebrandStringUpdates = SharedFlags.GetFFlagAppChatRebrandStringUpdates
+local FFlagAddTopBarPoliciesToUniversalPolicies = SharedFlags.FFlagAddTopBarPoliciesToUniversalPolicies
+local FFlagEnableSideSheet = SharedFlags.FFlagEnableSideSheet
 
 local FFlagAppChatEnabledChromeDropdownFtuxTooltip =
 	game:DefineFastFlag("AppChatEnabledChromeDropdownFtuxTooltip", false)
 local FFlagAvatarSwitcherFtuxTooltip = game:DefineFastFlag("AvatarSwitcherFtuxTooltip", false)
+local FFlagInExperienceShopFtuxTooltip = game:DefineFastFlag("InExperienceShopFtuxTooltip", false)
+	and SharedFlags.FFlagEnableInExperienceShop
+
+local InExperienceShopFtuxTooltip: any = nil
+if FFlagInExperienceShopFtuxTooltip then
+	InExperienceShopFtuxTooltip = require(Chrome.Integrations.InExperienceShop.InExperienceShopFtuxTooltip)
+end
 
 local FIntUnibarConnectIconTooltipPriority = game:DefineFastInt("UnibarConnectTooltipPriority", 2000)
 local shouldShowConnectTooltip = GetFFlagEnableAppChatInExperience()
-	and FFlagEnableUnibarFtuxTooltips
 	and FFlagAppChatEnabledChromeDropdownFtuxTooltip
 	and GetShouldShowPlatformChatBasedOnPolicy()
 
@@ -73,6 +91,7 @@ end)
 local leaderboard = ChromeService:register({
 	id = "leaderboard",
 	label = "CoreScripts.TopBar.Leaderboard",
+	sideSheetPlacement = SideSheetPlacement.Vertical,
 	activated = function(self)
 		if not isInExperienceUIVREnabled and VRService.VREnabled then
 			local InGameMenu = require(RobloxGui.Modules.InGameMenu)
@@ -91,9 +110,11 @@ local leaderboard = ChromeService:register({
 			end
 		end
 	end,
-	isActivated = function()
-		return leaderboardVisibility:get()
-	end,
+	isActivated = if FFlagChromeActivatedMappedSignal
+		then leaderboardVisibility
+		else function()
+			return leaderboardVisibility:get()
+		end,
 	components = {
 		Icon = function(props)
 			return CommonIcon("icons/controls/leaderboardOff", "icons/controls/leaderboardOn", leaderboardVisibility)
@@ -108,6 +129,7 @@ end)
 local emotes = ChromeService:register({
 	id = "emotes",
 	label = "CoreScripts.TopBar.Emotes",
+	sideSheetPlacement = SideSheetPlacement.Vertical,
 	activated = function(self)
 		if EmotesMenuMaster:isOpen() then
 			EmotesMenuMaster:close()
@@ -121,9 +143,11 @@ local emotes = ChromeService:register({
 			end
 		end
 	end,
-	isActivated = function()
-		return emotesVisibility:get()
-	end,
+	isActivated = if FFlagChromeActivatedMappedSignal
+		then emotesVisibility
+		else function()
+			return emotesVisibility:get()
+		end,
 	components = {
 		Icon = function(props)
 			return CommonIcon("icons/controls/emoteOff", "icons/controls/emoteOn", emotesVisibility)
@@ -152,28 +176,66 @@ EmotesMenuMaster.MenuVisibilityChanged.Event:Connect(function()
 	updateEmoteAvailability()
 end)
 
-local backpackVisibility = MappedSignal.new(BackpackModule.StateChanged.Event, function()
-	return BackpackModule.IsOpen
-end)
+local backpackVisibility: any = if not FFlagEnableNewBackpack
+	then MappedSignal.new(BackpackModule.StateChanged.Event, function()
+		return BackpackModule.IsOpen
+	end)
+	else nil
+
+local backpackActivatedSignal: any = nil
+if FFlagChromeActivatedMappedSignal then
+	if FFlagEnableNewBackpack then
+		local backpackVisibilityChanged = Signal.new()
+		Features.onVisibilityChanged(Features.FeatureName.Backpack, function()
+			backpackVisibilityChanged:fire()
+			return nil
+		end)
+		backpackActivatedSignal = MappedSignal.new(backpackVisibilityChanged, function()
+			return Features.getVisibility(Features.FeatureName.Backpack)
+		end)
+	else
+		backpackActivatedSignal = backpackVisibility
+	end
+end
 local backpack = ChromeService:register({
 	id = "backpack",
 	label = "CoreScripts.TopBar.Inventory",
+	sideSheetPlacement = SideSheetPlacement.Vertical,
 	activated = function(self)
-		if BackpackModule.IsOpen then
-			BackpackModule:OpenClose()
+		if FFlagEnableNewBackpack then
+			if Features.getVisibility(Features.FeatureName.Backpack) then
+				Features.toggleVisibility(Features.FeatureName.Backpack)
+			else
+				if (isInExperienceUIVREnabled and isSpatial()) and not InExperienceUIVRIXP:isMovePanelToCenter() then
+					Features.toggleVisibility(Features.FeatureName.Backpack)
+				else
+					ChromeIntegrationUtils.dismissRobloxMenuAndRun(function()
+						Features.toggleVisibility(Features.FeatureName.Backpack)
+					end)
+				end
+			end
 		else
-			if (isInExperienceUIVREnabled and isSpatial()) and not InExperienceUIVRIXP:isMovePanelToCenter() then
+			if BackpackModule.IsOpen then
 				BackpackModule:OpenClose()
 			else
-				ChromeIntegrationUtils.dismissRobloxMenuAndRun(function()
+				if (isInExperienceUIVREnabled and isSpatial()) and not InExperienceUIVRIXP:isMovePanelToCenter() then
 					BackpackModule:OpenClose()
-				end)
+				else
+					ChromeIntegrationUtils.dismissRobloxMenuAndRun(function()
+						BackpackModule:OpenClose()
+					end)
+				end
 			end
 		end
 	end,
-	isActivated = function()
-		return backpackVisibility:get()
-	end,
+	isActivated = if FFlagChromeActivatedMappedSignal
+		then backpackActivatedSignal
+		else function()
+			if FFlagEnableNewBackpack then
+				return Features.getVisibility(Features.FeatureName.Backpack)
+			end
+			return backpackVisibility:get()
+		end,
 	components = {
 		Icon = function(props)
 			return CommonIcon(
@@ -189,12 +251,15 @@ ChromeUtils.setCoreGuiAvailability(backpack, Enum.CoreGuiType.Backpack)
 local respawn = ChromeService:register({
 	id = "respawn",
 	label = "CoreScripts.InGameMenu.QuickActions.Respawn",
+	sideSheetPlacement = SideSheetPlacement.Vertical,
 	activated = function(self)
 		RespawnUtils.respawnPage()
 	end,
-	isActivated = function()
-		return RespawnUtils.respawnPageOpenSignal:get()
-	end,
+	isActivated = if FFlagChromeActivatedMappedSignal
+		then RespawnUtils.respawnPageOpenSignal
+		else function()
+			return RespawnUtils.respawnPageOpenSignal:get()
+		end,
 	components = {
 		Icon = function(props)
 			return CommonIcon("icons/actions/respawn")
@@ -246,14 +311,14 @@ function HamburgerButton(props)
 
 	local connectTooltip = if shouldShowConnectTooltip
 		then CommonFtuxTooltip({
-			id = if FFlagEnableUnibarTooltipQueue then "CONNECT_TOOLTIP" else nil,
-			priority = if FFlagEnableUnibarTooltipQueue then FIntUnibarConnectIconTooltipPriority else nil,
+			id = "CONNECT_TOOLTIP",
+			priority = FIntUnibarConnectIconTooltipPriority,
 			isIconVisible = props.visible,
 
-			headerKey = if GetFFlagAppChatRebrandStringUpdates() and GetFFlagIsSquadEnabled()
+			headerKey = if GetFFlagIsSquadEnabled()
 				then "CoreScripts.FTUX.Heading.CheckOutRobloxParty"
 				else "CoreScripts.FTUX.Heading.CheckOutRobloxConnect",
-			bodyKey = if GetFFlagAppChatRebrandStringUpdates() and GetFFlagIsSquadEnabled()
+			bodyKey = if GetFFlagIsSquadEnabled()
 				then "CoreScripts.FTUX.Label.PartyWithYourFriendsAnytime"
 				else "CoreScripts.FTUX.Label.ChatWithYourFriendsAnytime",
 
@@ -262,6 +327,12 @@ function HamburgerButton(props)
 			showDelay = GetFIntRobloxConnectFtuxShowDelayMs(),
 			dismissDelay = GetFIntRobloxConnectFtuxDismissDelayMs(),
 		})
+		else nil
+
+	local showBadgeOver12 = if FFlagAddTopBarPoliciesToUniversalPolicies
+		then useAppPolicy(function(appPolicy)
+			return appPolicy.getShowBadgeOver12()
+		end)
 		else nil
 
 	return React.createElement("Frame", {
@@ -276,37 +347,48 @@ function HamburgerButton(props)
 			Name = "Corner",
 			CornerRadius = UDim.new(1, 0),
 		}) :: any,
-		React.createElement(ImageSetLabel, {
-			Name = "Overflow",
-			AnchorPoint = Vector2.new(0.5, 0.5),
-			Position = UDim2.new(0.5, 0, 0.5, 0),
-			BackgroundTransparency = 1,
-			Image = Images["icons/common/hamburgermenu"],
-			Size = toggleIconTransition:map(function(value: any): any
-				value = 1 - value
-				return UDim2.new(0, iconSize * value, 0, iconSize * value)
-			end),
-			ImageColor3 = style.Theme.IconEmphasis.Color,
+		if FFlagEnableSideSheet
+			then React.createElement(SelectionCursorProvider, {}, {
+				Icon = React.createElement(MenuIcon, {
+					showBadgeOver12 = showBadgeOver12,
+				}),
+			})
+			else nil,
+		if not FFlagEnableSideSheet
+			then React.createElement(ImageSetLabel, {
+				Name = "Overflow",
+				AnchorPoint = Vector2.new(0.5, 0.5),
+				Position = UDim2.new(0.5, 0, 0.5, 0),
+				BackgroundTransparency = 1,
+				Image = Images["icons/common/hamburgermenu"],
+				Size = toggleIconTransition:map(function(value: any): any
+					value = 1 - value
+					return UDim2.new(0, iconSize * value, 0, iconSize * value)
+				end),
+				ImageColor3 = style.Theme.IconEmphasis.Color,
 
-			ImageTransparency = toggleIconTransition:map(function(value: any): any
-				return value * style.Theme.IconEmphasis.Transparency
-			end),
-		}) :: any,
-		React.createElement(ImageSetLabel, {
-			Name = "Close",
-			AnchorPoint = Vector2.new(0.5, 0.5),
-			Position = UDim2.new(0.5, 0, 0.5, 0),
-			BackgroundTransparency = 1,
-			Image = Images["icons/navigation/close"],
-			Size = toggleIconTransition:map(function(value: any): any
-				return UDim2.new(0, mediumIconSize * value, 0, mediumIconSize * value)
-			end),
-			ImageColor3 = style.Theme.IconEmphasis.Color,
+				ImageTransparency = toggleIconTransition:map(function(value: any): any
+					return value * style.Theme.IconEmphasis.Transparency
+				end),
+			}) :: any
+			else nil,
+		if not FFlagEnableSideSheet
+			then React.createElement(ImageSetLabel, {
+				Name = "Close",
+				AnchorPoint = Vector2.new(0.5, 0.5),
+				Position = UDim2.new(0.5, 0, 0.5, 0),
+				BackgroundTransparency = 1,
+				Image = Images["icons/navigation/close"],
+				Size = toggleIconTransition:map(function(value: any): any
+					return UDim2.new(0, mediumIconSize * value, 0, mediumIconSize * value)
+				end),
+				ImageColor3 = style.Theme.IconEmphasis.Color,
 
-			ImageTransparency = toggleIconTransition:map(function(value: any): any
-				return (1 - value) * style.Theme.IconEmphasis.Transparency
-			end),
-		}),
+				ImageTransparency = toggleIconTransition:map(function(value: any): any
+					return (1 - value) * style.Theme.IconEmphasis.Transparency
+				end),
+			}) :: any
+			else nil,
 		if SelfieView.useCameraOn()
 				and not ChromeService:isWindowOpen(SELFIE_ID)
 				and not submenuOpen
@@ -322,19 +404,27 @@ function HamburgerButton(props)
 				visible = props.visible,
 			})
 			else nil,
+		if FFlagInExperienceShopFtuxTooltip
+			then React.createElement(InExperienceShopFtuxTooltip, {
+				visible = props.visible,
+			})
+			else nil,
 	})
 end
 
 return ChromeService:register({
 	initialAvailability = ChromeService.AvailabilitySignal.Pinned,
-	notification = if FFlagRemoveUnusedTopBarNotifications then nil else ChromeService:subMenuNotifications("nine_dot"),
 	id = "nine_dot",
-	label = "CoreScripts.TopBar.MoreMenu",
-	isActivated = if FFlagFixIntegrationActivated
-		then function()
-			return submenuVisibility:get()
-		end
-		else nil,
+	label = if FFlagEnableSideSheet then "CoreScripts.TopBar.RobloxMenu" else "CoreScripts.TopBar.MoreMenu",
+	sideSheetPlacement = SideSheetPlacement.None,
+	hotkeyCodes = if FFlagEnableSideSheet then { Enum.KeyCode.Escape } else nil,
+	isActivated = if FFlagChromeActivatedMappedSignal
+		then submenuVisibility
+		else if FFlagFixIntegrationActivated
+			then function()
+				return submenuVisibility:get()
+			end
+			else nil,
 	components = {
 		Icon = function(props)
 			return React.createElement(HamburgerButton, props)

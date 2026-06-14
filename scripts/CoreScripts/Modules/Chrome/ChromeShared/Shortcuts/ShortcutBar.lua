@@ -2,6 +2,7 @@ local Root = script:FindFirstAncestor("ChromeShared")
 
 local CorePackages = game:GetService("CorePackages")
 local CoreGui = game:GetService("CoreGui")
+local UserInputService = game:GetService("UserInputService")
 local GamepadConnector = require(Root.Parent.Parent.TopBar.Components.GamepadConnector)
 
 local React = require(CorePackages.Packages.React)
@@ -9,7 +10,7 @@ local ReactRoblox = require(CorePackages.Packages.ReactRoblox)
 local UIBlox = require(CorePackages.Packages.UIBlox)
 local Foundation = require(CorePackages.Packages.Foundation)
 local ShortcutBar = UIBlox.App.Navigation.ShortcutBar
-local Types = require(Root.Service.Types)
+local ChromePackage = require(CorePackages.Workspace.Packages.Chrome)
 local Constants = require(Root.Unibar.Constants)
 local ViewportUtil = require(Root.Service.ViewportUtil)
 local useObservableValue = require(Root.Hooks.useObservableValue)
@@ -19,6 +20,11 @@ local ChromeService = require(Root.Service)
 
 local SharedFlags = require(CorePackages.Workspace.Packages.SharedFlags)
 local FFlagEnableConsoleExpControls = SharedFlags.FFlagEnableConsoleExpControls
+local isSpatial = require(CorePackages.Workspace.Packages.AppCommonLib).isSpatial
+local FFlagDisableGamepadConnectorInVR = ChromePackage.Flags.FFlagDisableGamepadConnectorInVR
+local FFlagGamepadIconSupportCheck = SharedFlags.FFlagGamepadIconSupportCheck
+
+type ShortcutProps = ChromePackage.ShortcutProps
 
 function ChromeShortcutBar(props)
 	local shortcuts, setShortcuts = React.useState({})
@@ -33,7 +39,7 @@ function ChromeShortcutBar(props)
 		if shortcutBarWidth.current > screenSize.X then
 			local removeIndex = 1
 			for i, s in shortcuts do
-				local shortcut = s :: Types.ShortcutProps
+				local shortcut = s :: ShortcutProps
 				local index = i :: number
 				if shortcut.displayPriority <= shortcuts[removeIndex].displayPriority then
 					removeIndex = index
@@ -52,38 +58,48 @@ function ChromeShortcutBar(props)
 	end, { screenSize })
 
 	React.useEffect(function()
-		ChromeService:onShortcutBarChanged():connect(function()
+		local function updateShortcuts()
+			if FFlagGamepadIconSupportCheck and not GamepadConnector:getGamepadActive():get() then
+				return
+			end
 			local s = ChromeService:getCurrentShortcuts()
 			setShortcuts(s)
 			setTrimmedShortcuts({})
-		end)
+		end
 
-		local showTopBar = GamepadConnector:getShowTopBar()
-		local gamepadActive = GamepadConnector:getGamepadActive()
+		ChromeService:onShortcutBarChanged():connect(updateShortcuts)
+		if FFlagGamepadIconSupportCheck then
+			UserInputService.LastInputTypeChanged:Connect(updateShortcuts)
+		end
 
-		if FFlagEnableConsoleExpControls then
-			local function shouldHideShortcutBar()
-				local shouldHide = not showTopBar:get() or not gamepadActive:get()
-				ChromeService:setHideShortcutBar("TopBar", shouldHide)
+		if not FFlagDisableGamepadConnectorInVR or not isSpatial() then
+			local showTopBar = GamepadConnector:getShowTopBar()
+			local gamepadActive = GamepadConnector:getGamepadActive()
+
+			if FFlagEnableConsoleExpControls then
+				local function shouldHideShortcutBar()
+					local shouldHide = not showTopBar:get() or not gamepadActive:get()
+					ChromeService:setHideShortcutBar("TopBar", shouldHide)
+				end
+				shouldHideShortcutBar()
+				showTopBar:connect(shouldHideShortcutBar)
+				gamepadActive:connect(shouldHideShortcutBar)
+			else
+				local function shouldShowShortcutBar()
+					local shouldShow = showTopBar:get() and gamepadActive:get()
+					setShowShortcutBar(shouldShow)
+				end
+
+				showTopBar:connect(shouldShowShortcutBar)
+				gamepadActive:connect(shouldShowShortcutBar)
 			end
-			shouldHideShortcutBar()
-			showTopBar:connect(shouldHideShortcutBar)
-			gamepadActive:connect(shouldHideShortcutBar)
-		else
-			local function shouldShowShortcutBar()
-				local shouldShow = showTopBar:get() and gamepadActive:get()
-				setShowShortcutBar(shouldShow)
-			end
-
-			showTopBar:connect(shouldShowShortcutBar)
-			gamepadActive:connect(shouldShowShortcutBar)
 		end
 	end, {})
 
-	local shortcutList = (if #trimmedShortcuts > 0 then trimmedShortcuts else shortcuts) :: { Types.ShortcutProps }
+	local shortcutList = (if #trimmedShortcuts > 0 then trimmedShortcuts else shortcuts) :: { ShortcutProps }
 	local shortcutItems = {}
 	for _, s in shortcutList do
-		local shortcut = s :: Types.ShortcutProps
+		local shortcut = s :: ShortcutProps
 		if not shortcut.label then
 			continue
 		end

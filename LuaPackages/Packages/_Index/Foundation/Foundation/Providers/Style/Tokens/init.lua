@@ -3,11 +3,25 @@ local Packages = Foundation.Parent
 local RbxDesignFoundations = require(Packages.RbxDesignFoundations)
 
 local Device = require(Foundation.Enums.Device)
+local Flags = require(Foundation.Utility.Flags)
 local Theme = require(Foundation.Enums.Theme)
+local TokenProcessingUtilities = require(script.TokenProcessingUtilities)
+local Types = require(Foundation.Components.Types)
+
 type Theme = Theme.Theme
 type Device = Device.Device
+type ColorStyleValue = Types.ColorStyleValue
+
+export type TokenPath = RbxDesignFoundations.TokenPath
+-- Non-string values are literals. With FoundationTokenOverrides, literals and path remaps must match the target (typeof or table keys/values).
+export type TokenOverrideValue = TokenPath | Color3 | ColorStyleValue | number | UDim | UDim2
+export type TokenOverrides = { [TokenPath]: TokenOverrideValue }
 
 local function getPlatformScale(device: Device, scaleFactor: number?)
+	if Flags.FoundationDisableTokenScaling then
+		return 1
+	end
+
 	scaleFactor = if scaleFactor ~= nil then scaleFactor else 1
 	scaleFactor = math.clamp(scaleFactor :: number, 0, math.huge)
 	-- Platform scale will be from engine API as soon as it's ready.
@@ -18,8 +32,24 @@ local function getPlatformScale(device: Device, scaleFactor: number?)
 	return baseScale * scaleFactor :: number
 end
 
-local function getTokens(device: Device, theme: Theme, scaleFactor: number?)
+local function applyTokenOverrides(tokens: any, overrides: TokenOverrides): any
+	if not Flags.FoundationTokenOverrides then
+		return tokens
+	end
+
+	for targetPath, source in overrides do
+		local sourceValue = TokenProcessingUtilities.resolveTokenOverride(tokens, targetPath, source)
+		if sourceValue ~= nil then
+			TokenProcessingUtilities.setTokenValue(tokens, targetPath, sourceValue)
+		end
+	end
+
+	return tokens
+end
+
+local function getTokens(theme: Theme, deviceInput: Device?, scaleFactor: number?, tokenOverrides: TokenOverrides?)
 	local generators = RbxDesignFoundations.Tokens
+	local device: Device = deviceInput or Device.Desktop
 	local scale = getPlatformScale(device, scaleFactor)
 	local themeTokens: typeof(generators.Dark) = if theme == Theme.Dark then generators.Dark else generators.Light
 
@@ -47,14 +77,14 @@ local function getTokens(device: Device, theme: Theme, scaleFactor: number?)
 		Typography = tokens.Typography,
 	}
 
-	-- For some reason, this is not exported from Tokens accurately.
-	-- We need an accurate way to reference this for useScaledValue.
-	-- This token should not be used outside of this function.
-	filteredTokens.Config.UI.Scale = scale
+	if tokenOverrides then
+		applyTokenOverrides(filteredTokens, tokenOverrides)
+	end
+
 	return filteredTokens
 end
 
-local defaultTokens = getTokens(Device.Desktop, Theme.Dark)
+local defaultTokens = getTokens(Theme.Dark, Device.Desktop)
 export type Tokens = typeof(defaultTokens)
 
 return {

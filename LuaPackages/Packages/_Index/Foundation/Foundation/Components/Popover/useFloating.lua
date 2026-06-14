@@ -1,15 +1,12 @@
 local Foundation = script:FindFirstAncestor("Foundation")
 local Packages = Foundation.Parent
 
+local Flags = require(Foundation.Utility.Flags)
 local PopoverAlign = require(Foundation.Enums.PopoverAlign)
 local PopoverSide = require(Foundation.Enums.PopoverSide)
 local React = require(Packages.React)
 local positioning = require(script.Parent.positioning)
-local Services = require(Foundation.Utility.Wrappers).Services
-local UserInputService = Services.UserInputService
-local GuiService = Services.GuiService
 
-local Flags = require(Foundation.Utility.Flags)
 local Types = require(Foundation.Components.Types)
 
 type PopoverSide = PopoverSide.PopoverSide
@@ -34,10 +31,7 @@ local function useConnectSignals(
 )
 	local connections = React.useRef({})
 
-	local effectHook = (
-		if Flags.FoundationPopoverFixArrowPositioning then React.useLayoutEffect else React.useEffect
-	) :: any
-	effectHook(function()
+	React.useLayoutEffect(function()
 		if instance ~= nil then
 			for _, signalName in signalNames do
 				-- This condition is here because of type system quirks. Feel free to simplify with the solver V2 or make a cast, it's horrific.
@@ -78,6 +72,12 @@ local function useFloating(
 	local arrowPosition, setArrowPosition = React.useBinding(Vector2.new())
 	local anchorPoint, setAnchorPoint = React.useBinding(Vector2.new(0, 0))
 	local recalculatePositionRef = React.useRef(function() end)
+	local clippingAncestorsRef: { current: { GuiObject } }? = if Flags.FoundationPopoverClipAwareVisibility
+		then React.useRef({} :: { GuiObject })
+		else nil
+	local pendingRecalcRef: { current: boolean }? = if Flags.FoundationPopoverClipAwareVisibility
+		then React.useRef(false)
+		else nil
 
 	local recalculatePosition = React.useCallback(function()
 		if not isOpen or not anchor or not content or not overlay then
@@ -95,18 +95,34 @@ local function useFloating(
 		local anchorRect = Rect.new(anchorPosition, anchorPosition + anchorSize)
 		local screenRect = Rect.new(screenPosition, screenPosition + screenSize)
 
-		if Flags.FoundationPopoverOnScreenKeyboard and UserInputService.OnScreenKeyboardVisible then
-			screenRect = positioning.adjustForOnScreenKeyboard(
-				screenRect,
-				UserInputService.OnScreenKeyboardPosition,
-				GuiService:GetGuiInset()
-			)
-		end
-
 		-- If the anchor is not visible on the screen, hide the popover
 		if not positioning.isOnScreen(anchorRect, screenRect) then
 			setIsVisible(false)
 			return
+		end
+
+		-- Hide when the anchor is clipped by any ClipsDescendants ancestor. Cache is built below.
+		if Flags.FoundationPopoverClipAwareVisibility then
+			local clippingAncestors = (clippingAncestorsRef :: { current: { GuiObject } }).current
+			local clipRect: Rect? = nil
+			for _, clippingAncestor in clippingAncestors do
+				local rect = Rect.new(
+					clippingAncestor.AbsolutePosition,
+					clippingAncestor.AbsolutePosition + clippingAncestor.AbsoluteSize
+				)
+				if clipRect == nil then
+					clipRect = rect
+				else
+					clipRect = Rect.new(
+						Vector2.new(math.max(clipRect.Min.X, rect.Min.X), math.max(clipRect.Min.Y, rect.Min.Y)),
+						Vector2.new(math.min(clipRect.Max.X, rect.Max.X), math.min(clipRect.Max.Y, rect.Max.Y))
+					)
+				end
+			end
+			if clipRect and not positioning.isOnScreen(anchorRect, clipRect) then
+				setIsVisible(false)
+				return
+			end
 		end
 
 		local side: PopoverSide = if type(sideConfig) == "table" then sideConfig.position else sideConfig
@@ -123,20 +139,12 @@ local function useFloating(
 		local arrowOffset = arrowSize or 0
 
 		-- Though this calculation includes side, it doesn't care about switching sides, so we can reuse it
-		local popoverSize = positioning.calculatePopoverBounds(
-			side,
-			sideOffset,
-			if Flags.FoundationPopoverOverflow then alignOffset else 0,
-			arrowOffset,
-			contentSize
-		)
+		local popoverSize = positioning.calculatePopoverBounds(side, sideOffset, alignOffset, arrowOffset, contentSize)
 
 		-- If the content is too large to fit on the selected side, switch sides if space allows on the other side
 		side = positioning.calculateSide(side, anchorRect, screenRect, popoverSize)
-		if Flags.FoundationPopoverOverflow then
-			if flipAlign then
-				align = positioning.calculateAlign(side, align, anchorRect, screenRect, popoverSize)
-			end
+		if flipAlign then
+			align = positioning.calculateAlign(side, align, anchorRect, screenRect, popoverSize)
 		end
 
 		local calculatedPosition, calculatedArrowPosition, calculatedAnchorPoint = positioning.calculatePositions(
@@ -161,39 +169,91 @@ local function useFloating(
 		-- https://roblox.atlassian.net/wiki/spaces/UIC/pages/1588593391/Quantum+Gui
 		local _ = content.AbsolutePosition
 	end, { isOpen, anchor, content, overlay, sideConfig, alignConfig, arrowSize } :: { unknown })
-	recalculatePositionRef.current = recalculatePosition
-
-	if Flags.FoundationPopoverFixArrowPositioning then
-		useConnectSignals(anchor, { "AbsolutePosition", "AbsoluteSize" }, recalculatePositionRef)
-		useConnectSignals(content, { "AbsoluteSize" }, recalculatePositionRef)
-		useConnectSignals(overlay, { "AbsoluteSize" }, recalculatePositionRef)
-		if Flags.FoundationPopoverOnScreenKeyboard then
-			useConnectSignals(
-				UserInputService,
-				{ "OnScreenKeyboardVisible", "OnScreenKeyboardPosition" },
-				recalculatePositionRef
-			)
+	if Flags.FoundationPopoverClipAwareVisibility then
+		-- Coalesce recalc fires within a frame into a single deferred recalc.
+		local pending = pendingRecalcRef :: { current: boolean }
+		recalculatePositionRef.current = function()
+			if pending.current then
+				return
+			end
+			pending.current = true
+			task.defer(function()
+				pending.current = false
+				recalculatePosition()
+			end)
 		end
-
-		React.useLayoutEffect(function()
-			recalculatePosition()
-		end, { recalculatePosition })
 	else
-		React.useLayoutEffect(function()
-			recalculatePosition()
-		end, { recalculatePosition })
-
-		useConnectSignals(anchor, { "AbsolutePosition", "AbsoluteSize" }, recalculatePositionRef)
-		useConnectSignals(content, { "AbsoluteSize" }, recalculatePositionRef)
-		useConnectSignals(overlay, { "AbsoluteSize" }, recalculatePositionRef)
-		if Flags.FoundationPopoverOnScreenKeyboard then
-			useConnectSignals(
-				UserInputService,
-				{ "OnScreenKeyboardVisible", "OnScreenKeyboardPosition" },
-				recalculatePositionRef
-			)
-		end
+		recalculatePositionRef.current = recalculatePosition
 	end
+	useConnectSignals(anchor, { "AbsolutePosition", "AbsoluteSize" }, recalculatePositionRef)
+	useConnectSignals(content, { "AbsoluteSize" }, recalculatePositionRef)
+	useConnectSignals(overlay, { "AbsoluteSize" }, recalculatePositionRef)
+
+	-- Cache the anchor's clipping ancestors so the hot-path clip check doesn't walk the tree.
+	-- Gated on isOpen so closed popovers don't pay the walk + subscription cost.
+	if Flags.FoundationPopoverClipAwareVisibility then
+		React.useLayoutEffect(function()
+			if not isOpen then
+				return
+			end
+			if typeof(anchor) ~= "Instance" or not anchor:IsA("GuiObject") then
+				return
+			end
+			local guiAnchor = anchor :: GuiObject
+			local ref = clippingAncestorsRef :: { current: { GuiObject } }
+			local propConnections: { RBXScriptConnection } = {}
+
+			local function rebuild()
+				for _, conn in propConnections do
+					conn:Disconnect()
+				end
+				table.clear(propConnections)
+
+				-- Limitation: an ancestor toggling ClipsDescendants at runtime won't update the cache.
+				local clippingAncestors: { GuiObject } = {}
+				local current = guiAnchor.Parent
+				while current and current:IsA("GuiObject") do
+					if current.ClipsDescendants then
+						table.insert(clippingAncestors, current)
+						table.insert(
+							propConnections,
+							current:GetPropertyChangedSignal("AbsolutePosition"):Connect(function()
+								recalculatePositionRef.current()
+							end)
+						)
+						table.insert(
+							propConnections,
+							current:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
+								recalculatePositionRef.current()
+							end)
+						)
+					end
+					current = current.Parent
+				end
+
+				ref.current = clippingAncestors
+				-- Skip recalc when there are no ancestors; the recalc layout effect handles it.
+				if #clippingAncestors > 0 then
+					recalculatePositionRef.current()
+				end
+			end
+
+			rebuild()
+			local ancestryConn = guiAnchor.AncestryChanged:Connect(rebuild)
+
+			return function()
+				ancestryConn:Disconnect()
+				for _, conn in propConnections do
+					conn:Disconnect()
+				end
+				ref.current = {}
+			end
+		end, { anchor, isOpen } :: { unknown })
+	end
+
+	React.useLayoutEffect(function()
+		recalculatePosition()
+	end, { recalculatePosition })
 
 	return position, isVisible, contentSize, arrowPosition, screenSize, anchorPoint
 end

@@ -2,6 +2,7 @@ local Foundation = script:FindFirstAncestor("Foundation")
 local Packages = Foundation.Parent
 
 local BuilderIcons = require(Packages.BuilderIcons)
+local Otter = require(Packages.Otter)
 local React = require(Packages.React)
 
 local ReactOtter = require(Packages.ReactOtter)
@@ -12,6 +13,7 @@ local Text = require(Foundation.Components.Text)
 
 local Types = require(Foundation.Components.Types)
 local View = require(Foundation.Components.View)
+local usePreferences = require(Foundation.Providers.Preferences.usePreferences)
 local withCommonProps = require(Foundation.Utility.withCommonProps)
 local withDefaults = require(Foundation.Utility.withDefaults)
 
@@ -54,17 +56,18 @@ local defaultProps = {
 	isExpanded = false,
 }
 
-local function getCommonEaseConfig(tokens: Tokens)
+local function getCommonEaseConfig(tokens: Tokens): Otter.EaseOptions
 	return {
 		easingStyle = tokens.Ease.StandardOut,
 		duration = tokens.Time.Time_300,
-		startingValue = nil, -- avoid type err
 	}
 end
 
 local function AccordionItem(accordionItemProps: AccordionItemProps, ref: React.Ref<GuiObject>?)
 	local props = withDefaults(accordionItemProps, defaultProps)
 	local tokens = useTokens()
+	local preferences = usePreferences()
+	local reducedMotionEnabled = preferences.reducedMotion
 	local commonEaseConfig = React.useMemo(function()
 		return getCommonEaseConfig(tokens)
 	end, { tokens })
@@ -81,16 +84,28 @@ local function AccordionItem(accordionItemProps: AccordionItemProps, ref: React.
 	end)
 	local contentRef = React.useRef(nil)
 	local onClose = React.useCallback(function()
+		if reducedMotionEnabled then
+			setCurrentHeight(ReactOtter.instant(0) :: any)
+			setChevronRotation(ReactOtter.instant(0) :: any)
+			setIsExpanded(false)
+			isClosing.current = false
+			return
+		end
+
 		isClosing.current = true
 		setCurrentHeight(ReactOtter.ease(0, commonEaseConfig))
 		setChevronRotation(ReactOtter.ease(0, commonEaseConfig))
-	end, {})
+	end, { reducedMotionEnabled, commonEaseConfig } :: { unknown })
 
 	local onContentSizeChange = React.useCallback(function()
 		if contentRef and contentRef.current and isExpanded then
-			setCurrentHeight(ReactOtter.ease(contentRef.current.AbsoluteSize.Y, commonEaseConfig))
+			if reducedMotionEnabled then
+				setCurrentHeight(ReactOtter.instant(contentRef.current.AbsoluteSize.Y) :: any)
+			else
+				setCurrentHeight(ReactOtter.ease(contentRef.current.AbsoluteSize.Y, commonEaseConfig))
+			end
 		end
-	end, { contentRef, isExpanded } :: { unknown })
+	end, { contentRef, isExpanded, reducedMotionEnabled, commonEaseConfig } :: { unknown })
 
 	React.useEffect(function()
 		if isExpanded and not props.isExpanded then
@@ -102,9 +117,13 @@ local function AccordionItem(accordionItemProps: AccordionItemProps, ref: React.
 
 	React.useEffect(function()
 		if isExpanded then
-			setChevronRotation(ReactOtter.ease(-180, commonEaseConfig))
+			if reducedMotionEnabled then
+				setChevronRotation(ReactOtter.instant(-180) :: any)
+			else
+				setChevronRotation(ReactOtter.ease(-180, commonEaseConfig))
+			end
 		end
-	end, { isExpanded })
+	end, { isExpanded, reducedMotionEnabled, commonEaseConfig } :: { unknown })
 
 	local accordionContext = useAccordion()
 	local onAccordionItemActivated, itemSize = accordionContext.onAccordionItemActivated, accordionContext.itemSize

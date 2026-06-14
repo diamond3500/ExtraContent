@@ -20,20 +20,25 @@ type BaseMenuItemVariantProps = {
 	text: { tag: string },
 	check: { tag: string, style: Types.ColorStyleValue, size: number },
 	title: { tag: string },
+	chevron: { size: IconSize },
+	groupPadding: { size: number },
 }
 
 local variantsMap = function(tokens: Tokens)
 	local common = {
 		-- It's not a mistake having size-full (see sizes) and auto-x. It makes the minimal size full and allow item to grow to fill up the max width of the menu
 		container = {
-			tag = "row align-y-center flex-x-between auto-x",
+			tag = "row flex-x-between align-y-center auto-x",
 		},
-		icon = { tag = "content-emphasis", style = tokens.Color.Content.Emphasis },
+		icon = {
+			tag = "radius-small content-emphasis",
+			style = tokens.Color.Content.Emphasis,
+		},
 		text = {
-			tag = "content-emphasis auto-xy fill text-align-x-left text-truncate-split",
+			tag = "fill auto-xy text-align-x-left text-truncate-split content-emphasis",
 		},
 		title = {
-			tag = "content-default auto-xy fill text-align-x-left text-truncate-split",
+			tag = "fill auto-xy text-align-x-left text-truncate-split content-default",
 		},
 		check = { tag = "content-emphasis", style = tokens.Color.Content.Emphasis },
 	}
@@ -41,39 +46,47 @@ local variantsMap = function(tokens: Tokens)
 	local sizes: { [InputSize]: VariantProps } = {
 		[InputSize.XSmall] = {
 			container = {
-				tag = "size-full-600 radius-small padding-x-medium gap-xsmall",
+				tag = "gap-xsmall size-full-600 padding-x-medium radius-small",
 			},
 			icon = { tag = "size-400", size = IconSize.XSmall :: IconSize },
 			text = { tag = "text-body-small" },
 			title = { tag = "text-caption-small" },
 			check = { tag = "size-300", size = tokens.Size.Size_600 },
+			chevron = { size = IconSize.Small :: IconSize },
+			groupPadding = { size = tokens.Padding.XSmall },
 		},
 		[InputSize.Small] = {
 			container = {
-				tag = "size-full-800 radius-medium padding-x-medium gap-xsmall",
+				tag = "gap-xsmall size-full-800 padding-x-medium radius-medium",
 			},
 			icon = { tag = "size-500", size = IconSize.Small :: IconSize },
 			text = { tag = "text-body-small" },
 			title = { tag = "text-caption-small" },
 			check = { tag = "size-400", size = tokens.Size.Size_700 },
+			chevron = { size = IconSize.Small :: IconSize },
+			groupPadding = { size = tokens.Padding.Small },
 		},
 		[InputSize.Medium] = {
 			container = {
-				tag = "size-full-1000 radius-medium padding-x-medium gap-small",
+				tag = "gap-small size-full-1000 padding-x-medium radius-medium",
 			},
 			icon = { tag = "size-600", size = IconSize.Medium :: IconSize },
 			text = { tag = "text-body-medium" },
 			title = { tag = "text-caption-medium" },
 			check = { tag = "size-500", size = tokens.Size.Size_800 },
+			chevron = { size = IconSize.Medium :: IconSize },
+			groupPadding = { size = tokens.Padding.Small },
 		},
 		[InputSize.Large] = {
 			container = {
-				tag = "size-full-1200 radius-medium padding-x-large gap-small",
+				tag = "gap-small size-full-1200 padding-x-large radius-medium",
 			},
 			icon = { tag = "size-700", size = IconSize.Large :: IconSize },
 			text = { tag = "text-body-large" },
 			title = { tag = "text-caption-large" },
 			check = { tag = "size-600", size = tokens.Size.Size_900 },
+			chevron = { size = IconSize.Large :: IconSize },
+			groupPadding = { size = tokens.Padding.Small },
 		},
 	}
 

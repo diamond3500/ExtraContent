@@ -4,6 +4,8 @@ local Packages = Foundation.Parent
 local React = require(Packages.React)
 
 local Icon = require(Foundation.Components.Icon)
+local View = require(Foundation.Components.View)
+
 local IconSize = require(Foundation.Enums.IconSize)
 type IconSize = IconSize.IconSize
 
@@ -27,15 +29,23 @@ local function Loading(loadingProps: LoadingProps, ref: React.Ref<GuiObject>?)
 	local rotation = useRotation()
 	local tokens = useTokens()
 
+	local iconProps = {
+		name = "icons/graphic/loadingspinner",
+		size = props.size,
+		style = tokens.DarkMode.Content.Emphasis,
+		Rotation = rotation,
+		ref = ref,
+		testId = `{props.testId}--icon`,
+	}
+
 	return React.createElement(
-		Icon,
+		View,
 		withCommonProps(props, {
-			name = "icons/graphic/loadingspinner",
-			size = props.size,
-			style = tokens.DarkMode.Content.Emphasis,
-			Rotation = rotation,
-			ref = ref,
-		})
+			tag = "auto-xy",
+		}),
+		{
+			Icon = React.createElement(Icon, iconProps),
+		}
 	)
 end
 

@@ -21,9 +21,11 @@ local ScriptContext = game:GetService("ScriptContext")
 local CoreGui = game:GetService("CoreGui")
 local GetFFlagDisplayServerChannel = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagDisplayServerChannel
 local getFFlagExpChatAlwaysRunTCS = require(CorePackages.Workspace.Packages.SharedFlags).getFFlagExpChatAlwaysRunTCS
-local GetFFlagEnableReferredPlayerJoinRemoteEvent = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagEnableReferredPlayerJoinRemoteEvent
+local GetFFlagEnableReferredPlayerJoinRemoteEvent =
+	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagEnableReferredPlayerJoinRemoteEvent
 local FFlagDebugLogExpchatMigration = game:DefineFastFlag("DebugLogExpchatMigration", false)
-local FFlagAXEnableInspectAndBuyBulkPurchase = require(CorePackages.Workspace.Packages.SharedFlags).FFlagAXEnableInspectAndBuyBulkPurchase
+local FFlagAXEnableInspectAndBuyBulkPurchase =
+	require(CorePackages.Workspace.Packages.SharedFlags).FFlagAXEnableInspectAndBuyBulkPurchase
 
 local RobloxGui = CoreGui:WaitForChild("RobloxGui", math.huge)
 assert(RobloxGui ~= nil, "RobloxGui should exist")
@@ -38,9 +40,7 @@ end
 --
 
 -- Remote allow list
-if game:DefineFastFlag("ImplementLuaAppsRemoteAllowList", false) then
-	require(RobloxGui.Modules.Server.RemoteAllowList)()
-end
+require(RobloxGui.Modules.Server.RemoteAllowList)()
 
 -- OpenCloud
 if game:DefineFastFlag("OpenCloudCoreScriptLuaEnabled", false) then
@@ -67,11 +67,7 @@ if FFlagAXEnableInspectAndBuyBulkPurchase then
 	ScriptContext:AddCoreScriptLocal("ServerCoreScripts/ServerBulkPurchaseEvent", script.Parent)
 end
 
-local SendChatAnalytics
-local FFlagEnableForkedChatAnalytics = require(RobloxGui.Modules.Common.Flags.FFlagEnableForkedChatAnalytics)
-if FFlagEnableForkedChatAnalytics then
-	SendChatAnalytics = require(RobloxGui.Modules.Server.SendChatAnalytics)
-end
+local SendChatAnalytics = require(RobloxGui.Modules.Server.SendChatAnalytics)
 
 ScriptContext:AddCoreScriptLocal("ServerCoreScripts/ServerDialog", script.Parent)
 
@@ -115,24 +111,16 @@ RemoteFunction_GetServerVersion.OnServerInvoke = getServerVersion
 if GetFFlagDisplayServerChannel() then
 	RemoteFunction_GetServerChannel.OnServerInvoke = getServerChannel
 end
-
-local FFlagEnableTenFootInterfaceCheckForLegacyChat =
-	game:DefineFastFlag("EnableTenFootInterfaceCheckForLegacyChat", false)
 local function shouldLoadLuaChat()
-	if FFlagEnableTenFootInterfaceCheckForLegacyChat then
 		return game:GetService("Chat").LoadDefaultChat
 			and game:GetService("TextChatService").ChatVersion == Enum.ChatVersion.LegacyChatService
 			and (not game:GetService("GuiService"):IsTenFootInterface())
-	else
-		return game:GetService("Chat").LoadDefaultChat
-			and game:GetService("TextChatService").ChatVersion == Enum.ChatVersion.LegacyChatService
-	end
 end
 
 if shouldLoadLuaChat() then
 	require(game:GetService("CoreGui").RobloxGui.Modules.Server.ClientChat.ChatWindowInstaller)()
 	require(game:GetService("CoreGui").RobloxGui.Modules.Server.ServerChat.ChatServiceInstaller)()
-elseif FFlagEnableForkedChatAnalytics then
+else
 	SendChatAnalytics("NoLoadDefaultChat")
 end
 
@@ -177,6 +165,10 @@ end
 local GetFFlagContactListEnabled = require(RobloxGui.Modules.Common.Flags.GetFFlagContactListEnabled)
 if GetFFlagContactListEnabled() then
 	ScriptContext:AddCoreScriptLocal("ServerCoreScripts/ServerContactList", script.Parent)
+end
+
+if game:DefineFastFlag("AppBuildReloadRemote", false) then
+	ScriptContext:AddCoreScriptLocal("ServerCoreScripts/ServerBuildExperiencePlaytestTeleport", script.Parent)
 end
 
 ScriptContext:AddCoreScriptLocal("ServerCoreScripts/PlayerViewCapability", script.Parent)

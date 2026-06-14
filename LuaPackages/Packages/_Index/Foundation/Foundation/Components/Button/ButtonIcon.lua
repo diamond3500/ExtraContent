@@ -6,11 +6,11 @@ local migrationLookup = BuilderIcons.Migration["uiblox"]
 
 local React = require(Packages.React)
 
+local ButtonVariant = require(Foundation.Enums.ButtonVariant)
+type SupportedButtonVariant = ButtonVariant.SupportedButtonVariant
+
 local InputSize = require(Foundation.Enums.InputSize)
 type InputSize = InputSize.InputSize
-
-local ButtonTypes = require(script.Parent.Types)
-type SupportedButtonVariant = ButtonTypes.SupportedButtonVariant
 
 local Image = require(Foundation.Components.Image)
 local Text = require(Foundation.Components.Text)
@@ -63,7 +63,7 @@ local function ButtonIcon(props: ButtonIconProps): React.Node
 					else BuilderIcons.IconVariant.Regular],
 				FontSize = variantProps.icon.size.Y.Offset,
 			},
-			tag = "anchor-center-center position-center-center",
+			tag = "position-center-center anchor-center-center",
 			Size = variantProps.icon.size,
 			textStyle = React.joinBindings({
 				disabledTransparencyBinding,
@@ -86,7 +86,7 @@ local function ButtonIcon(props: ButtonIconProps): React.Node
 		})
 	else
 		return React.createElement(Image, {
-			tag = "anchor-center-center position-center-center",
+			tag = "position-center-center anchor-center-center",
 			Image = props.icon,
 			Size = if intrinsicIconSize
 				then UDim2.fromOffset(intrinsicIconSize.X, intrinsicIconSize.Y)

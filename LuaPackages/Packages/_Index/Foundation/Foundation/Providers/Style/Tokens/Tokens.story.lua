@@ -7,14 +7,10 @@ local React = require(Packages.React)
 local Text = require(Foundation.Components.Text)
 local View = require(Foundation.Components.View)
 
-local Device = require(Foundation.Enums.Device)
-local Theme = require(Foundation.Enums.Theme)
 local TokenProcessingUtilities = require(Foundation.Providers.Style.Tokens.TokenProcessingUtilities)
-local Tokens = require(Foundation.Providers.Style.Tokens)
+local useTokens = require(Foundation.Providers.Style.useTokens)
 
 type StoryProps = {
-	theme: string,
-	platform: string,
 	controls: {
 		searchText: string,
 		flattenColors: boolean,
@@ -123,19 +119,19 @@ local function TokenSubsection(props: {
 	end
 
 	return React.createElement(View, {
-		tag = "size-full-0 auto-y col gap-small",
+		tag = "col gap-small size-full-0 auto-y",
 		LayoutOrder = props.LayoutOrder,
 	}, {
 		SubHeader = React.createElement(Text, {
 			Text = props.subcategory,
-			tag = "size-full-0 auto-y text-title-medium text-align-x-left padding-top-medium",
+			tag = "size-full-0 auto-y padding-top-medium text-title-medium text-align-x-left",
 			LayoutOrder = 1,
 		}),
 
 		TokensList = React.createElement(
 			View,
 			{
-				tag = "size-full-0 auto-y col gap-small",
+				tag = "col gap-small size-full-0 auto-y",
 				LayoutOrder = 2,
 			},
 			Dash.map(filteredTokens, function(token, index)
@@ -233,7 +229,7 @@ local function TokenSection(props: {
 
 	-- Render the common structure with header and children
 	return React.createElement(View, {
-		tag = "size-full-0 auto-y col gap-medium",
+		tag = "col gap-medium size-full-0 auto-y",
 		LayoutOrder = props.LayoutOrder,
 	}, {
 		Header = React.createElement(Text, {
@@ -242,7 +238,7 @@ local function TokenSection(props: {
 			LayoutOrder = 1,
 		}),
 		Content = React.createElement(View, {
-			tag = "size-full-0 auto-y col gap-small",
+			tag = "col gap-small size-full-0 auto-y",
 			LayoutOrder = 2,
 		}, children),
 	})
@@ -252,12 +248,11 @@ local function TokensStory(props: StoryProps)
 	local searchText = props.controls.searchText
 	local flattenColors = props.controls.flattenColors
 	local alternateRowBackgrounds = props.controls.alternateRowBackgrounds
-	local selectedTheme = Theme[props.theme]
-	local selectedDevice = Device[props.platform]
 
-	-- Get tokens for current theme/device
+	-- Get tokens from context (includes any overrides applied via StyleProvider)
+	local tokens = useTokens()
+
 	local allTokens = React.useMemo(function()
-		local tokens = Tokens.getTokens(selectedDevice, selectedTheme)
 		local collected: { [string]: any } = {}
 
 		-- Show official categories, excluding Config and Semantic
@@ -274,12 +269,12 @@ local function TokensStory(props: StoryProps)
 		end
 
 		return collected
-	end, { selectedTheme, selectedDevice, flattenColors })
+	end, { tokens, flattenColors } :: { unknown })
 
 	return React.createElement(
 		View,
 		{
-			tag = "size-full-0 auto-y col gap-xlarge",
+			tag = "col gap-xlarge size-full-0 auto-y",
 		},
 		(function()
 			-- Use the predefined order for official categories

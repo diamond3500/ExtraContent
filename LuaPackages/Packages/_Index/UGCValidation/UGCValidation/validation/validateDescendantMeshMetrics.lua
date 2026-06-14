@@ -26,14 +26,11 @@ local getMeshMinMax = require(root.util.getMeshMinMax)
 local getEditableMeshFromContext = require(root.util.getEditableMeshFromContext)
 local floatEquals = require(root.util.floatEquals)
 local getExpectedPartSize = require(root.util.getExpectedPartSize)
-local getMeshIdForSkinningValidation = require(root.util.getMeshIdForSkinningValidation)
 
 local getFFlagUGCValidateCoplanarTriTestBody = require(root.flags.getFFlagUGCValidateCoplanarTriTestBody)
-local getEngineFeatureEngineUGCValidateBodyParts = require(root.flags.getEngineFeatureEngineUGCValidateBodyParts)
 local getFIntUGCValidateTriangleLimitTolerance = require(root.flags.getFIntUGCValidateTriangleLimitTolerance)
-local getEngineFeatureEngineEditableMeshAvatarPublish =
-	require(root.flags.getEngineFeatureEngineEditableMeshAvatarPublish)
-local getEngineUGCValidateRelativeSkinningTransfer = require(root.flags.getEngineUGCValidateRelativeSkinningTransfer)
+local getEngineFeatureEngineUGCValidationConsolidateAccessorySkinning =
+	require(root.flags.getEngineFeatureEngineUGCValidationConsolidateAccessorySkinning)
 
 local function validateIsSkinned(
 	obj: MeshPart,
@@ -53,20 +50,12 @@ local function validateIsSkinned(
 		end
 	end
 
-	if not getEngineFeatureEngineUGCValidateBodyParts() then
-		return true
-	end
-
 	local retrievedMeshData, testsPassed = pcall(function()
-		if getEngineFeatureEngineEditableMeshAvatarPublish() then
-			local getEditableMeshSuccess, editableMesh = getEditableMeshFromContext(obj, "MeshId", validationContext)
-			if not getEditableMeshSuccess then
-				error("Failed to retrieve MeshContent")
-			end
-			return UGCValidationService:ValidateSkinnedEditableMesh(editableMesh :: EditableMesh)
-		else
-			return UGCValidationService:ValidateSkinnedMesh(getMeshIdForSkinningValidation(obj, allowEditableInstances))
+		local getEditableMeshSuccess, editableMesh = getEditableMeshFromContext(obj, "MeshId", validationContext)
+		if not getEditableMeshSuccess then
+			error("Failed to retrieve MeshContent")
 		end
+		return UGCValidationService:ValidateSkinnedEditableMesh(editableMesh :: EditableMesh)
 	end)
 
 	if not retrievedMeshData then
@@ -309,7 +298,7 @@ local function validateDescendantMeshMetrics(
 			)
 			Analytics.recordScriptTime("validateIsSkinned", startTime, validationContext)
 
-			if getEngineUGCValidateRelativeSkinningTransfer() then
+			if not getEngineFeatureEngineUGCValidationConsolidateAccessorySkinning() then
 				reasonsAccumulator:updateReasons(validateSkinningTransfer(data.instance :: MeshPart, validationContext))
 			end
 

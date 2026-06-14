@@ -6,6 +6,8 @@
 	and the valid bounding box is too great.
 ]]
 
+local AssetService = game:GetService("AssetService")
+
 local root = script.Parent.Parent
 
 local Analytics = require(root.Analytics)
@@ -16,19 +18,73 @@ local FailureReasonsAccumulator = require(root.util.FailureReasonsAccumulator)
 local AssetCalculator = require(root.util.AssetCalculator)
 local getEditableMeshFromContext = require(root.util.getEditableMeshFromContext)
 local getMeshVerts = require(root.util.getMeshVerts)
+local getAttachmentCFrameInPartSpace = require(root.util.getAttachmentCFrameInPartSpace)
 local Types = require(root.util.Types)
 local FloatVector = require(root.util.FloatVector)
 local Extents = require(root.util.Extents)
 local tryYield = require(root.util.tryYield)
 
 local validateAccurateBoundingBoxFlags = require(root.flags.validateAccurateBoundingBoxFlags)
-local getFFlagUGCValidateAccurateBoundingBoxRasterMethodTopViewFix =
-	require(root.flags.getFFlagUGCValidateAccurateBoundingBoxRasterMethodTopViewFix)
+local getFFlagUGCValidateTinyTrianglesIntersectFix = require(root.flags.getFFlagUGCValidateTinyTrianglesIntersectFix)
 
 type BodyAssetMasksRenderer = BodyAssetMasksRenderer.BodyAssetMasksRenderer
 type BodyAssetMaskEntry = BodyAssetMasksRenderer.BodyAssetMaskEntry
 type FloatVector = FloatVector.FloatVector
 type Extents = Extents.Extents
+
+-- Returns the NeckRigAttachment position in mesh-local space for the given head MeshPart.
+-- Attachments are in part-local space; dividing by partScale (Size/MeshSize) converts to mesh-local
+-- so it aligns with the coordinate space used by validBounds for DynamicHead.
+-- Returns nil if the attachment is missing e.g. the part is not a head (caller should skip the crop).
+local function getHeadNeckAttachmentMeshLocalPosition(headMeshPart: MeshPart): Vector3?
+	local neckAttachment = headMeshPart:FindFirstChild("NeckRigAttachment", true)
+	if not neckAttachment then
+		return nil
+	end
+
+	local attachmentPartLocalCFrame = getAttachmentCFrameInPartSpace(neckAttachment :: Attachment)
+	local partScale = headMeshPart.Size / headMeshPart.MeshSize
+	return attachmentPartLocalCFrame.Position / partScale
+end
+
+-- Projects a mesh-local 3D point to the image row of a given view's mask.
+-- Only meaningful for side views (Front/Back/Left/Right) where image-Y corresponds to world-Y.
+-- Uses the same normalized-to-screen transform as bodyAssetMasksRenderer.normalizedSpaceToScreenSpace.
+local function projectMeshLocalPointToImageRow(point: Vector3, maskEntry: BodyAssetMaskEntry): number
+	local viewSpacePoint = maskEntry.view:Inverse() * point
+
+	local bounds = maskEntry.viewSpaceBounds
+	local centerY = (bounds.max.Y + bounds.min.Y) / 2
+	local halfSizeY = (bounds.max.Y - bounds.min.Y) / 2
+	local normalizedY = (viewSpacePoint.Y - centerY) / halfSizeY
+
+	local imageSize: Vector2 = (maskEntry.mask :: EditableImage).Size
+	local screenY = normalizedY * -0.5 + 0.5
+	return screenY * (imageSize.Y - 1)
+end
+
+-- Returns a new EditableImage copied from sourceMask with all pixels below clipRow zeroed out.
+-- The row at floor(clipRow) is preserved (conservative crop). Does not mutate the source, since
+-- bodyAssetMasksWrapper is shared across downstream validators. Caller must :Destroy() the result.
+local function cloneMaskZeroedBelowRow(sourceMask: EditableImage, clipRow: number): EditableImage
+	local size = sourceMask.Size
+	local width, height = size.X, size.Y
+	local BYTES_PER_PIXEL = 4
+
+	local pixels = sourceMask:ReadPixelsBuffer(Vector2.zero, size)
+
+	-- floor+1 preserves the row containing clipRow; clamp guards against out-of-image values
+	local firstZeroRow = math.max(0, math.min(height, math.floor(clipRow) + 1))
+	if firstZeroRow < height then
+		local firstZeroByte = firstZeroRow * width * BYTES_PER_PIXEL
+		local bytesToZero = (height - firstZeroRow) * width * BYTES_PER_PIXEL
+		buffer.fill(pixels, firstZeroByte, 0, bytesToZero)
+	end
+
+	local croppedMask = (AssetService :: any):CreateEditableImage({ Size = size })
+	croppedMask:WritePixelsBuffer(Vector2.zero, size, pixels)
+	return croppedMask
+end
 
 local function sampleAreaTable(areaTable, leftBound, rightBound, topBound, bottomBound)
 	local upperLeftNormalized = Vector2.new(leftBound, topBound)
@@ -184,18 +240,10 @@ end
 
 -- returns true if a resultant vector component is mapped to exactly one component of the input vector, that is not z
 local function transformIsAlignedWithAxis(transform: CFrame, axis: Vector3)
-	if getFFlagUGCValidateAccurateBoundingBoxRasterMethodTopViewFix() then
-		if axis:FuzzyEq(transform.XVector:Abs()) then
-			return true
-		elseif axis:FuzzyEq(transform.YVector:Abs()) then
-			return true
-		end
-	else
-		if axis:Abs():FuzzyEq(transform.XVector) then
-			return true
-		elseif axis:Abs():FuzzyEq(transform.YVector) then
-			return true
-		end
+	if axis:FuzzyEq(transform.XVector:Abs()) then
+		return true
+	elseif axis:FuzzyEq(transform.YVector:Abs()) then
+		return true
 	end
 
 	return false
@@ -233,7 +281,9 @@ local function calculateValidBounds(
 	validationContext: Types.ValidationContext
 ): (boolean, { string } | Extents)
 	local validBounds = Extents.new() :: Extents
-	for _viewId, maskEntry in bodyAssetMasks do
+
+	local cardinalViews = (if getFFlagUGCValidateTinyTrianglesIntersectFix() then {} else nil) :: { string: any }
+	for viewId, maskEntry in bodyAssetMasks do
 		local validScreenBounds = nil
 
 		local success, result = calculateMinimumBoundsForView(maskEntry, validationContext)
@@ -256,8 +306,28 @@ local function calculateValidBounds(
 		local topRightAlignedExtents: Extents = alignedExtentsFromReprojectedPoint(topRightWorldSpace, maskEntry.view)
 		local bottomLeftAlignedExtents: Extents =
 			alignedExtentsFromReprojectedPoint(bottomLeftWorldSpace, maskEntry.view)
-		validBounds = validBounds:unionExtents(topRightAlignedExtents)
-		validBounds = validBounds:unionExtents(bottomLeftAlignedExtents)
+
+		if getFFlagUGCValidateTinyTrianglesIntersectFix() then
+			local validBoundsOnAxis = Extents.new():unionExtents(topRightAlignedExtents)
+			validBoundsOnAxis = validBoundsOnAxis:unionExtents(bottomLeftAlignedExtents)
+
+			local opposingViewId = BodyAssetMasksRenderer.opposingViewIds[viewId]
+			if cardinalViews[opposingViewId] then
+				cardinalViews[opposingViewId] = validBoundsOnAxis:intersectExtents(cardinalViews[opposingViewId])
+			else
+				cardinalViews[viewId] = validBoundsOnAxis
+			end
+		else
+			validBounds = validBounds:unionExtents(topRightAlignedExtents)
+			validBounds = validBounds:unionExtents(bottomLeftAlignedExtents)
+		end
+	end
+
+	if getFFlagUGCValidateTinyTrianglesIntersectFix() then
+		for _, extents in cardinalViews do
+			validBounds = validBounds:unionExtents(extents :: Extents)
+		end
+		assert(validBounds:isValid())
 	end
 
 	return true, validBounds :: Extents
@@ -500,42 +570,91 @@ function module.validate(
 		masksForAssetType = bodyAssetMasksWrapper.bodyAssetMasks
 	end
 
-	local validBounds = nil
-	local success: boolean, result: any = calculateValidBounds(masksForAssetType, validationContext)
+	-- Headless-avatar exploit mitigation: for DynamicHead, replace side-view masks with copies
+	-- that have below-neck pixels zeroed. Top/Bottom are untouched (their image-Y is world-Z).
+	-- TODO: Break this crop logic into its own module so this file doesn't need to know about attachments.
+	-- TODO: Generalize beyond DynamicHead to other body parts (e.g., legs hiding in torso via rig attachments).
+	local clonedMasksToDestroy: { EditableImage } = {}
+	if assetType == Enum.AssetType.DynamicHead and validateAccurateBoundingBoxFlags.neckAttachmentCrop() then
+		local neckMeshLocalPos = getHeadNeckAttachmentMeshLocalPosition(inst :: MeshPart)
+		if neckMeshLocalPos then
+			local marginNormalized = validateAccurateBoundingBoxFlags.neckAttachmentCropMargin()
+			local croppedMasks: { [string]: BodyAssetMaskEntry } = {}
+			for viewId, maskEntry in masksForAssetType do
+				local isSideView = viewId ~= BodyAssetMasksRenderer.viewIds.Top
+					and viewId ~= BodyAssetMasksRenderer.viewIds.Bottom
+				if isSideView then
+					local neckRow = projectMeshLocalPointToImageRow(neckMeshLocalPos, maskEntry)
+					local sourceImage = maskEntry.mask :: EditableImage
+					local imageHeight = sourceImage.Size.Y
+					local marginRows = marginNormalized * (imageHeight - 1) / 2
+					local clipRow = neckRow + marginRows -- preserve `marginRows` below the cropping coordinate
 
-	if not success then
-		return false, result :: { string }
+					local croppedImage = cloneMaskZeroedBelowRow(sourceImage, clipRow)
+					table.insert(clonedMasksToDestroy, croppedImage)
+
+					croppedMasks[viewId] = {
+						mask = croppedImage,
+						view = maskEntry.view,
+						viewSpaceBounds = maskEntry.viewSpaceBounds,
+						viewId = maskEntry.viewId,
+					}
+				else
+					croppedMasks[viewId] = maskEntry
+				end
+			end
+			masksForAssetType = croppedMasks
+		end
 	end
-	validBounds = result :: Extents
 
-	local validationSpaceTransforms = AssetCalculator.getAssetMeshesValidationSpaceTransforms(inst, validationContext)
+	-- Run pipeline in a closure to guarantee cloned mask cleanup regardless of early-exit path.
+	local runPipeline = function(): (boolean, { string }?)
+		local validBounds = nil
+		local success: boolean, result: any = calculateValidBounds(masksForAssetType, validationContext)
 
-	local editableMeshes = nil
-	success, result = getBodyPartAssetEditableMeshes(inst, validationContext)
-	if not success then
-		return false, result :: { string }
+		if not success then
+			return false, result :: { string }
+		end
+		validBounds = result :: Extents
+
+		local validationSpaceTransforms =
+			AssetCalculator.getAssetMeshesValidationSpaceTransforms(inst, validationContext)
+
+		local editableMeshes = nil
+		success, result = getBodyPartAssetEditableMeshes(inst, validationContext)
+		if not success then
+			return false, result :: { string }
+		end
+		editableMeshes = result :: { [string]: EditableMesh }
+
+		success, result = getHighestInflatingPointInEachAxis(
+			validBounds,
+			validationSpaceTransforms,
+			editableMeshes,
+			findMeshHandle,
+			validationContext
+		)
+		if not success then
+			return false, result :: { string }
+		end
+		local inflationPerAxis = result :: AxisInflations
+
+		local reasonsAccumulator = tryReportInflationError(inflationPerAxis, assetType)
+
+		if not (reasonsAccumulator:getFinalResults()) then
+			Analytics.reportFailure(Analytics.ErrorType.validateAccurateBoundingBox :: string, nil, validationContext)
+		end
+
+		return reasonsAccumulator:getFinalResults()
 	end
-	editableMeshes = result :: { [string]: EditableMesh }
 
-	success, result = getHighestInflatingPointInEachAxis(
-		validBounds,
-		validationSpaceTransforms,
-		editableMeshes,
-		findMeshHandle,
-		validationContext
-	)
-	if not success then
-		return false, result :: { string }
-	end
-	local inflationPerAxis = result :: AxisInflations
+	local pipelineSuccess, pipelineResult = runPipeline()
 
-	local reasonsAccumulator = tryReportInflationError(inflationPerAxis, assetType)
-
-	if not (reasonsAccumulator:getFinalResults()) then
-		Analytics.reportFailure(Analytics.ErrorType.validateAccurateBoundingBox :: string, nil, validationContext)
+	for _, cloned in clonedMasksToDestroy do
+		cloned:Destroy()
 	end
 
-	return reasonsAccumulator:getFinalResults()
+	return pipelineSuccess, pipelineResult
 end
 
 return module

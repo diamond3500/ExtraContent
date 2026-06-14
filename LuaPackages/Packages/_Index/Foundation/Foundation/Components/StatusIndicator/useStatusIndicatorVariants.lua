@@ -15,6 +15,7 @@ local Tokens = require(Foundation.Providers.Style.Tokens)
 type Tokens = Tokens.Tokens
 
 local VariantsContext = require(Foundation.Providers.Style.VariantsContext)
+local isDevMode = _G.__DEV__ == true
 
 type StatusIndicatorVariantProps = {
 	container: { tag: string },
@@ -27,10 +28,7 @@ function variantsFactory(tokens: Tokens)
 			tag = "radius-circle",
 		},
 		content = {
-			tag = {
-				["auto-xy text-caption-small"] = true,
-				["text-align-x-left"] = Flags.FoundationFixBadgeAndIndicatorTextAlignment,
-			},
+			tag = "auto-xy text-caption-small text-align-x-left",
 		},
 	}
 
@@ -59,14 +57,23 @@ function variantsFactory(tokens: Tokens)
 				style = tokens.LightMode.Content.Emphasis,
 			},
 		},
-		[StatusIndicatorVariant.Emphasis] = {
-			container = {
-				tag = "bg-system-emphasis",
+		[StatusIndicatorVariant.Emphasis] = if Flags.FoundationActionEmphasisStatusIndicator
+			then {
+				container = {
+					tag = "bg-action-emphasis",
+				},
+				content = {
+					style = tokens.Color.ActionEmphasis.Foreground,
+				},
+			}
+			else {
+				container = {
+					tag = "bg-system-emphasis",
+				},
+				content = {
+					style = tokens.DarkMode.Content.Emphasis,
+				},
 			},
-			content = {
-				style = tokens.DarkMode.Content.Emphasis,
-			},
-		},
 		[StatusIndicatorVariant.Neutral] = {
 			container = {
 				tag = "bg-system-neutral",
@@ -95,14 +102,14 @@ function variantsFactory(tokens: Tokens)
 
 	local hasValue: { [boolean]: any } = {
 		[false] = { container = { tag = "size-200-200" } },
-		[true] = { container = { tag = "size-400-400 auto-x row align-y-center align-x-center padding-xsmall" } },
+		[true] = { container = { tag = "row align-x-center align-y-center size-400-400 auto-x padding-xsmall" } },
 	}
 
 	return { common = common, variants = variants, hasValue = hasValue }
 end
 
 return function(tokens: Tokens, variant: StatusIndicatorVariant, hasValue: boolean): StatusIndicatorVariantProps
-	if not Flags.FoundationStatusIndicatorVariantExperiment then
+	if not Flags.FoundationStatusIndicatorVariantExperiment and isDevMode then
 		if variant == StatusIndicatorVariant.Contrast_Experiment then
 			error("Contrast is not a supported StatusIndicator variant.")
 		end

@@ -41,101 +41,107 @@ local defaultProps = {
 
 local function SegmentedControl(segmentedControlProps: SegmentedControlProps, ref: React.Ref<GuiObject>?)
 	local props = withDefaults(segmentedControlProps, defaultProps)
-	local hoveredSegmentId, setHoveredSegmentId = React.useBinding(nil :: Types.ItemId?)
 
 	local tokens = useTokens()
-	local lastHoveredRef = React.useRef(nil :: Types.ItemId?)
 	local variantProps = useSegmentedControlVariants(tokens, props.size)
 
 	local containerRef
 	local overlayData
-	local overlayHeight, segmentRefs, overlayPosition, overlayWidth
+	local overlayHeight, overlayPosition, overlayWidth
 	local hiddenContainerSize, setHiddenContainerSize
 	local onContainerSizeChange
 	local computeSegmentYInset
 	local onAbsoluteSizeChanged
-	if Flags.FoundationAnimateSegmentedControl then
-		containerRef = React.useRef(nil :: Types.ItemId?)
-		overlayData = useAnimatedHighlight(props.value, (ref or containerRef) :: { current: GuiObject? })
-		overlayHeight, segmentRefs, overlayPosition, overlayWidth =
-			overlayData.activeItemHeight,
-			overlayData.itemRefs,
-			overlayData.highlightPosition,
-			overlayData.highlightWidth
-		hiddenContainerSize, setHiddenContainerSize = React.useBinding(Vector2.new(0, 0))
+	containerRef = React.useRef(nil :: Types.ItemId?)
 
-		onContainerSizeChange = React.useCallback(function(frame: GuiObject)
-			setHiddenContainerSize(frame.AbsoluteSize)
-		end, { variantProps.container.tag })
-
-		onAbsoluteSizeChanged = React.useCallback(function(frame: GuiObject)
-			if props.onAbsoluteSizeChanged then
-				props.onAbsoluteSizeChanged(frame)
-			end
-			onContainerSizeChange(frame)
-		end, { props.onAbsoluteSizeChanged, onContainerSizeChange })
-
-		computeSegmentYInset = React.useCallback(function(activeContainerRef: { current: GuiObject? })
-			-- segments are slightly inset from the container; we need to compute this value to properly position
-			-- the animated overlay
-			local yInset = 0
-			if activeContainerRef.current then
-				local activeTab = segmentRefs[props.value].current :: GuiObject
-				if activeTab then
-					yInset = activeTab.AbsolutePosition.Y - activeContainerRef.current.AbsolutePosition.Y
+	-- Create refs for each segment (use user-provided ref if available)
+	local segmentRefs
+	if Flags.FoundationFixStaleAnimatedHighlightRefs then
+		local segmentRefsCache = React.useRef({} :: { [Types.ItemId]: React.RefObject<GuiObject?> })
+		segmentRefs = React.useMemo(function()
+			local cache = segmentRefsCache.current
+			for _, segment in props.segments do
+				if segment.ref then
+					cache[segment.id] = segment.ref
+				elseif not cache[segment.id] then
+					cache[segment.id] = React.createRef()
 				end
 			end
-			return yInset
-		end, { props.value })
+			return cache
+		end, { props.segments })
+	else
+		segmentRefs = React.useMemo(function()
+			local refs = {}
+			for _, segment in props.segments do
+				refs[segment.id] = segment.ref or React.createRef()
+			end
+			return refs
+		end, { props.segments })
 	end
 
-	local handleStateChanged = if Flags.FoundationRemoveDividerSegmentedControl
-		then nil :: never
-		else React.useCallback(function(state: ControlState, id: Types.ItemId)
-			if state == ControlState.Hover then
-				-- When hovering over a segment one after another onStateChanged is called Hover -> Default
-				-- so React batches the state change and hoveredSegmentId ends up being set as nil
-				if lastHoveredRef.current ~= id then
-					lastHoveredRef.current = id
-					setHoveredSegmentId(id)
-				end
-			elseif state == ControlState.Default then
-				if lastHoveredRef.current == id then
-					lastHoveredRef.current = nil
-					setHoveredSegmentId(nil)
-				end
-			end
-		end, { hoveredSegmentId })
+	overlayData = useAnimatedHighlight(props.value, (ref or containerRef) :: { current: GuiObject? }, segmentRefs)
+	overlayHeight, overlayPosition, overlayWidth =
+		overlayData.activeItemHeight, overlayData.highlightPosition, overlayData.highlightWidth
+	hiddenContainerSize, setHiddenContainerSize = React.useBinding(Vector2.new(0, 0))
 
-	if Flags.FoundationAnimateSegmentedControl then
-		return React.createElement(View, {
-			Size = hiddenContainerSize:map(function(value: Vector2)
-				return UDim2.fromOffset(value.X, value.Y)
-			end),
-			testId = "--foundation-segmented-control-container",
-		}, {
+	onContainerSizeChange = React.useCallback(function(frame: GuiObject)
+		setHiddenContainerSize(frame.AbsoluteSize)
+	end, { variantProps.container.tag })
+
+	onAbsoluteSizeChanged = React.useCallback(function(frame: GuiObject)
+		if props.onAbsoluteSizeChanged then
+			props.onAbsoluteSizeChanged(frame)
+		end
+		onContainerSizeChange(frame)
+	end, { props.onAbsoluteSizeChanged, onContainerSizeChange })
+
+	computeSegmentYInset = React.useCallback(function(activeContainerRef: { current: GuiObject? })
+		-- segments are slightly inset from the container; we need to compute this value to properly position
+		-- the animated overlay
+		local yInset = 0
+		if activeContainerRef.current then
+			local activeTab = segmentRefs[props.value].current :: GuiObject
+			if activeTab then
+				yInset = activeTab.AbsolutePosition.Y - activeContainerRef.current.AbsolutePosition.Y
+			end
+		end
+		return yInset
+	end, { props.value })
+
+	return React.createElement(
+		View,
+		if Flags.FoundationFixNoCommonPropsOnComponentParents
+			then withCommonProps(props, {
+				Size = hiddenContainerSize:map(function(value: Vector2)
+					return UDim2.fromOffset(value.X, value.Y)
+				end),
+			})
+			else {
+				Size = hiddenContainerSize:map(function(value: Vector2)
+					return UDim2.fromOffset(value.X, value.Y)
+				end),
+				testId = "--foundation-segmented-control-container",
+			},
+		{
 			SegmentsContainer = React.createElement(
 				View,
 				withDefaults(
-					withCommonProps(props, {
-						tag = variantProps.container.tag,
-						ref = ref or containerRef,
-						testId = "--foundation-segmented-control",
-					}),
+					if Flags.FoundationFixNoCommonPropsOnComponentParents
+						then {
+							tag = variantProps.container.tag,
+							ref = ref or containerRef,
+						}
+						else withCommonProps(props, {
+							tag = variantProps.container.tag,
+							ref = ref or containerRef,
+							testId = "--foundation-segmented-control",
+						}),
 					{
 						onAbsoluteSizeChanged = onAbsoluteSizeChanged,
 					}
 				),
 				Dash.map(props.segments, function(segment: Segment, index: number)
 					local segmentOrder = (index - 1) * 2 + 1
-					local dividerOrder = segmentOrder + 1
-
-					local isLast = index == #props.segments
-					local nextSegment = props.segments[index + 1]
-
-					local isActive = segment.id == props.value
-					local isNextActive = nextSegment and nextSegment.id == props.value
-
 					return React.createElement(React.Fragment, {
 						key = tostring(segment.id),
 					}, {
@@ -143,35 +149,13 @@ local function SegmentedControl(segmentedControlProps: SegmentedControlProps, re
 							id = segment.id,
 							size = props.size,
 							text = segment.text,
+							icon = segment.icon,
 							isActive = segment.id == props.value,
-							onStateChanged = if Flags.FoundationRemoveDividerSegmentedControl
-								then nil :: never
-								else function(state)
-									handleStateChanged(state, segment.id)
-								end,
 							onActivated = props.onActivated,
 							LayoutOrder = segmentOrder,
 							testId = `{props.testId}--segment-{segment.id}`,
 							ref = segmentRefs[segment.id],
 						}),
-						Divider = if Flags.FoundationRemoveDividerSegmentedControl or isLast
-							then nil
-							else React.createElement(View, {
-								tag = variantProps.divider.tag,
-								backgroundStyle = hoveredSegmentId:map(function(id)
-									local isHovered = id == segment.id
-									local isNextHovered = nextSegment and id == nextSegment.id
-									local showDivider = not (isActive or isHovered or isNextActive or isNextHovered)
-
-									if showDivider then
-										return tokens.Color.Stroke.Default
-									else
-										return tokens.Color.None
-									end
-								end),
-								Size = variantProps.divider.Size,
-								LayoutOrder = dividerOrder,
-							}),
 					})
 				end)
 			),
@@ -188,63 +172,7 @@ local function SegmentedControl(segmentedControlProps: SegmentedControlProps, re
 				ZIndex = props.ZIndex + 1,
 				testId = "--foundation-segmented-control--animated-overlay",
 			}),
-		})
-	end
-
-	return React.createElement(
-		View,
-		withCommonProps(props, {
-			tag = variantProps.container.tag,
-			ref = ref,
-			testId = "--foundation-segmented-control",
-		}),
-		Dash.map(props.segments, function(segment: Segment, index: number)
-			local segmentOrder = (index - 1) * 2 + 1
-			local dividerOrder = segmentOrder + 1
-
-			local isLast = index == #props.segments
-			local nextSegment = props.segments[index + 1]
-
-			local isActive = segment.id == props.value
-			local isNextActive = nextSegment and nextSegment.id == props.value
-
-			return React.createElement(React.Fragment, {
-				key = tostring(segment.id),
-			}, {
-				Segment = React.createElement(Segment, {
-					id = segment.id,
-					size = props.size,
-					text = segment.text,
-					isActive = segment.id == props.value,
-					onActivated = props.onActivated,
-					onStateChanged = if Flags.FoundationRemoveDividerSegmentedControl
-						then nil :: never
-						else function(state)
-							handleStateChanged(state, segment.id)
-						end,
-					LayoutOrder = segmentOrder,
-					testId = `{props.testId}--segment-{segment.id}`,
-				}),
-				Divider = if Flags.FoundationRemoveDividerSegmentedControl or isLast
-					then nil
-					else React.createElement(View, {
-						tag = variantProps.divider.tag,
-						backgroundStyle = hoveredSegmentId:map(function(id)
-							local isHovered = id == segment.id
-							local isNextHovered = nextSegment and id == nextSegment.id
-							local showDivider = not (isActive or isHovered or isNextActive or isNextHovered)
-
-							if showDivider then
-								return tokens.Color.Stroke.Default
-							else
-								return tokens.Color.None
-							end
-						end),
-						Size = variantProps.divider.Size,
-						LayoutOrder = dividerOrder,
-					}),
-			})
-		end)
+		}
 	)
 end
 

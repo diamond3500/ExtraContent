@@ -29,17 +29,6 @@ function LocalizeWithFallback(key, fallback)
   return fallback
 end
 
-local success, result = pcall(function() return settings():GetFFlag('UseNotificationsLocalization') end)
-local FFlagUseNotificationsLocalization = success and result
-
-function PingStatName()
-  if game:GetEngineFeature("PerfStatNetworkPingEnabled2") then
-    return "NetworkPing"
-  else
-    return "Ping"
-  end
-end
-
 --[[ Classes ]]--
 local StatsUtils = {}
 
@@ -142,7 +131,7 @@ StatsUtils.TypeToName = {
   [StatsUtils.StatType_GPU] = "GPU",
   [StatsUtils.StatType_NetworkSent] = strSentNetwork,
   [StatsUtils.StatType_NetworkReceived] = strReceivedNetwork,
-  [StatsUtils.StatType_Ping] = PingStatName(),
+  [StatsUtils.StatType_Ping] = "NetworkPing",
 }
 
 StatsUtils.TypeToShortName = {
@@ -151,7 +140,7 @@ StatsUtils.TypeToShortName = {
   [StatsUtils.StatType_GPU] = "GPU",
   [StatsUtils.StatType_NetworkSent] = "Sent",
   [StatsUtils.StatType_NetworkReceived] = "Recv",
-  [StatsUtils.StatType_Ping] = PingStatName(),
+  [StatsUtils.StatType_Ping] = "NetworkPing",
 }
 
 StatsUtils.MemoryAnalyzerTypeToName = {
@@ -197,24 +186,7 @@ function StatsUtils.StyleButtonSelected(frame, isSelected)
   end
 end
 
-local success, result = pcall(function() return settings():GetFFlag('UseNotificationsLocalization') end)
-local FFlagUseNotificationsLocalization = success and result
-
 function StatsUtils.FormatTypedValue(value, statType)
-  if FFlagUseNotificationsLocalization then
-    if statType == StatsUtils.StatType_CPU or statType == StatsUtils.StatType_GPU then
-      return string.gsub(
-        LocalizeWithFallback("InGame.StatsUtil.ms",string.format("%.2f MB", value)),
-        "{RBX_NUMBER}",string.format("%.2f",value)
-      )
-    elseif statType == StatsUtils.StatType_NetworkSent or statType == StatsUtils.StatType_NetworkReceived then
-      return string.gsub(
-        LocalizeWithFallback("InGame.StatsUtil.KBps",string.format("%.2f KB/s", value)),
-        "{RBX_NUMBER}",string.format("%.2f",value)
-      )
-    end
-  end
-
   if statType == StatsUtils.StatType_Memory then
     return string.format("%.2f MB", value)
   elseif statType == StatsUtils.StatType_CPU then
@@ -226,11 +198,7 @@ function StatsUtils.FormatTypedValue(value, statType)
   elseif statType == StatsUtils.StatType_NetworkReceived then
     return string.format("%.2f KB/s", value)
   elseif statType == StatsUtils.StatType_Ping then
-    if game:GetEngineFeature("PerfStatNetworkPingEnabled2") then
-      return string.format("%.0f ms", value)
-    else
-      return string.format("%.2f ms", value)
-    end
+    return string.format("%.0f ms", value)
   end
 end
 

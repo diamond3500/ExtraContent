@@ -18,10 +18,13 @@ export type UiComponentType =
 	| "UI_COMPONENT_TYPE_COLLECTION_CAROUSEL"
 	| "UI_COMPONENT_TYPE_COLLECTION_GRID"
 	| "UI_COMPONENT_TYPE_SINGLE_ITEM_COLLECTION"
+	| "UI_COMPONENT_TYPE_COLLECTION_CAROUSEL_PLACEHOLDER"
 	| "UI_COMPONENT_TYPE_TILE"
 	| "UI_COMPONENT_TYPE_GAME_TILE"
 	| "UI_COMPONENT_TYPE_SEE_ALL_TILE"
 	| "UI_COMPONENT_TYPE_BADGE_TILE"
+	| "UI_COMPONENT_TYPE_SONG_TILE"
+	| "UI_COMPONENT_TYPE_EVENT_TILE"
 	| "UI_COMPONENT_TYPE_BUTTON"
 	| "UI_COMPONENT_TYPE_IMAGE"
 	| "UI_COMPONENT_TYPE_TEXT"
@@ -39,9 +42,50 @@ export type UiComponentType =
 	| "UI_COMPONENT_TYPE_HOLD_TO_PLAY"
 	| "UI_COMPONENT_TYPE_PLAY_BUTTON"
 	| "UI_COMPONENT_TYPE_COUNTDOWN_TEXT_ICON_ROW"
+	| "UI_COMPONENT_TYPE_INFO_TABLE"
+	| "UI_COMPONENT_TYPE_INFO_TABLE_CELL"
+	| "UI_COMPONENT_TYPE_CHIP"
+	| "UI_COMPONENT_TYPE_DUAL_ACTION_CHIP"
+	| "UI_COMPONENT_TYPE_EXPANDABLE_TEXT"
+	| "UI_COMPONENT_TYPE_ASSOCIATED_ITEMS_ROW"
+	| "UI_COMPONENT_TYPE_OVERFLOW_MENU"
+	| "UI_COMPONENT_TYPE_DETAILS_PAGE_IMAGE_HEADER"
+	| "UI_COMPONENT_TYPE_CARD"
+	| "UI_COMPONENT_TYPE_TABS"
+	| "UI_COMPONENT_TYPE_ACTION_BAR"
+	| "UI_COMPONENT_TYPE_ICON"
+	| "UI_COMPONENT_TYPE_CIRCLE_ICON"
+	| "UI_COMPONENT_TYPE_CONTENT_RATING_LABEL"
+	| "UI_COMPONENT_TYPE_PLAY_BUTTON_CONTEXTUAL_MESSAGE"
+	| "UI_COMPONENT_TYPE_MEDIA_GALLERY"
+	| "UI_COMPONENT_TYPE_CONTENT_ROW"
+	| "UI_COMPONENT_TYPE_LINK_TEXT"
+	| "UI_COMPONENT_TYPE_COACHMARK"
+	| "UI_COMPONENT_TYPE_BADGE"
+	| "UI_COMPONENT_TYPE_SUBSCRIPTION_CELL"
+	| "UI_COMPONENT_TYPE_SHEET_FULL_BLEED"
+	| "UI_COMPONENT_TYPE_SYSTEM_BANNER"
+	| "UI_COMPONENT_TYPE_PLAY_WITH_REWARD"
+	| "UI_COMPONENT_TYPE_ICON_BUTTON"
+	| "UI_COMPONENT_TYPE_AGE_CHECK_UPSELL_ROW"
+	| "UI_COMPONENT_TYPE_PAGE_HEADER"
+	| "UI_COMPONENT_TYPE_AVATAR_GROUP"
+	| "UI_COMPONENT_TYPE_TOOLTIP"
+	| "UI_COMPONENT_TYPE_AI_OVERVIEW"
+	| "UI_COMPONENT_TYPE_SKELETON"
+	| "UI_COMPONENT_TYPE_PLACEHOLDER"
+	| "UI_COMPONENT_TYPE_PLACEHOLDER_WRAPPER"
 	| "UI_COMPONENT_TYPE_FOCUS_NAV_ACTIONS"
 	| "UI_COMPONENT_TYPE_FRAGMENT"
 	| "UI_COMPONENT_TYPE_VERTICAL_FEED"
+	| "UI_COMPONENT_TYPE_CATALOG_VIRTUALIZED_FEED"
+	| "UI_COMPONENT_TYPE_CATALOG_ITEM_GROUP"
+	| "UI_COMPONENT_TYPE_CATALOG_ITEM_CAROUSEL"
+	| "UI_COMPONENT_TYPE_CATALOG_CATEGORY_MENU"
+	| "UI_COMPONENT_TYPE_CATALOG_HERO_UNIT"
+	| "UI_COMPONENT_TYPE_FILTER_PILLS_CAROUSEL"
+	| "UI_COMPONENT_TYPE_USER_LIST"
+	| "UI_COMPONENT_TYPE_FRIEND_REQUEST_BUTTON"
 	| "UI_COMPONENT_TYPE_MOCK_COMPONENT"
 	| number -- Unknown
 
@@ -57,6 +101,8 @@ messages.UiComponentType = {
 			return "UI_COMPONENT_TYPE_COLLECTION_GRID"
 		elseif value == 12 then
 			return "UI_COMPONENT_TYPE_SINGLE_ITEM_COLLECTION"
+		elseif value == 13 then
+			return "UI_COMPONENT_TYPE_COLLECTION_CAROUSEL_PLACEHOLDER"
 		elseif value == 100 then
 			return "UI_COMPONENT_TYPE_TILE"
 		elseif value == 101 then
@@ -65,6 +111,10 @@ messages.UiComponentType = {
 			return "UI_COMPONENT_TYPE_SEE_ALL_TILE"
 		elseif value == 103 then
 			return "UI_COMPONENT_TYPE_BADGE_TILE"
+		elseif value == 104 then
+			return "UI_COMPONENT_TYPE_SONG_TILE"
+		elseif value == 105 then
+			return "UI_COMPONENT_TYPE_EVENT_TILE"
 		elseif value == 200 then
 			return "UI_COMPONENT_TYPE_BUTTON"
 		elseif value == 201 then
@@ -99,12 +149,94 @@ messages.UiComponentType = {
 			return "UI_COMPONENT_TYPE_PLAY_BUTTON"
 		elseif value == 216 then
 			return "UI_COMPONENT_TYPE_COUNTDOWN_TEXT_ICON_ROW"
+		elseif value == 217 then
+			return "UI_COMPONENT_TYPE_INFO_TABLE"
+		elseif value == 218 then
+			return "UI_COMPONENT_TYPE_INFO_TABLE_CELL"
+		elseif value == 219 then
+			return "UI_COMPONENT_TYPE_CHIP"
+		elseif value == 220 then
+			return "UI_COMPONENT_TYPE_DUAL_ACTION_CHIP"
+		elseif value == 221 then
+			return "UI_COMPONENT_TYPE_EXPANDABLE_TEXT"
+		elseif value == 222 then
+			return "UI_COMPONENT_TYPE_ASSOCIATED_ITEMS_ROW"
+		elseif value == 223 then
+			return "UI_COMPONENT_TYPE_OVERFLOW_MENU"
+		elseif value == 224 then
+			return "UI_COMPONENT_TYPE_DETAILS_PAGE_IMAGE_HEADER"
+		elseif value == 225 then
+			return "UI_COMPONENT_TYPE_CARD"
+		elseif value == 226 then
+			return "UI_COMPONENT_TYPE_TABS"
+		elseif value == 227 then
+			return "UI_COMPONENT_TYPE_ACTION_BAR"
+		elseif value == 228 then
+			return "UI_COMPONENT_TYPE_ICON"
+		elseif value == 229 then
+			return "UI_COMPONENT_TYPE_CIRCLE_ICON"
+		elseif value == 230 then
+			return "UI_COMPONENT_TYPE_CONTENT_RATING_LABEL"
+		elseif value == 231 then
+			return "UI_COMPONENT_TYPE_PLAY_BUTTON_CONTEXTUAL_MESSAGE"
+		elseif value == 232 then
+			return "UI_COMPONENT_TYPE_MEDIA_GALLERY"
+		elseif value == 233 then
+			return "UI_COMPONENT_TYPE_CONTENT_ROW"
+		elseif value == 234 then
+			return "UI_COMPONENT_TYPE_LINK_TEXT"
+		elseif value == 235 then
+			return "UI_COMPONENT_TYPE_COACHMARK"
+		elseif value == 236 then
+			return "UI_COMPONENT_TYPE_BADGE"
+		elseif value == 237 then
+			return "UI_COMPONENT_TYPE_SUBSCRIPTION_CELL"
+		elseif value == 238 then
+			return "UI_COMPONENT_TYPE_SHEET_FULL_BLEED"
+		elseif value == 239 then
+			return "UI_COMPONENT_TYPE_SYSTEM_BANNER"
+		elseif value == 240 then
+			return "UI_COMPONENT_TYPE_PLAY_WITH_REWARD"
+		elseif value == 241 then
+			return "UI_COMPONENT_TYPE_ICON_BUTTON"
+		elseif value == 242 then
+			return "UI_COMPONENT_TYPE_AGE_CHECK_UPSELL_ROW"
+		elseif value == 243 then
+			return "UI_COMPONENT_TYPE_PAGE_HEADER"
+		elseif value == 244 then
+			return "UI_COMPONENT_TYPE_AVATAR_GROUP"
+		elseif value == 245 then
+			return "UI_COMPONENT_TYPE_TOOLTIP"
+		elseif value == 246 then
+			return "UI_COMPONENT_TYPE_AI_OVERVIEW"
+		elseif value == 247 then
+			return "UI_COMPONENT_TYPE_SKELETON"
+		elseif value == 248 then
+			return "UI_COMPONENT_TYPE_PLACEHOLDER"
+		elseif value == 249 then
+			return "UI_COMPONENT_TYPE_PLACEHOLDER_WRAPPER"
 		elseif value == 300 then
 			return "UI_COMPONENT_TYPE_FOCUS_NAV_ACTIONS"
 		elseif value == 400 then
 			return "UI_COMPONENT_TYPE_FRAGMENT"
 		elseif value == 500 then
 			return "UI_COMPONENT_TYPE_VERTICAL_FEED"
+		elseif value == 600 then
+			return "UI_COMPONENT_TYPE_CATALOG_VIRTUALIZED_FEED"
+		elseif value == 601 then
+			return "UI_COMPONENT_TYPE_CATALOG_ITEM_GROUP"
+		elseif value == 602 then
+			return "UI_COMPONENT_TYPE_CATALOG_ITEM_CAROUSEL"
+		elseif value == 603 then
+			return "UI_COMPONENT_TYPE_CATALOG_CATEGORY_MENU"
+		elseif value == 604 then
+			return "UI_COMPONENT_TYPE_CATALOG_HERO_UNIT"
+		elseif value == 700 then
+			return "UI_COMPONENT_TYPE_FILTER_PILLS_CAROUSEL"
+		elseif value == 800 then
+			return "UI_COMPONENT_TYPE_USER_LIST"
+		elseif value == 801 then
+			return "UI_COMPONENT_TYPE_FRIEND_REQUEST_BUTTON"
 		elseif value == 9999 then
 			return "UI_COMPONENT_TYPE_MOCK_COMPONENT"
 		else
@@ -123,6 +255,8 @@ messages.UiComponentType = {
 			return 11
 		elseif self == "UI_COMPONENT_TYPE_SINGLE_ITEM_COLLECTION" then
 			return 12
+		elseif self == "UI_COMPONENT_TYPE_COLLECTION_CAROUSEL_PLACEHOLDER" then
+			return 13
 		elseif self == "UI_COMPONENT_TYPE_TILE" then
 			return 100
 		elseif self == "UI_COMPONENT_TYPE_GAME_TILE" then
@@ -131,6 +265,10 @@ messages.UiComponentType = {
 			return 102
 		elseif self == "UI_COMPONENT_TYPE_BADGE_TILE" then
 			return 103
+		elseif self == "UI_COMPONENT_TYPE_SONG_TILE" then
+			return 104
+		elseif self == "UI_COMPONENT_TYPE_EVENT_TILE" then
+			return 105
 		elseif self == "UI_COMPONENT_TYPE_BUTTON" then
 			return 200
 		elseif self == "UI_COMPONENT_TYPE_IMAGE" then
@@ -165,12 +303,94 @@ messages.UiComponentType = {
 			return 215
 		elseif self == "UI_COMPONENT_TYPE_COUNTDOWN_TEXT_ICON_ROW" then
 			return 216
+		elseif self == "UI_COMPONENT_TYPE_INFO_TABLE" then
+			return 217
+		elseif self == "UI_COMPONENT_TYPE_INFO_TABLE_CELL" then
+			return 218
+		elseif self == "UI_COMPONENT_TYPE_CHIP" then
+			return 219
+		elseif self == "UI_COMPONENT_TYPE_DUAL_ACTION_CHIP" then
+			return 220
+		elseif self == "UI_COMPONENT_TYPE_EXPANDABLE_TEXT" then
+			return 221
+		elseif self == "UI_COMPONENT_TYPE_ASSOCIATED_ITEMS_ROW" then
+			return 222
+		elseif self == "UI_COMPONENT_TYPE_OVERFLOW_MENU" then
+			return 223
+		elseif self == "UI_COMPONENT_TYPE_DETAILS_PAGE_IMAGE_HEADER" then
+			return 224
+		elseif self == "UI_COMPONENT_TYPE_CARD" then
+			return 225
+		elseif self == "UI_COMPONENT_TYPE_TABS" then
+			return 226
+		elseif self == "UI_COMPONENT_TYPE_ACTION_BAR" then
+			return 227
+		elseif self == "UI_COMPONENT_TYPE_ICON" then
+			return 228
+		elseif self == "UI_COMPONENT_TYPE_CIRCLE_ICON" then
+			return 229
+		elseif self == "UI_COMPONENT_TYPE_CONTENT_RATING_LABEL" then
+			return 230
+		elseif self == "UI_COMPONENT_TYPE_PLAY_BUTTON_CONTEXTUAL_MESSAGE" then
+			return 231
+		elseif self == "UI_COMPONENT_TYPE_MEDIA_GALLERY" then
+			return 232
+		elseif self == "UI_COMPONENT_TYPE_CONTENT_ROW" then
+			return 233
+		elseif self == "UI_COMPONENT_TYPE_LINK_TEXT" then
+			return 234
+		elseif self == "UI_COMPONENT_TYPE_COACHMARK" then
+			return 235
+		elseif self == "UI_COMPONENT_TYPE_BADGE" then
+			return 236
+		elseif self == "UI_COMPONENT_TYPE_SUBSCRIPTION_CELL" then
+			return 237
+		elseif self == "UI_COMPONENT_TYPE_SHEET_FULL_BLEED" then
+			return 238
+		elseif self == "UI_COMPONENT_TYPE_SYSTEM_BANNER" then
+			return 239
+		elseif self == "UI_COMPONENT_TYPE_PLAY_WITH_REWARD" then
+			return 240
+		elseif self == "UI_COMPONENT_TYPE_ICON_BUTTON" then
+			return 241
+		elseif self == "UI_COMPONENT_TYPE_AGE_CHECK_UPSELL_ROW" then
+			return 242
+		elseif self == "UI_COMPONENT_TYPE_PAGE_HEADER" then
+			return 243
+		elseif self == "UI_COMPONENT_TYPE_AVATAR_GROUP" then
+			return 244
+		elseif self == "UI_COMPONENT_TYPE_TOOLTIP" then
+			return 245
+		elseif self == "UI_COMPONENT_TYPE_AI_OVERVIEW" then
+			return 246
+		elseif self == "UI_COMPONENT_TYPE_SKELETON" then
+			return 247
+		elseif self == "UI_COMPONENT_TYPE_PLACEHOLDER" then
+			return 248
+		elseif self == "UI_COMPONENT_TYPE_PLACEHOLDER_WRAPPER" then
+			return 249
 		elseif self == "UI_COMPONENT_TYPE_FOCUS_NAV_ACTIONS" then
 			return 300
 		elseif self == "UI_COMPONENT_TYPE_FRAGMENT" then
 			return 400
 		elseif self == "UI_COMPONENT_TYPE_VERTICAL_FEED" then
 			return 500
+		elseif self == "UI_COMPONENT_TYPE_CATALOG_VIRTUALIZED_FEED" then
+			return 600
+		elseif self == "UI_COMPONENT_TYPE_CATALOG_ITEM_GROUP" then
+			return 601
+		elseif self == "UI_COMPONENT_TYPE_CATALOG_ITEM_CAROUSEL" then
+			return 602
+		elseif self == "UI_COMPONENT_TYPE_CATALOG_CATEGORY_MENU" then
+			return 603
+		elseif self == "UI_COMPONENT_TYPE_CATALOG_HERO_UNIT" then
+			return 604
+		elseif self == "UI_COMPONENT_TYPE_FILTER_PILLS_CAROUSEL" then
+			return 700
+		elseif self == "UI_COMPONENT_TYPE_USER_LIST" then
+			return 800
+		elseif self == "UI_COMPONENT_TYPE_FRIEND_REQUEST_BUTTON" then
+			return 801
 		elseif self == "UI_COMPONENT_TYPE_MOCK_COMPONENT" then
 			return 9999
 		else
@@ -189,6 +409,8 @@ messages.UiComponentType = {
 			return "UI_COMPONENT_TYPE_COLLECTION_GRID"
 		elseif name == "UI_COMPONENT_TYPE_SINGLE_ITEM_COLLECTION" then
 			return "UI_COMPONENT_TYPE_SINGLE_ITEM_COLLECTION"
+		elseif name == "UI_COMPONENT_TYPE_COLLECTION_CAROUSEL_PLACEHOLDER" then
+			return "UI_COMPONENT_TYPE_COLLECTION_CAROUSEL_PLACEHOLDER"
 		elseif name == "UI_COMPONENT_TYPE_TILE" then
 			return "UI_COMPONENT_TYPE_TILE"
 		elseif name == "UI_COMPONENT_TYPE_GAME_TILE" then
@@ -197,6 +419,10 @@ messages.UiComponentType = {
 			return "UI_COMPONENT_TYPE_SEE_ALL_TILE"
 		elseif name == "UI_COMPONENT_TYPE_BADGE_TILE" then
 			return "UI_COMPONENT_TYPE_BADGE_TILE"
+		elseif name == "UI_COMPONENT_TYPE_SONG_TILE" then
+			return "UI_COMPONENT_TYPE_SONG_TILE"
+		elseif name == "UI_COMPONENT_TYPE_EVENT_TILE" then
+			return "UI_COMPONENT_TYPE_EVENT_TILE"
 		elseif name == "UI_COMPONENT_TYPE_BUTTON" then
 			return "UI_COMPONENT_TYPE_BUTTON"
 		elseif name == "UI_COMPONENT_TYPE_IMAGE" then
@@ -231,12 +457,94 @@ messages.UiComponentType = {
 			return "UI_COMPONENT_TYPE_PLAY_BUTTON"
 		elseif name == "UI_COMPONENT_TYPE_COUNTDOWN_TEXT_ICON_ROW" then
 			return "UI_COMPONENT_TYPE_COUNTDOWN_TEXT_ICON_ROW"
+		elseif name == "UI_COMPONENT_TYPE_INFO_TABLE" then
+			return "UI_COMPONENT_TYPE_INFO_TABLE"
+		elseif name == "UI_COMPONENT_TYPE_INFO_TABLE_CELL" then
+			return "UI_COMPONENT_TYPE_INFO_TABLE_CELL"
+		elseif name == "UI_COMPONENT_TYPE_CHIP" then
+			return "UI_COMPONENT_TYPE_CHIP"
+		elseif name == "UI_COMPONENT_TYPE_DUAL_ACTION_CHIP" then
+			return "UI_COMPONENT_TYPE_DUAL_ACTION_CHIP"
+		elseif name == "UI_COMPONENT_TYPE_EXPANDABLE_TEXT" then
+			return "UI_COMPONENT_TYPE_EXPANDABLE_TEXT"
+		elseif name == "UI_COMPONENT_TYPE_ASSOCIATED_ITEMS_ROW" then
+			return "UI_COMPONENT_TYPE_ASSOCIATED_ITEMS_ROW"
+		elseif name == "UI_COMPONENT_TYPE_OVERFLOW_MENU" then
+			return "UI_COMPONENT_TYPE_OVERFLOW_MENU"
+		elseif name == "UI_COMPONENT_TYPE_DETAILS_PAGE_IMAGE_HEADER" then
+			return "UI_COMPONENT_TYPE_DETAILS_PAGE_IMAGE_HEADER"
+		elseif name == "UI_COMPONENT_TYPE_CARD" then
+			return "UI_COMPONENT_TYPE_CARD"
+		elseif name == "UI_COMPONENT_TYPE_TABS" then
+			return "UI_COMPONENT_TYPE_TABS"
+		elseif name == "UI_COMPONENT_TYPE_ACTION_BAR" then
+			return "UI_COMPONENT_TYPE_ACTION_BAR"
+		elseif name == "UI_COMPONENT_TYPE_ICON" then
+			return "UI_COMPONENT_TYPE_ICON"
+		elseif name == "UI_COMPONENT_TYPE_CIRCLE_ICON" then
+			return "UI_COMPONENT_TYPE_CIRCLE_ICON"
+		elseif name == "UI_COMPONENT_TYPE_CONTENT_RATING_LABEL" then
+			return "UI_COMPONENT_TYPE_CONTENT_RATING_LABEL"
+		elseif name == "UI_COMPONENT_TYPE_PLAY_BUTTON_CONTEXTUAL_MESSAGE" then
+			return "UI_COMPONENT_TYPE_PLAY_BUTTON_CONTEXTUAL_MESSAGE"
+		elseif name == "UI_COMPONENT_TYPE_MEDIA_GALLERY" then
+			return "UI_COMPONENT_TYPE_MEDIA_GALLERY"
+		elseif name == "UI_COMPONENT_TYPE_CONTENT_ROW" then
+			return "UI_COMPONENT_TYPE_CONTENT_ROW"
+		elseif name == "UI_COMPONENT_TYPE_LINK_TEXT" then
+			return "UI_COMPONENT_TYPE_LINK_TEXT"
+		elseif name == "UI_COMPONENT_TYPE_COACHMARK" then
+			return "UI_COMPONENT_TYPE_COACHMARK"
+		elseif name == "UI_COMPONENT_TYPE_BADGE" then
+			return "UI_COMPONENT_TYPE_BADGE"
+		elseif name == "UI_COMPONENT_TYPE_SUBSCRIPTION_CELL" then
+			return "UI_COMPONENT_TYPE_SUBSCRIPTION_CELL"
+		elseif name == "UI_COMPONENT_TYPE_SHEET_FULL_BLEED" then
+			return "UI_COMPONENT_TYPE_SHEET_FULL_BLEED"
+		elseif name == "UI_COMPONENT_TYPE_SYSTEM_BANNER" then
+			return "UI_COMPONENT_TYPE_SYSTEM_BANNER"
+		elseif name == "UI_COMPONENT_TYPE_PLAY_WITH_REWARD" then
+			return "UI_COMPONENT_TYPE_PLAY_WITH_REWARD"
+		elseif name == "UI_COMPONENT_TYPE_ICON_BUTTON" then
+			return "UI_COMPONENT_TYPE_ICON_BUTTON"
+		elseif name == "UI_COMPONENT_TYPE_AGE_CHECK_UPSELL_ROW" then
+			return "UI_COMPONENT_TYPE_AGE_CHECK_UPSELL_ROW"
+		elseif name == "UI_COMPONENT_TYPE_PAGE_HEADER" then
+			return "UI_COMPONENT_TYPE_PAGE_HEADER"
+		elseif name == "UI_COMPONENT_TYPE_AVATAR_GROUP" then
+			return "UI_COMPONENT_TYPE_AVATAR_GROUP"
+		elseif name == "UI_COMPONENT_TYPE_TOOLTIP" then
+			return "UI_COMPONENT_TYPE_TOOLTIP"
+		elseif name == "UI_COMPONENT_TYPE_AI_OVERVIEW" then
+			return "UI_COMPONENT_TYPE_AI_OVERVIEW"
+		elseif name == "UI_COMPONENT_TYPE_SKELETON" then
+			return "UI_COMPONENT_TYPE_SKELETON"
+		elseif name == "UI_COMPONENT_TYPE_PLACEHOLDER" then
+			return "UI_COMPONENT_TYPE_PLACEHOLDER"
+		elseif name == "UI_COMPONENT_TYPE_PLACEHOLDER_WRAPPER" then
+			return "UI_COMPONENT_TYPE_PLACEHOLDER_WRAPPER"
 		elseif name == "UI_COMPONENT_TYPE_FOCUS_NAV_ACTIONS" then
 			return "UI_COMPONENT_TYPE_FOCUS_NAV_ACTIONS"
 		elseif name == "UI_COMPONENT_TYPE_FRAGMENT" then
 			return "UI_COMPONENT_TYPE_FRAGMENT"
 		elseif name == "UI_COMPONENT_TYPE_VERTICAL_FEED" then
 			return "UI_COMPONENT_TYPE_VERTICAL_FEED"
+		elseif name == "UI_COMPONENT_TYPE_CATALOG_VIRTUALIZED_FEED" then
+			return "UI_COMPONENT_TYPE_CATALOG_VIRTUALIZED_FEED"
+		elseif name == "UI_COMPONENT_TYPE_CATALOG_ITEM_GROUP" then
+			return "UI_COMPONENT_TYPE_CATALOG_ITEM_GROUP"
+		elseif name == "UI_COMPONENT_TYPE_CATALOG_ITEM_CAROUSEL" then
+			return "UI_COMPONENT_TYPE_CATALOG_ITEM_CAROUSEL"
+		elseif name == "UI_COMPONENT_TYPE_CATALOG_CATEGORY_MENU" then
+			return "UI_COMPONENT_TYPE_CATALOG_CATEGORY_MENU"
+		elseif name == "UI_COMPONENT_TYPE_CATALOG_HERO_UNIT" then
+			return "UI_COMPONENT_TYPE_CATALOG_HERO_UNIT"
+		elseif name == "UI_COMPONENT_TYPE_FILTER_PILLS_CAROUSEL" then
+			return "UI_COMPONENT_TYPE_FILTER_PILLS_CAROUSEL"
+		elseif name == "UI_COMPONENT_TYPE_USER_LIST" then
+			return "UI_COMPONENT_TYPE_USER_LIST"
+		elseif name == "UI_COMPONENT_TYPE_FRIEND_REQUEST_BUTTON" then
+			return "UI_COMPONENT_TYPE_FRIEND_REQUEST_BUTTON"
 		elseif name == "UI_COMPONENT_TYPE_MOCK_COMPONENT" then
 			return "UI_COMPONENT_TYPE_MOCK_COMPONENT"
 		else

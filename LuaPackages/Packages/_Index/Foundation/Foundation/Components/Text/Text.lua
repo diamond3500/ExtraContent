@@ -1,8 +1,6 @@
 local Foundation = script:FindFirstAncestor("Foundation")
 local Packages = Foundation.Parent
-local Flags = require(Foundation.Utility.Flags)
 
-local Dash = require(Packages.Dash)
 local React = require(Packages.React)
 local ReactIs = require(Packages.ReactIs)
 
@@ -12,7 +10,6 @@ local GuiObjectChildren = require(Foundation.Utility.GuiObjectChildren)
 local Types = require(Foundation.Components.Types)
 local indexBindable = require(Foundation.Utility.indexBindable)
 local useDefaultTags = require(Foundation.Utility.useDefaultTags)
-local useStyledDefaults = require(Foundation.Utility.useStyledDefaults)
 local withDefaults = require(Foundation.Utility.withDefaults)
 local withGuiObjectProps = require(Foundation.Utility.withGuiObjectProps)
 type ColorStyle = Types.ColorStyle
@@ -51,19 +48,14 @@ local DEFAULT_TAGS = "gui-object-defaults text-defaults text-size-defaults text-
 local DEFAULT_TAGS_WITH_BG = `{DEFAULT_TAGS} x-default-transparency`
 
 local function Text(textProps: TextProps, ref: React.Ref<GuiObject>?)
-	local defaultPropsWithStyles = if not Flags.FoundationDisableStylingPolyfill
-		then useStyledDefaults("Text", textProps.tag, DEFAULT_TAGS, defaultProps)
-		else nil
-	local props = withDefaults(
-		textProps,
-		(
-				if not Flags.FoundationDisableStylingPolyfill then defaultPropsWithStyles else defaultProps
-			) :: typeof(defaultProps)
-	)
+	local props = withDefaults(textProps, defaultProps)
 
 	local isInteractable = props.onStateChanged ~= nil or props.onActivated ~= nil or props.onSecondaryActivated ~= nil
 
 	local defaultTags = if props.backgroundStyle ~= nil then DEFAULT_TAGS_WITH_BG else DEFAULT_TAGS
+	if props.fontStyle and props.fontStyle.FontSize then
+		defaultTags ..= " x-default-text-size"
+	end
 
 	local tagsWithDefaults = useDefaultTags(props.tag, defaultTags)
 	local tag = useStyleTags(tagsWithDefaults)
@@ -140,21 +132,19 @@ local function Text(textProps: TextProps, ref: React.Ref<GuiObject>?)
 		ref = ref,
 		[React.Tag] = tag,
 	})
+	local component: any = engineComponent
+	local componentProps: any = engineComponentProps
 
-	local component = if isInteractable then Interactable else engineComponent
-
-	local textComponentProps = {
-		component = engineComponent,
-		onActivated = props.onActivated,
-		onSecondaryActivated = props.onSecondaryActivated,
-		onStateChanged = props.onStateChanged,
-		stateLayer = props.stateLayer,
-		isDisabled = props.isDisabled,
-		cursor = props.cursor,
-	}
-	local componentProps = if isInteractable
-		then Dash.union(engineComponentProps, textComponentProps)
-		else engineComponentProps
+	if isInteractable then
+		component = Interactable
+		componentProps.component = engineComponent
+		componentProps.onActivated = props.onActivated
+		componentProps.onSecondaryActivated = props.onSecondaryActivated
+		componentProps.onStateChanged = props.onStateChanged
+		componentProps.stateLayer = props.stateLayer
+		componentProps.isDisabled = props.isDisabled
+		componentProps.cursor = props.cursor
+	end
 
 	return React.createElement(component, componentProps, GuiObjectChildren(props))
 end

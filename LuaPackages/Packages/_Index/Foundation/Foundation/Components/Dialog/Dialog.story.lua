@@ -5,16 +5,18 @@ local React = require(Packages.React)
 
 local Button = require(Foundation.Components.Button)
 local ButtonVariant = require(Foundation.Enums.ButtonVariant)
+local Checkbox = require(Foundation.Components.Checkbox)
 local Dialog = require(Foundation.Components.Dialog)
 local DialogSize = require(Foundation.Enums.DialogSize)
-local Flags = require(Foundation.Utility.Flags)
 local Image = require(Foundation.Components.Image)
 local InputSize = require(Foundation.Enums.InputSize)
+local List = require(Foundation.Components.List)
 local Orientation = require(Foundation.Enums.Orientation)
-local OverlayProvider = require(Foundation.Providers.Overlay.OverlayProvider)
 local RadioGroup = require(Foundation.Components.RadioGroup)
 local Text = require(Foundation.Components.Text)
 local View = require(Foundation.Components.View)
+
+local useDialogNavigation = require(Foundation.Components.Dialog.useDialogNavigation)
 local useTokens = require(Foundation.Providers.Style.useTokens)
 
 type ButtonVariant = ButtonVariant.ButtonVariant
@@ -39,8 +41,8 @@ type StoryProps = {
 		heroMediaHeightScale: number?,
 		heroMediaHeightOffset: number?,
 		heroMediaAspectRatio: number?,
-		mockScreenYOffset: number?,
 		size: DialogSize?,
+		selectableContent: boolean?,
 	},
 	children: {
 		DialogMedia: React.ReactNode?,
@@ -55,67 +57,54 @@ local Pictogram = "pictograms/avatar_setup"
 local function Story(props: StoryProps)
 	local children = props.children or { DialogMedia = nil, DialogContent = nil, DialogTitle = nil }
 	local controls = props.controls
-	local ref, setRef = React.useState(nil :: GuiBase2d?)
-	local tokens = useTokens()
-	local isOpen, setIsOpen = React.useState(true)
+	local isOpen, setIsOpen = React.useState(false)
 	local toggleDialog = function()
 		setIsOpen(not isOpen)
 	end
 
-	return React.createElement(View, {
-		ref = setRef,
-		backgroundStyle = {
-			Color3 = tokens.Color.Shift.Shift_200.Color3,
-			Transparency = tokens.Color.Shift.Shift_200.Transparency,
-		},
-		tag = "clip",
-		Size = UDim2.new(1, 0, 0, controls.mockScreenYOffset or 0),
-	}, {
-		OverlayProvider = React.createElement(OverlayProvider, { gui = ref }, {
-			ToggleButton = React.createElement(Button, {
-				text = if isOpen then "Close Dialog" else "Open Dialog",
-				onActivated = toggleDialog,
-				variant = ButtonVariant.Emphasis,
-				Position = UDim2.fromOffset(20, 20),
-			}),
-			DialogRoot = if isOpen
-				then React.createElement(Dialog.Root, {
-					size = controls.size,
-					onClose = toggleDialog,
-					hasBackdrop = controls.hasBackdrop,
-					disablePortal = controls.disablePortal,
-				}, {
-					DialogMedia = children.DialogMedia,
-					DialogTitle = children.DialogTitle,
-					DialogContent = children.DialogContent,
-					DialogActions = if controls.hasActions
-						then React.createElement(Dialog.Actions, {
-							LayoutOrder = 3,
-							orientation = controls.actionsOrientation,
-							actions = {
-								{
-									text = "Join",
-									variant = ButtonVariant.Emphasis,
-									icon = "icons/common/robux",
-									onActivated = function()
-										print("Join clicked!")
-									end,
-									inputDelay = 3,
-								} :: any,
-								{
-									text = "Share",
-									variant = ButtonVariant.Standard,
-									onActivated = function()
-										print("Share clicked!")
-									end,
-								} :: any,
-							},
-							label = controls.actionsLabel,
-						})
-						else nil,
-				})
-				else nil,
+	return React.createElement(React.Fragment, nil, {
+		ToggleButton = React.createElement(Button, {
+			text = if isOpen then "Close Dialog" else "Open Dialog",
+			onActivated = toggleDialog,
+			variant = ButtonVariant.Emphasis,
 		}),
+		DialogRoot = if isOpen
+			then React.createElement(Dialog.Root, {
+				size = controls.size,
+				onClose = toggleDialog,
+				hasBackdrop = controls.hasBackdrop,
+				disablePortal = controls.disablePortal,
+			}, {
+				DialogMedia = children.DialogMedia,
+				DialogTitle = children.DialogTitle,
+				DialogContent = children.DialogContent,
+				DialogActions = if controls.hasActions
+					then React.createElement(Dialog.Actions, {
+						LayoutOrder = 3,
+						orientation = controls.actionsOrientation,
+						actions = {
+							{
+								text = "Join",
+								variant = ButtonVariant.Emphasis,
+								icon = "icons/common/robux",
+								onActivated = function()
+									print("Join clicked!")
+								end,
+								inputDelay = 3,
+							} :: any,
+							{
+								text = "Share",
+								variant = ButtonVariant.Standard,
+								onActivated = function()
+									print("Share clicked!")
+								end,
+							} :: any,
+						},
+						label = controls.actionsLabel,
+					})
+					else nil,
+			})
+			else nil,
 	})
 end
 
@@ -125,9 +114,7 @@ function CustomMedia(props: {
 	aspectRatio: number?,
 })
 	return React.createElement(View, {
-		tag = `auto-y size-full-0 row align-x-center {if Flags.FoundationDialogBodyUpdate
-			then "padding-top-large"
-			else ""}`,
+		tag = "row align-x-center size-full-0 auto-y",
 	}, {
 		Image = React.createElement(Image, {
 			tag = {
@@ -136,6 +123,49 @@ function CustomMedia(props: {
 			aspectRatio = props.aspectRatio,
 			Image = props.media,
 			Size = props.Size,
+		}),
+	})
+end
+
+local function CheckboxContentWithNavigation(props: {
+	checkboxStates: { [string]: boolean },
+	toggleCheckbox: (key: string) -> (checked: boolean) -> (),
+})
+	local dialogNav = useDialogNavigation()
+	local firstCheckboxRef = React.useRef(nil)
+
+	React.useEffect(function()
+		dialogNav.setContentStartRef(firstCheckboxRef)
+	end, { dialogNav.setContentStartRef })
+
+	return React.createElement(View, {
+		tag = "col gap-small size-full-0 auto-y",
+	}, {
+		Notifications = React.createElement(Checkbox, {
+			label = "Enable notifications",
+			isChecked = props.checkboxStates.notifications,
+			onActivated = props.toggleCheckbox("notifications"),
+			ref = firstCheckboxRef,
+			NextSelectionUp = dialogNav.closeAffordanceRef,
+			LayoutOrder = 1,
+		}),
+		Analytics = React.createElement(Checkbox, {
+			label = "Share usage analytics",
+			isChecked = props.checkboxStates.analytics,
+			onActivated = props.toggleCheckbox("analytics"),
+			LayoutOrder = 2,
+		}),
+		Marketing = React.createElement(Checkbox, {
+			label = "Receive marketing emails",
+			isChecked = props.checkboxStates.marketing,
+			onActivated = props.toggleCheckbox("marketing"),
+			LayoutOrder = 3,
+		}),
+		ThirdParty = React.createElement(Checkbox, {
+			label = "Allow third-party integrations",
+			isChecked = props.checkboxStates.thirdParty,
+			onActivated = props.toggleCheckbox("thirdParty"),
+			LayoutOrder = 4,
 		}),
 	})
 end
@@ -167,6 +197,7 @@ return {
 					}),
 					DialogContent = React.createElement(Dialog.Content, {
 						LayoutOrder = 2,
+						Selectable = props.controls.selectableContent,
 					}, {
 						DialogText = React.createElement(Dialog.Text, {
 							Text = props.controls.content :: string,
@@ -184,6 +215,7 @@ return {
 					}),
 					DialogContent = React.createElement(Dialog.Content, {
 						LayoutOrder = 2,
+						Selectable = props.controls.selectableContent,
 					}, {
 						DialogText = React.createElement(Dialog.Text, {
 							Text = props.controls.content :: string,
@@ -213,6 +245,7 @@ return {
 					}),
 					DialogContent = React.createElement(Dialog.Content, {
 						LayoutOrder = 2,
+						Selectable = props.controls.selectableContent,
 					}, {
 						DialogText = React.createElement(Dialog.Text, {
 							Text = props.controls.content :: string,
@@ -262,10 +295,10 @@ return {
 				end)
 
 				local CustomContent = React.createElement(View, {
-					tag = "auto-y size-full-0 col gap-xxlarge",
+					tag = "col gap-xxlarge size-full-0 auto-y",
 				}, {
 					Text = React.createElement(Text, {
-						tag = "text-body-large text-wrap text-align-x-left text-align-y-top auto-y size-full-0",
+						tag = "size-full-0 auto-y text-body-large text-wrap text-align-x-left text-align-y-top",
 						Text = "Some text",
 						LayoutOrder = 2,
 					}),
@@ -292,8 +325,39 @@ return {
 					}),
 					DialogContent = React.createElement(Dialog.Content, {
 						LayoutOrder = 2,
+						Selectable = props.controls.selectableContent,
 					}, {
 						CustomContent = CustomContent,
+					}),
+				})
+			end,
+		},
+		{
+			name = "Scrollable List Content",
+			story = function(props: StoryProps)
+				local ITEM_COUNT = 15
+
+				local listItems = Dash.map(table.create(ITEM_COUNT, true), function(_: boolean, i: number)
+					return React.createElement(List.Item, {
+						key = tostring(i),
+						title = `Option {i}`,
+						description = "Description for this option",
+						onActivated = function()
+							print(`Option {i} activated`)
+						end,
+						LayoutOrder = i,
+					})
+				end)
+
+				return React.createElement(Story, props, {
+					DialogTitle = React.createElement(Dialog.Title, {
+						text = props.controls.title,
+					}),
+					DialogContent = React.createElement(Dialog.Content, {
+						LayoutOrder = 2,
+						Selectable = props.controls.selectableContent,
+					}, {
+						ItemList = React.createElement(List.Root, nil, listItems),
 					}),
 				})
 			end,
@@ -309,7 +373,7 @@ return {
 				)
 
 				local CustomContent = React.createElement(View, {
-					tag = "auto-y size-full-0 col gap-xlarge",
+					tag = "col gap-xlarge size-full-0 auto-y",
 				}, {
 					DialogMedia = React.createElement(CustomMedia, {
 						media = props.controls.media :: string,
@@ -331,8 +395,45 @@ return {
 					}),
 					DialogContent = React.createElement(Dialog.Content, {
 						LayoutOrder = 2,
+						Selectable = props.controls.selectableContent,
 					}, {
 						CustomContent = CustomContent,
+					}),
+				})
+			end,
+		},
+		{
+			name = "Checkbox Content with Focus Navigation",
+			story = function(props: StoryProps)
+				local checkboxStates, setCheckboxStates = React.useState({
+					notifications = false,
+					analytics = false,
+					marketing = false,
+					thirdParty = false,
+				})
+
+				local function toggleCheckbox(key: string)
+					return function(checked: boolean)
+						setCheckboxStates(function(prev)
+							local next = Dash.assign({}, prev)
+							next[key] = checked
+							return next
+						end)
+					end
+				end
+
+				return React.createElement(Story, props, {
+					DialogTitle = React.createElement(Dialog.Title, {
+						text = props.controls.title,
+					}),
+					DialogContent = React.createElement(Dialog.Content, {
+						LayoutOrder = 2,
+						Selectable = props.controls.selectableContent,
+					}, {
+						CheckboxContent = React.createElement(CheckboxContentWithNavigation, {
+							checkboxStates = checkboxStates,
+							toggleCheckbox = toggleCheckbox,
+						}),
 					}),
 				})
 			end,
@@ -356,7 +457,7 @@ return {
 		heroMediaAspectRatio = 2.5,
 		heroMediaHeightScale = 1,
 		heroMediaHeightOffset = 0,
+		selectableContent = true,
 		size = Dash.values(DialogSize),
-		mockScreenYOffset = 800,
 	},
 }

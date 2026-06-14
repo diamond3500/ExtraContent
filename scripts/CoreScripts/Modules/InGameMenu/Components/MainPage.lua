@@ -10,9 +10,6 @@ local UserInputService = game:GetService("UserInputService")
 local VRService = game:GetService("VRService")
 
 local RobloxGui = CoreGui:WaitForChild("RobloxGui")
-local SharedFlags = require(CorePackages.Workspace.Packages.SharedFlags)
-local GetFFlagUseFoundationButton = SharedFlags.UIBlox.GetFFlagUIBloxUseFoundationButton
-
 local InGameMenuDependencies = require(CorePackages.Packages.InGameMenuDependencies)
 local Roact = InGameMenuDependencies.Roact
 local RoactRodux = InGameMenuDependencies.RoactRodux
@@ -52,7 +49,6 @@ local FFlagTakeAScreenshotOfThis = game:DefineFastFlag("TakeAScreenshotOfThis", 
 local FFlagShowContextMenuWhenButtonsArePresent = game:DefineFastFlag("ShowContextMenuWhenButtonsArePresent", false)
 local FFlagUseVRSpecificLeaveButton = game:DefineFastFlag("UseVRSpecificLeaveButton", false)
 local GetFFlagIGMGamepadSelectionHistory = require(Flags.GetFFlagIGMGamepadSelectionHistory)
-local GetFFlagSideNavControllerBar = require(Flags.GetFFlagSideNavControllerBar)
 local Images = UIBlox.App.ImageSet.Images
 local FocusHandler = require(script.Parent.Connection.FocusHandler)
 local IGMMainPageControllerBar = require(script.Parent.IGMMainPageControllerBar)
@@ -147,7 +143,6 @@ MainPage.validateProps = t.strictInterface({
 	setFirstItemRef = t.optional(t.callback),
 	voiceEnabled = t.optional(t.boolean),
 	currentZone = GetFFlagIGMGamepadSelectionHistory() and t.optional(t.number) or nil,
-	isMainPageInForeground = GetFFlagSideNavControllerBar() and t.optional(t.boolean) or nil,
 })
 
 function MainPage:init()
@@ -172,18 +167,10 @@ function MainPage:init()
 end
 
 function MainPage.getDerivedStateFromProps(nextProps)
-	if GetFFlagSideNavControllerBar() then
-		if not nextProps.isMainPageInForeground then
-			return {
-				modalOpen = false,
-			}
-		end
-	else
-		if not nextProps.canCaptureFocus then
-			return {
-				modalOpen = false,
-			}
-		end
+	if not nextProps.canCaptureFocus then
+		return {
+			modalOpen = false,
+		}
 	end
 	return nil
 end
@@ -204,22 +191,20 @@ function MainPage:renderMainPageFocusHandler()
 		isFocused = canCaptureFocus,
 		shouldForgetPreviousSelection = shouldForgetPreviousSelection,
 		didFocus = GetFFlagIGMGamepadSelectionHistory() and function(previousSelection)
-			if not GetFFlagSideNavControllerBar() then
-				ContextActionService:BindCoreAction(
-					LEFT_STICK_TOGGLES_MORE_MENU_ACTION,
-					function(actionName, inputState)
-						if inputState == Enum.UserInputState.End then
-							self:setState({
-								modalOpen = true,
-							})
-							return Enum.ContextActionResult.Sink
-						end
-						return Enum.ContextActionResult.Pass
-					end,
-					false,
-					Enum.KeyCode.ButtonL3
-				)
-			end
+			ContextActionService:BindCoreAction(
+				LEFT_STICK_TOGGLES_MORE_MENU_ACTION,
+				function(actionName, inputState)
+					if inputState == Enum.UserInputState.End then
+						self:setState({
+							modalOpen = true,
+						})
+						return Enum.ContextActionResult.Sink
+					end
+					return Enum.ContextActionResult.Pass
+				end,
+				false,
+				Enum.KeyCode.ButtonL3
+			)
 
 			GuiService.SelectedCoreObject = previousSelection or self.mainPageFirstButtonRef:getValue()
 		end or function()
@@ -235,20 +220,13 @@ function MainPage:renderMainPageFocusHandler()
 		end,
 
 		didBlur = function()
-			if not GetFFlagSideNavControllerBar() then
-				ContextActionService:UnbindCoreAction(LEFT_STICK_TOGGLES_MORE_MENU_ACTION)
-			end
+			ContextActionService:UnbindCoreAction(LEFT_STICK_TOGGLES_MORE_MENU_ACTION)
 		end,
 	})
 end
 
 function MainPage:renderMoreMenuFocusHandler()
-	local canCaptureFocus = nil
-	if GetFFlagSideNavControllerBar() then
-		canCaptureFocus = self.props.isMainPageInForeground and self.props.inputType == Constants.InputType.Gamepad
-	else
-		canCaptureFocus = self.canGamepadCaptureFocus(self.props)
-	end
+	local canCaptureFocus = self.canGamepadCaptureFocus(self.props)
 
 	local isMainPageMoreMenuOpen = self.state.modalOpen
 
@@ -297,12 +275,7 @@ function MainPage:renderMoreMenuFocusHandler()
 end
 
 function MainPage:render()
-	local canCaptureFocus = nil
-	if GetFFlagSideNavControllerBar() then
-		canCaptureFocus = self.props.isMainPageInForeground and self.props.inputType == Constants.InputType.Gamepad
-	else
-		canCaptureFocus = self.canGamepadCaptureFocus(self.props)
-	end
+	local canCaptureFocus = self.canGamepadCaptureFocus(self.props)
 
 	return withStyle(function(style)
 		return withLocalization({
@@ -406,9 +379,7 @@ function MainPage:render()
 						HorizontalAlignment = Enum.HorizontalAlignment.Center,
 						Padding = UDim.new(0, 12),
 						SortOrder = Enum.SortOrder.LayoutOrder,
-						VerticalAlignment = if GetFFlagUseFoundationButton()
-							then Enum.VerticalAlignment.Top
-							else Enum.VerticalAlignment.Center,
+						VerticalAlignment = Enum.VerticalAlignment.Top,
 					}),
 					Padding = Roact.createElement("UIPadding", {
 						PaddingTop = UDim.new(0, 24),
@@ -425,9 +396,7 @@ function MainPage:render()
 					}, {
 						Button = Roact.createElement(Button, {
 							buttonType = ButtonType.PrimarySystem,
-							size = if GetFFlagUseFoundationButton()
-								then UDim2.new(1, 0, 0, BOTTOM_MENU_ICON_SIZE)
-								else UDim2.fromScale(1, 1),
+							size = UDim2.new(1, 0, 0, BOTTOM_MENU_ICON_SIZE),
 							onActivated = self.props.startLeavingGame,
 							text = localized.leaveGame,
 						}),
@@ -451,10 +420,6 @@ end
 
 function MainPage:willUnmount()
 	GuiService:RemoveSelectionGroup(MORE_MENU_NAME)
-
-	if GetFFlagSideNavControllerBar() then
-		ContextActionService:UnbindCoreAction(LEFT_STICK_TOGGLES_MORE_MENU_ACTION)
-	end
 end
 
 function MainPage.canGamepadCaptureFocus(props)
@@ -476,35 +441,6 @@ function MainPage:didUpdate(prevProps, prevState)
 		end
 	end
 
-	if GetFFlagSideNavControllerBar() then
-		local function gamepadCanToggleMoreMenu(props, isMoreMenuOpen)
-			return props.isMainPageInForeground
-				and props.inputType == Constants.InputType.Gamepad
-				and not isMoreMenuOpen
-		end
-
-		if
-			gamepadCanToggleMoreMenu(self.props, isMainPageMoreMenuOpen)
-			and not gamepadCanToggleMoreMenu(prevProps, prevIsMainPageMoreMenuOpen)
-		then
-			ContextActionService:BindCoreAction(LEFT_STICK_TOGGLES_MORE_MENU_ACTION, function(actionName, inputState)
-				if inputState == Enum.UserInputState.End then
-					self:setState({
-						modalOpen = true,
-					})
-
-					return Enum.ContextActionResult.Sink
-				end
-				return Enum.ContextActionResult.Pass
-			end, false, Enum.KeyCode.ButtonL3)
-		elseif
-			not gamepadCanToggleMoreMenu(self.props, isMainPageMoreMenuOpen)
-			and gamepadCanToggleMoreMenu(prevProps, prevIsMainPageMoreMenuOpen)
-		then
-			ContextActionService:UnbindCoreAction(LEFT_STICK_TOGGLES_MORE_MENU_ACTION)
-		end
-	end
-
 	if VRService.VREnabled then
 		UserInputService.OverrideMouseIconBehavior = Enum.OverrideMouseIconBehavior.ForceHide
 	end
@@ -512,11 +448,6 @@ end
 
 return RoactRodux.UNSTABLE_connect2(function(state, props)
 	local isMainPageInForeground = nil
-	if GetFFlagSideNavControllerBar() then
-		isMainPageInForeground = state.isMenuOpen
-			and not state.respawn.dialogOpen
-			and state.menuPage == Constants.MainPagePageKey
-	end
 
 	local currentZone = nil -- can inline when flag is removed
 	if GetFFlagIGMGamepadSelectionHistory() then

@@ -4,19 +4,20 @@ local Packages = Foundation.Parent
 
 local Dash = require(Packages.Dash)
 local React = require(Packages.React)
-local ReactIs = require(Packages.ReactIs)
 
-local Flags = require(Foundation.Utility.Flags)
 local Types = require(Foundation.Components.Types)
-local getBackgroundStyleWithStateLayer = require(script.Parent.getBackgroundStyleWithStateLayer)
+local blendColors = require(Foundation.Utility.blendColors)
 local getOriginalBackgroundStyle = require(script.Parent.getOriginalBackgroundStyle)
 local getStateLayerStyle = require(script.Parent.getStateLayerStyle)
+local joinBindables = require(Foundation.Utility.joinBindables)
+local mapBindable = require(Foundation.Utility.mapBindable)
 local useCursor = require(Foundation.Providers.Cursor.useCursor)
 local useGuiControlState = require(Foundation.Utility.Control.useGuiControlState)
 local useTokens = require(Foundation.Providers.Style.useTokens)
 local withDefaults = require(Foundation.Utility.withDefaults)
 
 local StateLayerAffordance = require(Foundation.Enums.StateLayerAffordance)
+type StateLayerAffordance = StateLayerAffordance.StateLayerAffordance
 local StateLayerMode = require(Foundation.Enums.StateLayerMode)
 type StateLayerMode = StateLayerMode.StateLayerMode
 local ControlState = require(Foundation.Enums.ControlState)
@@ -24,6 +25,8 @@ type ControlState = ControlState.ControlState
 type StateChangedCallback = Types.StateChangedCallback
 type ColorStyle = Types.ColorStyle
 type ColorStyleValue = Types.ColorStyleValue
+type Bindable<T> = Types.Bindable<T>
+type StateLayer = Types.StateLayer
 
 -- TODO: https://roblox.atlassian.net/browse/UIBLOX-2446 make this union type
 export type InteractableProps = {
@@ -52,12 +55,8 @@ local function Interactable(interactableProps: InteractableProps, forwardedRef: 
 
 	local onStateChanged = React.useCallback(function(newState: ControlState)
 		if controlState:getValue() == ControlState.Default and guiObjectRef.current ~= nil then
-			local guiObjectColor3 = if Flags.FoundationDisableStylingPolyfill
-				then guiObjectRef.current:GetStyled("BackgroundColor3")
-				else guiObjectRef.current.BackgroundColor3
-			local guiObjectTransparency = if Flags.FoundationDisableStylingPolyfill
-				then guiObjectRef.current:GetStyled("BackgroundTransparency")
-				else guiObjectRef.current.BackgroundTransparency
+			local guiObjectColor3 = guiObjectRef.current:GetStyled("BackgroundColor3")
+			local guiObjectTransparency = guiObjectRef.current:GetStyled("BackgroundTransparency")
 			if guiObjectColor3 ~= DEFAULT_GRAY or guiObjectTransparency ~= 0 then
 				realBackgroundStyle.current = {
 					Color3 = guiObjectColor3,
@@ -76,12 +75,17 @@ local function Interactable(interactableProps: InteractableProps, forwardedRef: 
 	end, { props.BackgroundColor3, props.BackgroundTransparency } :: { unknown })
 
 	local getBackgroundStyle = React.useCallback(
-		function(guiState, backgroundStyle: ColorStyleValue): ColorStyleValue
+		function(
+			guiState: ControlState,
+			backgroundStyle: ColorStyleValue,
+			mode: StateLayerMode?,
+			affordance: StateLayerAffordance?
+		): ColorStyleValue
 			if
 				guiState == ControlState.Initialize
 				or guiState == ControlState.Default
 				or guiState == ControlState.Disabled
-				or (props.stateLayer and props.stateLayer.affordance == StateLayerAffordance.None)
+				or affordance == StateLayerAffordance.None
 			then
 				return backgroundStyle
 			end
@@ -102,32 +106,36 @@ local function Interactable(interactableProps: InteractableProps, forwardedRef: 
 					else nil
 			end
 
-			local stateLayerStyle = getStateLayerStyle(tokens, props.stateLayer, guiState)
+			local stateLayerStyle = getStateLayerStyle(tokens, mode, guiState)
 
-			return getBackgroundStyleWithStateLayer(finalBackgroundStyle, stateLayerStyle)
+			return blendColors(finalBackgroundStyle, stateLayerStyle)
 		end,
 		{
 			tokens,
 			props.BackgroundColor3,
 			props.BackgroundTransparency,
-			props.stateLayer,
 		} :: { unknown }
 	)
 
-	local backgroundStyleBinding = React.useMemo(function()
-		if ReactIs.isBinding(originalBackgroundStyle) then
-			return React.joinBindings({
+	local backgroundStyleBinding = React.useMemo(
+		function(): Bindable<ColorStyleValue>
+			return joinBindables({
 				controlState = controlState,
-				backgroundStyle = originalBackgroundStyle :: React.Binding<ColorStyleValue>,
-			}):map(function(values)
-				return getBackgroundStyle(values.controlState, values.backgroundStyle)
+				backgroundStyle = originalBackgroundStyle,
+				mode = if props.stateLayer then props.stateLayer.mode else nil,
+				affordance = if props.stateLayer then props.stateLayer.affordance else nil,
+			}, function(values)
+				return getBackgroundStyle(values.controlState, values.backgroundStyle, values.mode, values.affordance)
 			end)
-		end
-
-		return controlState:map(function(guiState)
-			return getBackgroundStyle(guiState, originalBackgroundStyle :: ColorStyleValue)
-		end :: (any) -> ColorStyleValue)
-	end, { originalBackgroundStyle, controlState, getBackgroundStyle } :: { unknown })
+		end,
+		{
+			originalBackgroundStyle,
+			controlState,
+			getBackgroundStyle,
+			if props.stateLayer then props.stateLayer.mode else nil,
+			if props.stateLayer then props.stateLayer.affordance else nil,
+		} :: { unknown }
+	)
 
 	local wrappedRef = useGuiControlState(guiObjectRef, onStateChanged)
 
@@ -136,10 +144,10 @@ local function Interactable(interactableProps: InteractableProps, forwardedRef: 
 	end, {})
 
 	local interactableComponentProps = {
-		BackgroundColor3 = backgroundStyleBinding:map(function(backgroundStyle)
+		BackgroundColor3 = mapBindable(backgroundStyleBinding, function(backgroundStyle)
 			return backgroundStyle.Color3
 		end),
-		BackgroundTransparency = backgroundStyleBinding:map(function(backgroundStyle)
+		BackgroundTransparency = mapBindable(backgroundStyleBinding, function(backgroundStyle)
 			return backgroundStyle.Transparency
 		end),
 		Active = not props.isDisabled,

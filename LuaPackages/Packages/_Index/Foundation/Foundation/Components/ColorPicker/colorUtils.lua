@@ -1,3 +1,27 @@
+local Foundation = script:FindFirstAncestor("Foundation")
+local Types = require(Foundation.Components.Types)
+type PartialColorHSV = Types.PartialColorHSV
+
+-- For partial HSV, uses 100 for missing S/V. Callers use isPartialHSV when they need to treat partial as "no color".
+local function toColor3(value: Color3 | PartialColorHSV): Color3
+	if typeof(value) == "Color3" then
+		return value :: Color3
+	end
+
+	local hsv = value :: PartialColorHSV
+
+	--selene: allow(roblox_internal_custom_color)
+	return Color3.fromHSV(hsv.H / 360, (hsv.S or 100) / 100, (hsv.V or 100) / 100)
+end
+
+local function isPartialHSV(value: Color3 | PartialColorHSV): boolean
+	if typeof(value) == "Color3" then
+		return false
+	end
+	local hsv = value :: PartialColorHSV
+	return hsv.S == nil or hsv.V == nil
+end
+
 local function calculateSVFromPosition(
 	dragPosition: Vector2,
 	pickerPosition: Vector2,
@@ -56,4 +80,6 @@ return {
 	calculateSVFromPosition = calculateSVFromPosition,
 	createHSVUpdateHandler = createHSVUpdateHandler,
 	createColorInputChangeHandler = createColorInputChangeHandler,
+	isPartialHSV = isPartialHSV,
+	toColor3 = toColor3,
 }

@@ -8,6 +8,9 @@ local Foundation = require(Packages.Foundation)
 local ButtonVariant = Foundation.Enums.ButtonVariant
 local InputSize = Foundation.Enums.InputSize
 
+local BuilderIcons = require(Packages.BuilderIcons)
+local migrations = BuilderIcons.Migration["uiblox"]
+
 local ButtonType = require(ButtonRoot.Enum.ButtonType)
 local StandardButtonSize = require(Core.Button.Enum.StandardButtonSize)
 
@@ -32,11 +35,14 @@ local fitContentDefaultMapping = {
 	[StandardButtonSize.XSmall] = true,
 }
 
-local function findIcon(searchData)
+local function findIcon(searchData: any)
 	if not searchData then
 		return nil
 	end
-	local icon = ImagesInverse[searchData]
+
+	local isDeprecatedAsset = searchData.Image and migrations[searchData.Image] ~= nil
+
+	local icon = if isDeprecatedAsset then searchData.Image else ImagesInverse[searchData]
 	if icon == nil then
 		warn("Icon not found")
 	end

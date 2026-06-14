@@ -16,10 +16,12 @@ export type SheetProps = {
 	sheetRef: React.Ref<SheetRef>?,
 	-- Prefer using center sheet over side sheet
 	preferCenterSheet: boolean?,
-	-- The size of the sheet, only applies to center sheets
+	-- The size of the sheet, doesn't apply to bottom sheets
 	size: DialogSize?,
 	-- Callback fired when the sheet is closed
 	onClose: () -> (),
+	-- Height for center sheets, value should be between 0 and 1 representing the percentage of the screen height or absolute pixel values (e.g. 300) make sure to scale pixel values with `useScaledValue`. If omitted, the center sheet will size to fit its contents.
+	centerSheetHeight: number?,
 	-- List of snap points for bottom sheets, values should be between 0 and 1 representing the percentage of the screen height or absolute pixel values (e.g. 300) make sure to scale pixel values with `useScaledValue`. If omitted, the bottom sheet will size to fit its contents.
 	snapPoints: { number }?,
 	-- The default snap point index to open the sheet to, defaults to the first snap point

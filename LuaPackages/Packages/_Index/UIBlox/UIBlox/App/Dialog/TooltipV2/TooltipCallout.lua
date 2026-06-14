@@ -143,7 +143,7 @@ local function TooltipWithRef(props: Types.TooltipProps, ref)
 	end
 	local bodyFont
 	if UIBloxConfig.enableTooltipV2BodyFontFix then
-		bodyFont = font.BodySmall
+		bodyFont = (font :: any).BodySmall
 	else
 		bodyFont = font.CaptionBody
 	end
@@ -251,7 +251,7 @@ local function TooltipWithRef(props: Types.TooltipProps, ref)
 	local defaultBackgroundStyle = theme.BackgroundUIDefault
 	local backgroundColor = props.backgroundColor or defaultBackgroundStyle.Color
 	local backgroundTransparency = (props.backgroundTransparency or defaultBackgroundStyle.Transparency)
-		* settings.PreferredTransparency
+		* (settings :: any).PreferredTransparency
 
 	return React.createElement("CanvasGroup", {
 		GroupTransparency = props.transparency,
@@ -324,7 +324,7 @@ local function TooltipWithRef(props: Types.TooltipProps, ref)
 				layoutOrder = 1,
 				size = vectorToPosition(headerSize),
 				fluidSizing = false,
-				richText = if UIBloxConfig.enableTooltipRichText then props.enableHeaderRichText else false,
+				richText = props.enableHeaderRichText,
 				lineHeight = 1,
 			}),
 			Body = props.bodyText and React.createElement(StyledTextLabel, {
@@ -337,7 +337,7 @@ local function TooltipWithRef(props: Types.TooltipProps, ref)
 				layoutOrder = 2,
 				size = vectorToPosition(bodySize),
 				fluidSizing = false,
-				richText = if UIBloxConfig.enableTooltipRichText then props.enableBodyRichText else false,
+				richText = props.enableBodyRichText,
 				lineHeight = 1,
 			}),
 			Additional = additionalContent,

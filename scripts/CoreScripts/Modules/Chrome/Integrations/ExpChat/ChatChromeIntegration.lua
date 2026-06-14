@@ -25,26 +25,31 @@ local isSpatial = require(CorePackages.Workspace.Packages.AppCommonLib).isSpatia
 local ChatIconVisibleSignals = require(script.Parent.ChatIconVisibleSignals).default
 local SignalsRoblox = require(CorePackages.Packages.SignalsRoblox)
 
+local ChromePackage = require(CorePackages.Workspace.Packages.Chrome)
+local SideSheetPlacement = ChromePackage.Enums.SideSheetPlacement
+
 local ExpChat = require(CorePackages.Workspace.Packages.ExpChat)
 local ExpChatFocusNavigationStore = ExpChat.Stores.GetFocusNavigationStore(false)
 
 local SharedFlags = require(CorePackages.Workspace.Packages.SharedFlags)
 local FFlagEnableConsoleExpControls = SharedFlags.FFlagEnableConsoleExpControls
 local FFlagExpChatWindowSyncUnibar = SharedFlags.FFlagExpChatWindowSyncUnibar
-
-local AppChat = require(CorePackages.Workspace.Packages.AppChat)
-local InExperienceAppChatModal = AppChat.App.InExperienceAppChatModal
+local FFlagChromeActivatedMappedSignal = SharedFlags.FFlagChromeActivatedMappedSignal
+local InExperienceAppChatModal = require(CorePackages.Workspace.Packages.AppChat.InExperienceAppChatModal)
 
 local ChatSelector = require(RobloxGui.Modules.ChatSelector)
 local getExperienceChatVisualConfig = require(CorePackages.Workspace.Packages.ExpChat).getExperienceChatVisualConfig
 local GetFFlagSimpleChatUnreadMessageCount = SharedFlags.GetFFlagSimpleChatUnreadMessageCount
 local GetFFlagDisableLegacyChatSimpleUnreadMessageCount = SharedFlags.GetFFlagDisableLegacyChatSimpleUnreadMessageCount
+local ExpChatShared = require(CorePackages.Workspace.Packages.ExpChatShared)
+local GetFFlagTextChatEnableUniverseChatTabs = ExpChatShared.Flags.GetFFlagTextChatEnableUniverseChatTabs
 local FFlagExpChatUnibarThumbstickNavigate = game:DefineFastFlag("ExpChatUnibarThumbstickNavigate", false)
 local FFlagExpChatUnibarAvailabilityRefactor = game:DefineFastFlag("ExpChatUnibarAvailabilityRefactor", false)
-local FFlagHideChatButtonForChatDisabledUsers = game:DefineFastFlag("HideChatButtonForChatDisabledUsers", false)
 local isInExperienceUIVREnabled =
 	require(CorePackages.Workspace.Packages.SharedExperimentDefinition).isInExperienceUIVREnabled
 local InExperienceUIVRIXP = require(CorePackages.Workspace.Packages.SharedExperimentDefinition).InExperienceUIVRIXP
+local FFlagExpChatPerfTracking = SharedFlags.FFlagExpChatPerfTracking
+local ExpChatPerfTracker = ExpChat.ExpChatPerfTracker
 
 local unreadMessages = 0
 -- note: do not rely on ChatSelector:GetVisibility after startup; it's state is incorrect if user opens via keyboard shortcut
@@ -102,7 +107,7 @@ end, function()
 	local isVisible = ChatSelector.GetVisibility()
 	if not FFlagExpChatUnibarAvailabilityRefactor then
 		-- Is there a less imperative way to do this?
-		if FFlagHideChatButtonForChatDisabledUsers and not isVisible and not localUserCanChat() then
+		if not isVisible and not localUserCanChat() then
 			chatChromeIntegration.availability:unavailable()
 		end
 	end
@@ -140,10 +145,14 @@ end
 chatChromeIntegration = ChromeService:register({
 	id = "chat",
 	label = "CoreScripts.TopBar.Chat",
+	sideSheetPlacement = SideSheetPlacement.Unibar,
 	activated = function(self)
 		if chatVisibility then
 			ChatSelector:SetVisible(false)
 		else
+			if FFlagExpChatPerfTracking then
+				ExpChatPerfTracker.start(ExpChatPerfTracker.Events.ChatWindowMountTTI, {})
+			end
 			if (isInExperienceUIVREnabled and isSpatial()) and not InExperienceUIVRIXP:isMovePanelToCenter() then
 				ChatSelector:SetVisible(true)
 			else
@@ -153,9 +162,11 @@ chatChromeIntegration = ChromeService:register({
 			end
 		end
 	end,
-	isActivated = function()
-		return chatVisibilitySignal:get()
-	end,
+	isActivated = if FFlagChromeActivatedMappedSignal
+		then chatVisibilitySignal
+		else function()
+			return chatVisibilitySignal:get()
+		end,
 	selected = if FFlagEnableConsoleExpControls
 		then function(self)
 			if FFlagExpChatUnibarThumbstickNavigate then
@@ -255,6 +266,15 @@ if GetFFlagSimpleChatUnreadMessageCount() then
 		end
 	end)
 
+	-- Universe Chat
+	if GetFFlagTextChatEnableUniverseChatTabs() then
+		TextChatService.UniverseChatMessageReceived:Connect(function()
+			if not chatVisibility and chatChromeIntegration.notification:isEmpty() then
+				chatChromeIntegration.notification:fireCount(1)
+			end
+		end)
+	end
+
 	-- Legacy Chat
 	if not GetFFlagDisableLegacyChatSimpleUnreadMessageCount() then
 		ChatSelector.MessagesChanged:connect(function(messages: number)
@@ -270,6 +290,16 @@ else
 			chatChromeIntegration.notification:fireCount(unreadMessages)
 		end
 	end)
+
+	-- Universe Chat
+	if GetFFlagTextChatEnableUniverseChatTabs() then
+		TextChatService.UniverseChatMessageReceived:Connect(function()
+			if not chatVisibility then
+				unreadMessages += 1
+				chatChromeIntegration.notification:fireCount(unreadMessages)
+			end
+		end)
+	end
 
 	local lastMessagesChangedValue = 0
 	ChatSelector.MessagesChanged:connect(function(messages: number)

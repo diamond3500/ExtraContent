@@ -75,6 +75,7 @@ return {
 	UNIBAR_KEEP_OUT_AREA_ID = "unibar",
 	SELFIE_VIEW_ID = "selfie_view",
 	AVATAR_SWITCHER_ID = "avatar_switcher",
+	IN_EXPERIENCE_SHOP_ID = "in_experience_shop",
 
 	UNIBAR_SHORTCUTBAR_ID = "unibarShortcuts",
 	TILTMENU_SHORTCUTBAR_ID = "tiltMenuShortcuts",
@@ -99,6 +100,8 @@ return {
 
 	-- the amount of travel to activate a WindowHost from dragging an icon
 	DRAG_MAGNITUDE_THRESHOLD = 10,
+	-- the amount of travel to register a window being dragged and not tapped/clicked
+	WINDOW_MIN_DRAG_DISTANCE = 25,
 
 	DEFAULT_HEIGHT_LARGE = withUIScale(285),
 	DEFAULT_WIDTH_LARGE = withUIScale(176),

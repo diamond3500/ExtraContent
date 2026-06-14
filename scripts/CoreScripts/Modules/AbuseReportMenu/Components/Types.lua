@@ -30,6 +30,7 @@ export type ButtonMenuItemType = {
 	getIconSrc: (utilityProps: MenuUtilityProps) -> string,
 	getButtonLabel: (utilityProps: MenuUtilityProps) -> string,
 	onClick: (menuUIStates: any, dispatchUIStates: any, utilityProps: MenuUtilityProps) -> (),
+	selectResume: boolean?,
 }
 
 export type DropdownMenuItemType = {
@@ -141,6 +142,7 @@ export type MenuUtilityProps = {
 		width: number,
 		height: number,
 	},
+	setLastSelectableObjects: ((selectableList: { GuiObject }) -> ())?,
 }
 
 export type IdentificationResults = {
@@ -183,6 +185,7 @@ type PartialAnalyticsState = {
 	-- Keep a copy of these in here since we don't have access to the real
 	-- source of truth when at the top level of the menu
 	typeofabuseSelection: string?,
+	preselectedAbuseSelection: string?,
 	reasonSelection: string?,
 	commentAdded: boolean,
 	experiencePersonSelection: string?,

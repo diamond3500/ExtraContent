@@ -16,8 +16,6 @@ local SoundGroups = require(CorePackages.Workspace.Packages.SoundManager).SoundG
 local SoundManager = require(CorePackages.Workspace.Packages.SoundManager).SoundManager
 
 local ContactList = RobloxGui.Modules.ContactList
-local dependencies = require(ContactList.dependencies)
-local dependencyArray = dependencies.Hooks.dependencyArray
 
 local useAnalytics = require(ContactList.Analytics.useAnalytics)
 local EventNamesEnum = require(ContactList.Analytics.EventNamesEnum)
@@ -78,5 +76,5 @@ return function(
 		end
 
 		onStartCallProcessed()
-	end, dependencyArray(tag, userId, combinedName, onStartCallProcessed, analyticsInfo))
+	end, { tag :: any, userId, combinedName, onStartCallProcessed, analyticsInfo })
 end

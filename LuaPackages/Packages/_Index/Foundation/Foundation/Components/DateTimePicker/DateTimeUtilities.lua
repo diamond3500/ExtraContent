@@ -25,7 +25,7 @@ local weekdays = {
 	[1] = Translator:FormatByKey("CommonUI.Controls.Label.SundayAbbreviated"),
 	[2] = Translator:FormatByKey("CommonUI.Controls.Label.MondayAbbreviated"),
 	[3] = Translator:FormatByKey("CommonUI.Controls.Label.TuesdayAbbreviated"),
-	[4] = Translator:FormatByKey("CommonUI.Controls.Label.WednesdayAbbreviation"),
+	[4] = Translator:FormatByKey("CommonUI.Controls.Label.WednesdayAbbreviated"),
 	[5] = Translator:FormatByKey("CommonUI.Controls.Label.ThursdayAbbreviated"),
 	[6] = Translator:FormatByKey("CommonUI.Controls.Label.FridayAbbreviated"),
 	[7] = Translator:FormatByKey("CommonUI.Controls.Label.SaturdayAbbreviated"),
@@ -196,6 +196,15 @@ local function getDateTimeFromText(dateTimeStr: string): DateTime?
 		end)
 
 		if success and dateTime then
+			-- There's an engine bug with dates that are in daylight savings time and in local zones that observe it. This is a workaround to fix the offset by 1 hour for now.
+			-- https://devforum.roblox.com/t/datetime-localtime-inconsistency/3548279/2
+			-- https://roblox.slack.com/archives/C04NQD0Q0M6/p1761089479708459
+			-- https://roblox.atlassian.net/browse/CLI-147909
+			local isDst = os.date("*t", dateTime.UnixTimestamp).isdst
+			if isDst then
+				local unixTimestamp = dateTime.UnixTimestamp
+				dateTime = DateTime.fromUnixTimestamp(unixTimestamp - 3600)
+			end
 			return dateTime
 		end
 	end

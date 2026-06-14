@@ -1,16 +1,45 @@
 --!nonstrict
 --[[
-    This file preloads all validation modules based on ValidationEnums.ValidationModule, and provides a getter based on the enum.
+    This file preloads all validation modules based on ValidationEnums.ValidationModule and
+    ValidationEnums.AssetQualityCheck, and provides a getter based on the enum.
     Requiring module names dynamically like this is frowned upon, so we put it independently in this nonstrict file.
     This file also ensures the validationmodule follows ValidationEnums.ValidationConfig and creates default values.
     This allows us to get an immediate error if the module contains unexpected members, or if any files tries to use unavailable configs (like a typo).
+
+    There are two folders that hold validation modules:
+      * src/validationFolders/         — general validation modules, iterated by ValidationEnums.ValidationModule
+      * src/assetQualityFolders/       — Asset Quality modules, iterated by ValidationEnums.AssetQualityCheck.
 ]]
 
 local root = script.Parent.Parent
 local Types = require(root.util.Types)
 local ValidationEnums = require(root.validationSystem.ValidationEnums)
-local testFolders = root.validationFolders
+local getEngineFeatureEngineUGCValidationExpandReturnSchema =
+	require(root.flags.getEngineFeatureEngineUGCValidationExpandReturnSchema)
+
+local validationFolders = root.validationFolders
+local assetQualityFolders = root.assetQualityFolders
+
 local ValidationModuleLoader = {}
+local requiredDatasForAllAQSCalls = {
+	ValidationEnums.SharedDataMember.aqsSummaryData,
+	ValidationEnums.SharedDataMember.renderMeshesData,
+	ValidationEnums.SharedDataMember.innerCagesData,
+	ValidationEnums.SharedDataMember.outerCagesData,
+	ValidationEnums.SharedDataMember.meshTextures,
+}
+
+-- testEnum -> the folder its module lives in. Combining the two enum tables up front lets the
+-- preload loop below stay a single inline iteration regardless of how many module sources we have.
+local testEnumToSourceFolder: { [string]: Instance } = {}
+for _, testEnum in ValidationEnums.ValidationModule do
+	testEnumToSourceFolder[testEnum] = validationFolders
+end
+if getEngineFeatureEngineUGCValidationExpandReturnSchema() then
+	for _, testEnum in ValidationEnums.AssetQualityCheck do
+		testEnumToSourceFolder[testEnum] = assetQualityFolders
+	end
+end
 
 local existingEnums = {}
 for tableName, enumTable in ValidationEnums do
@@ -42,17 +71,17 @@ local function defaultShadowCheck()
 	return false
 end
 
-local preloads = {}
-for _, testEnum in ValidationEnums.ValidationModule do
+local allModules: { [string]: Types.PreloadedValidationModule } = {}
+for testEnum, sourceFolder in testEnumToSourceFolder do
 	-- First, ensure the module actually exists
-	local valFolder = testFolders:FindFirstChild(testEnum)
+	local valFolder = sourceFolder:FindFirstChild(testEnum)
 	if valFolder == nil then
-		error(`{testEnum} validation folder is missing from validationFolders`)
+		error(`{testEnum} validation folder is missing from {sourceFolder.Name}`)
 	end
 
 	local valFile = valFolder:FindFirstChild(testEnum)
 	if valFile == nil or not valFile:IsA("ModuleScript") then
-		error(`{testEnum}.lua validation file is missing from validationFolders/{testEnum}`)
+		error(`{testEnum}.lua validation file is missing from {sourceFolder.Name}/{testEnum}`)
 	end
 
 	local valModule = require(valFile)
@@ -72,9 +101,32 @@ for _, testEnum in ValidationEnums.ValidationModule do
 	valModule.shadowFlag = valModule.shadowFlag or defaultShadowCheck
 	valModule.categories = valModule.categories or {}
 	valModule.requiredData = valModule.requiredData or {}
+	valModule.conditionalData = valModule.conditionalData or {}
 	valModule.prereqTests = valModule.prereqTests or {}
 	valModule.expectedFailures = valModule.expectedFailures or {}
-	valModule.requiredAqsReturnSchema = valModule.requiredAqsReturnSchema or {}
+	valModule.expectedAqsData = valModule.expectedAqsData or {}
+	valModule.knownAqsUserErrors = valModule.knownAqsUserErrors or {}
+
+	-- Loader-injected, not a ValidationConfig entry the author can set. Signals that the module
+	-- is iterated out of assetQualityFolders/ and its testEnum matches the AQS summary key.
+	valModule.isAssetQualityModule = sourceFolder == assetQualityFolders
+
+	if getEngineFeatureEngineUGCValidationExpandReturnSchema() then
+		if valModule.isAssetQualityModule then
+			for _, dataEnum in requiredDatasForAllAQSCalls do
+				if not table.find(valModule.requiredData, dataEnum) then
+					table.insert(valModule.requiredData, dataEnum)
+				end
+			end
+		end
+	elseif next(valModule.expectedAqsData) ~= nil then
+		for _, dataEnum in requiredDatasForAllAQSCalls do
+			if not table.find(valModule.requiredData, dataEnum) then
+				table.insert(valModule.requiredData, dataEnum)
+			end
+		end
+	end
+
 	if valModule.run == nil or typeof(valModule.run) ~= "function" then
 		error(`Missing module run function in {testEnum}`)
 	end
@@ -93,19 +145,23 @@ for _, testEnum in ValidationEnums.ValidationModule do
 	if typeof(valModule.shadowFlag) ~= "function" or typeof(valModule.shadowFlag()) ~= "boolean" then
 		error(`Invalid shadowFlag config in {testEnum}`)
 	end
+
 	tableOnlyHasExistingEnums(testEnum, valModule.categories, "UploadCategory")
 	tableOnlyHasExistingEnums(testEnum, valModule.requiredData, "SharedDataMember")
+	tableOnlyHasExistingEnums(testEnum, valModule.conditionalData, "SharedDataMember")
 	tableOnlyHasExistingEnums(testEnum, valModule.prereqTests, "ValidationModule")
 
-	preloads[testEnum] = valModule
+	allModules[testEnum] = valModule
 end
 
+ValidationModuleLoader.allModules = allModules
+
 function ValidationModuleLoader.getValidationModule(testEnum: string): Types.PreloadedValidationModule
-	if preloads[testEnum] == nil then
+	if allModules[testEnum] == nil then
 		error(`{testEnum} does not exist in the preload table.`)
 	end
 
-	return preloads[testEnum]
+	return allModules[testEnum]
 end
 
 return ValidationModuleLoader

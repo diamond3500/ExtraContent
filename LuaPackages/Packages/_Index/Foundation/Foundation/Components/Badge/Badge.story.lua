@@ -15,7 +15,6 @@ local Text = require(Foundation.Components.Text)
 local View = require(Foundation.Components.View)
 type BadgeVariant = BadgeVariant.BadgeVariant
 
-local Flags = require(Foundation.Utility.Flags)
 local useTokens = require(Foundation.Providers.Style.useTokens)
 
 local itemTileSize = UDim2.fromOffset(150, 240)
@@ -32,7 +31,6 @@ return {
 		{
 			name = "Base",
 			story = function(props): React.Node
-				Flags.FoundationUpdateBadgeDesign = props.controls.updateBadgeDesign
 				local tokens = useTokens()
 				local Badge = if props.controls.updateBadgeDesign then Badge_NEW else Badge_DEPRECATED
 
@@ -41,7 +39,7 @@ return {
 					setItem({})
 					spawn(function()
 						wait(2.0)
-						local itemInfo = MarketplaceService:GetProductInfo(itemId)
+						local itemInfo = MarketplaceService:GetProductInfoAsync(itemId)
 						if itemInfo.IsPublicDomain then
 							itemInfo.PriceInRobux = 0
 							itemInfo.PriceText = "Free"
@@ -118,14 +116,14 @@ return {
 				local Badge = if props.controls.updateBadgeDesign then Badge_NEW else Badge_DEPRECATED
 				return React.createElement(
 					View,
-					{ tag = "row wrap auto-xy gap-xxlarge" },
+					{ tag = "row wrap gap-xxlarge auto-xy" },
 					Dash.map(nonDeprecatedVariants, function(variant)
 						return React.createElement(
 							View,
-							{ tag = "col gap-small auto-xy align-x-center" },
+							{ tag = "col align-x-center gap-small auto-xy" },
 							React.createElement(
 								Text,
-								{ tag = "auto-xy text-align-x-center text-caption-small", Text = variant }
+								{ tag = "auto-xy text-caption-small text-align-x-center", Text = variant }
 							),
 							React.createElement(Badge, {
 								text = props.controls.text,
@@ -145,14 +143,14 @@ return {
 				local Badge = if props.controls.updateBadgeDesign then Badge_NEW else Badge_DEPRECATED
 				return React.createElement(
 					View,
-					{ tag = "row wrap auto-xy gap-xxlarge" },
+					{ tag = "row wrap gap-xxlarge auto-xy" },
 					Dash.map({ BadgeVariant.Primary :: BadgeVariant, BadgeVariant.Secondary }, function(variant)
 						return React.createElement(
 							View,
-							{ tag = "col gap-small auto-xy align-x-center" },
+							{ tag = "col align-x-center gap-small auto-xy" },
 							React.createElement(
 								Text,
-								{ tag = "auto-xy text-align-x-center text-caption-small", Text = variant }
+								{ tag = "auto-xy text-caption-small text-align-x-center", Text = variant }
 							),
 							React.createElement(Badge, {
 								text = props.controls.text,
@@ -178,6 +176,5 @@ return {
 		},
 		variant = nonDeprecatedVariants,
 		onTile = false,
-		updateBadgeDesign = Flags.FoundationUpdateBadgeDesign,
 	},
 }

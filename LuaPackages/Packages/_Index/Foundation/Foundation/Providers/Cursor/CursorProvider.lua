@@ -1,6 +1,7 @@
 local Foundation = script:FindFirstAncestor("Foundation")
 local Packages = Foundation.Parent
 
+local Flags = require(Foundation.Utility.Flags)
 local CoreGui = require(Foundation.Utility.Wrappers).Services.CoreGui
 local GuiService = require(Foundation.Utility.Wrappers).Services.GuiService
 
@@ -16,6 +17,8 @@ local CursorContext = require(script.Parent.CursorContext)
 local CursorType = require(Foundation.Enums.CursorType)
 local KeyUtilities = require(script.Parent.KeyUtilities)
 type CursorType = CursorType.CursorType
+local ColorMode = require(Foundation.Enums.ColorMode)
+type ColorMode = ColorMode.ColorMode
 local Types = require(Foundation.Components.Types)
 local useTokens = require(Foundation.Providers.Style.useTokens)
 
@@ -59,15 +62,20 @@ local function CursorProvider(props: Props)
 				and selectionImageObject ~= nil
 				and refCache[key].current == selectionImageObject
 
-			-- Check if the key is a cursor type
-			if CursorType[key] ~= nil then
+			local keyParts: { string } = string.split(key, " ")
+			local isCursorTypeKey = #keyParts == 2
+
+			if isCursorTypeKey then
+				local cursorType, colorMode = KeyUtilities.decodeCursorTypeKey(keyParts)
+
 				cursors[key] = React.createElement(Cursor, {
 					ref = refCache[key],
 					isVisible = isVisible,
-					cursorType = key :: CursorType,
+					cursorType = cursorType :: CursorType,
+					colorMode = colorMode :: ColorMode,
 				})
 			else
-				local cornerRadius, offset, borderWidth = KeyUtilities.decodeKey(key)
+				local cornerRadius, offset, borderWidth, colorMode = KeyUtilities.decodeKey(keyParts)
 
 				cursors[key] = React.createElement(CursorComponent, {
 					ref = refCache[key],
@@ -75,6 +83,7 @@ local function CursorProvider(props: Props)
 					cornerRadius = cornerRadius,
 					offset = offset,
 					borderWidth = borderWidth,
+					colorMode = colorMode :: ColorMode,
 				})
 			end
 		end
@@ -83,7 +92,14 @@ local function CursorProvider(props: Props)
 	end
 
 	React.useEffect(function()
-		if frameRef.current == nil or not frameRef.current:IsDescendantOf(game) then
+		if
+			frameRef.current == nil
+			or (
+				if Flags.FoundationAllowMockDataModel
+					then not game:IsAncestorOf(frameRef.current)
+					else not frameRef.current:IsDescendantOf(game)
+			)
+		then
 			return
 		end
 

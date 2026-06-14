@@ -7,11 +7,11 @@
 ]]
 local AnimationClipProvider = game:GetService("AnimationClipProvider")
 local InsertService = game:GetService("InsertService")
+local RbxAnalyticsService = game:GetService("RbxAnalyticsService")
+
 local FStringEmoteUtilityFallbackKeyframeSequenceAssetId =
 	game:DefineFastString("EmoteUtilityFallbackKeyframeSequenceAssetId", "10921261056")
-local FFlagFixKeyframeGeneration = game:DefineFastFlag("FixKeyframeGeneration", false)
-
-local RbxAnalyticsService = game:GetService("RbxAnalyticsService")
+local FFlagEmoteUtilityDefaultMoodFromCharacter = game:DefineFastFlag("EmoteUtilityDefaultMoodFromCharacter", false)
 
 local module = {}
 
@@ -19,6 +19,7 @@ type AnimationAssetIdOrUrl = string | number
 
 type AttachmentsByName = { [string]: Attachment }
 
+type AnimatableJoint = AnimationConstraint | Motor6D
 type SomeKindOfRotationCurve = EulerRotationCurve | RotationCurve
 
 export type KeyframesForPose = {
@@ -42,6 +43,8 @@ export type MapAssetIdToFileNameType = (number) -> string
 module.FallbackKeyframeSequenceAssetId = FStringEmoteUtilityFallbackKeyframeSequenceAssetId
 module.debugLoadAssetsFromFiles = false
 module.mapAssetIdToFileName = nil :: MapAssetIdToFileNameType?
+
+module.EmoteUtilitySupportAJU = true
 
 -- In cases where no asset id is provided for posing the avatar, fall back a pose based on this animation.
 -- Note: this only works on prod, not sitetest or gametest.
@@ -289,14 +292,16 @@ local function applyKeyframeInner(character: Model, poseKeyframe: Keyframe?)
 		if parentPose and poseObject:IsA("Pose") then
 			local part0 = character:FindFirstChild(parentPose.Name) :: Part
 			local part1 = character:FindFirstChild(poseObject.Name) :: Part
-			local motor6d = module.GetMotor6DBetween(part0, part1)
+			local joint: AnimatableJoint? = module.GetJointBetween(part0, part1)
 
-			local shouldPositionJoint = motor6d and not jointIsBlacklisted(motor6d)
+			local shouldPositionJoint = joint and not jointIsBlacklisted(joint)
 
 			if shouldPositionJoint then
-				assert(motor6d, "motor6d is non-nil. Silence type checker.")
-				motor6d.Transform = poseObject.CFrame
-				blacklistJoint(motor6d)
+				assert(joint, "joint is non-nil. Silence type checker.")
+				-- Type checker doesn't work correctly with class unions
+				local jointAny = joint :: any
+				jointAny.Transform = poseObject.CFrame
+				blacklistJoint(joint)
 			end
 		end
 
@@ -662,16 +667,100 @@ local function getToolKeyframes(character: Model, givenPoseTrumpsToolPose: boole
 	return suggestedKeyframeFromTool, defaultToolKeyframe
 end
 
+local function getAttachmentCFrame(attachment: Attachment)
+	local cframe = attachment.CFrame
+	local current: Instance? = attachment.Parent
+	while current and current:IsA("Bone") do
+		cframe = (current :: Bone).CFrame * cframe
+		current = (current :: Instance).Parent
+	end
+	return cframe
+end
+
+local function getJointParts(joint: Instance): (BasePart?, BasePart?)
+	if joint:IsA("JointInstance") then
+		return (joint :: JointInstance).Part0, (joint :: JointInstance).Part1
+	elseif joint:IsA("Constraint") then
+		local attach0 = (joint :: Constraint).Attachment0
+		local attach1 = (joint :: Constraint).Attachment1
+		local p0 = attach0 and attach0:FindFirstAncestorWhichIsA("BasePart")
+		local p1 = attach1 and attach1:FindFirstAncestorWhichIsA("BasePart")
+		return p0, p1
+	end
+	return nil, nil
+end
+
+local function applyCFrame(part0: BasePart, part1: BasePart, joint: AnimatableJoint, poseCFrame: CFrame)
+	if joint:IsA("AnimationConstraint") then
+		local attach0 = (joint :: AnimationConstraint).Attachment0 :: Attachment
+		local attach1 = (joint :: AnimationConstraint).Attachment1 :: Attachment
+		part1.CFrame = part0.CFrame * getAttachmentCFrame(attach0) * poseCFrame * getAttachmentCFrame(attach1):Inverse()
+	elseif joint:IsA("Motor6D") then
+		local c0 = (joint :: Motor6D).C0
+		local c1 = (joint :: Motor6D).C1
+		part1.Anchored = true
+		part1.CFrame = part0.CFrame * c0 * poseCFrame * c1:Inverse()
+	end
+end
+
+local function getJointPose(joint: AnimatableJoint): CFrame
+	if joint:IsA("AnimationConstraint") then
+		return (joint :: AnimationConstraint).Transform
+	elseif joint:IsA("Motor6D") then
+		local motor = joint :: Motor6D
+		local pose = motor.Transform
+		if motor.CurrentAngle ~= 0 then
+			pose = pose * CFrame.Angles(0, 0, motor.CurrentAngle)
+		end
+		return pose
+	else
+		error("Unsupported joint type:" .. joint.ClassName)
+		return CFrame.new()
+	end
+end
+
 --[[
 	Experience suggests that on RCC, if just change the "Transform" on a joint, the avatar doesn't move.
 	We have to play the animation a bit to get things to jump into place.
 ]]
 module.ForceAnimationToStep = function(character: Model)
-	local humanoid = character:FindFirstChildOfClass("Humanoid")
-	if humanoid then
-		local animator = humanoid:FindFirstChildOfClass("Animator")
-		if animator then
-			animator:StepAnimations(0.1)
+	local partsToProcess = { character:FindFirstChild("HumanoidRootPart") :: BasePart }
+	local visited: { [BasePart]: boolean } = {}
+	local jointQueue: { { part0: BasePart, part1: BasePart, joint: AnimatableJoint } } = {}
+
+	while #partsToProcess > 0 do
+		local currentPart = table.remove(partsToProcess, 1) :: BasePart
+		if visited[currentPart] then
+			continue
+		end
+		visited[currentPart] = true
+
+		for _, joint in currentPart:GetJoints() do
+			if not joint:IsA("Motor6D") and not joint:IsA("AnimationConstraint") then
+				continue
+			end
+
+			local part0, part1 = getJointParts(joint)
+			if part0 == currentPart and part1 and not visited[part1 :: BasePart] then
+				table.insert(jointQueue, { part0 = currentPart, part1 = part1 :: BasePart, joint = joint })
+				table.insert(partsToProcess, part1 :: BasePart)
+			end
+		end
+	end
+
+	-- Disable all AnimationConstraints so they don't fight
+	-- the CFrame placements we're about to make.
+	for _, desc in character:GetDescendants() do
+		if desc:IsA("AnimationConstraint") then
+			desc.Enabled = false
+		end
+	end
+
+	for _, entry in jointQueue do
+		local joint = entry.joint
+		if joint:IsA("Motor6D") or joint:IsA("AnimationConstraint") then
+			local poseCFrame: CFrame = getJointPose(joint)
+			applyCFrame(entry.part0, entry.part1, joint :: AnimatableJoint, poseCFrame)
 		end
 	end
 end
@@ -710,21 +799,26 @@ module.SetDebugLoadAssetsFromFiles = function(
 	module.mapAssetIdToFileName = mapAssetIdToFileName
 end
 
-module.GetMotor6DBetween = function(part0: Part?, part1: Part?): Motor6D?
+module.GetJointBetween = function(part0: Part?, part1: Part?): AnimatableJoint?
 	if not part0 or not part1 then
 		return nil
 	end
 	assert(part0, "part0 is non-nil. Silence type checker.")
 	assert(part1, "part1 is non-nil. Silence type checker.")
 
-	for _, obj in pairs(part1:GetChildren()) do
+	for _, obj in part1:GetChildren() do
 		if obj:IsA("Motor6D") and obj.Part0 == part0 then
+			return obj
+		elseif obj:IsA("AnimationConstraint") and obj.Part0 == part0 then
 			return obj
 		end
 	end
 
 	return nil
 end
+
+-- Legacy name when only Motor6Ds were supported.
+module.GetMotor6DBetween = module.GetJointBetween
 
 --[[
 	Does this poseKeyframe pose the face?
@@ -821,7 +915,7 @@ module.GetCurveAnimationTimeLength = function(curveAnimation: CurveAnimation): n
 
 	for _, desc in curveAnimation:GetDescendants() do
 		if desc:IsA("FloatCurve") then
-			if FFlagFixKeyframeGeneration and desc.Length == 0 then
+			if desc.Length == 0 then
 				continue
 			end
 			local lastKeyTime = desc:GetKeyAtIndex(desc.Length).Time
@@ -879,7 +973,7 @@ module.GetThumbnailKeyframeFromCurve = function(
 				pose.Parent = parent
 				subPosesContainer = pose
 			end
-		elseif FFlagFixKeyframeGeneration and hasSubFolders(folder) then
+		elseif hasSubFolders(folder) then
 			local transform = CFrame.new()
 
 			local pose = Instance.new("Pose")
@@ -1005,7 +1099,7 @@ end
 --[[
 	Experimentation suggests that just calling "humanoid:BuildRigFromAttachments()"
 	isn't good enough to get the avatar in neutral t-pose: we also have to go through
-	and clear out each Transform on each Motor6D.
+	and clear out each Transform on each Motor6D and AnimationConstraint.
 ]]
 module.SetPlayerCharacterNeutralPose = function(character: Model)
 	local humanoid = character:FindFirstChildOfClass("Humanoid")
@@ -1026,6 +1120,8 @@ module.SetPlayerCharacterNeutralPose = function(character: Model)
 		if instance:IsA("Motor6D") then
 			local motor6D = instance :: Motor6D
 			motor6D.Transform = CFrame.new()
+		elseif instance:IsA("AnimationConstraint") then
+			instance.Transform = CFrame.new()
 		end
 
 		local children = instance:GetChildren()
@@ -1035,6 +1131,25 @@ module.SetPlayerCharacterNeutralPose = function(character: Model)
 	end
 
 	recurResetJoint(character)
+end
+
+module.FindDefaultMoodAnimationId = function(character: Model): string?
+	local animateScript = character:FindFirstChild("Animate")
+	if not animateScript then
+		return nil
+	end
+
+	local moodStringValue = animateScript:FindFirstChild("mood")
+	if not moodStringValue then
+		return nil
+	end
+
+	local moodAnim = moodStringValue:FindFirstChildOfClass("Animation")
+	if not moodAnim or moodAnim.AnimationId == "" then
+		return nil
+	end
+
+	return moodAnim.AnimationId
 end
 
 local function loadKeyframesForPoseR15(
@@ -1082,7 +1197,7 @@ local function loadKeyframesForPoseR15(
 	--   the emote is a stronger/more explicit choice about mood.
 	-- * Otherwise we do care about the mood asset: load it.
 	local shouldApplyMood = false
-	if moodAssetId and moodAssetId ~= 0 then
+	if FFlagEmoteUtilityDefaultMoodFromCharacter or (moodAssetId and moodAssetId ~= 0) then
 		if animationAssetId == nil then
 			shouldApplyMood = true
 		else
@@ -1092,7 +1207,24 @@ local function loadKeyframesForPoseR15(
 		end
 	end
 	if shouldApplyMood then
-		moodKeyframe = getMoodThumbnailKeyframe(moodAssetId)
+		if FFlagEmoteUtilityDefaultMoodFromCharacter then
+			if moodAssetId and moodAssetId ~= 0 then
+				moodKeyframe = getMoodThumbnailKeyframe(moodAssetId)
+			end
+
+			-- Fallback to default R15 mood animation
+			if not moodKeyframe then
+				local defaultMoodAnimationId = module.FindDefaultMoodAnimationId(character)
+				if defaultMoodAnimationId then
+					local moodAnimationClip = getAnimationClipByAssetId(defaultMoodAnimationId)
+					if moodAnimationClip and moodAnimationClip:IsA("KeyframeSequence") then
+						moodKeyframe = module.GetThumbnailKeyframe(nil, moodAnimationClip, 0)
+					end
+				end
+			end
+		else
+			moodKeyframe = getMoodThumbnailKeyframe(moodAssetId)
+		end
 	end
 
 	keyframesForPose.poseKeyframe = poseKeyframe

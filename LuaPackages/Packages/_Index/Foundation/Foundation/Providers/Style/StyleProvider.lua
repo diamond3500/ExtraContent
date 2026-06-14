@@ -2,11 +2,10 @@ local Style = script.Parent
 local Foundation = script:FindFirstAncestor("Foundation")
 local Packages = Foundation.Parent
 local Dash = require(Packages.Dash)
-local Flags = require(Foundation.Utility.Flags)
 local React = require(Packages.React)
 
 local Device = require(Foundation.Enums.Device)
-local RulesContext = require(Style.RulesContext)
+local Flags = require(Foundation.Utility.Flags)
 local StyleSheet = require(Foundation.StyleSheet)
 local StyleSheetContext = require(Style.StyleSheetContext)
 local TagsContext = require(Style.TagsContext)
@@ -16,7 +15,6 @@ local Tokens = require(Style.Tokens)
 local TokensContext = require(Style.TokensContext)
 local VariantsContext = require(Style.VariantsContext)
 local getTextSizeOffset = require(Foundation.Utility.getTextSizeOffset)
-local useGeneratedRules = require(Foundation.Utility.useGeneratedRules)
 local usePreferences = require(Foundation.Providers.Preferences.usePreferences)
 local useTagsState = require(Style.useTagsState)
 local withDefaults = require(Foundation.Utility.withDefaults)
@@ -28,16 +26,26 @@ export type StyleProviderProps = {
 	device: Device?,
 	scale: number?,
 	-- **Deprecated**. Use useStyleSheet hook insteads to derive the Foundation styles.
+	-- Ignored when FoundationDisableStyleProviderDerives is enabled.
 	derives: { StyleSheet }?,
+	-- Partial token overrides to apply on top of the base tokens.
+	-- Allows remapping token values (e.g., Color.Surface.Surface_0 to a different color path).
+	-- With FoundationTokenOverrides: map values are source paths (strings) or literals; both are validated against the target token shape.
+	-- Only available when FoundationTokenOverrides flag is enabled.
+	tokenOverrides: Tokens.TokenOverrides?,
 	children: React.ReactNode,
 }
 
 type Theme = Theme.Theme
 type Device = Device.Device
 type Tokens = Tokens.Tokens
+type TokenOverrides = Tokens.TokenOverrides
+
+local useRegistryStyleSheet = if Flags.FoundationUseStyleSheetRegistry
+	then require(Style.useRegistryStyleSheet)
+	else nil :: never
 
 -- After join, there are no optional values
-
 local defaultStyle = {
 	theme = Theme.Dark :: Theme,
 	device = Device.Desktop :: Device,
@@ -66,17 +74,18 @@ local function StyleProvider(styleProviderProps: StyleProviderProps)
 	}, defaultStyle)
 
 	-- Hack to update the sibling node, without rerendering the parent
-	local setStyleSheetRef = React.useRef(nil :: ((StyleSheet?) -> ())?)
-	local tags, addTags = useTagsState()
+	local setStyleSheetRef = if not Flags.FoundationUseStyleSheetRegistry
+		then React.useRef(nil :: ((StyleSheet?) -> ())?)
+		else nil
+	local tags, addTags
+	if not Flags.FoundationUseStyleSheetRegistry then
+		tags, addTags = useTagsState()
+	end
 	local useVariants = VariantsContext.useVariantsState()
 
 	local tokens: Tokens = React.useMemo(function()
-		return getTokens(props.device, props.theme, props.scale)
-	end, { props.device, props.theme, props.scale } :: { unknown })
-
-	local rules = if not Flags.FoundationDisableStylingPolyfill
-		then useGeneratedRules(props.theme, props.device)
-		else nil
+		return getTokens(props.theme, props.device, props.scale, styleProviderProps.tokenOverrides)
+	end, { props.device, props.theme, props.scale, styleProviderProps.tokenOverrides } :: { unknown })
 
 	local preferences = usePreferences()
 	local preferredTextSize = preferences.preferredTextSize
@@ -85,49 +94,48 @@ local function StyleProvider(styleProviderProps: StyleProviderProps)
 		return getTextSizeOffset() or 0
 	end, { preferredTextSize })
 
+	local registryStyleSheet, addStyleTags
+	if Flags.FoundationUseStyleSheetRegistry then
+		registryStyleSheet, addStyleTags =
+			useRegistryStyleSheet(props.theme, props.device, props.scale, styleProviderProps.tokenOverrides)
+	end
+
 	return React.createElement(TokensContext.Provider, {
 		value = tokens,
 	}, {
 		TextSizeOffsetContext = React.createElement(TextSizeOffsetContext.Provider, {
 			value = textSizeOffset,
 		}, {
-			VariantsContext = React.createElement(
-				VariantsContext.Provider,
-				{
-					value = useVariants,
-				},
-				if not Flags.FoundationDisableStylingPolyfill
-					then {
-						RulesContext = React.createElement(RulesContext.Provider, {
-							value = {
-								rules = rules,
-								scale = props.scale,
-							},
-						}, styleProviderProps.children),
-						StyleLink = if Flags.FoundationWarnOnMultipleStyleLinks
-							then React.createElement("StyleLink")
-							else nil,
-					}
-					else {
-						TagsContext = React.createElement(
-							TagsContext.Provider,
-							{
-								value = addTags,
-							},
-							React.createElement(StyleSheetContextWrapper, {
-								setStyleSheetRef = setStyleSheetRef,
-							}, styleProviderProps.children)
-						),
-						StyleSheet = React.createElement(StyleSheet, {
-							theme = props.theme :: Theme,
-							device = props.device :: Device,
-							scale = props.scale,
-							tags = tags,
-							derives = styleProviderProps.derives,
+			VariantsContext = React.createElement(VariantsContext.Provider, {
+				value = useVariants,
+			}, {
+				TagsContext = React.createElement(
+					TagsContext.Provider,
+					{
+						value = if Flags.FoundationUseStyleSheetRegistry then addStyleTags else addTags,
+					},
+					if Flags.FoundationUseStyleSheetRegistry
+						then React.createElement(StyleSheetContext.Provider, {
+							value = registryStyleSheet,
+						}, styleProviderProps.children)
+						else React.createElement(StyleSheetContextWrapper, {
 							setStyleSheetRef = setStyleSheetRef,
-						}),
-					}
-			),
+						}, styleProviderProps.children)
+				),
+				StyleSheet = if Flags.FoundationUseStyleSheetRegistry
+					then React.createElement("StyleLink", {
+						StyleSheet = registryStyleSheet,
+					})
+					else React.createElement(StyleSheet, {
+						theme = props.theme :: Theme,
+						device = props.device :: Device,
+						scale = props.scale,
+						tags = tags,
+						derives = styleProviderProps.derives,
+						setStyleSheetRef = setStyleSheetRef,
+						tokenOverrides = styleProviderProps.tokenOverrides,
+					}),
+			}),
 		}),
 	})
 end

@@ -4,13 +4,12 @@
 	2018 Camera Update - AllYourBlox
 --]]
 
-local CommonUtils = script.Parent.Parent:WaitForChild("CommonUtils")
-local FlagUtil = require(CommonUtils:WaitForChild("FlagUtil"))
+local CommonUtils = require(script.Parent.Parent:WaitForChild("CommonUtils"))
+local FlagUtil = CommonUtils.get("FlagUtil")
 local FFlagUserFixOrbitalCameraAzimuth = FlagUtil.getUserFlag("UserFixOrbitalCameraAzimuth")
 
 -- Local private variables and constants
 local UNIT_Z = Vector3.new(0,0,1)
-local X1_Y0_Z1 = Vector3.new(1,0,1)	--Note: not a unit vector, used for projecting onto XZ plane
 local ZERO_VECTOR3 = Vector3.new(0,0,0)
 local TAU = 2 * math.pi
 
@@ -18,18 +17,6 @@ local TAU = 2 * math.pi
 -- to the values the camera system equations can correctly handle
 local MIN_ALLOWED_ELEVATION_DEG = -80
 local MAX_ALLOWED_ELEVATION_DEG = 80
-
-local externalProperties = {}
-externalProperties["InitialDistance"]  = 25
-externalProperties["MinDistance"]      = 10
-externalProperties["MaxDistance"]      = 100
-externalProperties["InitialElevation"] = 35
-externalProperties["MinElevation"]     = 35
-externalProperties["MaxElevation"]     = 35
-externalProperties["ReferenceAzimuth"] = -45	-- Angle around the Y axis where the camera starts. -45 offsets the camera in the -X and +Z directions equally
-externalProperties["CWAzimuthTravel"]  = 90	-- How many degrees the camera is allowed to rotate from the reference position, CW as seen from above
-externalProperties["CCWAzimuthTravel"] = 90	-- How many degrees the camera is allowed to rotate from the reference position, CCW as seen from above
-externalProperties["UseAzimuthLimits"] = false -- Full rotation around Y axis available by default
 
 local Util = require(script.Parent:WaitForChild("CameraUtils"))
 local CameraInput = require(script.Parent:WaitForChild("CameraInput"))
@@ -171,23 +158,6 @@ end
 
 function OrbitalCamera:GetModuleName()
 	return "OrbitalCamera"
-end
-
-function OrbitalCamera:SetInitialOrientation(humanoid: Humanoid)
-	if not humanoid or not humanoid.RootPart then
-		warn("OrbitalCamera could not set initial orientation due to missing humanoid")
-		return
-	end
-	assert(humanoid.RootPart, "")
-	local newDesiredLook = (humanoid.RootPart.CFrame.LookVector - Vector3.new(0,0.23,0)).Unit
-	local horizontalShift = Util.GetAngleBetweenXZVectors(newDesiredLook, self:GetCameraLookVector())
-	local vertShift = math.asin(self:GetCameraLookVector().Y) - math.asin(newDesiredLook.Y)
-	if not Util.IsFinite(horizontalShift) then
-		horizontalShift = 0
-	end
-	if not Util.IsFinite(vertShift) then
-		vertShift = 0
-	end
 end
 
 --[[ Functions of BaseCamera that are overridden by OrbitalCamera ]]--

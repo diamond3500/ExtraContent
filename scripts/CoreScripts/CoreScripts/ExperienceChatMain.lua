@@ -37,54 +37,15 @@ local RobloxTranslator = require(CorePackages.Workspace.Packages.RobloxTranslato
 local GameTranslator = require(RobloxGui.Modules.GameTranslator)
 local ApolloClient = require(RobloxGui.Modules.ApolloClient)
 local ExperienceChat = require(CorePackages.Workspace.Packages.ExpChat)
-local FFlagEnableSetCoreGuiEnabledExpChat = game:DefineFastFlag("FFlagEnableSetCoreGuiEnabledExpChat", false)
-local FFlagAvatarChatCoreScriptSupport =
-	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagAvatarChatCoreScriptSupport()
 local getFFlagAddApolloClientToExperienceChat = require(RobloxGui.Modules.Flags.getFFlagAddApolloClientToExperienceChat)
-local getFFlagDoNotPromptCameraPermissionsOnMount =
-	require(RobloxGui.Modules.Flags.getFFlagDoNotPromptCameraPermissionsOnMount)
-local getFFlagEnableAlwaysAvailableCamera = require(RobloxGui.Modules.Flags.getFFlagEnableAlwaysAvailableCamera)
-local getFFlagRenderVoiceBubbleAfterAsyncInit = require(RobloxGui.Modules.Flags.getFFlagRenderVoiceBubbleAfterAsyncInit)
-local GetFFlagShowLikelySpeakingBubbles =
-	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagShowLikelySpeakingBubbles
-local ChromeEnabled = require(RobloxGui.Modules.Chrome.Enabled)()
+local ChromeEnabled = require(CorePackages.Workspace.Packages.Chrome).Enabled()
 local IsSpatialRobloxGuiEnabled = require(RobloxGui.Modules.VR.IsSpatialRobloxGuiEnabled)
 local getFFlagExpChatAlwaysRunTCS = require(CorePackages.Workspace.Packages.SharedFlags).getFFlagExpChatAlwaysRunTCS
 
 local getIconVoiceIndicator = require(RobloxGui.Modules.VoiceChat.Components.getIconVoiceIndicator)
 local onClickedVoiceIndicator = require(RobloxGui.Modules.VoiceChat.Components.onClickedVoiceIndicator)
 
-local onClickedCameraIndicator
 local getPermissions
-local selfViewListenerChanged
-local displayCameraDeniedToast
-local isCamEnabledForUserAndPlace
-local isCameraOnlyUser
-local isVoiceServiceInitialized
-local onClickedLikelySpeakingBubble
-
-if FFlagAvatarChatCoreScriptSupport then
-	onClickedCameraIndicator = require(RobloxGui.Modules.VoiceChat.Components.onClickedCameraIndicator)
-	getPermissions = require(RobloxGui.Modules.VoiceChat.Components.getPermissions)
-	selfViewListenerChanged = require(RobloxGui.Modules.VoiceChat.Components.selfViewListenerChanged)
-
-	if getFFlagDoNotPromptCameraPermissionsOnMount() then
-		displayCameraDeniedToast = require(RobloxGui.Modules.VoiceChat.Helpers.displayCameraDeniedToast)
-		isCamEnabledForUserAndPlace = require(RobloxGui.Modules.Settings.isCamEnabledForUserAndPlace)
-	end
-
-	if getFFlagEnableAlwaysAvailableCamera() then
-		isCameraOnlyUser = require(RobloxGui.Modules.Settings.isCameraOnlyUser)
-	end
-
-	if getFFlagRenderVoiceBubbleAfterAsyncInit() then
-		isVoiceServiceInitialized = require(RobloxGui.Modules.VoiceChat.Components.isVoiceServiceInitialized)
-	end
-end
-
-if GetFFlagShowLikelySpeakingBubbles() then
-	onClickedLikelySpeakingBubble = require(RobloxGui.Modules.VoiceChat.Components.onClickedLikelySpeakingBubble)
-end
 
 if ChromeEnabled then
 	getPermissions = require(RobloxGui.Modules.VoiceChat.Components.getPermissions)
@@ -133,13 +94,11 @@ local function findTextChannel(name: string): TextChannel
 	return textChannel
 end
 
-if FFlagEnableSetCoreGuiEnabledExpChat then
-	StarterGui.CoreGuiChangedSignal:Connect(function(coreGuiType, enabled)
-		if coreGuiType == Enum.CoreGuiType.All or coreGuiType == Enum.CoreGuiType.Chat then
-			ExperienceChat.Events.SetCoreGuiEnabledChanged(enabled)
-		end
-	end)
-end
+StarterGui.CoreGuiChangedSignal:Connect(function(coreGuiType, enabled)
+	if coreGuiType == Enum.CoreGuiType.All or coreGuiType == Enum.CoreGuiType.Chat then
+		ExperienceChat.Events.SetCoreGuiEnabledChanged(enabled)
+	end
+end)
 
 local createdDefaultChannels
 local validateLegacyBubbleChatSettings = require(RobloxGui.Modules.InGameChat.BubbleChat.Types).IChatSettings
@@ -150,23 +109,21 @@ else
 		and TextChatService.CreateDefaultTextChannels
 end
 
+if game:DefineFastFlag("DebugExpChatTextChannelWindow", false) then
+	local TextChannelWindow = require(CorePackages.Workspace.Packages.TextChannelWindow)
+	TextChannelWindow.start()
+end
+
 ExperienceChat.mountClientApp({
 	apolloClient = if getFFlagAddApolloClientToExperienceChat() then ApolloClient else nil,
 	getIconVoiceIndicator = if getIconVoiceIndicator then getIconVoiceIndicator else nil,
 	onClickedVoiceIndicator = if onClickedVoiceIndicator then onClickedVoiceIndicator else nil,
-	onClickedCameraIndicator = if onClickedCameraIndicator then onClickedCameraIndicator else nil,
-	displayCameraDeniedToast = if displayCameraDeniedToast then displayCameraDeniedToast else nil,
-	isCamEnabledForUserAndPlace = if isCamEnabledForUserAndPlace then isCamEnabledForUserAndPlace else nil,
-	isCameraOnlyUser = if isCameraOnlyUser then isCameraOnlyUser else nil,
 	getPermissions = if getPermissions then getPermissions else nil,
-	selfViewListenerChanged = if selfViewListenerChanged then selfViewListenerChanged else nil,
 	defaultTargetTextChannel = if createdDefaultChannels then findTextChannel("RBXGeneral") else nil,
 	defaultSystemTextChannel = if createdDefaultChannels then findTextChannel("RBXSystem") else nil,
 	validateLegacyBubbleChatSettings = if validateLegacyBubbleChatSettings
 		then validateLegacyBubbleChatSettings
 		else nil,
-	isVoiceServiceInitialized = if isVoiceServiceInitialized then isVoiceServiceInitialized else nil,
-	onClickedLikelySpeakingBubble = if onClickedLikelySpeakingBubble then onClickedLikelySpeakingBubble else nil,
 	translator = RobloxTranslator :: any,
 	gameTranslator = GameTranslator :: any,
 	parent = screenGui,

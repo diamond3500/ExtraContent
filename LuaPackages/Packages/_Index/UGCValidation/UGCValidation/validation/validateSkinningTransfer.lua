@@ -11,39 +11,22 @@ local Constants = require(root.Constants)
 local Types = require(root.util.Types)
 local pcallDeferred = require(root.util.pcallDeferred)
 local getEditableMeshFromContext = require(root.util.getEditableMeshFromContext)
-local getMeshIdForSkinningValidation = require(root.util.getMeshIdForSkinningValidation)
-
-local getEngineFeatureEngineEditableMeshAvatarPublish =
-	require(root.flags.getEngineFeatureEngineEditableMeshAvatarPublish)
 
 local getFFlagUGCValidationEyebrowEyelashSupport = require(root.flags.getFFlagUGCValidationEyebrowEyelashSupport)
-
-local FFlagEyebrowEyelashRequiresSpecialJoints = game:DefineFastFlag("EyebrowEyelashRequiresSpecialJoints", false)
 
 local function validateSkinningTransfer(
 	meshPart: MeshPart,
 	validationContext: Types.ValidationContext
 ): (boolean, { string }?)
-	local allowEditableInstances = validationContext.allowEditableInstances
 	local assetTypeEnum = validationContext.assetTypeEnum :: Enum.AssetType
 
-	local success, jointsInfo
-	if getEngineFeatureEngineEditableMeshAvatarPublish() then
-		success, jointsInfo = pcallDeferred(function()
-			local getEditableMeshSuccess, editableMesh =
-				getEditableMeshFromContext(meshPart, "MeshId", validationContext)
-			if not getEditableMeshSuccess then
-				error("Failed to retrieve MeshContent")
-			end
-			return UGCValidationService:GetEditableMeshSkinningTransferJointsInfo(editableMesh :: EditableMesh)
-		end, validationContext)
-	else
-		success, jointsInfo = pcallDeferred(function()
-			return UGCValidationService:GetSkinningTransferJointsInfo(
-				getMeshIdForSkinningValidation(meshPart, allowEditableInstances)
-			)
-		end, validationContext)
-	end
+	local success, jointsInfo = pcallDeferred(function()
+		local getEditableMeshSuccess, editableMesh = getEditableMeshFromContext(meshPart, "MeshId", validationContext)
+		if not getEditableMeshSuccess then
+			error("Failed to retrieve MeshContent")
+		end
+		return UGCValidationService:GetEditableMeshSkinningTransferJointsInfo(editableMesh :: EditableMesh)
+	end, validationContext)
 
 	if not success then
 		Analytics.reportFailure(Analytics.ErrorType.validateSkinningTransfer_FailedToExecute, nil, validationContext)
@@ -100,22 +83,20 @@ local function validateSkinningTransfer(
 	end
 
 	if getFFlagUGCValidationEyebrowEyelashSupport() then
-		if FFlagEyebrowEyelashRequiresSpecialJoints then
-			if not hasSpecialJoints and Constants.SkinningTransferRequiredTypes[assetTypeEnum] then
-				Analytics.reportFailure(
-					Analytics.ErrorType.validateSkinningTransfer_RequiredAssetTypes,
-					nil,
-					validationContext
-				)
-				return false,
-					{
-						string.format(
-							"No Skinning Transfer joints found in '%s'. Accessories of type %s are required to use Skinning Transfer with RBX_Leader and RBX_Follower joints.",
-							meshPart:GetFullName(),
-							assetTypeEnum.Name
-						),
-					}
-			end
+		if not hasSpecialJoints and Constants.SkinningTransferRequiredTypes[assetTypeEnum] then
+			Analytics.reportFailure(
+				Analytics.ErrorType.validateSkinningTransfer_RequiredAssetTypes,
+				nil,
+				validationContext
+			)
+			return false,
+				{
+					string.format(
+						"No Skinning Transfer joints found in '%s'. Accessories of type %s are required to use Skinning Transfer with RBX_Leader and RBX_Follower joints.",
+						meshPart:GetFullName(),
+						assetTypeEnum.Name
+					),
+				}
 		end
 	end
 

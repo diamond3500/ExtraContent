@@ -44,6 +44,7 @@ local DIALOG_SIZES: { [DialogSize]: number } = {
 
 local function variantsFactory(tokens: Tokens)
 	local common = {
+		-- TODO: remove backdrop when FoundationDialogAnimation is cleaned up
 		backdrop = {
 			backgroundStyle = tokens.Color.Common.Backdrop,
 		},
@@ -52,33 +53,33 @@ local function variantsFactory(tokens: Tokens)
 			imageStyle = tokens.Color.Extended.Black.Black_15,
 		},
 		container = {
-			tag = "size-full-full col align-x-center align-y-center",
+			tag = "col align-x-center align-y-center size-full-full",
 		},
 		inner = {
-			tag = "size-full-0 auto-y shrink-1 bg-surface-100 clip",
+			tag = "shrink-1 size-full-0 auto-y clip bg-surface-100",
 		},
 		body = {
-			tag = `size-full auto-y col padding-bottom-xlarge {if Flags.FoundationDialogBodyUpdate
-				then "gap-xlarge"
-				else ""}`,
+			tag = "col size-full auto-y padding-bottom-xlarge",
 		},
 		heroMediaWrapper = {
-			tag = "auto-y size-full-full position-top-center shrink",
+			tag = "shrink position-top-center size-full-full auto-y",
 		},
 		title = {
 			tag = "size-full-0 auto-y",
 		},
 		titleText = {
-			tag = "size-full-0 auto-y content-emphasized text-wrap text-align-x-left",
+			tag = `size-full-0 auto-y text-wrap text-align-x-left {if Flags.FoundationDialogTitleEmphasisFix
+				then "content-emphasis"
+				else "content-emphasized"}`,
 		},
 		content = {
-			tag = "auto-y size-full fill",
+			tag = "fill size-full auto-y",
 		},
 		contentText = {
-			tag = "text-wrap text-align-x-left text-align-y-top auto-y size-full-0",
+			tag = "size-full-0 auto-y text-wrap text-align-x-left text-align-y-top",
 		},
 		actionsLabel = {
-			tag = "text-align-x-left text-wrap text-align-y-top auto-y size-full-0 text-body-small",
+			tag = "size-full-0 auto-y text-body-small text-wrap text-align-x-left text-align-y-top",
 		},
 	}
 
@@ -92,7 +93,7 @@ local function variantsFactory(tokens: Tokens)
 				tag = "radius-medium",
 			},
 			body = {
-				tag = `padding-x-large {if Flags.FoundationDialogBodyUpdate then "" else "gap-large"}`,
+				tag = "gap-large padding-x-large",
 			},
 			closeAffordance = {
 				offset = tokens.Size.Size_300,
@@ -120,7 +121,7 @@ local function variantsFactory(tokens: Tokens)
 				tag = "radius-large",
 			},
 			body = {
-				tag = `padding-x-xlarge {if Flags.FoundationDialogBodyUpdate then "" else "gap-xlarge"}`,
+				tag = "gap-xlarge padding-x-xlarge",
 			},
 			closeAffordance = {
 				offset = tokens.Size.Size_400,
@@ -148,7 +149,7 @@ local function variantsFactory(tokens: Tokens)
 				tag = "radius-large",
 			},
 			body = {
-				tag = `padding-x-xlarge {if Flags.FoundationDialogBodyUpdate then "" else "gap-xlarge"}`,
+				tag = "gap-xlarge padding-x-xlarge",
 			},
 			closeAffordance = {
 				offset = tokens.Size.Size_400,

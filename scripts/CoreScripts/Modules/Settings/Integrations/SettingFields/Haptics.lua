@@ -10,7 +10,7 @@ local UserGameSettings = UserSettings.GameSettings
 -- Modules
 local SettingsServiceLib = require(CorePackages.Workspace.Packages.SettingsService)
 local ValueChangedSignal = SettingsServiceLib.ValueChangedSignal
-local FieldType = SettingsServiceLib.FieldType
+local SettingEnum = SettingsServiceLib.SettingEnum
 local Constants = require(Settings.Integrations.Constants)
 
 -- Constants
@@ -45,11 +45,11 @@ end
 
 local HapticsConfig = {
 	id = "haptics",
-	field_type = FieldType.Toggle,
+	field_type = SettingEnum.Toggle,
 	label = "CoreScripts.InGameMenu.GameSettings.Haptics",
 	layoutOrder = SettingsLayoutOrder.HapticsFrame,
 	onChanged = HapticValue(),
 	alreadyLocalized = false,
 }
 
-return HapticsConfig :: SettingsServiceLib.ToggleRegisterConfig
+return HapticsConfig

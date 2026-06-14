@@ -22,7 +22,7 @@ local function ConfigurableStory(props)
 end
 
 local function AnimatedProgressStory()
-	local progress, setProgress = React.useState(0)
+	local progressBinding, updateProgress = React.useBinding(0)
 	local isAnimating, setIsAnimating = React.useState(false)
 
 	React.useEffect(function()
@@ -34,7 +34,7 @@ local function AnimatedProgressStory()
 			connection = game:GetService("RunService").Heartbeat:Connect(function()
 				local elapsed = tick() - startTime
 				local newProgress = math.min(elapsed / durationSeconds * 100, 100)
-				setProgress(newProgress)
+				updateProgress(newProgress)
 
 				if newProgress >= 100 then
 					connection:Disconnect()
@@ -51,29 +51,31 @@ local function AnimatedProgressStory()
 	end, { isAnimating })
 
 	local function startAnimation()
-		setProgress(0)
+		updateProgress(0)
 		setIsAnimating(true)
 	end
 
 	return React.createElement(View, {
-		tag = "col gap-medium auto-y size-full-0",
+		tag = "col gap-medium size-full-0 auto-y",
 	}, {
 		Title = React.createElement(Text, {
-			Text = `Progress: {math.floor(progress)}%`,
+			Text = progressBinding:map(function(progressValue)
+				return `Progress: {math.floor(progressValue)}%`
+			end),
 			tag = "size-0-0 auto-xy text-title-small content-emphasis",
 			LayoutOrder = 1,
 		}),
 
 		CircleProgress = React.createElement(Progress, {
 			shape = ProgressShape.Circle,
-			value = progress,
+			value = progressBinding,
 			size = ProgressSize.Large,
 			LayoutOrder = 2,
 		}),
 
 		BarProgress = React.createElement(Progress, {
 			shape = ProgressShape.Bar,
-			value = progress,
+			value = progressBinding,
 			size = ProgressSize.Medium,
 			LayoutOrder = 3,
 		}),
@@ -93,15 +95,15 @@ local function SizeVariationsStory(props)
 	return React.createElement(
 		View,
 		{
-			tag = "col gap-large auto-y size-full-0",
+			tag = "col gap-large size-full-0 auto-y",
 		},
 		Dash.map(ProgressSize, function(size)
 			return React.createElement(View, {
-				tag = "row gap-medium align-y-center size-full-0 auto-y",
+				tag = "row align-y-center gap-medium size-full-0 auto-y",
 			}, {
 				Label = React.createElement(Text, {
 					Text = `{size}:`,
-					tag = "size-1500-0 text-align-x-right auto-y text-body-small content-default",
+					tag = "size-1500-0 auto-y text-body-small text-align-x-right content-default",
 					LayoutOrder = 1,
 				}),
 
@@ -128,7 +130,7 @@ end
 
 local function IndeterminateStory()
 	return React.createElement(View, {
-		tag = "col gap-medium auto-y size-full-0",
+		tag = "col gap-medium size-full-0 auto-y",
 	}, {
 		CircleIndeterminate = React.createElement(Progress, {
 			shape = ProgressShape.Circle,

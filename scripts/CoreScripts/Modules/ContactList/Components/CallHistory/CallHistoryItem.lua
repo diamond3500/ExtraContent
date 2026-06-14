@@ -15,7 +15,6 @@ local ContactList = RobloxGui.Modules.ContactList
 local dependencies = require(ContactList.dependencies)
 local useDispatch = dependencies.Hooks.useDispatch
 local UIBlox = dependencies.UIBlox
-local dependencyArray = dependencies.Hooks.dependencyArray
 local getStandardSizeAvatarHeadShotRbxthumb = dependencies.getStandardSizeAvatarHeadShotRbxthumb
 
 local useLocalization = dependencies.Hooks.useLocalization
@@ -219,7 +218,7 @@ local function CallHistoryItem(props: Props)
 		})
 
 		dispatch(OpenOrUpdateCFM(otherParticipant))
-	end, dependencyArray(otherParticipantId, props.layoutOrder))
+	end, { otherParticipantId :: any, props.layoutOrder })
 
 	local image = getStandardSizeAvatarHeadShotRbxthumb(tostring(otherParticipantId))
 

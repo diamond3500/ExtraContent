@@ -14,17 +14,22 @@ local GetFFlagSimpleChatUnreadMessageCount = SharedFlags.GetFFlagSimpleChatUnrea
 local FFlagAddUILessMode = SharedFlags.FFlagAddUILessMode
 local FIntAddUILessModeVariant = SharedFlags.FIntAddUILessModeVariant
 local FFlagEnableInExperienceAvatarSwitcher = SharedFlags.FFlagEnableInExperienceAvatarSwitcher
+local FFlagEnableSideSheet = SharedFlags.FFlagEnableSideSheet
+local FFlagAddIGMToSideSheet = SharedFlags.FFlagAddIGMToSideSheet
+local FFlagSideSheetSwapGalleryOrder = SharedFlags.FFlagSideSheetSwapGalleryOrder
+local FFlagEnableInExperienceShop = SharedFlags.FFlagEnableInExperienceShop
 
 local ChromeFlags = require(script.Parent.Parent.Parent.Flags)
 local FFlagUnibarMenuOpenSubmenu = ChromeFlags.FFlagUnibarMenuOpenSubmenu
+local FFlagReverseUnibar = require(script.Parent.Parent.Parent.Flags.FFlagReverseUnibar)
 
 local ChromeSharedFlags = require(Root.Flags)
 local FFlagTokenizeUnibarConstantsWithStyleProvider = ChromeSharedFlags.FFlagTokenizeUnibarConstantsWithStyleProvider
-
+local FFlagFixSpatialSubMenuSizing = ChromeSharedFlags.FFlagFixSpatialSubMenuSizing
 local UIBlox = require(CorePackages.Packages.UIBlox)
 local useStyle = UIBlox.Core.Style.useStyle
 local ChromeService = require(Root.Service)
-local UnibarStyle = require(Root.Unibar.UnibarStyle)
+local UnibarStyle = require(CorePackages.Workspace.Packages.Chrome).UnibarStyle
 
 local _integrations = if GetFFlagChromeCentralizedConfiguration() then nil else require(Root.Parent.Integrations)
 local SubMenu = require(Root.Unibar.SubMenu)
@@ -45,6 +50,8 @@ local FFlagReduceTopBarInsetsWhileHidden = SharedFlags.FFlagReduceTopBarInsetsWh
 local CoreGuiCommonStores = require(CorePackages.Workspace.Packages.CoreGuiCommon).Stores
 local Signals = require(CorePackages.Packages.Signals)
 local createEffect = Signals.createEffect
+
+local SideSheet = require(CorePackages.Workspace.Packages.InExperienceSideSheet)
 
 -- APPEXP-2053 TODO: Remove all use of RobloxGui from ChromeShared
 local PartyConstants = require(Root.Parent.Integrations.Party.Constants)
@@ -78,8 +85,11 @@ if not GetFFlagChromeCentralizedConfiguration() then
 		-- ie. Voice Mute integration will only be shown is voice is enabled/active
 		local nineDot = { "leaderboard", "emotes", "backpack" }
 
-		-- append to end of nine-dot
-		table.insert(nineDot, "respawn")
+		if not FFlagEnableSideSheet then
+			-- append to end of nine-dot
+			table.insert(nineDot, "respawn")
+		end
+
 		-- prepend trust_and_safety to nine-dot menu
 		table.insert(nineDot, 1, "trust_and_safety")
 
@@ -87,21 +97,40 @@ if not GetFFlagChromeCentralizedConfiguration() then
 			table.insert(nineDot, 1, "connect_dropdown")
 		end
 
-		local v4Ordering = { "toggle_mic_mute", "chat", "nine_dot" }
-		table.insert(v4Ordering, 2, "join_voice")
+		local v4Ordering = { "nine_dot", "chat", "toggle_mic_mute" }
+		if FFlagReverseUnibar then
+			table.insert(v4Ordering, 3, "join_voice")
 
-		if GetFFlagDebugEnableUnibarDummyIntegrations() then
-			table.insert(v4Ordering, 1, "dummy_window")
-			table.insert(v4Ordering, 1, "dummy_window_2")
-		end
+			if GetFFlagDebugEnableUnibarDummyIntegrations() then
+				table.insert(v4Ordering, "dummy_window")
+				table.insert(v4Ordering, "dummy_window_2")
+			end
 
-		if isConnectUnibarEnabled() then
-			table.insert(v4Ordering, 1, "connect_unibar")
-		end
+			if isConnectUnibarEnabled() then
+				table.insert(v4Ordering, "connect_unibar")
+			end
 
-		local toggleMicIndex = table.find(v4Ordering, "toggle_mic_mute")
-		if toggleMicIndex then
-			table.insert(v4Ordering, toggleMicIndex + 1, PartyConstants.TOGGLE_MIC_INTEGRATION_ID)
+			local toggleMicIndex = table.find(v4Ordering, "toggle_mic_mute")
+			if toggleMicIndex then
+				table.insert(v4Ordering, toggleMicIndex, PartyConstants.TOGGLE_MIC_INTEGRATION_ID)
+			end
+		else
+			v4Ordering = { "toggle_mic_mute", "chat", "nine_dot" }
+			table.insert(v4Ordering, 2, "join_voice")
+
+			if GetFFlagDebugEnableUnibarDummyIntegrations() then
+				table.insert(v4Ordering, 1, "dummy_window")
+				table.insert(v4Ordering, 1, "dummy_window_2")
+			end
+
+			if isConnectUnibarEnabled() then
+				table.insert(v4Ordering, 1, "connect_unibar")
+			end
+
+			local toggleMicIndex = table.find(v4Ordering, "toggle_mic_mute")
+			if toggleMicIndex then
+				table.insert(v4Ordering, toggleMicIndex + 1, PartyConstants.TOGGLE_MIC_INTEGRATION_ID)
+			end
 		end
 
 		if isInExperienceUIVREnabled and isSpatial() then
@@ -130,6 +159,34 @@ if not GetFFlagChromeCentralizedConfiguration() then
 		local isNotVROrConsole = not isSpatial() and not GuiService:IsTenFootInterface()
 		if isNotVROrConsole then
 			table.insert(nineDot, 4, "music_entrypoint")
+		end
+
+		if FFlagEnableSideSheet then
+			if FFlagAddIGMToSideSheet then
+				table.insert(nineDot, "people")
+				table.insert(nineDot, "settings")
+
+				if FFlagSideSheetSwapGalleryOrder then
+					table.insert(nineDot, "gallery")
+
+					table.remove(nineDot, table.find(nineDot, "trust_and_safety"))
+					table.insert(nineDot, "trust_and_safety")
+				else
+					table.remove(nineDot, table.find(nineDot, "trust_and_safety"))
+					table.insert(nineDot, "trust_and_safety")
+
+					table.insert(nineDot, "gallery")
+				end
+
+				table.insert(nineDot, "help")
+			end
+			table.insert(nineDot, SideSheet.Enums.ActionBinding.Leave)
+			table.insert(nineDot, SideSheet.Enums.ActionBinding.Respawn)
+		end
+
+		if FFlagEnableInExperienceShop then
+			-- Pin Shop to the 2nd position in the nine-dot menu.
+			table.insert(nineDot, 2, Constants.IN_EXPERIENCE_SHOP_ID)
 		end
 
 		ChromeService:configureSubMenu("nine_dot", nineDot)
@@ -785,8 +842,11 @@ local function SubMenuWrapper(props)
 		local currentSubMenu = useObservableValue(ChromeService:currentSubMenu())
 		SubMenuVisibilitySignal:set(currentSubMenu ~= nil)
 	end
-	local renderFunc = React.useCallback(function()
-		return React.createElement(SubMenu, { subMenuHostRef = props.subMenuHostRef }) :: any
+	local renderFunc = React.useCallback(function(panelSize: Vector2)
+		return React.createElement(SubMenu, {
+			subMenuHostRef = props.subMenuHostRef,
+			panelSize = if FFlagFixSpatialSubMenuSizing then panelSize else nil,
+		}) :: any
 	end, {
 		props.subMenuHostRef,
 	})

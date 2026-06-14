@@ -9,13 +9,11 @@ local Foundation = require(CorePackages.Packages.Foundation)
 local VoiceChatServiceManager = require(RobloxGui.Modules.VoiceChat.VoiceChatServiceManager).default
 local VoiceConstants = require(RobloxGui.Modules.VoiceChat.Constants)
 local CommonIcon = require(Chrome.Integrations.CommonIcon)
-local FFlagEnableUnibarTooltipQueue = require(Chrome.Flags.FFlagEnableUnibarTooltipQueue)()
 local CommonFtuxTooltip = require(Chrome.Integrations.CommonFtuxTooltip)
 local Constants = require(Chrome.ChromeShared.Unibar.Constants)
 local VOICE_JOIN_PROGRESS = VoiceConstants.VOICE_JOIN_PROGRESS
 local VoiceChatPromptType = require(RobloxGui.Modules.VoiceChatPrompt.PromptType)
 local observeCurrentContextId = require(CorePackages.Workspace.Packages.CrossExperience).Utils.observeCurrentContextId
-local VoiceChatConstants = require(CorePackages.Workspace.Packages.VoiceChatCore).Constants
 local GetIcon = require(CorePackages.Workspace.Packages.VoiceChat).Utils.GetIcon
 local CEV_CONTEXT_ID =
 	require(CorePackages.Workspace.Packages.CrossExperience).Constants.AUDIO_FOCUS_MANAGEMENT.CEV.CONTEXT_ID
@@ -26,11 +24,11 @@ local GetFFlagIntegratePhoneUpsellJoinVoice =
 local GetFFlagFixSeamlessVoiceIntegrationWithPrivateVoice =
 	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagFixSeamlessVoiceIntegrationWithPrivateVoice
 local GetFFlagEnableVoiceUxUpdates = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagEnableVoiceUxUpdates
+local GetFFlagVoiceChatLogConnectionSource =
+	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagVoiceChatLogConnectionSource
 
 local ChromeSharedFlags = require(Chrome.ChromeShared.Flags)
 local FFlagTokenizeUnibarConstantsWithStyleProvider = ChromeSharedFlags.FFlagTokenizeUnibarConstantsWithStyleProvider
-
-local FFlagJoinVoiceHideWhenPartyVoiceFocused = game:DefineFastFlag("JoinVoiceHideWhenPartyVoiceFocused", false)
 local FFlagCheckShouldShowJoinVoiceInEvent = game:DefineFastFlag("CheckShouldShowJoinVoiceInEvent", false)
 
 local FFlagReplaceJoinVoiceIconToMuted = game:DefineFastFlag("ReplaceJoinVoiceIconToMuted", false)
@@ -40,19 +38,18 @@ local FIntUnibarJoinVoiceTooltipPriority = game:DefineFastInt("UnibarJoinVoiceTo
 local FFlagEnableChromeJoinVoiceTooltip = game:DefineFastFlag("EnableChromeJoinVoiceTooltip", false)
 
 local ChromeService = require(Chrome.Service)
-local UnibarStyle = require(Chrome.ChromeShared.Unibar.UnibarStyle)
+local UnibarStyle = require(CorePackages.Workspace.Packages.Chrome).UnibarStyle
+
+local ChromePackage = require(CorePackages.Workspace.Packages.Chrome)
+local SideSheetPlacement = ChromePackage.Enums.SideSheetPlacement
 
 local isPrivateVoiceFocused = false
 local wasJoinVoiceSeenInThisPlaySession = false
 local lastKnownIntegrationAvailability: number = ChromeService.AvailabilitySignal.Unavailable
 
 function getShouldShowJoinVoiceTooltip(): boolean
-	local likelySpeakingBubblesRemoved = VoiceChatServiceManager:HasSeamlessVoiceFeature(
-		VoiceChatConstants.SeamlessVoiceFeatures.LikelySpeakingBubblesRemoved
-	)
 	local ageVerificationOverlay = VoiceChatServiceManager:FetchAgeVerificationOverlay()
 	local shouldShow = not wasJoinVoiceSeenInThisPlaySession
-		and likelySpeakingBubblesRemoved
 		and ageVerificationOverlay
 		and ageVerificationOverlay.showJoinVoiceUpsellTooltip
 	wasJoinVoiceSeenInThisPlaySession = true
@@ -64,10 +61,14 @@ joinVoice = ChromeService:register({
 	initialAvailability = ChromeService.AvailabilitySignal.Unavailable,
 	id = "join_voice",
 	label = "CoreScripts.TopBar.JoinVoice",
+	sideSheetPlacement = SideSheetPlacement.Unibar,
 	activated = function()
 		local SettingsHub = if GetFFlagIntegratePhoneUpsellJoinVoice()
 			then require(RobloxGui.Modules.Settings.SettingsHub)
 			else nil
+		if GetFFlagVoiceChatLogConnectionSource() then
+			VoiceChatServiceManager.pendingConnectionSource = VoiceConstants.VOICE_CONNECTION_SOURCE.IN_EXPERIENCE
+		end
 		VoiceChatServiceManager:JoinVoice(SettingsHub)
 	end,
 	components = {
@@ -91,8 +92,8 @@ joinVoice = ChromeService:register({
 				}, {
 					Icon = CommonIcon(iconName),
 					Tooltip = CommonFtuxTooltip({
-						id = if FFlagEnableUnibarTooltipQueue then "JOIN_VOICE" else nil,
-						priority = if FFlagEnableUnibarTooltipQueue then FIntUnibarJoinVoiceTooltipPriority else nil,
+						id = "JOIN_VOICE",
+						priority = FIntUnibarJoinVoiceTooltipPriority,
 						isIconVisible = shouldShowTooltip,
 						dismissOnOutsideInput = true,
 						headerKey = "CoreScripts.FTUX.Heading.JoinVoice",
@@ -134,17 +135,9 @@ local function HideOrShowJoinVoiceButton(state)
 		state == VOICE_JOIN_PROGRESS.Suspended
 		and (not FFlagCheckShouldShowJoinVoiceInEvent or VoiceChatServiceManager:ShouldShowJoinVoice())
 	then
-		if FFlagJoinVoiceHideWhenPartyVoiceFocused then
-			setAvailability(ChromeService.AvailabilitySignal.Available)
-		else
-			joinVoice.availability:available()
-		end
+		setAvailability(ChromeService.AvailabilitySignal.Available)
 	elseif state == VOICE_JOIN_PROGRESS.Joined then
-		if FFlagJoinVoiceHideWhenPartyVoiceFocused then
-			setAvailability(ChromeService.AvailabilitySignal.Unavailable)
-		else
-			joinVoice.availability:unavailable()
-		end
+		setAvailability(ChromeService.AvailabilitySignal.Unavailable)
 		-- When we enable and join voice through this button, we unmute the user
 		if VoiceChatServiceManager.inExpUpsellEntrypoint == VoiceConstants.IN_EXP_UPSELL_ENTRYPOINTS.JOIN_VOICE then
 			VoiceChatServiceManager:ToggleMic()
@@ -152,63 +145,42 @@ local function HideOrShowJoinVoiceButton(state)
 		end
 	end
 end
-
-if FFlagJoinVoiceHideWhenPartyVoiceFocused then
-	observeCurrentContextId(function(contextId)
-		local isVoiceFocused = contextId == CEV_CONTEXT_ID
-		if isPrivateVoiceFocused ~= isVoiceFocused then
-			isPrivateVoiceFocused = isVoiceFocused
-			if isPrivateVoiceFocused then
-				lastKnownIntegrationAvailability = joinVoice.availability:get()
-				joinVoice.availability:unavailable()
-			else
-				setAvailability(lastKnownIntegrationAvailability)
-			end
+observeCurrentContextId(function(contextId)
+	local isVoiceFocused = contextId == CEV_CONTEXT_ID
+	if isPrivateVoiceFocused ~= isVoiceFocused then
+		isPrivateVoiceFocused = isVoiceFocused
+		if isPrivateVoiceFocused then
+			lastKnownIntegrationAvailability = joinVoice.availability:get()
+			joinVoice.availability:unavailable()
+		else
+			setAvailability(lastKnownIntegrationAvailability)
 		end
-	end)
-end
+	end
+end)
 
 if game:GetEngineFeature("VoiceChatSupported") then
 	if GetFFlagIntegratePhoneUpsellJoinVoice() then
 		task.spawn(function()
 			-- Only show the join voice button if we're not in the phone upsell flow
 			if VoiceChatServiceManager:ShouldShowJoinVoice() then
-				-- Pin if we're already in suspended state
-				if FFlagJoinVoiceHideWhenPartyVoiceFocused then
-					setAvailability(ChromeService.AvailabilitySignal.Available)
-				else
-					joinVoice.availability:available()
-				end
+				setAvailability(ChromeService.AvailabilitySignal.Available)
 			end
 			VoiceChatServiceManager.VoiceJoinProgressChanged.Event:Connect(HideOrShowJoinVoiceButton)
 		end)
 	else
 		-- Only show the join voice button if we're not in the phone upsell flow
 		if VoiceChatServiceManager:ShouldShowJoinVoice() then
-			-- Pin if we're already in suspended state
-			if FFlagJoinVoiceHideWhenPartyVoiceFocused then
-				setAvailability(ChromeService.AvailabilitySignal.Available)
-			else
-				joinVoice.availability:available()
-			end
+			setAvailability(ChromeService.AvailabilitySignal.Available)
 		end
 		VoiceChatServiceManager.VoiceJoinProgressChanged.Event:Connect(HideOrShowJoinVoiceButton)
 	end
 	if GetFFlagEnableConnectDisconnectInSettingsAndChrome() then
 		if not GetFFlagEnableVoiceUxUpdates() then
 			VoiceChatServiceManager.showVoiceUI.Event:Connect(function()
-				if FFlagJoinVoiceHideWhenPartyVoiceFocused then
-					setAvailability(ChromeService.AvailabilitySignal.Unavailable)
-				else
-					joinVoice.availability:unavailable()
-				end
+				setAvailability(ChromeService.AvailabilitySignal.Unavailable)
 			end)
 			VoiceChatServiceManager.hideVoiceUI.Event:Connect(function()
-				if FFlagJoinVoiceHideWhenPartyVoiceFocused then
-					setAvailability(ChromeService.AvailabilitySignal.Available)
-				else
-					joinVoice.availability:available()
-				end
+				setAvailability(ChromeService.AvailabilitySignal.Available)
 			end)
 		end
 	else

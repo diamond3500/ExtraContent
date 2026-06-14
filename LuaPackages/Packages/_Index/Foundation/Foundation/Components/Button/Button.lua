@@ -1,9 +1,6 @@
 local Foundation = script:FindFirstAncestor("Foundation")
 local Packages = Foundation.Parent
 
-local BuilderIcons = require(Packages.BuilderIcons)
-local migrationLookup = BuilderIcons.Migration["uiblox"]
-
 local Motion = require(Packages.Motion)
 local useMotion = Motion.useMotion
 local AnimatePresence = Motion.AnimatePresence
@@ -18,9 +15,7 @@ type InputSize = InputSize.InputSize
 
 local ButtonVariant = require(Foundation.Enums.ButtonVariant)
 type ButtonVariant = ButtonVariant.ButtonVariant
-
-local ButtonTypes = require(script.Parent.Types)
-type SupportedButtonVariant = ButtonTypes.SupportedButtonVariant
+type SupportedButtonVariant = ButtonVariant.SupportedButtonVariant
 
 local FillBehavior = require(Foundation.Enums.FillBehavior)
 type FillBehavior = FillBehavior.FillBehavior
@@ -29,7 +24,6 @@ local ControlState = require(Foundation.Enums.ControlState)
 type ControlState = ControlState.ControlState
 
 local ButtonIcon = require(script.Parent.ButtonIcon)
-local Image = require(Foundation.Components.Image)
 local Text = require(Foundation.Components.Text)
 local Types = require(Foundation.Components.Types)
 local View = require(Foundation.Components.View)
@@ -37,17 +31,12 @@ local View = require(Foundation.Components.View)
 local Constants = require(Foundation.Constants)
 
 local Flags = require(Foundation.Utility.Flags)
-local getIconScale = require(Foundation.Utility.getIconScale)
 local withDefaults = require(Foundation.Utility.withDefaults)
 
-local iconMigrationUtils = require(Foundation.Utility.iconMigrationUtils)
 local withCommonProps = require(Foundation.Utility.withCommonProps)
-local isMigrated = iconMigrationUtils.isMigrated
-local isBuilderOrMigratedIcon = iconMigrationUtils.isBuilderOrMigratedIcon
 
 local useButtonMotionStates = require(script.Parent.useButtonMotionStates)
 local useButtonVariants = require(script.Parent.useButtonVariants)
-local useTextSizeOffset = require(Foundation.Providers.Style.useTextSizeOffset)
 local useTokens = require(Foundation.Providers.Style.useTokens)
 local usePresentationContext = require(Foundation.Providers.Style.PresentationContext).usePresentationContext
 
@@ -111,9 +100,7 @@ local defaultProps = {
 local function Button(buttonProps: ButtonProps, ref: React.Ref<GuiObject>?)
 	local props = withDefaults(buttonProps, defaultProps)
 	local inputDelay: number = props.inputDelay
-	local intrinsicIconSize, scale = getIconScale(props.icon, props.size)
 
-	local textSizeOffset = useTextSizeOffset()
 	local controlState, setControlState = React.useBinding(ControlState.Initialize :: ControlState)
 	local isDelaying, setIsDelaying = React.useState(inputDelay > 0)
 	local progress, setGoal = ReactOtter.useAnimatedBinding(0, function()
@@ -194,7 +181,13 @@ local function Button(buttonProps: ButtonProps, ref: React.Ref<GuiObject>?)
 	return React.createElement(
 		View,
 		withCommonProps(props, {
-			AutomaticSize = if props.width.Scale == 0 then Enum.AutomaticSize.X else nil,
+			AutomaticSize = if (
+					not Flags.FoundationButtonFillBehaviorEqualSize or props.fillBehavior ~= FillBehavior.Fill
+				)
+					and props.width.Scale == 0
+					and props.width.Offset == 0
+				then Enum.AutomaticSize.X
+				else nil,
 			cornerRadius = UDim.new(0, variantProps.container.radius),
 			backgroundStyle = if variantProps.container.style
 				then getTransparency(variantProps.container.style.Transparency, disabledValues.transparency):map(
@@ -245,7 +238,7 @@ local function Button(buttonProps: ButtonProps, ref: React.Ref<GuiObject>?)
 			ref = ref,
 		}),
 		{
-			Loading = if Flags.FoundationButtonLoadingHideTextWithIcon and props.isLoading
+			Loading = if props.isLoading
 				then React.createElement("Folder", {}, {
 					PresenceWrapper = React.createElement(AnimatePresence, {}, {
 						Spinner = React.createElement(Spinner, {
@@ -266,96 +259,23 @@ local function Button(buttonProps: ButtonProps, ref: React.Ref<GuiObject>?)
 
 			-- If there is an icon, render icon and spinner in place of eachother.
 			-- Otherwise, render a Folder to exempt from layout, and use exclusively for loading spinnner.
-			IconWrapper = if (
-					if Flags.FoundationButtonLoadingHideTextWithIcon then props.icon else props.icon or props.isLoading
-				)
-				then React.createElement(
-					if Flags.FoundationButtonLoadingHideTextWithIcon or props.icon then View else "Folder",
-					{
-						Size = if props.icon then variantProps.icon.size else nil,
-						LayoutOrder = if props.icon then if isEndAligned then 3 else 1 else nil,
-						testId = if props.icon then `{props.testId}--icon-wrapper` else nil,
-					},
-					{
-						PresenceWrapper = if not Flags.FoundationButtonLoadingHideTextWithIcon
-							then React.createElement(AnimatePresence, {}, {
-								Spinner = if props.isLoading
-									then React.createElement(Spinner, {
-										Size = variantProps.icon.size - (if Flags.FoundationUsePath2DSpinner
-											then UDim2.fromOffset(tokens.Padding.XSmall, tokens.Padding.XSmall)
-											else UDim2.fromOffset(0, 0)),
-										style = disabledValues.transparency:map(function(transparency)
-											return {
-												Color3 = variantProps.content.style.Color3,
-												Transparency = transparency,
-											}
-										end),
-										testId = `{props.testId}--spinner`,
-									})
-									else nil,
-							})
-							else nil,
+			IconWrapper = if props.icon
+				then React.createElement(View, {
+					Size = if props.icon then variantProps.icon.size else nil,
+					LayoutOrder = if props.icon then if isEndAligned then 3 else 1 else nil,
+					testId = if props.icon then `{props.testId}--icon-wrapper` else nil,
+				}, {
 
-						Icon = if Flags.FoundationButtonLoadingHideTextWithIcon
-							then React.createElement(ButtonIcon, {
-								icon = props.icon,
-								isLoading = props.isLoading,
-								variant = props.variant,
-								size = props.size,
-								disabledTransparencyBinding = disabledValues.transparency,
-								textTransparencyBinding = values.textTransparency,
-								testId = props.testId,
-							})
-							elseif not props.isLoading and props.icon then if isBuilderOrMigratedIcon(props.icon)
-								then React.createElement(Text, {
-									Text = if isMigrated(props.icon)
-										then migrationLookup[props.icon].name
-										else props.icon,
-									fontStyle = {
-										Font = BuilderIcons.Font[if isMigrated(props.icon)
-											then migrationLookup[props.icon].variant
-											else BuilderIcons.IconVariant.Regular],
-										FontSize = variantProps.icon.size.Y.Offset,
-									},
-									tag = "anchor-center-center position-center-center",
-									Size = variantProps.icon.size,
-									textStyle = disabledValues.transparency:map(function(transparency)
-										return {
-											Color3 = variantProps.content.style.Color3,
-											Transparency = transparency,
-										}
-									end),
-									scale = values.iconScale,
-									testId = `{props.testId}--icon`,
-								}, {
-									UITextSizeConstraint = if textSizeOffset > 0
-										then React.createElement("UITextSizeConstraint", {
-											MaxTextSize = values.iconScale:map(function(iconScale: number)
-												return iconScale * variantProps.icon.size.Y.Offset
-											end),
-										})
-										else nil,
-								})
-								else React.createElement(Image, {
-									tag = "anchor-center-center position-center-center",
-									Image = props.icon,
-									Size = if intrinsicIconSize
-										then UDim2.fromOffset(intrinsicIconSize.X, intrinsicIconSize.Y)
-										else variantProps.icon.size,
-									imageStyle = disabledValues.transparency:map(function(transparency)
-										return {
-											Color3 = variantProps.content.style.Color3,
-											Transparency = transparency,
-										}
-									end),
-									scale = values.iconScale:map(function(iconScale: number)
-										return iconScale * scale
-									end),
-									testId = `{props.testId}--icon`,
-								})
-							else nil,
-					}
-				)
+					Icon = React.createElement(ButtonIcon, {
+						icon = props.icon,
+						isLoading = props.isLoading,
+						variant = props.variant,
+						size = props.size,
+						disabledTransparencyBinding = disabledValues.transparency,
+						textTransparencyBinding = values.textTransparency,
+						testId = props.testId,
+					}),
+				})
 				else nil,
 			Text = if hasText
 				then React.createElement(Text, {
@@ -368,9 +288,7 @@ local function Button(buttonProps: ButtonProps, ref: React.Ref<GuiObject>?)
 							local textTransparency: number = transparencies[2]
 							return {
 								Color3 = variantProps.content.style.Color3,
-								Transparency = if not Flags.FoundationButtonLoadingHideTextWithIcon and props.icon
-									then disabledTransparency
-									else textTransparency + disabledTransparency,
+								Transparency = textTransparency + disabledTransparency,
 							}
 						end),
 					LayoutOrder = 2,

@@ -1,3 +1,6 @@
+-- TEMPORARY: Uses getAttachmentCFrameInPartSpace to fix HRD bone-nested attachment CFrame interpretation.
+-- All bounds/transform calculation in this file must be refactored in the new validation system.
+
 --[[
 	validateBodyPartExtentsRelativeToParent.lua checks that the relative parts do not extend beyond each other
 	This is done by checking that the order of bounding boxes is correct.
@@ -15,18 +18,16 @@ local Constants = require(root.Constants)
 local FailureReasonsAccumulator = require(root.util.FailureReasonsAccumulator)
 local getExpectedPartSize = require(root.util.getExpectedPartSize)
 local BoundsCalculator = require(root.util.BoundsCalculator)
+local R15plusUtils = require(root.util.R15plusUtils)
+local getAttachmentCFrameInPartSpace = require(root.util.getAttachmentCFrameInPartSpace)
 
-local getFFlagUGCValidatePrimativeBBoxes = require(root.flags.getFFlagUGCValidatePrimativeBBoxes)
-local getFFlagUGCValidateBBoxOrderingsInArms = require(root.flags.getFFlagUGCValidateBBoxOrderingsInArms)
-local getFFlagUGCValidateBBoxOrderingsInLegs = require(root.flags.getFFlagUGCValidateBBoxOrderingsInLegs)
-local getFFlagUGCValidateBBoxOrderingsInTorso = require(root.flags.getFFlagUGCValidateBBoxOrderingsInTorso)
-
-local checkSubPartRelativeBBoxOrderings = {}
-checkSubPartRelativeBBoxOrderings[Enum.AssetType.Torso] = getFFlagUGCValidateBBoxOrderingsInTorso()
-checkSubPartRelativeBBoxOrderings[Enum.AssetType.LeftArm] = getFFlagUGCValidateBBoxOrderingsInArms()
-checkSubPartRelativeBBoxOrderings[Enum.AssetType.RightArm] = getFFlagUGCValidateBBoxOrderingsInArms()
-checkSubPartRelativeBBoxOrderings[Enum.AssetType.RightLeg] = getFFlagUGCValidateBBoxOrderingsInLegs()
-checkSubPartRelativeBBoxOrderings[Enum.AssetType.LeftLeg] = getFFlagUGCValidateBBoxOrderingsInLegs()
+local checkSubPartRelativeBBoxOrderings = {
+	[Enum.AssetType.Torso] = true,
+	[Enum.AssetType.LeftArm] = true,
+	[Enum.AssetType.RightArm] = true,
+	[Enum.AssetType.RightLeg] = true,
+	[Enum.AssetType.LeftLeg] = true,
+}
 
 local BODYPART_IS_PLACED_ABOVE_PARENT = {
 	["UpperTorso"] = true,
@@ -115,18 +116,21 @@ function validateBodyPartExtentsRelativeToParent.validateSinglePartBasedOnAttach
 	validationContext: Types.ValidationContext
 )
 	local reasonsAccumulator = FailureReasonsAccumulator.new()
-	local attInPart = lowerPart:FindFirstChild(attName) :: Attachment
-	local attInParent = upperPart:FindFirstChild(attName) :: Attachment
+	local attInPart = lowerPart:FindFirstChild(attName, R15plusUtils.checkFlagEnabledForAllowHrd()) :: Attachment
+	local attInParent = upperPart:FindFirstChild(attName, R15plusUtils.checkFlagEnabledForAllowHrd()) :: Attachment
 	assert(attInPart)
 	assert(attInParent)
 
 	local sizeLowerPart = getExpectedPartSize(lowerPart, validationContext)
 	local sizeUpperPart = getExpectedPartSize(upperPart, validationContext)
 
-	local spaceAbovePart = (sizeLowerPart / 2.0 - attInPart.Position).Y
-	local spaceBelowPart = (sizeLowerPart / 2.0 + attInPart.Position).Y
-	local spaceAboveParent = (sizeUpperPart / 2.0 - attInParent.Position).Y
-	local spaceBelowParent = (sizeUpperPart / 2.0 + attInParent.Position).Y
+	local attInPartPos = getAttachmentCFrameInPartSpace(attInPart).Position
+	local attInParentPos = getAttachmentCFrameInPartSpace(attInParent).Position
+
+	local spaceAbovePart = (sizeLowerPart / 2.0 - attInPartPos).Y
+	local spaceBelowPart = (sizeLowerPart / 2.0 + attInPartPos).Y
+	local spaceAboveParent = (sizeUpperPart / 2.0 - attInParentPos).Y
+	local spaceBelowParent = (sizeUpperPart / 2.0 + attInParentPos).Y
 
 	if spaceAbovePart > spaceAboveParent then
 		reasonsAccumulator:updateReasons(
@@ -196,19 +200,17 @@ function validateBodyPartExtentsRelativeToParent.runValidation(
 			)
 		reasonsAccumulator:updateReasons(validationSuccess, validationIssues)
 
-		if getFFlagUGCValidatePrimativeBBoxes() then
-			if validationSuccess and APPLY_PRIMATIVE_BBOX_CHECK[assetTypeEnum] then
-				-- Secondary check based on just part size.Y and att pos.Y
-				-- This is done to guarentee humanoid scaling doesn't break
-				reasonsAccumulator:updateReasons(
-					validateBodyPartExtentsRelativeToParent.validateSinglePartBasedOnAttachmentYPos(
-						upperPart,
-						lowerPart,
-						attName,
-						validationContext
-					)
+		if validationSuccess and APPLY_PRIMATIVE_BBOX_CHECK[assetTypeEnum] then
+			-- Secondary check based on just part size.Y and att pos.Y
+			-- This is done to guarentee humanoid scaling doesn't break
+			reasonsAccumulator:updateReasons(
+				validateBodyPartExtentsRelativeToParent.validateSinglePartBasedOnAttachmentYPos(
+					upperPart,
+					lowerPart,
+					attName,
+					validationContext
 				)
-			end
+			)
 		end
 	end
 

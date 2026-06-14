@@ -1,14 +1,15 @@
 local Foundation = script:FindFirstAncestor("Foundation")
 local Packages = Foundation.Parent
 
-local Flags = require(Foundation.Utility.Flags)
-
 local BuilderIcons = require(Packages.BuilderIcons)
 local React = require(Packages.React)
 local migrationLookup = BuilderIcons.Migration["uiblox"]
 
 local InputSize = require(Foundation.Enums.InputSize)
 type InputSize = InputSize.InputSize
+
+local FillBehavior = require(Foundation.Enums.FillBehavior)
+type FillBehavior = FillBehavior.FillBehavior
 
 local IconSize = require(Foundation.Enums.IconSize)
 type IconSize = IconSize.IconSize
@@ -55,6 +56,10 @@ export type IconButtonProps = {
 	-- Size of IconButton. `IconSize` is deprecated - use `InputSize`.
 	-- `Large` and `XLarge` `IconSize`s map to `InputSize.Large` and are not supported.
 	size: (InputSize | IconSize)?,
+	-- **DEPRECATED** Sets a custom width. Prefer wrapping in a fixed-width container and using `fillBehavior = Fill` instead.
+	width: UDim?,
+	-- **DEPRECATED** Controls how the IconButton fills space in a layout.
+	fillBehavior: FillBehavior?,
 	variant: SupportedIconButtonVariant?,
 	icon: string | {
 		name: string,
@@ -65,6 +70,7 @@ export type IconButtonProps = {
 local defaultProps = {
 	isDisabled = false,
 	size = InputSize.Medium,
+	width = UDim.new(0, 0),
 	isCircular = false,
 	variant = ButtonVariant.Utility,
 	testId = "--foundation-icon-button",
@@ -93,6 +99,8 @@ local function IconButton(iconButtonProps: IconButtonProps, ref: React.Ref<GuiOb
 		if presentationContext then presentationContext.colorMode else nil
 	)
 
+	local containerSize = variantProps.container.size
+
 	-- Override radius if circular
 	local componentRadius = if props.isCircular
 		then UDim.new(0, tokens.Radius.Circle)
@@ -108,11 +116,25 @@ local function IconButton(iconButtonProps: IconButtonProps, ref: React.Ref<GuiOb
 		}
 	end, { tokens, componentRadius } :: { unknown })
 
+	-- Width/fillBehavior logic: fillBehavior.Fill takes precedence over width.
+	-- Unlike Button, IconButton defaults to a fixed square (containerSize) rather than AutomaticSize
+	local fillOverridesWidth = props.fillBehavior == FillBehavior.Fill
+
+	local hasExplicitWidth = props.width.Scale ~= 0 or props.width.Offset ~= 0
+	local sizeX = if fillOverridesWidth then UDim.new(1, 0) elseif hasExplicitWidth then props.width else containerSize.X
+
 	return React.createElement(
 		View,
 		withCommonProps(props, {
 			onActivated = props.onActivated,
-			Size = variantProps.container.size,
+			Size = UDim2.new(sizeX, UDim.new(0, containerSize.Y.Offset)),
+			flexItem = if props.fillBehavior
+				then {
+					FlexMode = if props.fillBehavior == FillBehavior.Fill
+						then Enum.UIFlexMode.Fill
+						else Enum.UIFlexMode.Shrink,
+				}
+				else nil,
 			selection = {
 				Selectable = if props.isDisabled then false else props.Selectable,
 				NextSelectionUp = props.NextSelectionUp,
@@ -127,7 +149,6 @@ local function IconButton(iconButtonProps: IconButtonProps, ref: React.Ref<GuiOb
 			backgroundStyle = variantProps.container.style,
 			stroke = variantProps.container.stroke,
 			cursor = cursor,
-			tag = if Flags.FoundationIconButtonNoListLayout then nil else variantProps.container.tag,
 			GroupTransparency = if props.isDisabled then Constants.DISABLED_TRANSPARENCY else nil,
 			ref = ref,
 		}),
@@ -141,13 +162,13 @@ local function IconButton(iconButtonProps: IconButtonProps, ref: React.Ref<GuiOb
 							else iconVariant or BuilderIcons.IconVariant.Regular],
 						FontSize = iconSize.Y.Offset,
 					},
-					tag = "anchor-center-center position-center-center",
+					tag = "position-center-center anchor-center-center",
 					Size = iconSize,
 					textStyle = variantProps.content.style,
 					testId = `{props.testId}--icon`,
 				})
 				else React.createElement(Image, {
-					tag = "anchor-center-center position-center-center",
+					tag = "position-center-center anchor-center-center",
 					Image = iconName,
 					Size = if intrinsicIconSize
 						then UDim2.fromOffset(intrinsicIconSize.X, intrinsicIconSize.Y)

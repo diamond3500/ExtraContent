@@ -10,18 +10,15 @@ local FaceAnimatorService = game:GetService("FaceAnimatorService")
 
 local Roact = require(CorePackages.Packages.Roact)
 local UIBlox = require(CorePackages.Packages.UIBlox)
+local ReactUtils = require(CorePackages.Packages.ReactUtils)
 local t = require(CorePackages.Packages.t)
 
-local ExternalEventConnection = UIBlox.Utility.ExternalEventConnection
+local EventConnection = ReactUtils.EventConnection
 
 local Modules = CoreGui.RobloxGui.Modules
 local VoiceChatServiceManager = require(Modules.VoiceChat.VoiceChatServiceManager).default
-local FFlagAvatarChatCoreScriptSupport =
-	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagAvatarChatCoreScriptSupport()
 local cameraDevicePermissionGrantedSignal =
 	require(CoreGui.RobloxGui.Modules.Settings.cameraDevicePermissionGrantedSignal)
-local getFFlagDoNotPromptCameraPermissionsOnMount =
-	require(CoreGui.RobloxGui.Modules.Flags.getFFlagDoNotPromptCameraPermissionsOnMount)
 
 local ANIMATION_SPEED = 3
 local FLASHING_DOT = "rbxasset://textures/AnimationEditor/FaceCaptureUI/FlashingDot.png"
@@ -47,19 +44,12 @@ function FlashingDot:init()
 
 	self.checkNewVisibility = function()
 		local isUsingMic = VoiceChatServiceManager.localMuted ~= nil and not VoiceChatServiceManager.localMuted
-		-- @TODO: Remove VideoCaptureService.Active when FaceAnimatorService.VideoAnimationEnabled gives correct values for voice-enabled experiences
-		-- Note that we have to add VideoCaptureService.Active here because FaceAnimatorService.VideoAnimationEnabled returns true for voice-enabled experiences
-		local isUsingCamera = FaceAnimatorService.VideoAnimationEnabled and VideoCaptureService.Active
-		if getFFlagDoNotPromptCameraPermissionsOnMount() then
-			-- FaceAnimatorService.VideoAnimationEnabled is giving correct values now
-			isUsingCamera = FaceAnimatorService:IsStarted() and FaceAnimatorService.VideoAnimationEnabled
-		end
+		local isUsingCamera = FaceAnimatorService:IsStarted() and FaceAnimatorService.VideoAnimationEnabled
 		local newVisible = isUsingMic or isUsingCamera
 
 		local updatedVisibility = self.state.Visible ~= newVisible
-		local updatedMutedStatus = FFlagAvatarChatCoreScriptSupport and self.state.isUsingMic ~= isUsingMic
 
-		if updatedVisibility or updatedMutedStatus then
+		if updatedVisibility then
 			self:setState({
 				Visible = newVisible,
 				isUsingMic = isUsingMic,
@@ -78,19 +68,17 @@ function FlashingDot:init()
 		self.prevSinTime = newSinTime
 	end
 
-	if getFFlagDoNotPromptCameraPermissionsOnMount() then
-		self.teardownCameraPermissionGrantedListener = function()
-			-- Garbage collection
-			if self.cameraPermissionGrantedListener then
-				self.cameraPermissionGrantedListener:disconnect()
-				self.cameraPermissionGrantedListener = nil
-			end
+	self.teardownCameraPermissionGrantedListener = function()
+		-- Garbage collection
+		if self.cameraPermissionGrantedListener then
+			self.cameraPermissionGrantedListener:disconnect()
+			self.cameraPermissionGrantedListener = nil
 		end
-
-		self.cameraPermissionGrantedListener = cameraDevicePermissionGrantedSignal:connect(function()
-			self.checkNewVisibility()
-		end)
 	end
+
+	self.cameraPermissionGrantedListener = cameraDevicePermissionGrantedSignal:connect(function()
+		self.checkNewVisibility()
+	end)
 end
 
 function FlashingDot:didMount()
@@ -104,20 +92,7 @@ function FlashingDot:willUnmount()
 end
 
 function FlashingDot:render()
-	local image
 	local imageSize = UDim2.fromOffset(4, 4)
-	if FFlagAvatarChatCoreScriptSupport then
-		local isUsingCamera = FaceAnimatorService.VideoAnimationEnabled and VideoCaptureService.Active
-		if getFFlagDoNotPromptCameraPermissionsOnMount() then
-			isUsingCamera = FaceAnimatorService:IsStarted() and FaceAnimatorService.VideoAnimationEnabled
-		end
-		if self.state.isUsingMic then
-			image = FLASHING_DOT
-		elseif isUsingCamera then
-			image = GREEN_DOT
-			imageSize = UDim2.fromOffset(12, 12)
-		end
-	end
 
 	return Roact.createElement("Frame", {
 		AnchorPoint = Vector2.new(1, 0),
@@ -130,24 +105,22 @@ function FlashingDot:render()
 	}, {
 		FlashingDot = Roact.createElement("ImageLabel", {
 			BackgroundTransparency = 1,
-			AnchorPoint = if FFlagAvatarChatCoreScriptSupport then Vector2.new(0.5, 0.5) else nil,
-			Position = if FFlagAvatarChatCoreScriptSupport then UDim2.fromScale(0.5, 0.5) else nil,
 			Size = imageSize,
-			Image = if FFlagAvatarChatCoreScriptSupport then image else FLASHING_DOT,
+			Image = FLASHING_DOT,
 			ImageTransparency = self.transparencyBinding,
 			LayoutOrder = 2,
 		}),
-		MuteChangedEvent = Roact.createElement(ExternalEventConnection, {
+		MuteChangedEvent = Roact.createElement(EventConnection, {
 			event = VoiceChatServiceManager.muteChanged.Event,
 			callback = self.checkNewVisibility,
 		}),
-		CameraChangedEvent = Roact.createElement(ExternalEventConnection, {
+		CameraChangedEvent = Roact.createElement(EventConnection, {
 			event = FaceAnimatorService:GetPropertyChangedSignal("VideoAnimationEnabled"),
 			callback = self.checkNewVisibility,
 		}),
 		AnimationConnection = if self.state.Visible
-			then Roact.createElement(ExternalEventConnection, {
-				event = RunService.RenderStepped,
+			then Roact.createElement(EventConnection, {
+				event = RunService.RenderStepped :: RBXScriptSignal,
 				callback = self.animationConnection,
 			})
 			else nil,

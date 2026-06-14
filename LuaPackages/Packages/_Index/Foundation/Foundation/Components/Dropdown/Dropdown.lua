@@ -7,15 +7,16 @@ local BaseMenu = require(Foundation.Components.BaseMenu)
 local Popover = require(Foundation.Components.Popover)
 local Types = require(Foundation.Components.Types)
 
+local Flags = require(Foundation.Utility.Flags)
 local withCommonProps = require(Foundation.Utility.withCommonProps)
 local withDefaults = require(Foundation.Utility.withDefaults)
 
-local Flags = require(Foundation.Utility.Flags)
-
 local InputSize = require(Foundation.Enums.InputSize)
+local InputVariant = require(Foundation.Enums.InputVariant)
 local PopoverAlign = require(Foundation.Enums.PopoverAlign)
 local PopoverSide = require(Foundation.Enums.PopoverSide)
 local Radius = require(Foundation.Enums.Radius)
+type InputVariant = InputVariant.InputVariant
 type InputSize = InputSize.InputSize
 type Radius = Radius.Radius
 
@@ -46,6 +47,8 @@ export type DropdownProps = {
 	onItemChanged: OnItemActivated,
 	-- Whether the dropdown is in an error state
 	hasError: boolean?,
+	-- Style variant of the dropdown
+	variant: InputVariant?,
 	-- Whether the dropdown is disabled
 	isDisabled: boolean?,
 	-- Width of the component
@@ -62,6 +65,7 @@ export type DropdownProps = {
 } & Types.CommonProps
 
 local defaultProps = {
+	variant = if Flags.FoundationDropdownVariant then InputVariant.Standard else nil :: never,
 	width = UDim.new(0, 400),
 	size = InputSize.Medium,
 	testId = "--foundation-dropdown",
@@ -71,6 +75,10 @@ local sideConfig = { position = PopoverSide.Bottom, offset = 5 }
 
 local function Dropdown(dropdownProps: DropdownProps, ref: React.Ref<GuiObject>?)
 	local props = withDefaults(dropdownProps, defaultProps)
+	-- TODO: clean up with FFlagFoundationDropdownVariant
+	if Flags.FoundationDropdownVariant and props.variant == nil then
+		props.variant = InputVariant.Standard
+	end
 	local isMenuOpen, setIsMenuOpen = React.useState(false)
 	local inputRef = React.useRef(nil :: GuiObject?)
 	-- This may cause blinking for UDim.new(1, 0) size if the menu is open from the start. Shouldn't be the case?
@@ -107,6 +115,7 @@ local function Dropdown(dropdownProps: DropdownProps, ref: React.Ref<GuiObject>?
 		DropdownControl = React.createElement(
 			DropdownControl,
 			withCommonProps(props, {
+				variant = if Flags.FoundationDropdownVariant then props.variant else nil :: never,
 				onActivated = toggleIsMenuOpen,
 				hasError = props.hasError,
 				isDisabled = props.isDisabled,
@@ -132,7 +141,7 @@ local function Dropdown(dropdownProps: DropdownProps, ref: React.Ref<GuiObject>?
 				align = PopoverAlign.End,
 				side = sideConfig,
 				onPressedOutside = closeMenu,
-				radius = if Flags.FoundationBaseMenuBorderFix then Radius.Medium else nil,
+				radius = Radius.Medium,
 				selection = props.selection,
 				selectionGroup = props.selectionGroup,
 			},
@@ -143,7 +152,7 @@ local function Dropdown(dropdownProps: DropdownProps, ref: React.Ref<GuiObject>?
 				items = items,
 				maxHeight = props.maxHeight,
 				onActivated = onActivated,
-				radius = if Flags.FoundationBaseMenuBorderFix then Radius.Medium else nil,
+				radius = Radius.Medium,
 				testId = `{props.testId}--menu`,
 			})
 		),

@@ -18,8 +18,6 @@ local iconMigrationUtils = require(Foundation.Utility.iconMigrationUtils)
 local isMigrated = iconMigrationUtils.isMigrated
 local isBuilderIconOrMigrated = iconMigrationUtils.isBuilderOrMigratedIcon
 
-local Flags = require(Foundation.Utility.Flags)
-
 local Constants = require(Foundation.Constants)
 
 type InputSize = InputSize.InputSize
@@ -40,6 +38,8 @@ export type TabItem = {
 	isDisabled: boolean?,
 	-- Could be defined in the Tabs, since it's needed only there, but intersection types are hell with curent solver.
 	content: React.ReactNode?,
+	-- Ref to the tab item element
+	ref: React.RefObject<GuiObject?>?,
 }
 
 export type TabItemProps = TabItem & {
@@ -55,7 +55,6 @@ local function TabItem(props: TabItemProps, ref: React.Ref<GuiObject>?)
 
 	local contentStyle = if props.isActive then tokens.Color.Content.Default else tokens.Color.Content.Emphasis
 
-	local borderSize = tokens.Stroke.Thick
 	local isFill = props.fillBehavior == FillBehavior.Fill
 
 	local variantProps = useTabVariants(tokens, props.size, isFill)
@@ -131,11 +130,12 @@ local function TabItem(props: TabItemProps, ref: React.Ref<GuiObject>?)
 			},
 			cursor = cursor,
 			isDisabled = props.isDisabled,
-			ref = if Flags.FoundationAnimateTabs then ref else nil,
+			ref = ref,
 		}),
 		Content = React.createElement(View, {
 			LayoutOrder = 2,
 			tag = variantProps.content.tag,
+			Size = variantProps.content.Size,
 		}, {
 			Icon = if props.icon then _Icon else nil,
 			Text = React.createElement(Text, {
@@ -145,16 +145,7 @@ local function TabItem(props: TabItemProps, ref: React.Ref<GuiObject>?)
 				LayoutOrder = 2,
 			}),
 		}),
-		Border = if props.isActive and not Flags.FoundationAnimateTabs
-			then React.createElement(View, {
-				LayoutOrder = 3,
-				Size = UDim2.new(1, 0, 0, borderSize),
-				Position = UDim2.new(0, 0, 1, -borderSize),
-				backgroundStyle = tokens.Color.System.Contrast,
-				testId = `{props.testId}--border`,
-			})
-			else nil,
 	})
 end
 
-return if Flags.FoundationAnimateTabs then React.memo(React.forwardRef(TabItem)) else TabItem
+return React.memo(React.forwardRef(TabItem))

@@ -17,8 +17,14 @@ export type StateChangedCallback = (newState: ControlState) -> ()
 local ButtonVariant = require(Foundation.Enums.ButtonVariant)
 type ButtonVariant = ButtonVariant.ButtonVariant
 
+local InputFocusBehavior = require(Foundation.Enums.InputFocusBehavior)
+type InputFocusBehavior = InputFocusBehavior.InputFocusBehavior
+
 local InputSize = require(Foundation.Enums.InputSize)
 type InputSize = InputSize.InputSize
+
+local InputVariant = require(Foundation.Enums.InputVariant)
+type InputVariant = InputVariant.InputVariant
 
 export type ActionProps = {
 	onActivated: () -> (),
@@ -91,13 +97,16 @@ export type ColorStyleValue = {
 
 export type ColorStyle = Bindable<ColorStyleValue>
 
+-- Partial HSV for color picker: H required (0–360), S and V optional (0–100). Used when initial color is HSV-only.
+export type PartialColorHSV = { H: number, S: number?, V: number? }
+
 export type ItemId = string | number
 export type OnItemActivated = (id: ItemId) -> ()
 
 export type StateLayer = {
 	inset: boolean?,
-	mode: StateLayerMode?,
-	affordance: StateLayerAffordance?,
+	mode: Bindable<StateLayerMode>?,
+	affordance: Bindable<StateLayerAffordance>?,
 }
 
 -- SelectionProps are broken out such that any Foundation component that is selectable
@@ -169,6 +178,9 @@ export type BaseGuiObjectProps = {
 	BorderColor3: Bindable<Color3>?,
 	BorderMode: Bindable<Enum.BorderMode>?,
 	ClipsDescendants: Bindable<boolean>?,
+	-- TODO: update when InputSink is available in all engine builds
+	-- InputSink: Bindable<Enum.InputSink>?,
+	InputSink: Bindable<any>?,
 	Rotation: Bindable<number>?,
 	Size: Bindable<UDim2?>,
 	SizeConstraint: Bindable<Enum.SizeConstraint>?,
@@ -181,31 +193,37 @@ export type GuiObjectProps = BaseGuiObjectProps & BaseInteractableProps
 
 export type TextInputCommonProps = {
 	-- Input text value
-	text: string,
+	text: Bindable<string>,
 	-- Ran when the input text changes
 	onChanged: (text: string) -> (),
-	-- The label shown alongside the TextArea
+	-- The label shown alongside the text input
 	label: string,
 	-- Subcaption shown below the text input, red on error
 	hint: string?,
-	-- The size of the TextArea input
+	-- The size of the text input
 	size: InputSize?,
-	-- Defined width of the TextArea by default
+	-- Style variant of the text input
+	variant: InputVariant?,
+	-- Defined width of the text input by default
 	width: UDim?,
-	-- What text should be shown in the TextArea when there is no user input
+	-- What text should be shown in the input when there is no user input
 	placeholder: string?,
-	-- Whether the TextArea should be disabled to input
+	-- Whether the text input should be disabled
 	isDisabled: boolean?,
-	-- Whether the input is required, true for "*", false for " (optional)", nil for nothing
+	-- Whether the text input is required, true for "*", false for " (optional)", nil for nothing
 	isRequired: boolean?,
-	-- Whether to show the TextArea input as erroneous
+	-- Whether to show the text input as erroneous
 	hasError: boolean?,
+	-- Whether the input has a clear button
+	hasClearButton: boolean?,
+	-- Behavior of the text input when focused. Mobile does not yet support Highlight behavior.
+	focusBehavior: InputFocusBehavior?,
 	-- Partial TextBox ref exposed via imperative handle
 	textBoxRef: React.Ref<TextInputRef>?,
 	-- Ran when textbox focus is gained
 	onFocusGained: (() -> ())?,
-	-- Ran when textbox focus is lost
-	onFocusLost: (() -> ())?,
+	-- Ran when textbox focus is lost. The InputObject that caused focus to be lost is passed if available.
+	onFocusLost: ((inputObject: InputObject?) -> ())?,
 }
 
 export type AspectRatioTable = {
@@ -255,7 +273,7 @@ export type InternalTextInputRef = {
 	getIsFocused: () -> boolean,
 	focus: () -> (),
 	releaseFocus: () -> (),
-	setHover: (isHovering: boolean) -> (),
+	setHover: (isHovering: boolean) -> (), -- Remove with FoundationTextInputsBetaUpdate
 	getSelectionStart: () -> number,
 	getCursorPosition: () -> number,
 	setSelectionStart: (position: number) -> (),

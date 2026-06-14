@@ -5,6 +5,11 @@ local ValidationEnums = require(root.validationSystem.ValidationEnums)
 local CreateExpectedSchema = require(root.util.CreateExpectedSchema)
 
 local ErrorSourceStrings = require(root.validationSystem.ErrorSourceStrings)
+local getFFlagUGCValidationExtendSchemaToIgnoreDescendants =
+	require(root.flags.getFFlagUGCValidationExtendSchemaToIgnoreDescendants)
+local getEngineFeatureEngineUGCValidationExpandReturnSchema =
+	require(root.flags.getEngineFeatureEngineUGCValidationExpandReturnSchema)
+local getFFlagUGCValidationAnimationPackSupport = require(root.flags.getFFlagUGCValidationAnimationPackSupport)
 local ExpectedRootSchema = {}
 
 ExpectedRootSchema.categories = Constants.AllUploadCategories
@@ -38,6 +43,20 @@ local function validateInstancesFromSchema(
 	reporter: Types.ValidationReporter
 )
 	authorizedSet[instance] = true
+	if getFFlagUGCValidationExtendSchemaToIgnoreDescendants() then
+		if schema._ignoreDescendants then
+			assert(
+				not schema._children,
+				"if _ignoreDescendants is true, there should be no descendants in the schema as they would be ignored anyway"
+			)
+			for _, descendant in instance:GetDescendants() do
+				authorizedSet[descendant] = true
+			end
+
+			return
+		end
+	end
+
 	for _, childSchema in (schema._children or {}) do
 		local found = false
 		for _, child in instance:GetChildren() do
@@ -57,7 +76,7 @@ local function validateInstancesFromSchema(
 				ParentPath = instance:GetFullName(),
 				ExpectedClass = childSchema.ClassName,
 				ExpectedName = getReadableName(childSchema.Name),
-			})
+			}, if getEngineFeatureEngineUGCValidationExpandReturnSchema() then instance else nil)
 		end
 	end
 end
@@ -75,9 +94,11 @@ local function validateNoInstancesOutsideSchema(
 	end
 
 	if #unauthorizedDescendantPaths > 0 then
-		reporter:fail(ErrorSourceStrings.Keys.AssetSchemaUnexpectedItems, {
-			UnexpectedDescendantPaths = table.concat(unauthorizedDescendantPaths, ", "),
-		})
+		reporter:fail(
+			ErrorSourceStrings.Keys.AssetSchemaUnexpectedItems,
+			{ UnexpectedDescendantPaths = table.concat(unauthorizedDescendantPaths, ", ") },
+			if getEngineFeatureEngineUGCValidationExpandReturnSchema() then instance else nil
+		)
 	end
 end
 
@@ -85,7 +106,7 @@ ExpectedRootSchema.run = function(reporter: Types.ValidationReporter, data: Type
 	local instance: Instance, category: string, uploadEnum: Types.UploadEnum =
 		data.rootInstance, data.uploadCategory, data.uploadEnum
 
-	if instance == nil then
+	if (instance :: Instance?) == nil then
 		-- We don't validate the selection input yet, so we should verify the root instance exists. Other validations can assume it exists as it passes schema check.
 
 		reporter:fail(ErrorSourceStrings.Keys.SelectionCountNotOne)
@@ -95,9 +116,13 @@ ExpectedRootSchema.run = function(reporter: Types.ValidationReporter, data: Type
 	local schema
 
 	if uploadEnum.bundleType then
-		-- For bundle uploads, we will recheck all the asset schemas and display an early abort message upon failure
-		local fullBodyData = data.entrypointInput :: Types.FullBodyData
-		schema = CreateExpectedSchema.generateBundleSchema(fullBodyData)
+		if getFFlagUGCValidationAnimationPackSupport() and uploadEnum.bundleType == Enum.BundleType.Animations then
+			schema = CreateExpectedSchema.generateAnimationPackBundleSchema()
+		else
+			-- For bundle uploads, we will recheck all the asset schemas and display an early abort message upon failure
+			local fullBodyData = data.entrypointInput :: Types.FullBodyData
+			schema = CreateExpectedSchema.generateBundleSchema(fullBodyData)
+		end
 	else
 		schema = CreateExpectedSchema.generateAssetSchema(category, uploadEnum.assetType, instance)
 	end

@@ -3,6 +3,9 @@ local root = script:FindFirstAncestor("AbuseReportMenu")
 local CorePackages = game:GetService("CorePackages")
 local AppFonts = require(CorePackages.Workspace.Packages.Style).AppFonts
 local UIBlox = require(CorePackages.Packages.UIBlox)
+local SharedFlags = require(CorePackages.Workspace.Packages.SharedFlags)
+local FFlagRenameDeprecatedUIBloxTokens = SharedFlags.FFlagRenameDeprecatedUIBloxTokens
+
 local React = require(CorePackages.Packages.React)
 local Images = UIBlox.App.ImageSet.Images
 local useStyle = UIBlox.Core.Style.useStyle
@@ -12,9 +15,6 @@ local getMenuItemSizings = require(root.Utility.getMenuItemSizings)
 local TextButton = UIBlox.App.Button.TextButton
 local IconButton = UIBlox.App.Button.IconButton
 local IconSize = UIBlox.App.ImageSet.Enum.IconSize
-
-local FFlagAbuseReportTabSelectionHighlightCutoffFixEnabled =
-	require(root.Flags.FFlagAbuseReportTabSelectionHighlightCutoffFixEnabled)
 
 type Props = {
 	label: string,
@@ -30,7 +30,9 @@ type Props = {
 
 local ReportTypeSelector = function(props: Props)
 	local style = useStyle()
-	local verticalPadding = style.Tokens.Global.Size_100
+	local verticalPadding = (
+		if FFlagRenameDeprecatedUIBloxTokens then style.Tokens.Size.Size_200 else style.Tokens.Global.Size_100
+	)
 	local dimensions = getMenuItemDimensions(props.menuWidth)
 	local sizings = getMenuItemSizings()
 
@@ -121,9 +123,7 @@ local ReportTypeSelector = function(props: Props)
 					layoutOrder = 2,
 					isDisabled = props.isSelectionDisabled,
 					fontStyle = sizings.FontStyle,
-					verticalPadding = if FFlagAbuseReportTabSelectionHighlightCutoffFixEnabled
-						then sizings.ButtonInsideVerticalPadding
-						else nil,
+					verticalPadding = sizings.ButtonInsideVerticalPadding,
 				}),
 			}),
 			RightChevron = if props.isSelectionDisabled

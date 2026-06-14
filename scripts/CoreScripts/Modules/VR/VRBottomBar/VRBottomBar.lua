@@ -32,9 +32,12 @@ local Images = UIBlox.App.ImageSet.Images
 
 local RobloxGui = CoreGui:WaitForChild("RobloxGui")
 local RobloxTranslator = require(CorePackages.Workspace.Packages.RobloxTranslator)
-local VRHub = require(RobloxGui.Modules.VR.VRHub)
+local VRHub = require(CorePackages.Workspace.Packages.VrCommon).VRHub
 local VRUtil = require(CorePackages.Workspace.Packages.VrCommon).VRUtil
 local VoiceChatServiceManager = require(RobloxGui.Modules.VoiceChat.VoiceChatServiceManager).default
+local VoiceConstants = require(RobloxGui.Modules.VoiceChat.Constants)
+local GetFFlagVoiceChatLogConnectionSource =
+	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagVoiceChatLogConnectionSource
 
 local ExternalEventConnection = require(CorePackages.Workspace.Packages.RoactUtils).ExternalEventConnection
 
@@ -75,7 +78,11 @@ local VRBottomBarAnalytics = require(script.Parent.VRBottomBarAnalytics)
 local VRBottomBarType = require(script.Parent.VRBottomBarType)
 
 local EmotesMenuMaster = require(RobloxGui.Modules.EmotesMenu.EmotesMenuMaster)
-local BackpackScript = require(RobloxGui.Modules.BackpackScript)
+local FFlagEnableNewBackpack = require(CorePackages.Workspace.Packages.SharedFlags).FFlagEnableNewBackpack
+local Features = if FFlagEnableNewBackpack then require(CorePackages.Workspace.Packages.System).Features else nil
+local BackpackScript = if FFlagEnableNewBackpack
+	then require(CorePackages.Workspace.Packages.Backpack)
+	else require(RobloxGui.Modules.BackpackScript)
 local PlayerListMaster = require(RobloxGui.Modules.PlayerList.PlayerListManager)
 local StarterPlayer = game:GetService("StarterPlayer")
 
@@ -86,8 +93,6 @@ local FIntVRBottomBarPositionOffsetVerticalNumber =
 	require(RobloxGui.Modules.Flags.FIntVRBottomBarPositionOffsetVerticalNumber)
 local FIntVRBottomBarPositionOffsetDepthNumber =
 	require(RobloxGui.Modules.Flags.FIntVRBottomBarPositionOffsetDepthNumber)
-local FFlagVRBottomBarHighlightedLeaveGameIcon =
-	require(RobloxGui.Modules.Flags.FFlagVRBottomBarHighlightedLeaveGameIcon)
 local IsSpatialRobloxGuiEnabled = require(RobloxGui.Modules.VR.IsSpatialRobloxGuiEnabled)
 
 local SplashScreenManager = require(CorePackages.Workspace.Packages.SplashScreenManager).SplashScreenManager
@@ -184,22 +189,37 @@ local BackpackIcon = {
 	iconOn = "rbxasset://textures/ui/MenuBar/icon__backpack.png",
 	iconOff = "rbxasset://textures/ui/MenuBar/icon__backpack.png",
 	onActivated = function()
-		if not VRHub.ShowTopBar then
-			-- Expand UI and open backpack
-			VRHub:SetShowTopBar(true)
-			if not BackpackScript.IsOpen then
-				BackpackScript.OpenClose()
+		if FFlagEnableNewBackpack then
+			if not VRHub.ShowTopBar then
+				VRHub:SetShowTopBar(true)
+				Features.setVisibility(Features.FeatureName.Backpack, true)
+			else
+				Features.toggleVisibility(Features.FeatureName.Backpack)
+			end
+			if FFlagFixVRBottomBarAnalytics then
+				VRBottomBarAnalytics.sendEventToTelemetryV2({
+					integrationId = VRBottomBarType.ButtomName.Inventory,
+					isToggleOn = Features.getVisibility(Features.FeatureName.Backpack),
+					source = VRBottomBarType.Source.MoreSubMenu
+				})
 			end
 		else
-			BackpackScript.OpenClose()
-		end
-		if FFlagFixVRBottomBarAnalytics then
-			local isToggleOn = BackpackScript.IsOpen
-			VRBottomBarAnalytics.sendEventToTelemetryV2({
-				integrationId = VRBottomBarType.ButtomName.Inventory,
-				isToggleOn = isToggleOn,
-				source = VRBottomBarType.Source.MoreSubMenu
-			})
+			if not VRHub.ShowTopBar then
+				VRHub:SetShowTopBar(true)
+				if not BackpackScript.IsOpen then
+					BackpackScript.OpenClose()
+				end
+			else
+				BackpackScript.OpenClose()
+			end
+			if FFlagFixVRBottomBarAnalytics then
+				local isToggleOn = BackpackScript.IsOpen
+				VRBottomBarAnalytics.sendEventToTelemetryV2({
+					integrationId = VRBottomBarType.ButtomName.Inventory,
+					isToggleOn = isToggleOn,
+					source = VRBottomBarType.Source.MoreSubMenu
+				})
+			end
 		end
 		AnalyticsService:ReportCounter("VR-BottomBar-Backpack")
 	end,
@@ -413,6 +433,9 @@ local JoinVoice = {
 	iconOff = Images["icons/controls/publicAudioJoin"],
 	text = "Join Voice",
 	onActivated = function()
+		if GetFFlagVoiceChatLogConnectionSource() then
+			VoiceChatServiceManager.pendingConnectionSource = VoiceConstants.VOICE_CONNECTION_SOURCE.IN_EXPERIENCE
+		end
 		VoiceChatServiceManager:JoinVoice()
 		if FFlagEnableJoinVoiceVrTelemetry then
 			local isToggleOn = VoiceChatServiceManager:ShouldShowJoinVoice()
@@ -778,12 +801,8 @@ function VRBottomBar:updateItems()
 		table.insert(enabledItems, SafetyOff)
 	end
 
-	if FFlagVRBottomBarHighlightedLeaveGameIcon then
-		if VRHub.ShowHighlightedLeaveGameIcon then
-			table.insert(enabledItems, LeaveGameHighlighted)
-		else
-			table.insert(enabledItems, LeaveGame)
-		end
+	if VRHub.ShowHighlightedLeaveGameIcon then
+		table.insert(enabledItems, LeaveGameHighlighted)
 	else
 		table.insert(enabledItems, LeaveGame)
 	end
@@ -926,11 +945,10 @@ function VRBottomBar:renderWithStyle(style)
 			}),
 		}),
 
-		ShowHighlightedLeaveGameIconToggled = FFlagVRBottomBarHighlightedLeaveGameIcon
-			and Roact.createElement(ExternalEventConnection, {
-				event = VRHub.ShowHighlightedLeaveGameIconToggled.Event,
-				callback = self.updateItemListState,
-			}),
+		ShowHighlightedLeaveGameIconToggled = Roact.createElement(ExternalEventConnection, {
+			event = VRHub.ShowHighlightedLeaveGameIconToggled.Event,
+			callback = self.updateItemListState,
+		}),
 		ShowTopBarChanged = Roact.createElement(ExternalEventConnection, {
 			event = VRHub.ShowTopBarChanged.Event,
 			callback = self.onShowTopBarChanged,

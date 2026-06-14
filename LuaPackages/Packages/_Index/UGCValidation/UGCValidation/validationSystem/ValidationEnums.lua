@@ -3,6 +3,9 @@
 	The point is that indexing these tables with a typo will give you an error instead of nil, so they can be treated as enums.
 	We use ValidationEnums as a source of truth to run validations, log telemetry, etc.
 ]]
+local root = script.Parent.Parent
+local getEngineFeatureEngineUGCValidationExpandReturnSchema =
+	require(root.flags.getEngineFeatureEngineUGCValidationExpandReturnSchema)
 
 local ValidationEnums = {}
 
@@ -48,22 +51,82 @@ ValidationEnums.ValidationModule = {
 			- Good examples: HeadIsDynamic, CagingIsRelevant, AccurateBoundingBox, AssetVisible
 			- Bad example: DynamicHead, Tags, ValidateMeshSize
     --]]
+	-- Basic schema checks
 	ExpectedRootSchema = "ExpectedRootSchema",
 	SingleInstanceSelected = "SingleInstanceSelected",
 	NoExtraTags = "NoExtraTags",
-	HeadIsDynamic = "HeadIsDynamic",
-} :: { [string]: string }
-finalizeEnumTable("ValidationModule")
+
+	-- Schema, Properties & Structural checks
+	AttributesAllowed = "AttributesAllowed",
+	MaterialsAllowed = "MaterialsAllowed",
+	PropertyRequirementsValid = "PropertyRequirementsValid",
+	PropertiesSensible = "PropertiesSensible",
+	InstanceTreeMatchesSchema = "InstanceTreeMatchesSchema",
+	DescendantIdsAllowed = "DescendantIdsAllowed",
+	ScaleTypeValid = "ScaleTypeValid",
+	CollisionFidelityCorrect = "CollisionFidelityCorrect",
+	AttachmentBoundsValid = "AttachmentBoundsValid",
+	AttachmentOrientationsValid = "AttachmentOrientationsValid",
+	HSRAssetStructureValid = "HSRAssetStructureValid",
+	HSRMeshIdsMatch = "HSRMeshIdsMatch",
+	ThumbnailConfigValid = "ThumbnailConfigValid",
+	AssetCanLoad = "AssetCanLoad",
+
+	-- Facs exploits
+	NoFACSOverrideData = "NoFACSOverrideData",
+	FacsHeadConsistency = "FacsHeadConsistency",
+
+	-- HRD/DRD/Bone checks (introduced for R15+ launch)
+	HrdBonesFollowSchema = "HrdBonesFollowSchema",
+	HrdPropertiesSensible = "HrdPropertiesSensible",
+	TposeAdjustmentSensible = "TposeAdjustmentSensible",
+	BoneCFramesInBounds = "BoneCFramesInBounds",
+	JointRotationAttachmentsLimited = "JointRotationAttachmentsLimited",
+	MoveableAttachmentsExist = "MoveableAttachmentsExist",
+
+	-- Mesh skinning checks
+	FacsNotDrivingSchema = "FacsNotDrivingSchema",
+	BodySkinnedToSchema = "BodySkinnedToSchema",
+	RigidSkinnedToSchema = "RigidSkinnedToSchema",
+	LCSkinnedToSchema = "LCSkinnedToSchema",
+
+	-- Layered clothing exploits
+	LCDeformationWithinBounds = "LCDeformationWithinBounds",
+
+	-- Eyelash Tests
+	LeaderSkinnedVertsNearCageIslands = "LeaderSkinnedVertsNearCageIslands",
+
+	-- Curve Animation checks
+	CurveAnimDataAvailable = "CurveAnimDataAvailable",
+	CurveAnimHierarchyCorrect = "CurveAnimHierarchyCorrect",
+	CurveAnimRigDataPresent = "CurveAnimRigDataPresent",
+	CurveAnimMarkerCurvesLimited = "CurveAnimMarkerCurvesLimited",
+	CurveAnimNoScripts = "CurveAnimNoScripts",
+	CurveAnimAllowedTypes = "CurveAnimAllowedTypes",
+	CurveAnimNumericalDataValid = "CurveAnimNumericalDataValid",
+	CurveAnimTagsValid = "CurveAnimTagsValid",
+	CurveAnimJointsManipulated = "CurveAnimJointsManipulated",
+	CurveAnimFrameDataSensible = "CurveAnimFrameDataSensible",
+	CurveAnimJointsAnimated = "CurveAnimJointsAnimated",
+	CurveAnimPositionBounded = "CurveAnimPositionBounded",
+	CurveAnimLengthBounded = "CurveAnimLengthBounded",
+	CurveAnimBoundsValid = "CurveAnimBoundsValid",
+	CurveAnimSpeedBounded = "CurveAnimSpeedBounded",
+	CurveAnimRotationBounded = "CurveAnimRotationBounded",
+	CurveAnimJointRotationLimited = "CurveAnimJointRotationLimited",
+	AnimationWeightPositive = "AnimationWeightPositive",
+}
 
 ---- Camel case enums (module members) ----
 ValidationEnums.SharedDataMember = {
 	--[[ 
 	Enum for Data that is made and used by validation tests. Should match Types.ValidationSharedData. 
-	This exists twice as type export allows selene to run while the enum system allows code usage.
+	This is duplicated in Types.SharedData for selene to run while the enum system allows strict code usage.
 	
-	If there is a common data calculation that happens in multiple tests, especially if they are calling a util, it should be preloaded here.
-	For example, if multiple tests need to straighten out the limbs or compute the mesh scale, we should create that information only once to avoid inconsistencies.
-	On the otherhand, if a test needs to know an LC's ImportOrigin or the PBR's metalness map, it can just directly get it from the root instance
+	The primary goal of this list is to consolidate any complicated or time-consuming (>50ms) data fetching or calculation.
+	For example, if multiple tests need to straighten out the limbs or fetch the editable meshes, we should create that information only once here.
+	On the otherhand, if a test needs to know an LC's ImportOrigin or the PBR's metalness map, it can just directly get it from the root instance.
+	If multiple tests want to do a simple data re-org (eg getAllInstancesIsA), they can just use a util instead of cluttering this data list. 
 	--]]
 
 	-- ==== Guaranteed data ====
@@ -81,20 +144,51 @@ ValidationEnums.SharedDataMember = {
 	innerCagesData = "innerCagesData",
 	outerCagesData = "outerCagesData",
 	meshTextures = "meshTextures",
-} :: { [string]: string }
+	curveAnimations = "curveAnimations",
+	curveAnimComputedFrames = "curveAnimComputedFrames",
+	contentIds = "contentIds",
+	hsrAssets = "hsrAssets",
+}
 finalizeEnumTable("SharedDataMember")
 
 ValidationEnums.ValidationConfig = {
+	-- Configs for enabling or disabling the test
 	categories = "categories", -- List of UploadCategory to run the test against. If missing, the test does NOT run.
 	fflag = "fflag", -- Function that returns true/false. If provided and the function returns false, the test does not run.
-	shadowFlag = "shadowFlag", -- Like an fflag, but runs the test with telemetry without including the result unless the consumer opts-in.
-	requiredData = "requiredData", -- List of SharedData enums that we need to fetch before we can run the test.
-	prereqTests = "prereqTests", -- List of Tests that must pass before running this test. If they fail, we get status CANNOT_START
+	shadowFlag = "shadowFlag", -- If provided and the function returns true, then even if the test is not enabled, we will include it as a warning.
+
+	-- Configs for setting test requirements, where an enabled test may be skipped
+	prereqTests = "prereqTests", -- List of Tests that must pass before running this test. If they do not pass, we get status CANNOT_START.
+	requiredData = "requiredData", -- List of SharedData enums fetched before running the test. If the data doesn't exist, this is an ERROR.
+	conditionalData = "conditionalData", -- List of SharedData enums fetched before running the test. If the data doesn't exist, the test will PASS.
+
+	-- AQS-only configs
+	expectedAqsData = "expectedAqsData", -- Legacy system of demanding a schema. AQ is now 1-to-1 with wrappers.
+	knownAqsUserErrors = "knownAqsUserErrors", -- Mapping of AQS error enum to Validation failure key that has no params. If provided, the error results in FAIL. Otherwise ERROR.
+
+	-- Extra configs you should include
 	expectedFailures = "expectedFailures", -- List of System tests that we expect to fail this specific check. For bundles, you must specify Name.AssetType or Name.FullBody
-	requiredAqsReturnSchema = "requiredAqsReturnSchema", -- Similar to required data, validations that request asset quality can demand specific return datas
 	run = "run", -- The main validation function
-} :: { [string]: string }
+}
 finalizeEnumTable("ValidationConfig")
+
+-- Camel-case sentinels for sharedData.aqsFetchMetrics.fetchStatus. NA means the upload had no AQS
+-- tests in scope; InProgress is a transient state while fetchQualityResults is running.
+ValidationEnums.AssetQualityFetchStatus = {
+	assetQualityFetchNA = "assetQualityFetchNA",
+	assetQualityFetchInProgress = "assetQualityFetchInProgress",
+	assetQualityFetchSuccess = "assetQualityFetchSuccess",
+	assetQualityFetchFailure = "assetQualityFetchFailure",
+}
+finalizeEnumTable("AssetQualityFetchStatus")
+
+-- Resolved environment that env-aware validation modules switch on.
+ValidationEnums.ConsumerEnv = {
+	Studio = "Studio",
+	Backend = "Backend",
+	IEC = "IEC",
+}
+finalizeEnumTable("ConsumerEnv")
 
 ---- Upper case enums (constants) ----
 ValidationEnums.Status = {
@@ -104,8 +198,28 @@ ValidationEnums.Status = {
 	ERROR = "ERROR",
 	FAIL = "FAIL",
 	PASS = "PASS",
-} :: { [string]: string }
+	IN_PROGRESS = "IN_PROGRESS",
+}
 finalizeEnumTable("Status")
+
+if getEngineFeatureEngineUGCValidationExpandReturnSchema() then
+	ValidationEnums.AssetQualityCheck = {
+		Measure_Dynamic_Head = "Measure_Dynamic_Head",
+		Measure_Cage_Distance_Head = "Measure_Cage_Distance_Head",
+		Measure_Cage_Mesh_Distance = "Measure_Cage_Mesh_Distance",
+		Measure_Cage_Mesh_Distance_Avatar = "Measure_Cage_Mesh_Distance_Avatar",
+		Measure_Cage_UV = "Measure_Cage_UV",
+		Measure_Cage_UV_Avatar = "Measure_Cage_UV_Avatar",
+		Measure_Cage_Relevancy = "Measure_Cage_Relevancy",
+		Measure_Mesh_Outside_OuterCage = "Measure_Mesh_Outside_OuterCage",
+	}
+	finalizeEnumTable("AssetQualityCheck")
+else
+	ValidationEnums.ValidationModule.HeadIsDynamic = "HeadIsDynamic"
+	ValidationEnums.ValidationModule.MeasureCageMeshDistanceHead = "MeasureCageMeshDistanceHead"
+end
+
+finalizeEnumTable("ValidationModule")
 
 ValidationEnums.UploadCategory = {
 	-- Every upload will be strictly ONE group.
@@ -118,7 +232,9 @@ ValidationEnums.UploadCategory = {
 	MAKEUP = "MAKEUP",
 	FULL_BODY = "FULL_BODY",
 	BOTH_SHOES = "BOTH_SHOES",
-} :: { [string]: string }
+	ANIMATION_PACK = "ANIMATION_PACK",
+	ANIMATION = "ANIMATION",
+}
 finalizeEnumTable("UploadCategory")
 
 return ValidationEnums

@@ -1,9 +1,8 @@
 -- DEPRECATED: Use the packgified UIManager in vr-spatial-ui module instead.
 local VRService = game:GetService("VRService")
 local RunService = game:GetService("RunService")
-local CoreGui = game:GetService("CoreGui")
-local RobloxGui = CoreGui.RobloxGui
-local VRHub = require(RobloxGui.Modules.VR.VRHub)
+local CorePackages = game:GetService("CorePackages")
+local VRHub = require(CorePackages.Workspace.Packages.VrCommon).VRHub
 local UIManagerRoot = script.Parent
 local Constants = require(UIManagerRoot.Constants)
 local Utils = require(UIManagerRoot.Utils)
@@ -14,7 +13,6 @@ local createUIGroupDragBar = require(script.Parent.createUIGroupDragBar)
 local DragBar = require(UIManagerRoot.DragBar)
 local Players = game:GetService("Players")
 local FIntUIResetDelayInSec = game:DefineFastInt("FIntUIResetDelayInSec", 3)
-local FFlagFixHeadSacleAdjustment = game:DefineFastFlag("FixHeadSacleAdjustment", false)
 
 export type UIGroupPositionProps = {
 	-- The rotation of the UI group relative to the head, used to update the CFrame of the UI group
@@ -462,11 +460,7 @@ function UIManager.new()
 	--- Immediately initialize the UI groups after creation
 	self:setUpUiGroups()
 	self:rescaleUIForCurrentHeadScale()
-	if FFlagFixHeadSacleAdjustment then
-		self:updateUIGroupsForCurCamera()
-	else
-		self:updateUIGroupsForCurHeadCFrame()
-	end
+	self:updateUIGroupsForCurCamera()
 
 	RunService:BindToRenderStep("UIManagerRenderStep", Enum.RenderPriority.Last.Value, function()
 		self:step()

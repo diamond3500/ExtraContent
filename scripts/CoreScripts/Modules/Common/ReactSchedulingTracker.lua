@@ -6,7 +6,6 @@ local FIntReactSchedulingTrackerPeriodMs: number = game:DefineFastInt("ReactSche
 local EngineFeatureTelemetryServiceMemoryCPUInfoEnabled = game:GetEngineFeature("TelemetryServiceMemoryCPUInfoEnabled")
 local FFlagDisableReactSchedulingTimePctStats = game:DefineFastFlag("DisableReactSchedulingTimePctStats", false)
 local FFlagDisableReactSchedulingAvgMaxMsStats = game:DefineFastFlag("DisableReactSchedulingAvgMaxMsStats", false)
-local FFlagEnableReactSessionMetrics = require(CorePackages.Workspace.Packages.SharedFlags).FFlagEnableReactSessionMetrics
 local FStringReactSchedulingContext = require(CorePackages.Workspace.Packages.SharedFlags).FStringReactSchedulingContext
 local FStringReactSchedulingPercentiles = game:DefineFastString("ReactSchedulingPercentiles", "10,50,95,99")
 local FIntReactSchedulingKllSketchMaxSize: number = game:DefineFastInt("ReactSchedulingKllSketchMaxSize", 200)
@@ -14,7 +13,6 @@ local FFlagDebugReactSchedulingEnableErrorEvents = game:DefineFastFlag("DebugRea
 local FFlagReactSchedulingTrackerLayoutEffects = game:DefineFastFlag("ReactSchedulingTrackerLayoutEffects", false)
 local FFlagReactSchedulingTrackerDataModelUpdate = game:DefineFastFlag("ReactSchedulingTrackerDataModelUpdate", false)
 local EngineFeatureTelemetryServicePlaySessionInfoEnabled = game:GetEngineFeature("TelemetryServicePlaySessionInfoEnabled")
-local FFlagReactSchedulingAddPlaySessionId = game:DefineFastFlag("ReactSchedulingAddPlaySessionId", false)
 local FFlagEnableCorescriptExecutionTime = game:DefineFastFlag("EnableCorescriptExecutionTime", false)
 local EngineFeatureScriptPlusExecutionTimeEnabled = game:GetEngineFeature("ScriptPlusExecutionTimeEnabled")
 
@@ -51,16 +49,11 @@ local enableKibana = FIntReactSchedulingTrackerEnableHunderedthsPercent
 local enabled = enableKibana > 0
 local periodReportEnabled = true 
 local rootReportEnabled = true
-local errorReportEnabled = FFlagEnableReactSessionMetrics and FFlagDebugReactSchedulingEnableErrorEvents
+local errorReportEnabled = FFlagDebugReactSchedulingEnableErrorEvents
 
 if not enabled then
-	if not FFlagEnableReactSessionMetrics then 
-		-- Logging is OFF. Don't enable. Early exit.
-		return nil :: ReactSchedulingTracker?
-	else
-		rootReportEnabled = false
-		periodReportEnabled = false
-	end
+	rootReportEnabled = false
+	periodReportEnabled = false
 end
 
 local sampleVal = math.random(0, MAX_SAMPLE_RATE)
@@ -72,13 +65,8 @@ end
 enabled = if sampleVal < enableKibana then true else false
 
 if not enabled then
-	if not FFlagEnableReactSessionMetrics then 
-		-- Not included in sampling. Don't enable. Early exit.
-		return nil :: ReactSchedulingTracker?
-	else
-		rootReportEnabled = false
-		periodReportEnabled = false
-	end
+	rootReportEnabled = false
+	periodReportEnabled = false
 end
 
 local TelemetryService = game:GetService("TelemetryService")
@@ -303,7 +291,7 @@ if EngineFeatureTelemetryServiceMemoryCPUInfoEnabled then
 	summaryStandardizedFields =
 		{ "addPlaceId", "addUniverseId", "addSessionId", "addOSInfo", "addSessionInfo", "addMemoryInfo", "addCPUInfo" }
 end
-if FFlagReactSchedulingAddPlaySessionId and EngineFeatureTelemetryServicePlaySessionInfoEnabled then
+if EngineFeatureTelemetryServicePlaySessionInfoEnabled then
 	table.insert(summaryStandardizedFields, "addPlaySessionId")
 end
 
@@ -340,7 +328,6 @@ local PeriodSummaryEvent = {
 local PeriodStatConfig = {
 	eventName = "ReactPeriod",
 	backends = { "RobloxTelemetryStat" },
-	throttlingPercentage = game:DefineFastInt("ReactPeriodStatThrottleHunderedthsPercent", 0),
 	lastUpdated = { 2025, 2, 18 },
 	description = "Stats for React performance over a period",
 	links = DOCS_LINK,
@@ -349,7 +336,6 @@ local PeriodStatConfig = {
 local FrameCountConfig = {
 	eventName = "ReactFrameCounter",
 	backends = { "RobloxTelemetryCounter" },
-	throttlingPercentage = game:DefineFastInt("ReactFrameCountThrottleHunderedthsPercent", 0),
 	lastUpdated = { 2025, 2, 18 },
 	description = "Frame counts for React performance over a period",
 	links = DOCS_LINK,
@@ -370,7 +356,6 @@ if not FFlagDisableReactSchedulingTimePctStats then
 		eventName = "ReactRootPeriod",
 		backends = { "RobloxTelemetryStat" },
 		lastUpdated = { 2025, 2, 18 },
-		throttlingPercentage = game:DefineFastInt("ReactRootPeriodStatThrottleHunderedthsPercent2", 0),
 		description = "Stats for React performance for a root over a period",
 		links = DOCS_LINK,
 	}
@@ -380,7 +365,6 @@ local RootTaskCountConfig = {
 	eventName = "ReactRootTaskCount",
 	backends = { "RobloxTelemetryCounter" },
 	lastUpdated = { 2025, 2, 18 },
-	throttlingPercentage = game:DefineFastInt("ReactRootTaskCountThrottleHunderedthsPercent2", 0),
 	description = "Task counts for React performance for a root over a period",
 	links = DOCS_LINK,
 }
@@ -391,7 +375,6 @@ if not FFlagDisableReactSchedulingAvgMaxMsStats then
 		eventName = "ReactRootPeriodTask",
 		backends = { "RobloxTelemetryStat" },
 		lastUpdated = { 2025, 2, 18 },
-		throttlingPercentage = game:DefineFastInt("ReactRootPeriodTaskStatThrottleHunderedthsPercent2", 0),
 		description = "Task stats for React performance for a root over a period",
 		links = DOCS_LINK,
 	}
@@ -402,7 +385,6 @@ local RootUpdateStatConfig = {
 	eventName = "ReactRootUpdate",
 	backends = { "RobloxTelemetryStat" },
 	lastUpdated = { 2025, 2, 18 },
-	throttlingPercentage = game:DefineFastInt("ReactRootUpdateStatThrottleHunderedthsPercent", 0),
 	description = "Task stats for individual React root updates, all in milliseconds",
 	links = DOCS_LINK,
 }
@@ -482,19 +464,17 @@ export type ReactSchedulingTracker = typeof(setmetatable(
 function ReactSchedulingTracker.new(context: string?): ReactSchedulingTracker
 	local updateTimeSketches, commitTimeSketches, timeToUpdateSketches = {}, {}, {}
 	local updateTimeAllData, commitTimeAllData, timeToUpdateAllData = {}, {}, {}
-	if FFlagEnableReactSessionMetrics then
-		updateTimeSketches[SKETCH_ALL_KEY] = KllSketch.new(FIntReactSchedulingKllSketchMaxSize)
-		commitTimeSketches[SKETCH_ALL_KEY] = KllSketch.new(FIntReactSchedulingKllSketchMaxSize)
-		timeToUpdateSketches[SKETCH_ALL_KEY] = KllSketch.new(FIntReactSchedulingKllSketchMaxSize)
-		if errorReportEnabled then
-			updateTimeAllData[SKETCH_ALL_KEY] = {}
-			commitTimeAllData[SKETCH_ALL_KEY] = {}
-			timeToUpdateAllData[SKETCH_ALL_KEY] = {}
-		end
+	updateTimeSketches[SKETCH_ALL_KEY] = KllSketch.new(FIntReactSchedulingKllSketchMaxSize)
+	commitTimeSketches[SKETCH_ALL_KEY] = KllSketch.new(FIntReactSchedulingKllSketchMaxSize)
+	timeToUpdateSketches[SKETCH_ALL_KEY] = KllSketch.new(FIntReactSchedulingKllSketchMaxSize)
+	if errorReportEnabled then
+		updateTimeAllData[SKETCH_ALL_KEY] = {}
+		commitTimeAllData[SKETCH_ALL_KEY] = {}
+		timeToUpdateAllData[SKETCH_ALL_KEY] = {}
 	end
 
 	local self = setmetatable({
-		started = if FFlagEnableReactSessionMetrics then false else nil,
+		started = false,
 		periodStartMs = 0,
 		reactFrameTimeMs = 0,
 		frameMetrics = {
@@ -508,7 +488,7 @@ function ReactSchedulingTracker.new(context: string?): ReactSchedulingTracker
 			reactDropChangeHistogram = { 0, 0, 0, 0 },
 		},
 		rootsMetrics = {},
-		sessionMetrics = if FFlagEnableReactSessionMetrics then {
+		sessionMetrics = {
 			updateTime = {
 				sketches = updateTimeSketches,
 				allData = if errorReportEnabled then updateTimeAllData else {},
@@ -532,16 +512,14 @@ function ReactSchedulingTracker.new(context: string?): ReactSchedulingTracker
 				sketch = KllSketch.new(FIntReactSchedulingKllSketchMaxSize),
 				allData = {},
 			},
-		} else nil,
+		},
 		context = context,
 	}, ReactSchedulingTracker)
 
 	self.schedulerStateMachine = SchedulerStateMachine.new(function(duration)
 		self:addToFrame(duration)
 	end, function(rootTimeMs, root)
-		if FFlagEnableReactSessionMetrics then
-			self:trackSessionSketches(rootTimeMs, root)
-		end
+		self:trackSessionSketches(rootTimeMs, root)
 		if rootReportEnabled then
 			self:reportRoot(rootTimeMs, root)
 		end
@@ -551,7 +529,7 @@ function ReactSchedulingTracker.new(context: string?): ReactSchedulingTracker
 end
 
 function ReactSchedulingTracker:start()
-	self.started = if FFlagEnableReactSessionMetrics then true else nil
+	self.started = true
 	self:resetState()
 
 	schedulingProfiler.registerProfilerEventCallback(function(type: number, root: FiberRoot?)
@@ -612,7 +590,7 @@ function ReactSchedulingTracker:addToFrame(duration)
 end
 
 function ReactSchedulingTracker:trackSessionSketches(rootTime: RootTaskTime, root: FiberRoot?)
-	if not FFlagEnableReactSessionMetrics or not self.sessionMetrics then
+	if not self.sessionMetrics then
 		return
 	end
 
@@ -830,22 +808,18 @@ function ReactSchedulingTracker:processFrame(frameTimeMs: number)
 	frameMetrics.totalFrameCount += 1
 	local bucket = self:getFrameBucket(frameTimeMs)
 	frameMetrics.allFrameHistogram[bucket] += 1
-	if FFlagEnableReactSessionMetrics then
-		self.sessionMetrics.timePerFrame.sketch:insert(reactFrameTimeMs)
-		if errorReportEnabled then
-			table.insert(self.sessionMetrics.timePerFrame.allData, reactFrameTimeMs)
-		end
+	self.sessionMetrics.timePerFrame.sketch:insert(reactFrameTimeMs)
+	if errorReportEnabled then
+		table.insert(self.sessionMetrics.timePerFrame.allData, reactFrameTimeMs)
 	end
 
 	if reactFrameTimeMs > 0 then
 		-- React ran this frame
 		frameMetrics.totalReactTimeMs += reactFrameTimeMs
 		frameMetrics.reactFrameHistogram[bucket] += 1
-		if FFlagEnableReactSessionMetrics then
-			self.sessionMetrics.timePerReactFrame.sketch:insert(reactFrameTimeMs)
-			if errorReportEnabled then
-				table.insert(self.sessionMetrics.timePerReactFrame.allData, reactFrameTimeMs)
-			end
+		self.sessionMetrics.timePerReactFrame.sketch:insert(reactFrameTimeMs)
+		if errorReportEnabled then
+			table.insert(self.sessionMetrics.timePerReactFrame.allData, reactFrameTimeMs)
 		end
 
 		-- update frame summary
@@ -1240,7 +1214,7 @@ end
 
 function ReactSchedulingTracker:reportSession()
 	-- do not report session unless tracking has started (past delay)
-	if not self.started or not FFlagEnableReactSessionMetrics then
+	if not self.started then
 		return
 	end
 
@@ -1275,9 +1249,5 @@ function ReactSchedulingTracker:reportSession()
 	})
 end
 
-if FFlagEnableReactSessionMetrics then
-	local instance: ReactSchedulingTracker = ReactSchedulingTracker.new(FStringReactSchedulingContext)
-	return instance
-end
-
-return (ReactSchedulingTracker :: unknown) :: ReactSchedulingTracker
+local instance: ReactSchedulingTracker = ReactSchedulingTracker.new(FStringReactSchedulingContext)
+return instance

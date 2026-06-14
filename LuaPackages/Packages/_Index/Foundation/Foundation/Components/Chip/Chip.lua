@@ -26,6 +26,9 @@ type CursorType = CursorType.CursorType
 local ChipSize = require(Foundation.Enums.ChipSize)
 type ChipSize = ChipSize.ChipSize
 
+local ChipVariant = require(Foundation.Enums.ChipVariant)
+type ChipVariant = ChipVariant.ChipVariant
+
 local useChipVariants = require(script.Parent.useChipVariants)
 
 type Accessory = Accessory.Accessory
@@ -44,6 +47,7 @@ export type ChipProps = {
 	onActivated: () -> (),
 	isChecked: boolean?,
 	size: ChipSize?,
+	variant: ChipVariant?,
 
 	-- DEPRECATED
 	children: React.ReactNode?,
@@ -57,6 +61,7 @@ local defaultProps = {
 	Selectable = true,
 	isDisabled = false,
 	size = ChipSize.Medium,
+	variant = ChipVariant.Standard,
 	testId = "--foundation-chip",
 }
 
@@ -89,7 +94,8 @@ local function Chip(chipProps: ChipProps, ref: React.Ref<GuiObject>?)
 		return props.leading or leading, props.trailing or trailing
 	end, { props.leading, props.icon, props.trailing } :: { unknown })
 
-	local variantProps = useChipVariants(tokens, props.size, props.isChecked, leading ~= nil, trailing ~= nil)
+	local variantProps =
+		useChipVariants(tokens, props.size, props.variant, props.isChecked, leading ~= nil, trailing ~= nil)
 	local cursorBorderWidth = math.floor(tokens.Stroke.Thicker)
 
 	return React.createElement(

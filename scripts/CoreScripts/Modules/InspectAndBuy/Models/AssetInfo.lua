@@ -27,8 +27,9 @@
 ]]
 local CorePackages = game:GetService("CorePackages")
 local SharedFlags = require(CorePackages.Workspace.Packages.SharedFlags)
-local CoreGui = game:GetService("CoreGui")
 local Dash = require(CorePackages.Packages.Dash)
+local FFlagAXEnableIaBTimedOptionsBulkPurchase =
+	require(CorePackages.Workspace.Packages.AvatarExperienceFlags).FFlagAXEnableIaBTimedOptionsBulkPurchase
 
 local InspectAndBuyFolder = script.Parent.Parent
 
@@ -44,9 +45,6 @@ type BundleInfo = AvatarExperienceInspectAndBuy.BundleInfo
 type BulkPurchaseResultItem = AvatarExperienceInspectAndBuy.BulkPurchaseResultItem
 type ItemDetails = AvatarExperienceInspectAndBuy.ItemDetails
 
-local FFlagEnableRestrictedAssetSaleLocationInspectAndBuy =
-	require(CoreGui.RobloxGui.Modules.Flags.FFlagEnableRestrictedAssetSaleLocationInspectAndBuy)
-
 local GetFFlagIBEnableCollectiblesSystemSupport =
 	require(InspectAndBuyFolder.Flags.GetFFlagIBEnableCollectiblesSystemSupport)
 
@@ -54,7 +52,6 @@ local FFlagAXParseAdditionalItemDetailsFromCatalog =
 	require(InspectAndBuyFolder.Flags.FFlagAXParseAdditionalItemDetailsFromCatalog)
 
 local FFlagIBV2Attribution = SharedFlags.FFlagIBV2Attribution
-
 
 local AssetInfo = {}
 
@@ -355,6 +352,10 @@ function AssetInfo.fromGetItemDetailsV2(itemDetails: ItemDetails): AssetInfo
 	newAsset.numFavorites = itemDetails.favoriteCount
 	newAsset.catalogPriceStatus = itemDetails.priceStatus
 
+	if FFlagAXEnableIaBTimedOptionsBulkPurchase then
+		newAsset.timedOptions = itemDetails.timedOptions
+	end
+
 	return newAsset
 end
 
@@ -445,13 +446,11 @@ function AssetInfo.getSaleDetailsForCollectibles(assetInfo)
 		if not assetInfo.collectibleIsLimited then
 			newAsset.isForSale = newAsset.isForSale and not newAsset.owned
 		end
-	elseif FFlagEnableRestrictedAssetSaleLocationInspectAndBuy then
+	else
 		newAsset.isForSale = assetInfo.isForSale and assetInfo.canBeSoldInThisGame
 		if assetInfo.canBeSoldInThisGame == nil then
 			newAsset.isForSale = assetInfo.isForSale
 		end
-	else
-		newAsset.isForSale = assetInfo.isForSale
 	end
 	return newAsset
 end

@@ -11,6 +11,7 @@ local InternalTextInput = require(Components.InternalTextInput)
 local Types = require(Foundation.Components.Types)
 local View = require(Components.View)
 
+local Flags = require(Foundation.Utility.Flags)
 local useTextInputVariants = require(Foundation.Components.TextInput.useTextInputVariants)
 local useTokens = require(Foundation.Providers.Style.useTokens)
 local withCommonProps = require(Foundation.Utility.withCommonProps)
@@ -18,6 +19,9 @@ local withDefaults = require(Foundation.Utility.withDefaults)
 
 local InputSize = require(Foundation.Enums.InputSize)
 type InputSize = InputSize.InputSize
+
+local InputVariant = require(Foundation.Enums.InputVariant)
+type InputVariant = InputVariant.InputVariant
 
 local getInputTextSize = require(Foundation.Utility.getInputTextSize)
 
@@ -38,19 +42,17 @@ export type TextInputProps = {
 	textInputType: Enum.TextInputType?,
 	-- Ran when return is pressed within the TextInput
 	onReturnPressed: (() -> ())?,
-} & Types.TextInputCommonProps & Types.CommonProps
+} & Types.TextInputCommonProps & Types.SelectionProps & Types.CommonProps
 
 local defaultProps = {
 	size = InputSize.Large,
-	width = UDim.new(0, 400),
 	testId = "--foundation-text-input",
 }
 
 local function TextInput(textInputProps: TextInputProps, ref: React.Ref<GuiObject>?)
 	local props = withDefaults(textInputProps, defaultProps)
-
 	local tokens = useTokens()
-	local variantProps = useTextInputVariants(tokens, props.size :: InputSize)
+	local variantProps = useTextInputVariants(tokens, props.size, props.variant)
 
 	return React.createElement(
 		InputField,
@@ -60,6 +62,7 @@ local function TextInput(textInputProps: TextInputProps, ref: React.Ref<GuiObjec
 			label = props.label,
 			size = getInputTextSize(props.size),
 			isRequired = props.isRequired,
+			isDisabled = props.isDisabled,
 			hasError = props.hasError,
 			hint = props.hint,
 			textBoxRef = props.textBoxRef,
@@ -68,12 +71,20 @@ local function TextInput(textInputProps: TextInputProps, ref: React.Ref<GuiObjec
 					ref = inputRef,
 					hasError = props.hasError,
 					isDisabled = props.isDisabled,
+					hasClearButton = props.hasClearButton,
 					text = props.text,
 					textInputType = props.textInputType,
+					focusBehavior = props.focusBehavior,
 					size = props.size,
+					variant = props.variant,
+					Selectable = if Flags.FoundationInputSelectionProps then props.Selectable else nil,
+					NextSelectionUp = if Flags.FoundationInputSelectionProps then props.NextSelectionUp else nil,
+					NextSelectionDown = if Flags.FoundationInputSelectionProps then props.NextSelectionDown else nil,
+					NextSelectionLeft = if Flags.FoundationInputSelectionProps then props.NextSelectionLeft else nil,
+					NextSelectionRight = if Flags.FoundationInputSelectionProps then props.NextSelectionRight else nil,
 					horizontalPadding = {
-						left = variantProps.innerContainer.horizontalPadding,
-						right = variantProps.innerContainer.horizontalPadding,
+						left = variantProps.container.horizontalPadding,
+						right = variantProps.container.horizontalPadding,
 					},
 					onChanged = props.onChanged,
 					onFocus = props.onFocusGained,
@@ -83,7 +94,7 @@ local function TextInput(textInputProps: TextInputProps, ref: React.Ref<GuiObjec
 					leadingElement = if props.leadingIcon
 						then React.createElement(
 							View,
-							{ tag = "size-0-full auto-x row align-y-center" },
+							{ tag = "row align-y-center size-0-full auto-x" },
 							React.createElement(Icon, {
 								name = props.leadingIcon,
 								style = variantProps.icon.style,
@@ -94,13 +105,14 @@ local function TextInput(textInputProps: TextInputProps, ref: React.Ref<GuiObjec
 					trailingElement = if props.iconTrailing
 						then React.createElement(
 							View,
-							{ tag = "size-0-full auto-x row align-y-center" },
+							{ tag = "row align-y-center size-0-full auto-x" },
 							if type(props.iconTrailing) == "table" and props.iconTrailing.onActivated
 								then React.createElement(IconButton, {
 									onActivated = props.iconTrailing.onActivated,
 									isDisabled = props.isDisabled,
 									size = variantProps.icon.size,
 									icon = props.iconTrailing.name,
+									testId = `{props.testId}--trailing-icon-button`,
 								})
 								else React.createElement(Icon, {
 									name = if type(props.iconTrailing) == "table"

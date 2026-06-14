@@ -47,9 +47,12 @@ local FFlagNotificationsRenameFriendRequestToConnection =
 
 local shouldSaveScreenshotToAlbum = require(RobloxGui.Modules.shouldSaveScreenshotToAlbum)
 local FFlagFixOnBadgeAwardedError = game:DefineFastFlag("FixOnBadgeAwardedError", false)
-local FFlagFixGraphicsQualityLevelNotif = game:DefineFastFlag("FixGraphicsQualityLevelNotif", false)
+
+local FFlagConnectionsToFriendsRename = require(CorePackages.Workspace.Packages.SharedFlags).FFlagConnectionsToFriendsRename
 
 local RobloxTranslator = require(CorePackages.Workspace.Packages.RobloxTranslator)
+
+local featureDeprecateOldGuiObjectProperties = game:GetEngineFeature("DeprecateOldGuiObjectProperties")
 
 
 local function LocalizedGetString(key, rtv)
@@ -116,8 +119,12 @@ local MAX_GET_FRIEND_IMAGE_YIELD_TIME = 5
 local FRIEND_REQUEST_NOTIFICATION_THROTTLE = 5
 
 local FRIEND_REQUEST_NOTIFICATION_LOCALIZATION_KEYS = {
-	ACCEPTED = "InGame.NotificationScript2.Message.ConnectionRequestEvent.Accepted",
-	SENT = "InGame.NotificationScript2.Message.ConnectionRequestEvent.Sent",
+	ACCEPTED = if FFlagConnectionsToFriendsRename 
+		then "InGame.NotificationScript2.Message.FriendRequestEvent.Accepted"
+		else "InGame.NotificationScript2.Message.ConnectionRequestEvent.Accepted",
+	SENT = if FFlagConnectionsToFriendsRename
+		then "InGame.NotificationScript2.Message.FriendRequestEvent.Sent"
+		else "InGame.NotificationScript2.Message.ConnectionRequestEvent.Sent",
 }
 
 -- The new, supported way to translate strings in the client.
@@ -505,18 +512,34 @@ local function updateNotifications()
 				thisOffset = currentNotification.IsFriend and frame.Size.Y.Offset + ((NOTIFICATION_Y_OFFSET + 2) * 0.5)
 					or frame.Size.Y.Offset
 				yOffset = yOffset + thisOffset
-				frame:TweenPosition(
-					UDim2.new(0, 0, 1, -yOffset - (pos * 4)),
-					EASE_DIR,
-					EASE_STYLE,
-					TWEEN_TIME,
-					true,
-					function()
-						if currentNotification.TweenOutCallback then
-							currentNotification.TweenOutCallback()
+
+				if featureDeprecateOldGuiObjectProperties then
+					frame:TweenPositionInternal(
+						UDim2.new(0, 0, 1, -yOffset - (pos * 4)),
+						EASE_DIR,
+						EASE_STYLE,
+						TWEEN_TIME,
+						true,
+						function()
+							if currentNotification.TweenOutCallback then
+								currentNotification.TweenOutCallback()
+							end
 						end
-					end
-				)
+					)
+				else
+					frame:TweenPosition(
+						UDim2.new(0, 0, 1, -yOffset - (pos * 4)),
+						EASE_DIR,
+						EASE_STYLE,
+						TWEEN_TIME,
+						true,
+						function()
+							if currentNotification.TweenOutCallback then
+								currentNotification.TweenOutCallback()
+							end
+						end
+					)
+				end
 				pos = pos + 1
 			end
 		end
@@ -581,17 +604,31 @@ removeNotification = function(notification)
 			-- Tween out now, or set up to tween out immediately after current tween is finished, but don't interrupt.
 			local function doTweenOut()
 				if frame:IsDescendantOf(game) then
-					return frame:TweenPosition(
-						UDim2.new(1, 0, 1, frame.Position.Y.Offset),
-						EASE_DIR,
-						EASE_STYLE,
-						TWEEN_TIME,
-						false,
-						function()
-							frame:Destroy()
-							notification = nil
-						end
-					)
+					if featureDeprecateOldGuiObjectProperties then
+						return frame:TweenPositionInternal(
+							UDim2.new(1, 0, 1, frame.Position.Y.Offset),
+							EASE_DIR,
+							EASE_STYLE,
+							TWEEN_TIME,
+							false,
+							function()
+								frame:Destroy()
+								notification = nil
+							end
+						)
+					else
+						return frame:TweenPosition(
+							UDim2.new(1, 0, 1, frame.Position.Y.Offset),
+							EASE_DIR,
+							EASE_STYLE,
+							TWEEN_TIME,
+							false,
+							function()
+								frame:Destroy()
+								notification = nil
+							end
+						)
+					end
 				else
 					return false
 				end
@@ -1091,7 +1128,7 @@ if not isTenFootInterface then
 	--GameSettings.Changed:connect(onGameSettingsChanged)
 
 	game.GraphicsQualityChangeRequest:Connect(function(graphicsIncrease) --graphicsIncrease is a boolean
-		onGameSettingsChanged("SavedQualityLevel", if FFlagFixGraphicsQualityLevelNotif then 0 else graphicsIncrease == true and 1 or -1)
+		onGameSettingsChanged("SavedQualityLevel", 0 )
 	end)
 end
 
@@ -1149,7 +1186,11 @@ GuiService.SendCoreUiNotification = function(title, text)
 	notification.NotificationTitle.FontSize = Enum.FontSize.Size36
 	notification.NotificationText.FontSize = Enum.FontSize.Size24
 	notification.Parent = RbxGui
-	notification:TweenPosition(UDim2.new(0.25, 0, 0, 0), EASE_DIR, EASE_STYLE, TWEEN_TIME, true)
+	if featureDeprecateOldGuiObjectProperties then
+		notification:TweenPositionInternal(UDim2.new(0.25, 0, 0, 0), EASE_DIR, EASE_STYLE, TWEEN_TIME, true)
+	else
+		notification:TweenPosition(UDim2.new(0.25, 0, 0, 0), EASE_DIR, EASE_STYLE, TWEEN_TIME, true)
+	end
 	wait(5)
 	if notification then
 		notification:Destroy()

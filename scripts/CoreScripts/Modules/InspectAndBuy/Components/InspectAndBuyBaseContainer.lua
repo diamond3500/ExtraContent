@@ -16,6 +16,8 @@ local useViewBreakpoints = AvatarExperienceInspectAndBuy.Hooks.useViewBreakpoint
 local ResponsivePanelLayout = AvatarExperienceInspectAndBuy.Components.ResponsivePanelLayout
 local useResponsivePanelLayoutProps = AvatarExperienceInspectAndBuy.Hooks.useResponsivePanelLayoutProps
 local applyTryOnItemToHumanoidDescription = AvatarExperienceInspectAndBuy.Utils.applyTryOnItemToHumanoidDescription
+local useInspectAndBuyFocusNavigation = AvatarExperienceInspectAndBuy.Hooks.useInspectAndBuyFocusNavigation
+local buildBulkPurchaseAnalyticsPayload = AvatarExperienceInspectAndBuy.Utils.buildBulkPurchaseAnalyticsPayload
 
 local UpdateBulkPuchaseResults = require(InspectAndBuyFolder.Actions.UpdateBulkPuchaseResults)
 local GetProductInfo = require(InspectAndBuyFolder.Thunks.GetProductInfo)
@@ -27,8 +29,12 @@ local CreateFavoriteForBundle = require(InspectAndBuyFolder.Thunks.CreateFavorit
 local DeleteFavoriteForBundle = require(InspectAndBuyFolder.Thunks.DeleteFavoriteForBundle)
 local PromptPurchase = require(InspectAndBuyFolder.Thunks.PromptPurchase)
 local GetItemDetails = require(InspectAndBuyFolder.Thunks.GetItemDetails)
-local useDispatch = require(CorePackages.Workspace.Packages.RoactUtils).Hooks.RoactRodux.useDispatch
-local ItemTypeEnum = require(CorePackages.Workspace.Packages.AvatarExperienceCommon).Enums.ItemTypeEnum
+local RoactUtils = require(CorePackages.Workspace.Packages.RoactUtils)
+local useDispatch = RoactUtils.Hooks.RoactRodux.useDispatch
+local useSelector = RoactUtils.Hooks.RoactRodux.useSelector
+local AvatarExperienceCommon = require(CorePackages.Workspace.Packages.AvatarExperienceCommon)
+local ItemTypeEnum = AvatarExperienceCommon.Enums.ItemTypeEnum
+type ItemType = AvatarExperienceCommon.ItemType
 local OpenOverlay = require(InspectAndBuyFolder.Actions.OpenOverlay)
 local OverlayEnum = require(InspectAndBuyFolder.Enums.Overlay)
 local Overlay = require(InspectAndBuyFolder.Components.Overlay)
@@ -36,16 +42,25 @@ local Overlay = require(InspectAndBuyFolder.Components.Overlay)
 local useUnifiedEventListenerInExperience =
 	require(CorePackages.Workspace.Packages.AvatarExperienceAnalytics).useUnifiedEventListener.useUnifiedEventListenerInExperience
 
+local SignalsReact = require(CorePackages.Packages.SignalsReact)
+local useSignalState = SignalsReact.useSignalState
+
 local Foundation = require(CorePackages.Packages.Foundation)
 local useTokens = Foundation.Hooks.useTokens
 local Modules = CoreGui.RobloxGui.Modules
 local Theme = require(Modules.Settings.Theme)
 local TopBarConstants = require(Modules.TopBar.Constants)
+local tutils = require(CorePackages.Packages.tutils)
 
 type PromptBulkPurchaseFinishedResult = AvatarExperienceInspectAndBuy.PromptBulkPurchaseFinishedResult
 type AvatarItem = AvatarExperienceInspectAndBuy.AvatarItem
 type TryOnItem = AvatarExperienceInspectAndBuy.TryOnItem
 type LocalPlayerModel = AvatarExperienceInspectAndBuy.LocalPlayerModel
+type ItemSelectionStore = AvatarExperienceInspectAndBuy.ItemSelectionStore
+type PriceStatus = AvatarExperienceInspectAndBuy.PriceStatus
+type AssetInfo = AvatarExperienceInspectAndBuy.AssetInfo
+type ItemData = AvatarExperienceInspectAndBuy.ItemData
+type InspectAndBuyState = AvatarExperienceInspectAndBuy.InspectAndBuyState
 
 -- this flag controls whether the avatar model rotates when the user is not interacting with it
 local FFlagEnableAvatarViewportAutoRotation = game:DefineFastFlag("EnableAvatarViewportAutoRotation", false)
@@ -53,16 +68,52 @@ local FFlagEnableAvatarViewportAutoRotation = game:DefineFastFlag("EnableAvatarV
 local FIntViewportCameraFieldOfView = game:DefineFastInt("AXViewportCameraFieldOfView", 68)
 local FFlagIBV2Attribution = SharedFlags.FFlagIBV2Attribution
 local FFlagAXEnableBatchItemDetailsFetchV2 = AvatarExperienceFlags.FFlagAXEnableBatchItemDetailsFetchV2
+local FFlagAXEnableInspectAndBuyFocusNavigation = AvatarExperienceFlags.FFlagAXEnableInspectAndBuyFocusNavigation
+local FFlagAXEnableIaBTimedOptionsBulkPurchase = AvatarExperienceFlags.FFlagAXEnableIaBTimedOptionsBulkPurchase
+local ItemSelectionStoreContext = if FFlagAXEnableIaBTimedOptionsBulkPurchase
+	then AvatarExperienceInspectAndBuy.Contexts.ItemSelectionStoreContext
+	else nil
+local ItemSelectionStoreProvider = if ItemSelectionStoreContext then ItemSelectionStoreContext.Provider else nil
+local useItemSelectionStore = if ItemSelectionStoreContext then ItemSelectionStoreContext.useItemSelectionStore else nil
 
 export type InspectAndBuyBaseContainerProps = {
 	localPlayerModel: LocalPlayerModel?,
 	analytics: any, -- Analytics service instance
 }
 
+local getAssetsMap = function(state: InspectAndBuyState)
+	return state.assets
+end
+
+local getCollectibleResellableInstances = function(state: InspectAndBuyState)
+	return state.collectibleResellableInstances
+end
+
+local getBundlesMap = function(state: InspectAndBuyState)
+	return state.bundles
+end
+
 local function InspectAndBuyBaseContainer(props)
 	local viewBreakpoints = useViewBreakpoints(TopBarConstants.TopBarHeight)
 	local tokens = useTokens()
 	local dispatch = useDispatch()
+
+	local itemSelectionStore = if FFlagAXEnableIaBTimedOptionsBulkPurchase
+		then (useItemSelectionStore :: () -> ItemSelectionStore)()
+		else nil
+	local itemDataMap = if FFlagAXEnableIaBTimedOptionsBulkPurchase
+		then useSignalState((itemSelectionStore :: ItemSelectionStore).getItemDataMap)
+		else nil
+
+	local assetsMap = if FFlagAXEnableIaBTimedOptionsBulkPurchase
+		then useSelector(getAssetsMap, tutils.deepEqual)
+		else nil
+	local collectibleResellableInstances = if FFlagAXEnableIaBTimedOptionsBulkPurchase
+		then useSelector(getCollectibleResellableInstances, tutils.deepEqual)
+		else nil
+	local bundlesMap = if FFlagAXEnableIaBTimedOptionsBulkPurchase
+		then useSelector(getBundlesMap, tutils.deepEqual)
+		else nil
 
 	--[[
 		Close and unmount the inspect and buy menu
@@ -74,23 +125,55 @@ local function InspectAndBuyBaseContainer(props)
 	--[[
 		When a bulk purchase is finished, update the bulk purchase results (owndership status)
 	]]
-	local onBulkPurchaseFinished = React.useCallback(function(player, status, result: PromptBulkPurchaseFinishedResult)
-		dispatch(UpdateBulkPuchaseResults(result))
+	local onBulkPurchaseFinished = React.useCallback(
+		function(player, status, result: PromptBulkPurchaseFinishedResult)
+			dispatch(UpdateBulkPuchaseResults(result))
 
-		-- refresh the item card price line content (mainly for resale items)
-		for _, item in result.Items do
-			-- only report purchase success if the item was purchased successfully
-			if item.status == Enum.MarketplaceItemPurchaseStatus.Success then
-				if item.type == Enum.MarketplaceProductType.AvatarAsset then
-					props.analytics.reportPurchaseSuccess(ItemTypeEnum.Asset, item.id)
-					dispatch(GetItemDetails(item.id, Enum.AvatarItemType.Asset))
-				elseif item.type == Enum.MarketplaceProductType.AvatarBundle then
-					props.analytics.reportPurchaseSuccess(ItemTypeEnum.Bundle, item.id)
-					dispatch(GetItemDetails(item.id, Enum.AvatarItemType.Bundle))
+			-- refresh the item card price line content (mainly for resale items)
+			for _, item in result.Items do
+				-- only report purchase success if the item was purchased successfully
+				if item.status == Enum.MarketplaceItemPurchaseStatus.Success then
+					if FFlagAXEnableIaBTimedOptionsBulkPurchase and itemDataMap then
+						local isAsset = item.type == Enum.MarketplaceProductType.AvatarAsset
+						local itemId = item.id
+						local itemAvatarType = if isAsset then Enum.AvatarItemType.Asset else Enum.AvatarItemType.Bundle
+						local itemTypeEnum: ItemType = if isAsset then ItemTypeEnum.Asset else ItemTypeEnum.Bundle
+
+						local storedData = itemDataMap[tostring(itemId)]
+						local payload = buildBulkPurchaseAnalyticsPayload({
+							itemId = tostring(itemId),
+							itemType = itemTypeEnum,
+							assetsMap = assetsMap,
+							bundlesMap = bundlesMap,
+							collectibleResellableInstances = collectibleResellableInstances,
+							storedData = storedData,
+						})
+						if payload then
+							props.analytics.reportPurchaseSuccessUnifiedEvent(itemTypeEnum, itemId, payload)
+						end
+						dispatch(GetItemDetails(itemId, itemAvatarType))
+					else
+						if item.type == Enum.MarketplaceProductType.AvatarAsset then
+							props.analytics.reportPurchaseSuccess(ItemTypeEnum.Asset, item.id)
+							dispatch(GetItemDetails(item.id, Enum.AvatarItemType.Asset))
+						elseif item.type == Enum.MarketplaceProductType.AvatarBundle then
+							props.analytics.reportPurchaseSuccess(ItemTypeEnum.Bundle, item.id)
+							dispatch(GetItemDetails(item.id, Enum.AvatarItemType.Bundle))
+						end
+					end
 				end
 			end
-		end
-	end, { dispatch })
+		end,
+		{
+			dispatch,
+			if FFlagAXEnableIaBTimedOptionsBulkPurchase then assetsMap else nil,
+			if FFlagAXEnableIaBTimedOptionsBulkPurchase then bundlesMap else nil,
+			if FFlagAXEnableIaBTimedOptionsBulkPurchase then collectibleResellableInstances else nil,
+			if FFlagAXEnableIaBTimedOptionsBulkPurchase then itemDataMap else nil,
+			if FFlagAXEnableIaBTimedOptionsBulkPurchase then props.analytics.reportPurchaseSuccess else nil,
+			if FFlagAXEnableIaBTimedOptionsBulkPurchase then props.analytics.reportPurchaseSuccessUnifiedEvent else nil,
+		} :: { any }
+	)
 
 	--[[
 		when item details is opened, we need to call additional APIs to get more information
@@ -135,9 +218,11 @@ local function InspectAndBuyBaseContainer(props)
 		end
 	end, { dispatch })
 
-	local openAttributionOverlay = if FFlagIBV2Attribution then React.useCallback(function(experienceInfo)
-		dispatch(OpenOverlay(OverlayEnum.AttributionTraversal, experienceInfo))
-	end, { dispatch }) else nil
+	local openAttributionOverlay = if FFlagIBV2Attribution
+		then React.useCallback(function(experienceInfo)
+			dispatch(OpenOverlay(OverlayEnum.AttributionTraversal, experienceInfo))
+		end, { dispatch })
+		else nil
 
 	--[[
 	Prompts a purchase for a single item.
@@ -232,39 +317,96 @@ local function InspectAndBuyBaseContainer(props)
 
 	useUnifiedEventListenerInExperience()
 
-	-- outer overlay container will close the menu when clicked on
-	return React.createElement(Foundation.View, {
-		Size = viewBreakpoints.OverlaySize,
-		Position = viewBreakpoints.OverlayPosition,
-		backgroundStyle = tokens.Color.Common.Shadow,
-		stateLayer = {
-			affordance = Foundation.Enums.StateLayerAffordance.None,
-		},
-		onActivated = function()
-			GuiService:CloseInspectMenu()
-		end,
-	}, {
-		ContainerView = React.createElement(Foundation.View, {
-			AnchorPoint = viewBreakpoints.ContainerAnchorPoint,
-			ClipsDescendants = true,
-			Size = viewBreakpoints.ContainerSize,
-			Position = viewBreakpoints.ContainerPosition,
-			backgroundStyle = {
-				Color3 = Theme.color("MenuContainer"),
-				Transparency = Theme.transparency("MenuContainer", 1) * GuiService.PreferredTransparency,
-			},
+	if FFlagAXEnableInspectAndBuyFocusNavigation then
+		-- Focus navigation (handles purchase modal detection and auto-focus)
+		local focusNavigationConfig = useInspectAndBuyFocusNavigation()
+
+		return React.createElement("Frame", {
+			ref = focusNavigationConfig.setFocusRef,
+			Size = UDim2.fromScale(1, 1),
+			BackgroundTransparency = 1,
+			BorderSizePixel = 0,
+			SelectionGroup = focusNavigationConfig.focusNavigationProps.SelectionGroup,
+			SelectionBehaviorDown = focusNavigationConfig.focusNavigationProps.SelectionBehaviorDown,
+			SelectionBehaviorLeft = focusNavigationConfig.focusNavigationProps.SelectionBehaviorLeft,
+			SelectionBehaviorRight = focusNavigationConfig.focusNavigationProps.SelectionBehaviorRight,
+			SelectionBehaviorUp = focusNavigationConfig.focusNavigationProps.SelectionBehaviorUp,
+		}, {
+			Content = React.createElement(Foundation.View, {
+				Size = viewBreakpoints.OverlaySize,
+				Position = viewBreakpoints.OverlayPosition,
+				backgroundStyle = tokens.Color.Common.Shadow,
+				stateLayer = {
+					affordance = Foundation.Enums.StateLayerAffordance.None,
+				},
+				onActivated = function()
+					GuiService:CloseInspectMenu()
+				end,
+			}, {
+				ContainerView = React.createElement(Foundation.View, {
+					AnchorPoint = viewBreakpoints.ContainerAnchorPoint,
+					ClipsDescendants = true,
+					Size = viewBreakpoints.ContainerSize,
+					Position = viewBreakpoints.ContainerPosition,
+					backgroundStyle = {
+						Color3 = Theme.color("MenuContainer"),
+						Transparency = Theme.transparency("MenuContainer", 1) * GuiService.PreferredTransparency,
+					},
+					stateLayer = {
+						affordance = Foundation.Enums.StateLayerAffordance.None,
+					},
+					onActivated = function() end, -- stop click events from propagating up to overlay
+				}, {
+					UICorner = React.createElement("UICorner", {
+						CornerRadius = Theme.DefaultCornerRadius,
+					}),
+					ResponsivePanelLayout = React.createElement(ResponsivePanelLayout, responsivePanelLayoutProps),
+				}),
+				Overlay = if FFlagIBV2Attribution then React.createElement(Overlay) else nil,
+			}),
+		})
+	else
+		return React.createElement(Foundation.View, {
+			Size = viewBreakpoints.OverlaySize,
+			Position = viewBreakpoints.OverlayPosition,
+			backgroundStyle = tokens.Color.Common.Shadow,
 			stateLayer = {
 				affordance = Foundation.Enums.StateLayerAffordance.None,
 			},
-			onActivated = function() end, -- stop click events from propagating up to overlay
+			onActivated = function()
+				GuiService:CloseInspectMenu()
+			end,
 		}, {
-			UICorner = React.createElement("UICorner", {
-				CornerRadius = Theme.DefaultCornerRadius,
+			ContainerView = React.createElement(Foundation.View, {
+				AnchorPoint = viewBreakpoints.ContainerAnchorPoint,
+				ClipsDescendants = true,
+				Size = viewBreakpoints.ContainerSize,
+				Position = viewBreakpoints.ContainerPosition,
+				backgroundStyle = {
+					Color3 = Theme.color("MenuContainer"),
+					Transparency = Theme.transparency("MenuContainer", 1) * GuiService.PreferredTransparency,
+				},
+				stateLayer = {
+					affordance = Foundation.Enums.StateLayerAffordance.None,
+				},
+				onActivated = function() end, -- stop click events from propagating up to overlay
+			}, {
+				UICorner = React.createElement("UICorner", {
+					CornerRadius = Theme.DefaultCornerRadius,
+				}),
+				ResponsivePanelLayout = React.createElement(ResponsivePanelLayout, responsivePanelLayoutProps),
 			}),
-			ResponsivePanelLayout = React.createElement(ResponsivePanelLayout, responsivePanelLayoutProps),
-		}),
-		Overlay = if FFlagIBV2Attribution then React.createElement(Overlay) else nil,
+			Overlay = if FFlagIBV2Attribution then React.createElement(Overlay) else nil,
+		}) :: any
+	end
+end
+
+local function InspectAndBuyBaseContainerWithSignalsProvider(props)
+	return React.createElement(ItemSelectionStoreProvider :: any, {}, {
+		Inner = React.createElement(InspectAndBuyBaseContainer, props),
 	})
 end
 
-return InspectAndBuyBaseContainer
+return if FFlagAXEnableIaBTimedOptionsBulkPurchase
+	then InspectAndBuyBaseContainerWithSignalsProvider
+	else InspectAndBuyBaseContainer

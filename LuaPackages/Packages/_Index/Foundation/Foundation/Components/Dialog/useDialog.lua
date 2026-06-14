@@ -15,6 +15,9 @@ type DialogConfiguration = {
 	hasHeroMedia: boolean,
 	setHasHeroMedia: (has: boolean) -> (),
 	testId: string,
+	closeAffordanceRef: React.Ref<GuiObject>?,
+	contentStartRef: React.Ref<GuiObject>?,
+	setContentStartRef: (ref: React.Ref<GuiObject>) -> (),
 }
 
 local function useDialog(): DialogConfiguration

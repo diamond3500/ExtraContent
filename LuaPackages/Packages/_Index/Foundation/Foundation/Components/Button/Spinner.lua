@@ -1,6 +1,7 @@
 local Foundation = script:FindFirstAncestor("Foundation")
 local Packages = Foundation.Parent
 local React = require(Packages.React)
+local isPluginSecurity = require(Foundation.Utility.isPluginSecurity)
 
 local Motion = require(Packages.Motion)
 local useMotion = Motion.useMotion
@@ -29,7 +30,7 @@ local function IconSpinner(props: InternalSpinnerProps)
 		Image = "icons/status/loading_large",
 		imageStyle = props.style,
 		Rotation = rotation,
-		tag = "anchor-center-center position-center-center size-full-full",
+		tag = "position-center-center anchor-center-center size-full-full",
 		testId = props.testId,
 	}, {
 		UIScale = React.createElement("UIScale", {
@@ -58,7 +59,7 @@ local function Path2DSpinner(props: InternalSpinnerProps)
 	end, {})
 
 	return React.createElement(View, {
-		tag = "anchor-center-center position-center-center size-full",
+		tag = "position-center-center anchor-center-center size-full",
 		Rotation = rotation,
 		testId = props.testId,
 	}, {
@@ -68,9 +69,11 @@ local function Path2DSpinner(props: InternalSpinnerProps)
 			Color3 = props.style:map(function(styleValues)
 				return styleValues.Color3
 			end),
-			Transparency = props.style:map(function(styleValues)
-				return styleValues.Transparency
-			end),
+			Transparency = if isPluginSecurity()
+				then props.style:map(function(styleValues)
+					return styleValues.Transparency
+				end)
+				else nil,
 			Thickness = props.Thickness,
 		}),
 		UIScale = React.createElement("UIScale", {

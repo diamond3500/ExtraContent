@@ -3,7 +3,6 @@ local GuiService = game:GetService("GuiService")
 local React = require(CorePackages.Packages.React)
 local RoactUtils = require(CorePackages.Workspace.Packages.RoactUtils)
 local useSelector = RoactUtils.Hooks.RoactRodux.useSelector
-local dependencyArray = RoactUtils.Hooks.dependencyArray
 
 type KeepOutArea = {
 	id: string,
@@ -133,7 +132,7 @@ function KeepOutAreasHandler(props)
 
 	React.useEffect(function()
 		fireKeepOutAreasChanged(screenSize, keepOutAreas)
-	end, dependencyArray(screenSize, keepOutAreas))
+	end, { screenSize :: any, keepOutAreas })
 end
 
 return KeepOutAreasHandler

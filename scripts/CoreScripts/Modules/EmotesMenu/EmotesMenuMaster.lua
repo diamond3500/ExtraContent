@@ -21,7 +21,7 @@ local Rodux = require(CorePackages.Packages.Rodux)
 local RoactRodux = require(CorePackages.Packages.RoactRodux)
 local UIBlox = require(CorePackages.Packages.UIBlox)
 local Signals = require(CorePackages.Packages.Signals)
-local CoreGuiCommon = require(CorePackages.Workspace.Packages.CoreGuiCommon)
+local InExperienceTopBar = require(CorePackages.Workspace.Packages.InExperienceTopBar)
 
 local EmotesModules = script.Parent
 local CoreScriptModules = EmotesModules.Parent
@@ -32,12 +32,14 @@ local Reducers = EmotesModules.Reducers
 local Thunks = EmotesModules.Thunks
 local Utility = EmotesModules.Utility
 
-local Backpack = require(CoreScriptModules.BackpackScript)
+local FFlagEnableNewBackpack = require(CorePackages.Workspace.Packages.SharedFlags).FFlagEnableNewBackpack
+local Features = if FFlagEnableNewBackpack then require(CorePackages.Workspace.Packages.System).Features else nil
+local Backpack = if not FFlagEnableNewBackpack then require(CoreScriptModules.BackpackScript) else nil
 local Chat = require(CoreScriptModules.ChatSelector)
 local TenFootInterface = require(CoreScriptModules.TenFootInterface)
 local TopBarConstant = require(CoreScriptModules.TopBar.Constants)
-local InExperienceAppChatModal = require(CorePackages.Workspace.Packages.AppChat).App.InExperienceAppChatModal
-local FFlagTopBarSignalizeSetCores = CoreGuiCommon.Flags.FFlagTopBarSignalizeSetCores
+local InExperienceAppChatModal = require(CorePackages.Workspace.Packages.AppChat.InExperienceAppChatModal)
+local FFlagTopBarSignalizeSetCores = InExperienceTopBar.Flags.FFlagTopBarSignalizeSetCores
 
 local StyleConstants = UIBlox.App.Style.Constants
 local UiModeStyleProvider = require(CorePackages.Workspace.Packages.Style).UiModeStyleProvider
@@ -93,15 +95,27 @@ function EmotesMenuMaster:setTopBarEnabled(isEnabled)
 end
 
 function EmotesMenuMaster:_connectCoreGuiListeners()
-	Backpack.StateChanged.Event:Connect(function(isBackpackOpen)
-		if not isBackpackOpen then
-			return
-		end
+	if FFlagEnableNewBackpack then
+		Features.onVisibilityChanged(Features.FeatureName.Backpack, function(visible)
+			if not visible then
+				return
+			end
 
-		if self:isOpen() then
-			self:close()
-		end
-	end)
+			if self:isOpen() then
+				self:close()
+			end
+		end)
+	else
+		Backpack.StateChanged.Event:Connect(function(isBackpackOpen)
+			if not isBackpackOpen then
+				return
+			end
+
+			if self:isOpen() then
+				self:close()
+			end
+		end)
+	end
 
 	Chat.VisibilityStateChanged:connect(function(isChatVisible)
 		if not isChatVisible then
@@ -296,7 +310,7 @@ function EmotesMenuMaster:_connectListeners()
 
 	if FFlagTopBarSignalizeSetCores then 
 		self.disposeEffect = Signals.createEffect(function(scope)
-			local getTopBarStore = CoreGuiCommon.Stores.GetTopBarStore
+			local getTopBarStore = InExperienceTopBar.Stores.GetTopBarStore
 			if getTopBarStore then
 				self:setTopBarEnabled(getTopBarStore(scope).getTopBarCoreGuiEnabled(scope))
 			end

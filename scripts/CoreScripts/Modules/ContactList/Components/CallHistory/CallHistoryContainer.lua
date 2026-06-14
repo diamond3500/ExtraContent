@@ -21,14 +21,16 @@ local SetCurrentPage = require(ContactList.Actions.SetCurrentPage)
 local Pages = require(ContactList.Enums.Pages)
 local dependencies = require(ContactList.dependencies)
 local NetworkingCall = dependencies.NetworkingCall
-local dependencyArray = dependencies.Hooks.dependencyArray
 local useDispatch = dependencies.Hooks.useDispatch
 local UIBlox = dependencies.UIBlox
+local Foundation = dependencies.Foundation
+local IconSize = Foundation.Enums.IconSize
+local LoadingSpinner = Foundation.Loading
+
 local useLocalization = dependencies.Hooks.useLocalization
 local useSelector = dependencies.Hooks.useSelector
 
 local useStyle = UIBlox.Core.Style.useStyle
-local LoadingSpinner = UIBlox.App.Loading.LoadingSpinner
 
 local useAnalytics = require(ContactList.Analytics.useAnalytics)
 local EventNamesEnum = require(ContactList.Analytics.EventNamesEnum)
@@ -145,37 +147,34 @@ local function CallHistoryContainer(props: Props)
 		end
 	end, { status })
 
-	local noRecordsComponent = React.useMemo(
-		function()
-			local message
-			if status == RetrievalStatus.Failed then
-				message = localized.genericErrorLabel
-			else
-				message = localized.noCallsLabel
-			end
+	local noRecordsComponent = React.useMemo(function()
+		local message
+		if status == RetrievalStatus.Failed then
+			message = localized.genericErrorLabel
+		else
+			message = localized.noCallsLabel
+		end
 
-			return React.createElement(NoItemView, {
-				isImageEnabled = status ~= RetrievalStatus.Failed,
-				imageName = "icons/graphic/findfriends_xlarge",
-				isFailedButtonEnabled = status == RetrievalStatus.Failed,
-				onFailedButtonActivated = function()
-					getCallRecords(callRecords, nextPageCursor)
-				end,
-				isCallButtonEnabled = status == RetrievalStatus.Done,
-				onCallButtonActivated = navigateToNewCall,
-				messageText = message,
-			})
-		end,
-		dependencyArray(
-			callRecords,
-			getCallRecords,
-			localized.genericErrorLabel,
-			localized.noCallsLabel,
-			navigateToNewCall,
-			nextPageCursor,
-			status
-		)
-	)
+		return React.createElement(NoItemView, {
+			isImageEnabled = status ~= RetrievalStatus.Failed,
+			imageName = "icons/graphic/findfriends_xlarge",
+			isFailedButtonEnabled = status == RetrievalStatus.Failed,
+			onFailedButtonActivated = function()
+				getCallRecords(callRecords, nextPageCursor)
+			end,
+			isCallButtonEnabled = status == RetrievalStatus.Done,
+			onCallButtonActivated = navigateToNewCall,
+			messageText = message,
+		})
+	end, {
+		callRecords :: any,
+		getCallRecords,
+		localized.genericErrorLabel,
+		localized.noCallsLabel,
+		navigateToNewCall,
+		nextPageCursor,
+		status,
+	})
 
 	local touchStarted = React.useCallback(function(touch: InputObject)
 		initialPositionY.current = touch.Position.Y
@@ -242,16 +241,16 @@ local function CallHistoryContainer(props: Props)
 					LayoutOrder = index,
 				}, {
 					LoadingSpinner = React.createElement(LoadingSpinner, {
-						size = UDim2.fromOffset(48, 48),
-						position = UDim2.fromScale(0.5, 0.5),
-						anchorPoint = Vector2.new(0.5, 0.5),
+						size = IconSize.Large,
+						Position = UDim2.fromScale(0.5, 0.5),
+						AnchorPoint = Vector2.new(0.5, 0.5),
 					}),
 				})
 			end
 		end
 
 		return entries
-	end, dependencyArray(callRecords, nextPageCursor, noRecordsComponent, status))
+	end, { callRecords :: any, nextPageCursor, noRecordsComponent, status })
 
 	local onFetchNextPage = React.useCallback(function(f)
 		if
@@ -262,7 +261,7 @@ local function CallHistoryContainer(props: Props)
 		then
 			getCallRecords(callRecords, nextPageCursor)
 		end
-	end, dependencyArray(callRecords, getCallRecords, nextPageCursor, status))
+	end, { callRecords :: any, getCallRecords, nextPageCursor, status })
 
 	React.useEffect(function()
 		-- This is used to handle the case where the number of records is less
@@ -274,7 +273,7 @@ local function CallHistoryContainer(props: Props)
 		if scrollingFrameRef.current and totalHeight <= scrollingFrameRef.current.AbsoluteSize.Y then
 			onFetchNextPage(scrollingFrameRef.current)
 		end
-	end, dependencyArray(children, onFetchNextPage))
+	end, { children :: any, onFetchNextPage })
 
 	return if #callRecords == 0 and status == RetrievalStatus.Fetching
 		then React.createElement("Frame", {
@@ -282,9 +281,9 @@ local function CallHistoryContainer(props: Props)
 			BackgroundTransparency = 1,
 		}, {
 			LoadingSpinner = React.createElement(LoadingSpinner, {
-				size = UDim2.fromOffset(48, 48),
-				position = UDim2.fromScale(0.5, 0.5),
-				anchorPoint = Vector2.new(0.5, 0.5),
+				size = IconSize.Large,
+				Position = UDim2.fromScale(0.5, 0.5),
+				AnchorPoint = Vector2.new(0.5, 0.5),
 			}),
 		})
 		elseif #callRecords == 0 then noRecordsComponent

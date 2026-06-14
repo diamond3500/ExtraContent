@@ -5,6 +5,7 @@ local React = require(Packages.React)
 
 local Types = require(Foundation.Components.Types)
 type CommonProps = Types.CommonProps
+type PartialColorHSV = Types.PartialColorHSV
 local Dropdown = require(Foundation.Components.Dropdown)
 local NumberInput = require(Foundation.Components.NumberInput)
 local TextInput = require(Foundation.Components.TextInput)
@@ -18,6 +19,7 @@ local InputSize = require(Foundation.Enums.InputSize)
 local NumberInputControlsVariant = require(Foundation.Enums.NumberInputControlsVariant)
 
 local colorInputUtils = require(Foundation.Components.ColorPicker.colorInputUtils)
+local colorUtils = require(Foundation.Components.ColorPicker.colorUtils)
 local withCommonProps = require(Foundation.Utility.withCommonProps)
 local withDefaults = require(Foundation.Utility.withDefaults)
 
@@ -25,13 +27,63 @@ local Tokens = require(Foundation.Providers.Style.Tokens)
 local useTokens = require(Foundation.Providers.Style.useTokens)
 type Tokens = Tokens.Tokens
 
+type RawRGB = { r: number?, g: number?, b: number? }
+type RawHSV = { h: number, s: number?, v: number? }
+
+local EMPTY_CHANNEL_VALUE = -1
 local RGB_MAX_VALUE = 255
 
 type Config<T, V> = colorInputUtils.Config<T, V>
 
-local function createInput<T>(
+local function createNumberInputElement<T>(
+	config: Config<T, string | number | nil>,
+	controlsVariant: any,
+	sharedProps: any
+): React.ReactNode
+	local configValue = config.value:getValue()
+
+	-- When value is nil (partial HSV empty channel), show empty NumberInput.
+	if configValue == nil then
+		return React.createElement(
+			NumberInput,
+			Dash.join({
+				value = EMPTY_CHANNEL_VALUE,
+				onChanged = function(value: number)
+					if value ~= EMPTY_CHANNEL_VALUE then
+						(config.handler :: any)(value, config.component)
+					end
+				end,
+				controlsVariant = controlsVariant,
+				minimum = config.minimum or 0,
+				maximum = config.maximum or 255,
+				step = config.step or 1,
+				precision = config.precision or 0,
+				formatAsString = function(_value: number)
+					return ""
+				end,
+			}, sharedProps)
+		)
+	end
+
+	return React.createElement(
+		NumberInput,
+		Dash.join({
+			value = configValue :: number,
+			onChanged = function(value: number)
+				(config.handler :: any)(value, config.component)
+			end,
+			controlsVariant = controlsVariant,
+			minimum = config.minimum or 0,
+			maximum = config.maximum or 255,
+			step = config.step or 1,
+			precision = config.precision or 0,
+		}, sharedProps)
+	)
+end
+
+local function renderInput<T>(
 	tokens: Tokens,
-	config: Config<T, string | number>,
+	config: Config<T, string | number | nil>,
 	index: number,
 	mode: string,
 	testId: string?
@@ -41,42 +93,41 @@ local function createInput<T>(
 	local sharedProps = {
 		size = InputSize.XSmall,
 		label = "",
-		width = config.width or UDim.new(0, tokens.Size.Size_1500),
+		width = UDim.new(1, 0),
 		LayoutOrder = index,
 		testId = `{testId}-{mode}{configKey}`,
 	}
 
 	if config.key == ColorInputMode.Hex then
-		return React.createElement(
-			TextInput,
-			Dash.join({
+		-- Wrapper with grow-1 expands to fill remaining space, TextInput fills the wrapper
+		return React.createElement(View, {
+			tag = "grow-1 size-0-full",
+			LayoutOrder = index,
+		}, {
+			Input = React.createElement(TextInput, {
 				text = config.value:getValue() :: string,
 				onChanged = function(text: string)
 					config.handler(text, config.component)
 				end,
-				placeholder = config.placeholder or "0",
-			}, sharedProps)
-		)
+				placeholder = config.placeholder or "#000000",
+				size = InputSize.XSmall,
+				label = "",
+				width = UDim.new(1, 0),
+				testId = `{testId}-{mode}`,
+			}),
+		})
 	end
-
-	return React.createElement(
-		NumberInput,
-		Dash.join({
-			value = config.value:getValue() :: number,
-			onChanged = function(value: number)
-				config.handler(value, config.component)
-			end,
-			controlsVariant = NumberInputControlsVariant.Stacked,
-			minimum = config.minimum or 0,
-			maximum = config.maximum or 255,
-			step = config.step or 1,
-			precision = config.precision or 0,
-		}, sharedProps)
-	)
+	-- grow-1: R/G/B (or H/S/V) inputs share remaining width equally
+	return React.createElement(View, {
+		tag = "grow-1 size-0-full",
+		LayoutOrder = index,
+	}, {
+		Input = createNumberInputElement(config, NumberInputControlsVariant.None, sharedProps),
+	})
 end
 
 type ColorInputsProps = {
-	color: React.Binding<Color3>,
+	color: React.Binding<Color3 | PartialColorHSV>,
 	alpha: React.Binding<number>?,
 	onColorChanged: (color: Color3) -> (),
 	onAlphaChanged: ((alpha: number) -> ())?,
@@ -108,7 +159,12 @@ local function ColorInputs(colorInputsProps: ColorInputsProps)
 	local onAlphaChanged = props.onAlphaChanged
 	local showAlpha = props.onAlphaChanged ~= nil
 
-	local rgbValues = color:map(function(currentColor: Color3)
+	-- When FoundationColorPickerPartialHSV on: partial HSV gives empty RGB; full HSV/Color3 derive RGB. When flag off: color is always Color3.
+	local rgbValues: React.Binding<RawRGB> = color:map(function(value: Color3 | PartialColorHSV): RawRGB
+		if colorUtils.isPartialHSV(value) then
+			return { r = nil, g = nil, b = nil }
+		end
+		local currentColor = colorUtils.toColor3(value)
 		return {
 			r = math.round(currentColor.R * RGB_MAX_VALUE),
 			g = math.round(currentColor.G * RGB_MAX_VALUE),
@@ -116,8 +172,13 @@ local function ColorInputs(colorInputsProps: ColorInputsProps)
 		}
 	end)
 
-	local hsvValues = color:map(function(currentColor: Color3)
-		local h: number, s: number, v: number = currentColor:ToHSV()
+	-- When FoundationColorPickerPartialHSV on: table = HSV H,S,V (partial or full); Color3 = ToHSV. When flag off: color is always Color3.
+	local hsvValues: React.Binding<RawHSV> = color:map(function(value: Color3 | PartialColorHSV): RawHSV
+		if type(value) == "table" then
+			local hsv = value :: PartialColorHSV
+			return { h = hsv.H, s = hsv.S, v = hsv.V }
+		end
+		local h: number, s: number, v: number = (value :: Color3):ToHSV()
 		return {
 			h = math.round(h * 360),
 			s = math.round(s * 100),
@@ -125,8 +186,12 @@ local function ColorInputs(colorInputsProps: ColorInputsProps)
 		}
 	end)
 
-	local hexValue = rgbValues:map(function(values)
-		return string.format("#%02X%02X%02X", values.r, values.g, values.b)
+	local hexValue = rgbValues:map(function(values: RawRGB): string
+		-- RGB values would only be nil if the color is a partial HSV
+		if values.r ~= nil and values.g ~= nil and values.b ~= nil then
+			return string.format("#%02X%02X%02X", values.r, values.g, values.b)
+		end
+		return ""
 	end)
 
 	local handleRGBChange = React.useCallback(function(value: number, component: string?)
@@ -134,6 +199,11 @@ local function ColorInputs(colorInputsProps: ColorInputsProps)
 
 		local rgb = table.clone(rgbValues:getValue())
 		rgb[component] = clampedValue
+
+		-- Only update color when all R, G, B are set (no partial RGB).
+		if rgb.r == nil or rgb.g == nil or rgb.b == nil then
+			return
+		end
 
 		--selene: allow(roblox_internal_custom_color)
 		local newColor = Color3.fromRGB(rgb.r, rgb.g, rgb.b)
@@ -148,11 +218,15 @@ local function ColorInputs(colorInputsProps: ColorInputsProps)
 
 	local handleHSVChange = React.useCallback(function(value: number, component: string?)
 		local hsv = table.clone(hsvValues:getValue())
+		-- NumberInput blur commits 0; ignore so partial HSV gradient does not change.
+		if hsv[component] == nil and value == 0 then
+			return
+		end
 		local clampedValue = math.clamp(value, 0, if component == "h" then 360 else 100)
 		hsv[component] = clampedValue
 
 		--selene: allow(roblox_internal_custom_color)
-		local newColor = Color3.fromHSV(hsv.h / 360, hsv.s / 100, hsv.v / 100)
+		local newColor = Color3.fromHSV(hsv.h / 360, (hsv.s or 100) / 100, (hsv.v or 100) / 100)
 		onColorChanged(newColor)
 	end, { hsvValues, onColorChanged } :: { unknown })
 
@@ -215,10 +289,24 @@ local function ColorInputs(colorInputsProps: ColorInputsProps)
 		end
 	end, { mode, showAlpha } :: { unknown })
 
-	local renderInputs = function()
-		-- For Brick mode, we don't show any inputs (the picker handles the selection)
+	local renderInputs = function(): { [string]: any }?
 		if mode == ColorInputMode.Brick then
-			return
+			return {
+				BrickColorName = React.createElement(View, {
+					tag = "grow-1 size-0-full",
+					LayoutOrder = 1,
+				}, {
+					Input = React.createElement(TextInput, {
+						text = (BrickColor.new :: any)(color:getValue()).Name,
+						onChanged = function() end,
+						isDisabled = true,
+						size = InputSize.XSmall,
+						label = "",
+						width = UDim.new(1, 0),
+						testId = `{props.testId}-brick-name`,
+					}),
+				}),
+			}
 		end
 
 		local configs = colorInputUtils.createInputConfigs(
@@ -234,22 +322,21 @@ local function ColorInputs(colorInputsProps: ColorInputsProps)
 		)
 		local modeConfig = configs[mode]
 		if not modeConfig then
-			return
+			return nil
 		end
 		local inputs = {}
 		for index, config in ipairs(modeConfig) do
 			local inputKey = config.key .. "Input"
-			inputs[inputKey] = createInput(tokens, config, index, mode:lower(), props.testId)
+			inputs[inputKey] = renderInput(tokens, config, index, mode:lower(), props.testId)
 		end
 		return inputs
 	end
-
 	return React.createElement(
 		View,
 		withCommonProps(props, {
-			tag = "row gap-small auto-xy align-y-center",
+			tag = "row gap-xsmall size-full-600",
 		}),
-		{
+		Dash.join({
 			ModeDropdown = if #dropdownOptions > 1
 				then React.createElement(Dropdown.Root, {
 					items = dropdownOptions :: { DropdownItem },
@@ -261,15 +348,11 @@ local function ColorInputs(colorInputsProps: ColorInputsProps)
 					end,
 					size = InputSize.XSmall,
 					label = "",
-					width = UDim.new(0, tokens.Size.Size_2000),
+					width = UDim.new(0, tokens.Size.Size_1600), -- ~64px, fits "RGB" + chevron
 					testId = `{props.testId}--mode-dropdown`,
 				})
 				else nil,
-
-			Inputs = React.createElement(View, {
-				tag = "row gap-small auto-xy",
-			}, renderInputs()),
-		}
+		}, renderInputs())
 	)
 end
 

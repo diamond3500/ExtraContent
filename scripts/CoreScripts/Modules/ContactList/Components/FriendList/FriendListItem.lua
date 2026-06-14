@@ -11,7 +11,6 @@ local SoundManager = require(CorePackages.Workspace.Packages.SoundManager).Sound
 local UserProfiles = require(CorePackages.Workspace.Packages.UserProfiles)
 local ContactList = RobloxGui.Modules.ContactList
 local dependencies = require(ContactList.dependencies)
-local dependencyArray = dependencies.Hooks.dependencyArray
 local useDispatch = dependencies.Hooks.useDispatch
 local useSelector = dependencies.Hooks.useSelector
 local getStandardSizeAvatarHeadShotRbxthumb = dependencies.getStandardSizeAvatarHeadShotRbxthumb
@@ -83,7 +82,7 @@ local function FriendListItem(props: Props)
 		if props.userPresenceType == nil then
 			dispatch(GetPresencesFromUserIds.API({ props.userId }))
 		end
-	end, dependencyArray(props.userId, props.userPresenceType))
+	end, { props.userId :: any, props.userPresenceType })
 
 	local selectUserPresence = React.useCallback(function(state: any)
 		return state.Presence.byUserId[tostring(props.userId)]
@@ -193,7 +192,7 @@ local function FriendListItem(props: Props)
 		})
 
 		dispatch(OpenOrUpdateCFM(friend))
-	end, dependencyArray(friend.userId, props.searchQueryString, props.itemListIndex, props.isSuggestedUser))
+	end, { friend.userId :: any, props.searchQueryString, props.itemListIndex, props.isSuggestedUser })
 
 	return React.createElement(Interactable, {
 		Position = UDim2.fromOffset(0, 0),

@@ -20,14 +20,17 @@ local TopBarConstants = require(TopBar.Constants)
 local topBarHeight = TopBarConstants.ApplyDisplayScale(TopBarConstants.TopBarHeight)
 
 local SelfieViewModule = Chrome.Parent.SelfieView
-local GetFFlagSelfieViewEnabled = require(SelfieViewModule.Flags.GetFFlagSelfieViewEnabled)
 local GetFFlagChromeSelfViewIgnoreCoreGui = require(Chrome.Flags.GetFFlagChromeSelfViewIgnoreCoreGui)
+
+local ChromePackage = require(CorePackages.Workspace.Packages.Chrome)
+local SideSheetPlacement = ChromePackage.Enums.SideSheetPlacement
 
 local ChromeSharedFlags = require(Chrome.ChromeShared.Flags)
 local FFlagTokenizeUnibarConstantsWithStyleProvider = ChromeSharedFlags.FFlagTokenizeUnibarConstantsWithStyleProvider
 
 local SharedFlags = require(CorePackages.Workspace.Packages.SharedFlags)
 local FFlagEnableConsoleExpControls = SharedFlags.FFlagEnableConsoleExpControls
+local FFlagChromeActivatedMappedSignal = SharedFlags.FFlagChromeActivatedMappedSignal
 
 local SelfieView = require(SelfieViewModule)
 local FaceChatUtils = require(SelfieViewModule.Utils.FaceChatUtils)
@@ -35,7 +38,7 @@ local SizingUtils = require(SelfieViewModule.Utils.SizingUtils)
 local SelfieViewPolicy = require(SelfieViewModule.Utils.SelfieViewPolicy)
 local AvailabilitySignalState = require(Chrome.ChromeShared.Service.ChromeUtils).AvailabilitySignalState
 local WindowSizeSignal = require(Chrome.ChromeShared.Service.WindowSizeSignal)
-local UnibarStyle = require(Chrome.ChromeShared.Unibar.UnibarStyle)
+local UnibarStyle = require(CorePackages.Workspace.Packages.Chrome).UnibarStyle
 
 local ViewportUtil = require(Chrome.ChromeShared.Service.ViewportUtil)
 local startingSize = SizingUtils.getSize(ViewportUtil.screenSize:get(), false)
@@ -58,6 +61,7 @@ local selfieViewChromeIntegration = ChromeService:register({
 	id = ID,
 	-- TODO: update localizations
 	label = LABEL,
+	sideSheetPlacement = SideSheetPlacement.Vertical,
 	-- We haven't decided if we're going to allow hotkeys yet
 	-- Relevant ticket: https://roblox.atlassian.net/browse/APPEXP-817
 	-- hotkeyCodes = { Enum.KeyCode.LeftControl, Enum.KeyCode.LeftAlt, Enum.KeyCode.T },
@@ -68,9 +72,11 @@ local selfieViewChromeIntegration = ChromeService:register({
 	activated = function()
 		ChromeService:toggleWindow(ID)
 	end,
-	isActivated = function()
-		return mappedSelfieWindowOpenSignal:get()
-	end,
+	isActivated = if FFlagChromeActivatedMappedSignal
+		then mappedSelfieWindowOpenSignal
+		else function()
+			return mappedSelfieWindowOpenSignal:get()
+		end,
 	draggable = true,
 	cachePosition = true,
 	components = {
@@ -160,7 +166,7 @@ if FFlagEnableConsoleExpControls then
 	end
 end
 
-if GetFFlagSelfieViewEnabled() and game:GetEngineFeature("VideoCaptureService") then
+if game:GetEngineFeature("VideoCaptureService") then
 	updateAvailability()
 	VideoCaptureService.Started:Connect(updateAvailability)
 	VideoCaptureService.Stopped:Connect(updateAvailability)

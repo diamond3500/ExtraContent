@@ -12,4 +12,7 @@ return React.createContext({
 	hasHeroMedia = false,
 	setHasHeroMedia = function(_hasHeroMedia: boolean) end,
 	testId = "",
+	closeAffordanceRef = nil :: React.Ref<GuiObject>?,
+	contentStartRef = nil :: React.Ref<GuiObject>?,
+	setContentStartRef = function(_ref: React.Ref<GuiObject>) end,
 })

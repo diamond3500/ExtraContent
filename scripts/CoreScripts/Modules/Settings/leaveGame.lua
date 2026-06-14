@@ -14,7 +14,6 @@ local Players = game:GetService("Players")
 -------------- Flags ----------------------------------------------------------
 local SharedFlags = require(CorePackages.Workspace.Packages.SharedFlags)
 local FFlagEnableGameLeftMessage = SharedFlags.FFlagEnableGameLeftMessage
-
 local EngineFeatureRbxAnalyticsServiceExposePlaySessionId = game:GetEngineFeature("RbxAnalyticsServiceExposePlaySessionId")
 
 ----------- UTILITIES --------------
@@ -28,8 +27,6 @@ RobloxGui:WaitForChild("Modules"):WaitForChild("TenFootInterface")
 
 local GetFFlagEnableInGameMenuDurationLogger = require(RobloxGui.Modules.Common.Flags.GetFFlagEnableInGameMenuDurationLogger)
 local FFlagLeaveActionChromeShortcutTelemetry = require(RobloxGui.Modules.Chrome.Flags.FFlagLeaveActionChromeShortcutTelemetry)
-local FFlagEnableReactSessionMetrics =
-	require(CorePackages.Workspace.Packages.SharedFlags).FFlagEnableReactSessionMetrics
 
 local GetDefaultQualityLevel = require(CorePackages.Workspace.Packages.AppCommonLib).GetDefaultQualityLevel
 
@@ -48,13 +45,11 @@ local leaveGame = function(publishSurveyMessage: boolean, props: LeaveGameProps?
     if GetFFlagEnableInGameMenuDurationLogger() then
         PerfUtils.leavingGame()
     end
-    if FFlagEnableReactSessionMetrics then
-        (ReactSchedulingTracker::ReactSchedulingTracker.ReactSchedulingTracker):reportSession()
-    end
-    local CorescriptMemoryTracker = require(RobloxGui.Modules.Common.CorescriptMemoryTracker)
-    local coreScriptMemoryTracker = CorescriptMemoryTracker()
-    if coreScriptMemoryTracker then
-        coreScriptMemoryTracker:destroy()
+    (ReactSchedulingTracker::ReactSchedulingTracker.ReactSchedulingTracker):reportSession()
+    local MemoryTracker = require(CorePackages.Workspace.Packages.Memory).MemoryTracker
+    local memoryTracker = MemoryTracker()
+    if memoryTracker then
+        memoryTracker:destroy()
     end
 
     GuiService.SelectedCoreObject = nil -- deselects the button and prevents spamming the popup to save in studio when using gamepad

@@ -24,13 +24,19 @@ local useElevation = require(Foundation.Providers.Elevation.useElevation)
 local OwnerScope = require(Foundation.Providers.Elevation.ElevationProvider).ElevationOwnerScope
 local ElevationLayer = require(Foundation.Enums.ElevationLayer)
 type ElevationLayer = ElevationLayer.ElevationLayer
+local DialogSize = require(Foundation.Enums.DialogSize)
+type DialogSize = DialogSize.DialogSize
 
+local childrenHasFullBleed = require(script.Parent.childrenHasFullBleed)
 local useHardwareInsets = require(script.Parent.useHardwareInsets)
+local useScreenSize = require(script.Parent.useScreenSize)
 
 local CloseAffordance = require(Foundation.Components.CloseAffordance)
 local Flags = require(Foundation.Utility.Flags)
 local Image = require(Foundation.Components.Image)
 local View = require(Foundation.Components.View)
+
+local usePreferences = require(Foundation.Providers.Preferences.usePreferences)
 
 type SideSheetProps = {
 	displaySize: Enum.DisplaySize,
@@ -39,8 +45,22 @@ type SideSheetProps = {
 local SMALL_DISPLAY_WIDTH = 400
 local LARGE_DISPLAY_WIDTH = 360
 
+local SIDE_SHEET_WIDTHS: { [DialogSize]: { TARGET_WIDTH: number, MIN: number, MAX: number } } = {
+	[DialogSize.Medium] = {
+		TARGET_WIDTH = 0.40,
+		MIN = 360,
+		MAX = 440,
+	},
+	[DialogSize.Large] = {
+		TARGET_WIDTH = 0.5,
+		MIN = 440,
+		MAX = 640,
+	},
+}
+
 local defaultProps = {
 	testId = "--foundation-sheet",
+	size = if Flags.FoundationSideSheetNewWidthCalculation then DialogSize.Medium else nil :: never,
 }
 
 local SHADOW_IMAGE = Constants.SHADOW_IMAGE
@@ -50,15 +70,29 @@ local function SideSheet(sideSheetProps: SideSheetProps, ref: React.Ref<GuiObjec
 	local props = withDefaults(sideSheetProps, defaultProps)
 	local overlay = useOverlay()
 	local tokens = useTokens()
-	local elevation = useElevation(ElevationLayer.Sheet, { relativeToOwner = false })
+	local elevation = useElevation(ElevationLayer.Sheet, { stackAboveOwner = false })
+	local preferences = usePreferences()
+	local reducedMotion = preferences.reducedMotion
+
 	local hardwareInsets = useHardwareInsets(overlay)
+	local screenSize = if Flags.FoundationSideSheetNewWidthCalculation then useScreenSize() else nil :: never
 	local safeAreaPadding = hardwareInsets.right
-	-- Top hardware inset in landscape orientation currently is only possible if it's top bar
-	local topBarHeight = if Flags.FoundationSheetSideSheetTopBarFix then hardwareInsets.top else 0
 
 	local isSmallDisplay = props.displaySize == Enum.DisplaySize.Small
 
-	local width = useScaledValue(if isSmallDisplay then SMALL_DISPLAY_WIDTH else LARGE_DISPLAY_WIDTH)
+	local targetWidth
+	local minWidth
+	local maxWidth
+	if Flags.FoundationSideSheetNewWidthCalculation then
+		local scaleFactor = tokens.Config.UI.Scale
+		targetWidth = SIDE_SHEET_WIDTHS[props.size].TARGET_WIDTH
+		minWidth = SIDE_SHEET_WIDTHS[props.size].MIN * scaleFactor
+		maxWidth = SIDE_SHEET_WIDTHS[props.size].MAX * scaleFactor
+	end
+
+	local width = if Flags.FoundationSideSheetNewWidthCalculation
+		then math.clamp(screenSize.X * targetWidth, minWidth, maxWidth)
+		else useScaledValue(if isSmallDisplay then SMALL_DISPLAY_WIDTH else LARGE_DISPLAY_WIDTH)
 	local sheetPadding = tokens.Padding.Medium
 
 	local closing = React.useRef(false)
@@ -73,32 +107,54 @@ local function SideSheet(sideSheetProps: SideSheetProps, ref: React.Ref<GuiObjec
 
 	local hasActionsDivider, setHasActionsDivider = React.useBinding(false)
 	local hasHeader, setHasHeader = React.useBinding(false)
+	local hasFullBleed
+	local fullBleedHeight, setFullBleedHeight
+	if Flags.FoundationSheetFullBleed then
+		hasFullBleed = childrenHasFullBleed(props.children)
+		fullBleedHeight, setFullBleedHeight = React.useBinding(0)
+	end
 
 	local innerScrollY, setInnerScrollY = React.useBinding(0)
 
-	React.useEffect(function()
-		setRightPositionGoal(Otter.ease(width, {
-			easingStyle = tokens.Ease.StandardOut,
-			duration = tokens.Time.Time_300,
-		}))
-		setBackdropTransparencyGoal(Otter.ease(0, {
-			duration = tokens.Time.Time_100,
-		}))
-	end, { width })
+	local closeAffordanceRef = React.useRef(nil) :: React.Ref<GuiObject>
+	local contentStartRef, setContentStartRef = React.useState(nil :: React.Ref<GuiObject>?)
 
+	-- lute-lint-ignore(exhaustiveDeps) tokens.Ease and tokens.Time are stable between themes
+	React.useEffect(function()
+		if reducedMotion then
+			setRightPositionGoal(Otter.instant(width) :: Otter.Goal<any>)
+			setBackdropTransparencyGoal(Otter.instant(0) :: Otter.Goal<any>)
+		else
+			setRightPositionGoal(Otter.ease(width, {
+				easingStyle = tokens.Ease.StandardOut,
+				duration = tokens.Time.Time_300,
+			}))
+			setBackdropTransparencyGoal(Otter.ease(0, {
+				duration = tokens.Time.Time_100,
+			}))
+		end
+	end, { width, reducedMotion } :: { unknown })
+
+	-- lute-lint-ignore(exhaustiveDeps) tokens.Ease and tokens.Time are stable between themes
 	local closeSheet = React.useCallback(function()
 		if closing.current then
 			return
 		end
-		setRightPositionGoal(Otter.ease(closedPosition, {
-			easingStyle = tokens.Ease.StandardIn,
-			duration = tokens.Time.Time_100,
-		}))
-		setBackdropTransparencyGoal(Otter.ease(1, {
-			duration = tokens.Time.Time_100,
-		}))
-		closing.current = true
-	end, { closedPosition })
+		if reducedMotion then
+			closing.current = true
+			setRightPositionGoal(Otter.instant(closedPosition))
+			setBackdropTransparencyGoal(Otter.instant(1))
+		else
+			setRightPositionGoal(Otter.ease(closedPosition, {
+				easingStyle = tokens.Ease.StandardIn,
+				duration = tokens.Time.Time_100,
+			}))
+			setBackdropTransparencyGoal(Otter.ease(1, {
+				duration = tokens.Time.Time_100,
+			}))
+			closing.current = true
+		end
+	end, { closedPosition, reducedMotion } :: { unknown })
 
 	React.useImperativeHandle(props.sheetRef, function()
 		return {
@@ -110,7 +166,7 @@ local function SideSheet(sideSheetProps: SideSheetProps, ref: React.Ref<GuiObjec
 		0,
 		width + if isSmallDisplay then safeAreaPadding else 0,
 		1,
-		(if isSmallDisplay then 0 else -sheetPadding * 2) + topBarHeight
+		if isSmallDisplay then 0 else -sheetPadding * 2
 	)
 
 	local sheetPosition = rightPosition:map(function(value: number)
@@ -118,30 +174,47 @@ local function SideSheet(sideSheetProps: SideSheetProps, ref: React.Ref<GuiObjec
 			1,
 			if isSmallDisplay then -value else -(value + sheetPadding),
 			0,
-			(if isSmallDisplay then 0 else sheetPadding) - topBarHeight
+			if isSmallDisplay then 0 else sheetPadding
 		)
 	end)
 
-	local contextValue = React.useMemo(function()
-		return {
-			actionsHeight = 0,
-			setActionsHeight = Dash.noop,
-			hasActionsDivider = hasActionsDivider,
-			setHasActionsDivider = setHasActionsDivider,
-			sheetHeightAvailable = 0,
-			setSheetHeightAvailable = Dash.noop,
-			safeAreaPadding = 0,
-			bottomPadding = 0,
-			innerScrollingEnabled = true,
-			innerScrollY = innerScrollY,
-			setInnerScrollY = setInnerScrollY,
-			hasHeader = hasHeader,
-			setHasHeader = setHasHeader,
-			closeSheet = closeSheet,
-			sheetType = SheetType.Side,
-			testId = props.testId,
-		}
-	end, { props.testId, closeSheet } :: { unknown })
+	local contextValue = React.useMemo(
+		function()
+			return {
+				actionsHeight = 0,
+				setActionsHeight = Dash.noop,
+				hasActionsDivider = hasActionsDivider,
+				setHasActionsDivider = setHasActionsDivider,
+				sheetHeightAvailable = 0,
+				setSheetHeightAvailable = Dash.noop,
+				safeAreaPadding = 0,
+				bottomPadding = 0,
+				innerScrollingEnabled = true,
+				innerScrollY = innerScrollY,
+				setInnerScrollY = setInnerScrollY,
+				hasHeader = hasHeader,
+				setHasHeader = setHasHeader,
+				hasFullBleed = if Flags.FoundationSheetFullBleed then hasFullBleed else nil,
+				fullBleedHeight = if Flags.FoundationSheetFullBleed then fullBleedHeight else nil,
+				setFullBleedHeight = if Flags.FoundationSheetFullBleed then setFullBleedHeight else nil,
+				closeSheet = closeSheet,
+				hasRadius = if Flags.FoundationSheetFullBleed then not isSmallDisplay else nil,
+				sheetType = SheetType.Side,
+				testId = props.testId,
+				closeAffordanceRef = closeAffordanceRef,
+				contentStartRef = contentStartRef,
+				setContentStartRef = setContentStartRef,
+			}
+		end,
+		{
+			props.testId,
+			closeSheet,
+			contentStartRef,
+			closeAffordanceRef,
+			hasFullBleed,
+			if Flags.FoundationSheetFullBleed then isSmallDisplay else nil,
+		} :: { unknown }
+	)
 
 	return overlay
 		and ReactRoblox.createPortal(
@@ -169,7 +242,7 @@ local function SideSheet(sideSheetProps: SideSheetProps, ref: React.Ref<GuiObjec
 					selection = SheetTypes.nonSelectable,
 					selectionGroup = SheetTypes.isolatedSelectionGroup,
 					tag = {
-						["bg-surface-100 stroke-default stroke-standard"] = true,
+						["stroke-standard stroke-default bg-surface-100"] = true,
 						["radius-large"] = not isSmallDisplay,
 					},
 					testId = props.testId,
@@ -177,7 +250,7 @@ local function SideSheet(sideSheetProps: SideSheetProps, ref: React.Ref<GuiObjec
 					Content = React.createElement(
 						View,
 						{
-							tag = "size-full-full col items-center clip",
+							tag = "col items-center size-full-full clip",
 						},
 						React.createElement(SheetContext.Provider, {
 							value = contextValue,
@@ -185,7 +258,11 @@ local function SideSheet(sideSheetProps: SideSheetProps, ref: React.Ref<GuiObjec
 					),
 					CloseAffordance = React.createElement(CloseAffordance, {
 						onActivated = closeSheet,
-						variant = CloseAffordanceVariant.Utility,
+						ref = closeAffordanceRef,
+						NextSelectionDown = contentStartRef,
+						variant = if Flags.FoundationSheetFullBleed and hasFullBleed
+							then CloseAffordanceVariant.OverMedia
+							else CloseAffordanceVariant.Utility,
 						Position = UDim2.new(1, -tokens.Margin.Small, 0, tokens.Margin.Small),
 						AnchorPoint = Vector2.new(1, 0),
 						Visible = hasHeader:map(function(value: boolean)

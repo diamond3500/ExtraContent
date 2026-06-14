@@ -5,11 +5,8 @@ local React = require(CorePackages.Packages.React)
 local AudioFocusManagementEnabled = game:GetEngineFeature("AudioFocusManagement")
 
 local CrossExperienceVoice = require(CorePackages.Workspace.Packages.CrossExperienceVoice)
-local RoactUtils = require(CorePackages.Workspace.Packages.RoactUtils)
 
-local dependencyArray = RoactUtils.Hooks.dependencyArray
-
-local ChromeEnabled = require(Chrome.Enabled)
+local ChromeEnabled = require(CorePackages.Workspace.Packages.Chrome).Enabled
 local ChromeService = if ChromeEnabled() then require(Chrome.Service) else nil
 local Constants = require(Chrome.Integrations.Party.Constants)
 local useIsVoiceFocused = CrossExperienceVoice.Hooks.useIsVoiceFocused
@@ -33,7 +30,7 @@ local function PartyMicBinder()
 				integration.availability:unavailable()
 			end
 		end
-	end, dependencyArray(isVoiceConnected, isVoiceFocused, integration))
+	end, { isVoiceConnected :: any, isVoiceFocused, integration })
 
 	return nil
 end

@@ -43,8 +43,7 @@ local VoiceChatServiceManager = require(RobloxGui.Modules.VoiceChat.VoiceChatSer
 local initVoiceChatStore = require(RobloxGui.Modules.VoiceChat.initVoiceChatStore)
 local GetFFlagEnableVoiceChatVoiceUISync = require(RobloxGui.Modules.Flags.GetFFlagEnableVoiceChatVoiceUISync)
 local GetFFlagLocalMutedNilFix = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagLocalMutedNilFix
-local GetFFlagBatchVoiceParticipantsUpdates = require(VoiceChatCore.Flags.GetFFlagBatchVoiceParticipantsUpdates)
-local FFlagFixMessageReceivedEventLeak = game:DefineFastFlag("FixMessageReceivedEventLeak", false)
+local GetFFlagBatchVoiceParticipantsUpdates = VoiceChatCore.Flags.GetFFlagBatchVoiceParticipantsUpdates
 local getFFlagExpChatAlwaysRunTCS = require(CorePackages.Workspace.Packages.SharedFlags).getFFlagExpChatAlwaysRunTCS
 local GetFFlagExpChatUseVoiceParticipantsStore =
 	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagExpChatUseVoiceParticipantsStore
@@ -276,15 +275,13 @@ local function destroyBubbleChat()
 		chattedConn = nil
 	end
 
-	if FFlagFixMessageReceivedEventLeak then
-		if sendingMessageConn then
-			sendingMessageConn:Disconnect()
-			sendingMessageConn = nil
-		end
-		if messageReceivedConn then
-			messageReceivedConn:Disconnect()
-			messageReceivedConn = nil
-		end
+	if sendingMessageConn then
+		sendingMessageConn:Disconnect()
+		sendingMessageConn = nil
+	end
+	if messageReceivedConn then
+		messageReceivedConn:Disconnect()
+		messageReceivedConn = nil
 	end
 end
 

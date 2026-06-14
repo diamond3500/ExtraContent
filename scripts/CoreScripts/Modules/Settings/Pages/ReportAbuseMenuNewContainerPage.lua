@@ -7,18 +7,26 @@ local Roact = require(CorePackages.Packages.Roact)
 local utility = require(RobloxGui.Modules.Settings.Utility)
 local BuilderIcons = require(CorePackages.Packages.BuilderIcons)
 local migrationLookup = BuilderIcons.Migration['uiblox']
+local Foundation = require(CorePackages.Packages.Foundation)
+local IconName = Foundation.Enums.IconName
+local IconVariant = Foundation.Enums.IconVariant
 
 local AbuseReportMenu = require(RobloxGui.Modules.AbuseReportMenu).AbuseReportMenu
+local AbuseReportMenuV2 = require(RobloxGui.Modules.AbuseReportMenu).AbuseReportMenuV2
 local ReportAbuseAnalytics = require(RobloxGui.Modules.AbuseReportMenu).ReportAbuseAnalytics
 
 local Chrome = RobloxGui.Modules.Chrome
-local ChromeEnabled = require(Chrome.Enabled)()
+local ChromeEnabled = require(CorePackages.Workspace.Packages.Chrome).Enabled()
 local ChromeService = if ChromeEnabled then require(Chrome.Service) else nil :: never
 
 local SharedFlags = require(CorePackages.Workspace.Packages.SharedFlags)
 local FFlagInExperienceReportClosingBugfix = SharedFlags.FFlagInExperienceReportClosingBugfix
+local FFlagEnableSideSheet = SharedFlags.FFlagEnableSideSheet
 
 local FFlagHideShortcutsOnReportDropdown = require(RobloxGui.Modules.AbuseReportMenu.Flags.FFlagHideShortcutsOnReportDropdown)
+local FFlagAbuseReportMenuV2 = SharedFlags.FFlagAbuseReportMenuV2
+local FFlagReportFocusNavIEMButtons =  require(RobloxGui.Modules.AbuseReportMenu.Flags.FFlagReportFocusNavIEMButtons)
+local FFlagStandardizeSafetyIcon = SharedFlags.FFlagStandardizeSafetyIcon
 
 ------------ Variables -------------------
 local PageInstance = nil
@@ -83,16 +91,24 @@ local function Initialize()
 	------ TAB CUSTOMIZATION -------
 	this.TabHeader.Name = "ReportAbuseTab"
 	local icon = migrationLookup["icons/actions/feedback"]
+	if FFlagStandardizeSafetyIcon then
+		icon = {
+			name = IconName.Flag,
+			variant = IconVariant.Regular,
+		}
+	end
 	this.TabHeader.TabLabel.Icon.Text = icon.name
 	this.TabHeader.TabLabel.Icon.FontFace = BuilderIcons.Font[icon.variant]
 	this.TabHeader.TabLabel.Title.Text = "Report"
 
 	------ PAGE CUSTOMIZATION -------
 	this.Page.Name = "ReportAbuseMenuNewContainerPage"
-	this.ShouldShowBottomBar = true
+	this.ShouldShowBottomBar = not FFlagEnableSideSheet
 	this.ShouldShowHubBar = true
+	-- TODO: Need to flip FFlagAddAbilityToDisableIGMScroll before turning on FFlagAbuseReportMenuV2
+	this.ShouldDisableDefaultScroll = FFlagAbuseReportMenuV2
 
-	local abuseReportMenu = Roact.createElement(AbuseReportMenu, {
+	local abuseReportMenu = Roact.createElement(if FFlagAbuseReportMenuV2 then AbuseReportMenuV2 else AbuseReportMenu, {
 		hideReportTab = function()
 			this:HideMenu()
 		end,
@@ -128,6 +144,9 @@ local function Initialize()
 		end,
 		onDropdownMenuOpenChange = if FFlagHideShortcutsOnReportDropdown and ChromeEnabled then function(isOpen)
 			ChromeService:setHideShortcutBar("InExperienceReportDropdown", isOpen)
+		end else nil,
+		getSettingsHubRef = if FFlagReportFocusNavIEMButtons then function()
+			return this.HubRef
 		end else nil,
 	})
 	Roact.mount(abuseReportMenu, this.Page, "AbuseReportMenu")

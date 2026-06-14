@@ -6,13 +6,13 @@
 
 local Players = game:GetService("Players")
 
-local CommonUtils = script.Parent.Parent.Parent:WaitForChild("CommonUtils")
-local FlagUtil = require(CommonUtils:WaitForChild("FlagUtil"))
-local CameraWrapper = require(CommonUtils:WaitForChild("CameraWrapper"))
-local ConnectionUtil = require(CommonUtils:WaitForChild("ConnectionUtil"))
+local CommonUtils = require(script.Parent.Parent.Parent:WaitForChild("CommonUtils"))
+local FlagUtil = CommonUtils.get("FlagUtil")
+local CameraWrapper = CommonUtils.get("CameraWrapper")
+local ConnectionUtil = CommonUtils.get("ConnectionUtil")
 
 -- Flags
-local FFlagUserRaycastUpdateAPI = FlagUtil.getUserFlag("UserRaycastUpdateAPI")
+local FFlagUserRaycastUpdateAPI = FlagUtil.getUserFlag("UserRaycastUpdateAPI2")
 local FFlagUserCurrentCameraUpdate = FlagUtil.getUserFlag("UserCurrentCameraUpdate2")
 local FFlagUserPlayerConnectionMemoryLeak = FlagUtil.getUserFlag("UserPlayerConnectionMemoryLeak")
 
@@ -32,6 +32,7 @@ local ray = Ray.new
 local excludeParams = RaycastParams.new()
 excludeParams.IgnoreWater = true
 excludeParams.FilterType = Enum.RaycastFilterType.Exclude
+excludeParams.RespectCanCollide = true
 
 local includeParams = RaycastParams.new()
 includeParams.IgnoreWater = true
@@ -201,7 +202,7 @@ local function canOcclude(part)
 
 	return
 		getTotalTransparency(part) < 0.25 and
-		part.CanCollide and
+		(FFlagUserRaycastUpdateAPI or part.CanCollide) and
 		subjectRoot ~= (part:GetRootPart() or part) and
 		not part:IsA("TrussPart")
 end
@@ -224,16 +225,11 @@ local QUERY_POINT_CAST_LIMIT = 64
 local function getCollisionPoint(origin, dir)
 	if FFlagUserRaycastUpdateAPI then
 		excludeParams.FilterDescendantsInstances = excludeList
-		repeat
-			local raycastResult = workspace:Raycast(origin, dir, excludeParams)
 
-			if raycastResult then
-				if raycastResult.Instance.CanCollide then
-					return raycastResult.Position, true
-				end
-				excludeParams:AddToFilter(raycastResult.Instance)
-			end
-		until not raycastResult
+		local raycastResult = workspace:Raycast(origin, dir, excludeParams)
+		if raycastResult then
+			return raycastResult.Position, true
+		end
 	else
 		local originalSize = #excludeList
 
@@ -365,7 +361,7 @@ end
 local function queryViewport(focus, dist)
 	debug.profilebegin("queryViewport")
 
-	local fP =  focus.p
+	local fP =  focus.Position
 	local fX =  focus.rightVector
 	local fY =  focus.upVector
 	local fZ = -focus.lookVector
@@ -408,7 +404,7 @@ end
 local function testPromotion(focus, dist, focusExtrapolation)
 	debug.profilebegin("testPromotion")
 
-	local fP = focus.p
+	local fP = focus.Position
 	local fX = focus.rightVector
 	local fY = focus.upVector
 	local fZ = -focus.lookVector
@@ -427,7 +423,7 @@ local function testPromotion(focus, dist, focusExtrapolation)
 		for dt = 0, min(SAMPLE_MAX_T, focusExtrapolation.rotVelocity.magnitude + maxDist/combinedSpeed), SAMPLE_DT do
 			local cfDt = focusExtrapolation.extrapolate(dt) -- Extrapolated CFrame at time dt
 
-			if queryPoint(cfDt.p, -cfDt.lookVector, dist) >= dist then
+			if queryPoint(cfDt.Position, -cfDt.lookVector, dist) >= dist then
 				return false
 			end
 		end

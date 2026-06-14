@@ -1,4 +1,5 @@
 --!nonstrict
+
 local HumanoidDescriptionAssetProperties = {
 	"ClimbAnimation",
 	"Face",
@@ -36,6 +37,17 @@ return function(humanoidDescription)
 	local accesories = humanoidDescription:GetAccessories(--[[includeRigidAccessories = ]] true)
 	for _, accessoryMetadata in ipairs(accesories) do
 		table.insert(assetIdList, accessoryMetadata.AssetId)
+	end
+
+	local humanoidDescriptionChildren = humanoidDescription:GetChildren()
+	for _, child in humanoidDescriptionChildren do
+		if not child:IsA("MakeupDescription") then
+			continue
+		end
+
+		if child.AssetId > 0 then
+			table.insert(assetIdList, child.AssetId)
+		end
 	end
 
 	local emotesIds = humanoidDescription:GetEmotes()

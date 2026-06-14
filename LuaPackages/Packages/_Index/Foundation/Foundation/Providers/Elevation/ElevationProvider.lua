@@ -9,7 +9,7 @@ type ElevationLayer = ElevationLayer.ElevationLayer
 type Token = elevation.Token
 
 export type Manager = {
-	acquire: (layer: ElevationLayer) -> elevation.Token,
+	acquire: (layer: ElevationLayer, options: { reserve: boolean, owner: elevation.Token? }) -> elevation.Token,
 	peek: (layer: ElevationLayer) -> number,
 	releaseIfTop: (layer: ElevationLayer, index: number) -> nil,
 }
@@ -32,33 +32,38 @@ local function ElevationProvider(props: ElevationProviderProps)
 
 	local manager = React.useMemo(function(): Manager
 		return {
-			acquire = function(layer: ElevationLayer)
-				local count = countersRef.current[layer] or 0
-
+			acquire = function(layer: ElevationLayer, options: { reserve: boolean, owner: Token? })
 				local spec = elevation.ELEVATION_LAYERS[layer]
-				local capacity = math.floor((spec.finish - spec.start) / spec.step) + 1
+				local index = -1
+				local zIndex
+				local shouldCap = true
 
-				if count == capacity then
+				if options.owner then
+					zIndex = options.owner.zIndex + 1
+					shouldCap = options.owner.zIndex <= spec.finish
+				elseif options.reserve then
+					local count = countersRef.current[layer] or 0
+					zIndex = spec.start + (count + 1) * spec.step
+					countersRef.current[layer] = count + 1
+					index = count
+				else
+					zIndex = spec.start
+				end
+
+				if shouldCap and zIndex > spec.finish then
 					warn(
 						string.format(
 							"Layer '%s' capacity exceeded (%d/%d). Capping zIndex at %d.",
 							tostring(layer),
-							count + 1,
-							capacity,
+							zIndex,
+							spec.finish,
 							spec.finish
 						)
 					)
-				end
-
-				countersRef.current[layer] = count + 1
-
-				local zIndex = spec.start + count * spec.step
-
-				if zIndex > spec.finish then
 					zIndex = spec.finish
 				end
 
-				return { layer = layer, index = count, zIndex = zIndex }
+				return { layer = layer, index = index, zIndex = zIndex }
 			end,
 			peek = function(layer: ElevationLayer)
 				return countersRef.current[layer] or 0

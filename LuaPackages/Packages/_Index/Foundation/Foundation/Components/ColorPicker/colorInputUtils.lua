@@ -77,7 +77,7 @@ local function createInputConfigs(
 			value = hexValue,
 			handler = handleHexChange,
 			placeholder = "#000000",
-			width = tokens.Size and tokens.Size.Size_2000 and tokens.Size.Size_2000 or nil,
+			width = UDim.new(1, 0),
 		},
 	}
 

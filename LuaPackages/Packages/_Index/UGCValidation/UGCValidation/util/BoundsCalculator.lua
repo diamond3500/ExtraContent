@@ -1,3 +1,6 @@
+-- TEMPORARY: Uses getAttachmentCFrameInPartSpace to fix HRD bone-nested attachment CFrame interpretation.
+-- All bounds/transform calculation in this file must be refactored in the new validation system.
+
 --[[
 calculateAssetBounds:
 	traverses through the hierarchy of each part of an asset type in order to determine the total bounds
@@ -21,8 +24,9 @@ local getMeshVerts = require(root.util.getMeshVerts)
 local getMeshInfo = require(root.util.getMeshInfo)
 local BoundsDataUtils = require(root.util.BoundsDataUtils)
 local getExpectedPartSize = require(root.util.getExpectedPartSize)
-
-local getFFlagUGCValidationConsolidateGetMeshInfos = require(root.flags.getFFlagUGCValidationConsolidateGetMeshInfos)
+local getFFlagUGCValidateLegFullBodySeparation = require(root.flags.getFFlagUGCValidateLegFullBodySeparation)
+local R15plusUtils = require(root.util.R15plusUtils)
+local getAttachmentCFrameInPartSpace = require(root.util.getAttachmentCFrameInPartSpace)
 
 local BoundsCalculator = {}
 
@@ -55,15 +59,19 @@ local function orientFullBodyArmsLegsToWorldAxes(partsCFrames: { string: CFrame 
 		local upperPart = findMeshHandle(partNames[1])
 
 		local attachmentoParentName = ConstantsInterface.getRigAttachmentToParent(singleAsset, upperPart.Name)
-		local attachmentInChild: Attachment? = upperPart:FindFirstChild(attachmentoParentName) :: Attachment
+		local attachmentInChild: Attachment? =
+			upperPart:FindFirstChild(attachmentoParentName, R15plusUtils.checkFlagEnabledForAllowHrd()) :: Attachment
 		assert(attachmentInChild)
-		local rigAttachmentInChildCFrame = partsCFrames[upperPart.Name] * attachmentInChild.CFrame
+		local rigAttachmentInChildCFrame = partsCFrames[upperPart.Name]
+			* getAttachmentCFrameInPartSpace(attachmentInChild :: Attachment)
 
 		local parentPart = findMeshHandle(parentPartName)
 		assert(parentPart)
-		local attachmentInParent: Attachment? = parentPart:FindFirstChild(attachmentoParentName) :: Attachment
+		local attachmentInParent: Attachment? =
+			parentPart:FindFirstChild(attachmentoParentName, R15plusUtils.checkFlagEnabledForAllowHrd()) :: Attachment
 		assert(attachmentInParent)
-		local rigAttachmentInParentCFrame = partsCFrames[parentPart.Name] * attachmentInParent.CFrame
+		local rigAttachmentInParentCFrame = partsCFrames[parentPart.Name]
+			* getAttachmentCFrameInPartSpace(attachmentInParent :: Attachment)
 
 		local fixUpVector = rigAttachmentInParentCFrame.Position - rigAttachmentInChildCFrame.Position
 
@@ -126,10 +134,10 @@ local function calculateBoundsDataForPart(
 			continue
 		end
 
-		local attach = part:FindFirstChild(attachName) :: Attachment
+		local attach = part:FindFirstChild(attachName, R15plusUtils.checkFlagEnabledForAllowHrd()) :: Attachment
 		assert(attach)
 
-		local world = cframe * attach.CFrame
+		local world = cframe * getAttachmentCFrameInPartSpace(attach :: Attachment)
 		BoundsDataUtils.expandRigAttachmentBounds(resultMinMaxBounds, world.Position)
 	end
 
@@ -150,12 +158,8 @@ local function calculateAllPartsBoundsData(
 		local meshInfo = nil
 		if not dataCache then
 			local success, failureReasons, meshInfoOpt
-			if getFFlagUGCValidationConsolidateGetMeshInfos() then
-				success, failureReasons, meshInfoOpt =
-					getMeshInfo(meshPart, Constants.MESH_CONTENT_TYPE.RENDER_MESH, validationContext)
-			else
-				success, failureReasons, meshInfoOpt = (getMeshInfo :: any)(meshPart, validationContext)
-			end
+			success, failureReasons, meshInfoOpt =
+				getMeshInfo(meshPart, Constants.MESH_CONTENT_TYPE.RENDER_MESH, validationContext)
 			if not success then
 				return success, failureReasons
 			end
@@ -276,14 +280,21 @@ end
 function BoundsCalculator.calculateIndividualFullBodyPartsData(
 	fullBodyAssets: Types.AllBodyParts,
 	validationContext: Types.ValidationContext,
-	dataCache: Types.DataCache?
+	dataCache: Types.DataCache?,
+	doOrientArmsLegsToWorldAxes: boolean
 ): (boolean, { string }?, { string: any }?)
 	local function findMeshHandle(name: string): MeshPart
 		return fullBodyAssets[name] :: MeshPart
 	end
 
 	local partsCFrames = AssetCalculator.calculateAllTransformsForFullBody(fullBodyAssets)
-	orientFullBodyArmsLegsToWorldAxes(partsCFrames, findMeshHandle)
+	if getFFlagUGCValidateLegFullBodySeparation() then
+		if doOrientArmsLegsToWorldAxes then
+			orientFullBodyArmsLegsToWorldAxes(partsCFrames, findMeshHandle)
+		end
+	else
+		orientFullBodyArmsLegsToWorldAxes(partsCFrames, findMeshHandle)
+	end
 
 	local success, failureReasons, allPartsBoundsDataOpt =
 		calculateAllPartsBoundsData(partsCFrames, findMeshHandle, validationContext, dataCache)

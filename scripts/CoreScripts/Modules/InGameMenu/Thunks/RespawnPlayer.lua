@@ -1,4 +1,5 @@
 --!nonstrict
+local AvatarEditorService = game:GetService("AvatarEditorService")
 local Players = game:GetService("Players")
 
 local InGameMenu = script.Parent.Parent
@@ -11,6 +12,8 @@ local Constants = require(InGameMenu.Resources.Constants)
 return function(store)
 	local state = store:getState()
 	if state.respawn.enabled then
+		AvatarEditorService:BustAvatarFetchCache()
+
 		if state.respawn.customCallback then
 			state.respawn.customCallback:Fire()
 		else

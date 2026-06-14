@@ -10,14 +10,16 @@ local useTokens = require(Foundation.Providers.Style.useTokens)
 local Button = require(Foundation.Components.Button)
 
 local ButtonVariant = require(Foundation.Enums.ButtonVariant)
+local InputFocusBehavior = require(Foundation.Enums.InputFocusBehavior)
 local InputSize = require(Foundation.Enums.InputSize)
+local InputVariant = require(Foundation.Enums.InputVariant)
 
 local TextInput = require(Foundation.Components.TextInput)
 
 local function Story(props)
 	local controls = props.controls
 
-	local text, setText = React.useState("")
+	local text, setText = React.useBinding("")
 	local numReturnPressed, setNumReturnPressed = React.useState(0)
 	local tokens = useTokens()
 
@@ -41,8 +43,8 @@ local function Story(props)
 		print("focus gained!")
 	end
 
-	local function onFocusLost()
-		print("focus lost!")
+	local function onFocusLost(inputObject: InputObject?)
+		print("focus lost!", if inputObject then `InputObject: {inputObject.UserInputType.Name}` else "no input object")
 	end
 
 	local function onReturnPressed()
@@ -59,6 +61,9 @@ local function Story(props)
 			LayoutOrder = 1,
 			text = text,
 			textInputType = if controls.textInputType == React.None then nil else controls.textInputType,
+			focusBehavior = if controls.focusBehavior ~= React.None then controls.focusBehavior else nil,
+			hasClearButton = if controls.hasClearButton == React.None then nil else controls.hasClearButton,
+			variant = controls.variant,
 			hasError = controls.hasError,
 			isDisabled = controls.isDisabled,
 			isRequired = controls.isRequired,
@@ -68,6 +73,7 @@ local function Story(props)
 			onReturnPressed = onReturnPressed,
 			label = controls.label,
 			size = controls.size,
+			width = if controls.width == 0 then nil else UDim.new(0, controls.width),
 			hint = if controls.hint == "" then nil else controls.hint,
 			placeholder = controls.placeholder,
 			leadingIcon = if controls.leadingIcon == React.None then nil else controls.leadingIcon,
@@ -114,12 +120,15 @@ return {
 		hasError = false,
 		isDisabled = false,
 		isRequired = { React.None, false, true },
+		focusBehavior = { React.None, unpack(Dash.values(InputFocusBehavior)) },
+		hasClearButton = { React.None, false, true },
 		textInputType = {
 			React.None,
 			Enum.TextInputType.Default,
 			Enum.TextInputType.Password,
 			Enum.TextInputType.Number,
 		},
+		variant = Dash.values(InputVariant),
 		size = Dash.values(InputSize),
 		label = "Input Label",
 		hint = "Helper text goes here",
@@ -139,5 +148,6 @@ return {
 			React.None,
 		},
 		trailingButton = false,
+		width = 0,
 	},
 }

@@ -3,10 +3,7 @@ local Chrome = script:FindFirstAncestor("Chrome")
 
 local ChromeService = require(Chrome.Service)
 
-local GetFFlagAppChatAddConnectUnibarForActiveSquad =
-	require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagAppChatAddConnectUnibarForActiveSquad
-local AppChat = require(CorePackages.Workspace.Packages.AppChat)
-local InExperienceAppChatModal = AppChat.App.InExperienceAppChatModal
+local InExperienceAppChatModal = require(CorePackages.Workspace.Packages.AppChat.InExperienceAppChatModal)
 
 local registerConnectIntegration = require(script.Parent.registerConnectIntegration)
 local isConnectUnibarEnabled = require(script.Parent.isConnectUnibarEnabled)
@@ -14,6 +11,10 @@ local isConnectDropdownEnabled = require(script.Parent.isConnectDropdownEnabled)
 
 local GetFFlagIsSquadEnabled = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagIsSquadEnabled
 local FFlagIsSquadEnabledAMP = require(CorePackages.Workspace.Packages.SharedFlags).FFlagIsSquadEnabledAMP
+local FIntSideSheetVariant = require(CorePackages.Workspace.Packages.SharedFlags).FIntSideSheetVariant
+local FFlagEnableSideSheet = require(CorePackages.Workspace.Packages.SharedFlags).FFlagEnableSideSheet
+
+local ConnectIconDropdown = require(script.Parent.ConnectIconDropdown)
 
 -- "Connect_Unibar" icon and option are used to open AppChat (InExperienceAppChat)
 -- It will also serve as an entry point for Party
@@ -29,11 +30,14 @@ local function canAccessParty()
 end
 
 local function shouldEnableIntegrationForParty(): boolean
-	return GetFFlagAppChatAddConnectUnibarForActiveSquad() and canAccessParty() and isConnectDropdownEnabled()
+	return GetFFlagIsSquadEnabled() and canAccessParty() and isConnectDropdownEnabled()
 end
 
 local integration = nil
 local squadSignalDisconnect: (() -> ())? = nil
+
+-- hide connect dropdown if connect unibar is shown for sidesheet grid variant
+local shouldHideDropdown = FFlagEnableSideSheet and FIntSideSheetVariant == 0 and ConnectIconDropdown ~= nil
 
 -- combine s1 and s2 logic into one function
 local function updateConnectIntegration(currentIntegrationSoleyForParty)
@@ -60,6 +64,9 @@ local function updateConnectIntegration(currentIntegrationSoleyForParty)
 		-- pin/re-pin connect_unibar if there is an active squad when party and connect dropdown is enabled
 		if hasActiveSquad then
 			integration.availability:pinned()
+			if shouldHideDropdown then
+				ConnectIconDropdown.availability:unavailable()
+			end
 		end
 
 		-- attach listener to update availability based on active squad
@@ -67,8 +74,14 @@ local function updateConnectIntegration(currentIntegrationSoleyForParty)
 			local conn = InExperienceAppChatModal.default.currentSquadIdSignal.Event:Connect(function(currentSquadId)
 				if currentSquadId == "" then
 					integration.availability:unavailable()
+					if shouldHideDropdown then
+						ConnectIconDropdown.availability:available()
+					end
 				else
 					integration.availability:pinned()
+					if shouldHideDropdown then
+						ConnectIconDropdown.availability:unavailable()
+					end
 				end
 			end)
 			squadSignalDisconnect = function()
@@ -93,9 +106,7 @@ if isConnectUnibarEnabled() then
 		-- s2, AppChat launches dropdown entrypoint: need to hide and show connect_unibar
 		--   see logic below
 
-		local currentIntegrationSoleyForParty = GetFFlagAppChatAddConnectUnibarForActiveSquad()
-			and GetFFlagIsSquadEnabled()
-			and isConnectDropdownEnabled()
+		local currentIntegrationSoleyForParty = GetFFlagIsSquadEnabled() and isConnectDropdownEnabled()
 		integration = registerConnectIntegration(
 			"connect_unibar",
 			if currentIntegrationSoleyForParty
@@ -109,13 +120,22 @@ if isConnectUnibarEnabled() then
 			local hasActiveSquad = InExperienceAppChatModal.default.currentSquadId ~= ""
 			if hasActiveSquad then
 				integration.availability:pinned()
+				if shouldHideDropdown then
+					ConnectIconDropdown.availability:unavailable()
+				end
 			end
 
 			InExperienceAppChatModal.default.currentSquadIdSignal.Event:Connect(function(currentSquadId)
 				if currentSquadId == "" then
 					integration.availability:unavailable()
+					if shouldHideDropdown then
+						ConnectIconDropdown.availability:available()
+					end
 				else
 					integration.availability:pinned()
+					if shouldHideDropdown then
+						ConnectIconDropdown.availability:unavailable()
+					end
 				end
 			end)
 		end

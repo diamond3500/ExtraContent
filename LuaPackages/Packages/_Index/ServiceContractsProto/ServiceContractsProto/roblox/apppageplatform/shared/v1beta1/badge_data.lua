@@ -11,6 +11,8 @@ type _Messages = {
 }
 local messages: _Messages = {} :: _Messages
 
+local _google_protobuf_timestamp = require(script.Parent.Parent.Parent.Parent.Parent.google.protobuf.timestamp)
+
 type _BadgeDataImpl = {
 	__index: _BadgeDataImpl,
 	new: (fields: _BadgeDataPartialFields?) -> BadgeData,
@@ -26,6 +28,14 @@ type _BadgeDataFields = {
 	display_name: string,
 	display_icon_image_id: number,
 	display_description: string,
+	total_awarded_count: number,
+	past_day_awarded_count: number,
+	rarity: string,
+	badge_type_label: string,
+	created_time: _google_protobuf_timestamp.Timestamp?,
+	updated_time: _google_protobuf_timestamp.Timestamp?,
+	is_earned_by_user: boolean,
+	awarded_time: _google_protobuf_timestamp.Timestamp?,
 }
 
 type _BadgeDataPartialFields = {
@@ -33,6 +43,14 @@ type _BadgeDataPartialFields = {
 	display_name: string?,
 	display_icon_image_id: number?,
 	display_description: string?,
+	total_awarded_count: number?,
+	past_day_awarded_count: number?,
+	rarity: string?,
+	badge_type_label: string?,
+	created_time: _google_protobuf_timestamp.Timestamp?,
+	updated_time: _google_protobuf_timestamp.Timestamp?,
+	is_earned_by_user: boolean?,
+	awarded_time: _google_protobuf_timestamp.Timestamp?,
 }
 
 export type BadgeData = typeof(setmetatable({} :: _BadgeDataFields, {} :: _BadgeDataImpl))
@@ -52,6 +70,18 @@ do
 			display_description = if data == nil or data.display_description == nil
 				then ""
 				else data.display_description,
+			total_awarded_count = if data == nil or data.total_awarded_count == nil
+				then 0
+				else data.total_awarded_count,
+			past_day_awarded_count = if data == nil or data.past_day_awarded_count == nil
+				then 0
+				else data.past_day_awarded_count,
+			rarity = if data == nil or data.rarity == nil then "" else data.rarity,
+			badge_type_label = if data == nil or data.badge_type_label == nil then "" else data.badge_type_label,
+			created_time = if data == nil or data.created_time == nil then nil else data.created_time,
+			updated_time = if data == nil or data.updated_time == nil then nil else data.updated_time,
+			is_earned_by_user = if data == nil or data.is_earned_by_user == nil then false else data.is_earned_by_user,
+			awarded_time = if data == nil or data.awarded_time == nil then nil else data.awarded_time,
 		}, _BadgeDataImpl :: _BadgeDataImpl)
 	end
 
@@ -79,6 +109,49 @@ do
 			output, cursor = proto.writeString(output, cursor, self.display_description)
 		end
 
+		if self.total_awarded_count ~= nil and self.total_awarded_count ~= 0 then
+			output, cursor = proto.writeTag(output, cursor, 5, proto.wireTypes.varint)
+			output, cursor = proto.writeVarInt(output, cursor, self.total_awarded_count)
+		end
+
+		if self.past_day_awarded_count ~= nil and self.past_day_awarded_count ~= 0 then
+			output, cursor = proto.writeTag(output, cursor, 6, proto.wireTypes.varint)
+			output, cursor = proto.writeVarInt(output, cursor, self.past_day_awarded_count)
+		end
+
+		if self.rarity ~= nil and self.rarity ~= "" then
+			output, cursor = proto.writeTag(output, cursor, 7, proto.wireTypes.lengthDelimited)
+			output, cursor = proto.writeString(output, cursor, self.rarity)
+		end
+
+		if self.badge_type_label ~= nil and self.badge_type_label ~= "" then
+			output, cursor = proto.writeTag(output, cursor, 8, proto.wireTypes.lengthDelimited)
+			output, cursor = proto.writeString(output, cursor, self.badge_type_label)
+		end
+
+		if self.created_time ~= nil then
+			local encoded = self.created_time:encode()
+			output, cursor = proto.writeTag(output, cursor, 9, proto.wireTypes.lengthDelimited)
+			output, cursor = proto.writeBuffer(output, cursor, encoded, buffer.len(encoded))
+		end
+
+		if self.updated_time ~= nil then
+			local encoded = self.updated_time:encode()
+			output, cursor = proto.writeTag(output, cursor, 10, proto.wireTypes.lengthDelimited)
+			output, cursor = proto.writeBuffer(output, cursor, encoded, buffer.len(encoded))
+		end
+
+		if self.is_earned_by_user then
+			output, cursor = proto.writeTag(output, cursor, 11, proto.wireTypes.varint)
+			output, cursor = proto.writeVarInt(output, cursor, if self.is_earned_by_user then 1 else 0)
+		end
+
+		if self.awarded_time ~= nil then
+			local encoded = self.awarded_time:encode()
+			output, cursor = proto.writeTag(output, cursor, 12, proto.wireTypes.lengthDelimited)
+			output, cursor = proto.writeBuffer(output, cursor, encoded, buffer.len(encoded))
+		end
+
 		local shrunkBuffer = buffer.create(cursor)
 		buffer.copy(shrunkBuffer, 0, output, 0, cursor)
 		return shrunkBuffer
@@ -103,6 +176,21 @@ do
 					value, cursor = proto.readVarIntI64(input, cursor)
 					self.display_icon_image_id = value
 					continue
+				elseif field == 5 then
+					local value
+					value, cursor = proto.readVarIntI64(input, cursor)
+					self.total_awarded_count = value
+					continue
+				elseif field == 6 then
+					local value
+					value, cursor = proto.readVarIntI64(input, cursor)
+					self.past_day_awarded_count = value
+					continue
+				elseif field == 11 then
+					local value
+					value, cursor = proto.readVarInt(input, cursor)
+					self.is_earned_by_user = value ~= 0
+					continue
 				end
 
 				local _
@@ -117,6 +205,31 @@ do
 					local value
 					value, cursor = proto.readBuffer(input, cursor)
 					self.display_description = buffer.tostring(value)
+					continue
+				elseif field == 7 then
+					local value
+					value, cursor = proto.readBuffer(input, cursor)
+					self.rarity = buffer.tostring(value)
+					continue
+				elseif field == 8 then
+					local value
+					value, cursor = proto.readBuffer(input, cursor)
+					self.badge_type_label = buffer.tostring(value)
+					continue
+				elseif field == 9 then
+					local value
+					value, cursor = proto.readBuffer(input, cursor)
+					self.created_time = _google_protobuf_timestamp.Timestamp.decode(value)
+					continue
+				elseif field == 10 then
+					local value
+					value, cursor = proto.readBuffer(input, cursor)
+					self.updated_time = _google_protobuf_timestamp.Timestamp.decode(value)
+					continue
+				elseif field == 12 then
+					local value
+					value, cursor = proto.readBuffer(input, cursor)
+					self.awarded_time = _google_protobuf_timestamp.Timestamp.decode(value)
 					continue
 				end
 
@@ -161,6 +274,38 @@ do
 			output.displayDescription = self.display_description
 		end
 
+		if self.total_awarded_count ~= nil and self.total_awarded_count ~= 0 then
+			output.totalAwardedCount = self.total_awarded_count
+		end
+
+		if self.past_day_awarded_count ~= nil and self.past_day_awarded_count ~= 0 then
+			output.pastDayAwardedCount = self.past_day_awarded_count
+		end
+
+		if self.rarity ~= nil and self.rarity ~= "" then
+			output.rarity = self.rarity
+		end
+
+		if self.badge_type_label ~= nil and self.badge_type_label ~= "" then
+			output.badgeTypeLabel = self.badge_type_label
+		end
+
+		if self.created_time ~= nil then
+			output.createdTime = self.created_time:jsonEncode()
+		end
+
+		if self.updated_time ~= nil then
+			output.updatedTime = self.updated_time:jsonEncode()
+		end
+
+		if self.is_earned_by_user then
+			output.isEarnedByUser = self.is_earned_by_user
+		end
+
+		if self.awarded_time ~= nil then
+			output.awardedTime = self.awarded_time:jsonEncode()
+		end
+
 		return output
 	end
 
@@ -193,6 +338,66 @@ do
 
 		if input.displayDescription ~= nil then
 			self.display_description = input.displayDescription
+		end
+
+		if input.total_awarded_count ~= nil then
+			self.total_awarded_count = input.total_awarded_count
+		end
+
+		if input.totalAwardedCount ~= nil then
+			self.total_awarded_count = input.totalAwardedCount
+		end
+
+		if input.past_day_awarded_count ~= nil then
+			self.past_day_awarded_count = input.past_day_awarded_count
+		end
+
+		if input.pastDayAwardedCount ~= nil then
+			self.past_day_awarded_count = input.pastDayAwardedCount
+		end
+
+		if input.rarity ~= nil then
+			self.rarity = input.rarity
+		end
+
+		if input.badge_type_label ~= nil then
+			self.badge_type_label = input.badge_type_label
+		end
+
+		if input.badgeTypeLabel ~= nil then
+			self.badge_type_label = input.badgeTypeLabel
+		end
+
+		if input.created_time ~= nil then
+			self.created_time = _google_protobuf_timestamp.Timestamp.jsonDecode(input.created_time)
+		end
+
+		if input.createdTime ~= nil then
+			self.created_time = _google_protobuf_timestamp.Timestamp.jsonDecode(input.createdTime)
+		end
+
+		if input.updated_time ~= nil then
+			self.updated_time = _google_protobuf_timestamp.Timestamp.jsonDecode(input.updated_time)
+		end
+
+		if input.updatedTime ~= nil then
+			self.updated_time = _google_protobuf_timestamp.Timestamp.jsonDecode(input.updatedTime)
+		end
+
+		if input.is_earned_by_user ~= nil then
+			self.is_earned_by_user = input.is_earned_by_user
+		end
+
+		if input.isEarnedByUser ~= nil then
+			self.is_earned_by_user = input.isEarnedByUser
+		end
+
+		if input.awarded_time ~= nil then
+			self.awarded_time = _google_protobuf_timestamp.Timestamp.jsonDecode(input.awarded_time)
+		end
+
+		if input.awardedTime ~= nil then
+			self.awarded_time = _google_protobuf_timestamp.Timestamp.jsonDecode(input.awardedTime)
 		end
 
 		return self

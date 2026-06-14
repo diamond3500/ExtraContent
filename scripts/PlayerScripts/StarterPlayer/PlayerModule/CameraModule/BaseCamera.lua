@@ -7,9 +7,9 @@ local VRService = game:GetService("VRService")
 local GuiService = game:GetService("GuiService")
 local UserGameSettings = UserSettings():GetService("UserGameSettings")
 
-local CommonUtils = script.Parent.Parent:WaitForChild("CommonUtils")
-local ConnectionUtil = require(CommonUtils:WaitForChild("ConnectionUtil"))
-local FlagUtil = require(CommonUtils:WaitForChild("FlagUtil"))
+local CommonUtils = require(script.Parent.Parent:WaitForChild("CommonUtils"))
+local ConnectionUtil = CommonUtils.get("ConnectionUtil")
+local FlagUtil = CommonUtils.get("FlagUtil")
 
 local CameraUtils = require(script.Parent:WaitForChild("CameraUtils"))
 local ZoomController = require(script.Parent:WaitForChild("ZoomController"))
@@ -17,15 +17,11 @@ local CameraToggleStateController = require(script.Parent:WaitForChild("CameraTo
 local CameraInput = require(script.Parent:WaitForChild("CameraInput"))
 local CameraUI = require(script.Parent:WaitForChild("CameraUI"))
 
-local player = Players.LocalPlayer
+local inputContexts = script.Parent.Parent:WaitForChild("InputContexts")
+local cameraContext = inputContexts:WaitForChild("CameraContext")
+local cameraGamepadZoomAction = cameraContext:WaitForChild("CameraGamepadZoomAction") :: InputAction
 
-local FFlagUserFixGamepadMaxZoom
-do
-	local success, result = pcall(function()
-		return UserSettings():IsUserFeatureEnabled("UserFixGamepadMaxZoom")
-	end)
-	FFlagUserFixGamepadMaxZoom = success and result
-end
+local player = Players.LocalPlayer
 
 local UNIT_Z = Vector3.new(0,0,1)
 local X1_Y0_Z1 = Vector3.new(1,0,1)	--Note: not a unit vector, used for projecting onto XZ plane
@@ -40,7 +36,6 @@ local MAX_Y = math.rad(80)
 
 local VR_ANGLE = math.rad(15)
 
-local ZERO_VECTOR2 = Vector2.new(0,0)
 local ZERO_VECTOR3 = Vector3.new(0,0,0)
 
 local SEAT_OFFSET = Vector3.new(0,5,0)
@@ -124,7 +119,9 @@ function BaseCamera.new()
 	self.cameraFrozen = false
 	self.subjectStateChangedConn = nil
 
-	self.gamepadZoomPressConnection = nil
+	self.gamepadZoomPressConnection = cameraGamepadZoomAction.Pressed:Connect(function()
+		self:GamepadZoomPress()
+	end)
 
 	-- Mouse locked formerly known as shift lock mode
 	self.mouseLockOffset = ZERO_VECTOR3
@@ -141,11 +138,7 @@ function BaseCamera:GetModuleName()
 end
 
 local function onSelectedObjectChanged()
-	if GuiService.SelectedObject then
-		CameraInput.gamepadZoomPress.Enabled = false
-	else
-		CameraInput.gamepadZoomPress.Enabled = true
-	end
+	cameraGamepadZoomAction.Enabled = not GuiService.SelectedObject
 end
 
 function BaseCamera:_setUpConfigurations()
@@ -186,18 +179,6 @@ function BaseCamera:GetHumanoidRootPart(): BasePart
 		end
 	end
 	return self.humanoidRootPart
-end
-
-function BaseCamera:GetBodyPartToFollow(humanoid: Humanoid, isDead: boolean) -- BasePart
-	-- If the humanoid is dead, prefer the head part if one still exists as a sibling of the humanoid
-	if humanoid:GetState() == Enum.HumanoidStateType.Dead then
-		local character = humanoid.Parent
-		if character and character:IsA("Model") then
-			return character:FindFirstChild("Head") or humanoid.RootPart
-		end
-	end
-
-	return humanoid.RootPart
 end
 
 function BaseCamera:GetSubjectCFrame(): CFrame
@@ -403,21 +384,21 @@ function BaseCamera:GetSubjectPosition(): Vector3?
 					heightOffset = ZERO_VECTOR3
 				end
 
-				result = bodyPartToFollow.CFrame.p + bodyPartToFollow.CFrame:vectorToWorldSpace(heightOffset + cameraOffset)
+				result = bodyPartToFollow.CFrame.Position + bodyPartToFollow.CFrame:vectorToWorldSpace(heightOffset + cameraOffset)
 			end
 
 		elseif cameraSubject:IsA("VehicleSeat") then
 			local offset = SEAT_OFFSET
-			result = cameraSubject.CFrame.p + cameraSubject.CFrame:vectorToWorldSpace(offset)
+			result = cameraSubject.CFrame.Position + cameraSubject.CFrame:vectorToWorldSpace(offset)
 		elseif cameraSubject:IsA("SkateboardPlatform") then
-			result = cameraSubject.CFrame.p + SEAT_OFFSET
+			result = cameraSubject.CFrame.Position + SEAT_OFFSET
 		elseif cameraSubject:IsA("BasePart") then
-			result = cameraSubject.CFrame.p
+			result = cameraSubject.CFrame.Position
 		elseif cameraSubject:IsA("Model") then
 			if cameraSubject.PrimaryPart then
-				result = cameraSubject:GetPrimaryPartCFrame().p
+				result = cameraSubject:GetPrimaryPartCFrame().Position
 			else
-				result = cameraSubject:GetModelCFrame().p
+				result = cameraSubject:GetModelCFrame().Position
 			end
 		end
 	else
@@ -479,16 +460,8 @@ function BaseCamera:GamepadZoomPress()
 		
 		if zoom < player.CameraMinZoomDistance then
 			zoom = player.CameraMinZoomDistance
-			if FFlagUserFixGamepadMaxZoom then
-				-- no more zoom levels to check, all the remaining ones
-				-- are < min
-				if max == zoom then
-					break
-				end
-			end
-		end
-
-		if not FFlagUserFixGamepadMaxZoom then
+			-- no more zoom levels to check, all the remaining ones
+			-- are < min
 			if max == zoom then
 				break
 			end
@@ -521,9 +494,7 @@ function BaseCamera:OnEnabledChanged()
 
 		CameraInput.setInputEnabled(true)
 
-		self.gamepadZoomPressConnection = CameraInput.gamepadZoomPress:Connect(function()
-			self:GamepadZoomPress()
-		end)
+		cameraGamepadZoomAction.Enabled = true
 
 		if player.CameraMode == Enum.CameraMode.LockFirstPerson then
 			self.currentSubjectDistance = 0.5
@@ -542,10 +513,7 @@ function BaseCamera:OnEnabledChanged()
 
 		CameraInput.setInputEnabled(false)
 
-		if self.gamepadZoomPressConnection then
-			self.gamepadZoomPressConnection:Disconnect()
-			self.gamepadZoomPressConnection = nil
-		end
+		cameraGamepadZoomAction.Enabled = false
 		-- Clean up additional event listeners and reset a bunch of properties
 		self:Cleanup()
 	end
@@ -590,7 +558,7 @@ function BaseCamera:UpdateMouseBehavior()
 		else
 			CameraUtils.restoreRotationType()
 
-			local rotationActivated = CameraInput.getRotationActivated()
+			local rotationActivated = CameraInput.getPanActivated()
 			if rotationActivated then
 				CameraUtils.setMouseBehaviorOverride(Enum.MouseBehavior.LockCurrentPosition)
 			else
@@ -699,7 +667,7 @@ end
 function BaseCamera:GetMeasuredDistanceToFocus(): number?
 	local camera = game.Workspace.CurrentCamera
 	if camera then
-		return (camera.CoordinateFrame.p - camera.Focus.p).magnitude
+		return (camera.CoordinateFrame.Position - camera.Focus.Position).magnitude
 	end
 	return nil
 end
@@ -725,7 +693,7 @@ end
 
 function BaseCamera:CalculateNewLookVectorVRFromArg(rotateInput: Vector2): Vector3
 	local subjectPosition: Vector3 = self:GetSubjectPosition()
-	local vecToSubject: Vector3 = (subjectPosition - (game.Workspace.CurrentCamera :: Camera).CFrame.p)
+	local vecToSubject: Vector3 = (subjectPosition - (game.Workspace.CurrentCamera :: Camera).CFrame.Position)
 	local currLookVector: Vector3 = (vecToSubject * X1_Y0_Z1).unit
 	local vrRotateInput: Vector2 = Vector2.new(rotateInput.X, 0)
 	local startCFrame: CFrame = CFrame.new(ZERO_VECTOR3, currLookVector)
@@ -750,20 +718,6 @@ function BaseCamera:GetHumanoid(): Humanoid?
 	end
 	return nil
 end
-
-function BaseCamera:GetHumanoidPartToFollow(humanoid: Humanoid, humanoidStateType: Enum.HumanoidStateType) -- BasePart
-	if humanoidStateType == Enum.HumanoidStateType.Dead then
-		local character = humanoid.Parent
-		if character then
-			return character:FindFirstChild("Head") or humanoid.Torso
-		else
-			return humanoid.Torso
-		end
-	else
-		return humanoid.Torso
-	end
-end
-
 
 function BaseCamera:OnNewCameraSubject()
 	if self.subjectStateChangedConn then

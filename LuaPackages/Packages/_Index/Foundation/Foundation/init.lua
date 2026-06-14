@@ -1,21 +1,36 @@
 local strict = require(script.Utility.strict)
 
 local PreferencesProvider = require(script.Providers.Preferences)
+local Responsive = require(script.Providers.Responsive)
+local ResponsiveProvider = Responsive.ResponsiveProvider
 local Tokens = require(script.Providers.Style.Tokens)
 local Types = require(script.Components.Types)
+
+local Flags = require(script.Utility.Flags)
+
+local StyleSheetRegistry = if Flags.FoundationUseStyleSheetRegistry
+	then require(script.StyleSheet.StyleSheetRegistry)
+	else nil :: never
 
 local Packages = script.Parent
 local BuilderIcons = require(Packages.BuilderIcons)
 
 export type ActionProps = Types.ActionProps
+export type AspectRatio = Types.AspectRatio
 export type Bindable<T> = Types.Bindable<T>
 export type CommonProps = Types.CommonProps
+export type FlexItem = Types.FlexItem
+export type ListLayout = Types.ListLayout
 export type Padding = Types.Padding
 export type PopoverAnchor = Types.PopoverAnchor
 export type Preferences = PreferencesProvider.PreferencesProps
 export type PreferencesProviderProps = PreferencesProvider.PreferencesProviderProps
+export type ResponsiveProviderProps = Responsive.ResponsiveProviderProps
+export type Selection = Types.Selection
+export type SelectionGroup = Types.SelectionGroup
 export type StateChangedCallback = Types.StateChangedCallback
 export type StateLayer = Types.StateLayer
+export type Stroke = Types.Stroke
 export type Tags = Types.Tags
 
 -- Token types
@@ -23,8 +38,10 @@ export type ColorStyle = Types.ColorStyle
 export type ColorStyleValue = Types.ColorStyleValue
 export type FontStyle = Types.FontStyle
 export type Tokens = Tokens.Tokens
+export type TokenOverrides = Tokens.TokenOverrides
 
 -- Enums and their types
+local AccessoryType = require(script.Enums.AccessoryType)
 local AlertSeverity = require(script.Enums.AlertSeverity)
 local AlertVariant = require(script.Enums.AlertVariant)
 local AvatarGroupType = require(script.Enums.AvatarGroupType)
@@ -32,8 +49,8 @@ local BadgeSize = require(script.Enums.BadgeSize)
 local BadgeVariant = require(script.Enums.BadgeVariant)
 local Breakpoint = require(script.Enums.Breakpoint)
 local ButtonVariant = require(script.Enums.ButtonVariant)
-local CheckedState = require(script.Enums.CheckedState)
 local ChipSize = require(script.Enums.ChipSize)
+local ChipVariant = require(script.Enums.ChipVariant)
 local ControlState = require(script.Enums.ControlState)
 local CursorType = require(script.Enums.CursorType)
 local DateTimePickerVariant = require(script.Enums.DateTimePickerVariant)
@@ -41,21 +58,26 @@ local Device = require(script.Enums.Device)
 local DialogSize = require(script.Enums.DialogSize)
 local DividerVariant = require(script.Enums.DividerVariant)
 local FillBehavior = require(script.Enums.FillBehavior)
-local Orientation = require(script.Enums.Orientation)
 local IconName = BuilderIcons.Icon
 local IconPosition = require(script.Enums.IconPosition)
 local IconSize = require(script.Enums.IconSize)
 local IconVariant = BuilderIcons.IconVariant
+local InputFocusBehavior = require(script.Enums.InputFocusBehavior)
 local InputLabelSize = require(script.Enums.InputLabelSize)
 local InputPlacement = require(script.Enums.InputPlacement)
 local InputSize = require(script.Enums.InputSize)
+local InputVariant = require(script.Enums.InputVariant)
+local ListItemInputType = require(script.Enums.ListItemInputType)
 local NumberInputControlsVariant = require(script.Enums.NumberInputControlsVariant)
+local OnChangeCallbackReason = require(script.Enums.OnChangeCallbackReason)
 local OnCloseCallbackReason = require(script.Enums.OnCloseCallbackReason)
+local Orientation = require(script.Enums.Orientation)
 local PopoverAlign = require(script.Enums.PopoverAlign)
 local PopoverSide = require(script.Enums.PopoverSide)
 local ProgressShape = require(script.Enums.ProgressShape)
 local ProgressSize = require(script.Enums.ProgressSize)
 local Radius = require(script.Enums.Radius)
+local SearchInputShape = require(script.Enums.SearchInputShape)
 local SliderVariant = require(script.Enums.SliderVariant)
 local StateLayerAffordance = require(script.Enums.StateLayerAffordance)
 local StateLayerMode = require(script.Enums.StateLayerMode)
@@ -66,6 +88,7 @@ local ThumbnailType = require(script.Enums.ThumbnailType)
 local UserPresence = require(script.Enums.UserPresence)
 local Visibility = require(script.Enums.Visibility)
 
+export type AccessoryType = AccessoryType.AccessoryType
 export type AlertSeverity = AlertSeverity.AlertSeverity
 export type AlertVariant = AlertVariant.AlertVariant
 export type AvatarGroupType = AvatarGroupType.AvatarGroupType
@@ -73,37 +96,42 @@ export type BadgeSize = BadgeSize.BadgeSize
 export type BadgeVariant = BadgeVariant.BadgeVariant
 export type Breakpoint = Breakpoint.Breakpoint
 export type ButtonVariant = ButtonVariant.ButtonVariant
-export type CheckedState = CheckedState.CheckedState
 export type ChipSize = ChipSize.ChipSize
+export type ChipVariant = ChipVariant.ChipVariant
 export type ControlState = ControlState.ControlState
 export type CursorType = CursorType.CursorType
-export type Device = Device.Device
 export type DateTimePickerVariant = DateTimePickerVariant.DateTimePickerVariant
+export type Device = Device.Device
 export type DialogSize = DialogSize.DialogSize
-export type Orientation = Orientation.Orientation
 export type DividerVariant = DividerVariant.DividerVariant
 export type FillBehavior = FillBehavior.FillBehavior
-export type IconPosition = IconPosition.IconPosition
 export type IconName = BuilderIcons.Icon
+export type IconPosition = IconPosition.IconPosition
 export type IconSize = IconSize.IconSize
-export type InputSize = InputSize.InputSize
-export type InputPlacement = InputPlacement.InputPlacement
 export type IconVariant = BuilderIcons.IconVariant
+export type InputFocusBehavior = InputFocusBehavior.InputFocusBehavior
 export type InputLabelSize = InputLabelSize.InputLabelSize
+export type InputPlacement = InputPlacement.InputPlacement
+export type InputSize = InputSize.InputSize
+export type InputVariant = InputVariant.InputVariant
+export type ListItemInputType = ListItemInputType.ListItemInputType
 export type NumberInputControlsVariant = NumberInputControlsVariant.NumberInputControlsVariant
+export type OnChangeCallbackReason = OnChangeCallbackReason.OnChangeCallbackReason
 export type OnCloseCallbackReason = OnCloseCallbackReason.OnCloseCallbackReason
+export type Orientation = Orientation.Orientation
 export type PopoverAlign = PopoverAlign.PopoverAlign
 export type PopoverSide = PopoverSide.PopoverSide
 export type ProgressShape = ProgressShape.ProgressShape
 export type ProgressSize = ProgressSize.ProgressSize
 export type Radius = Radius.Radius
+export type SearchInputShape = SearchInputShape.SearchInputShape
 export type SliderVariant = SliderVariant.SliderVariant
 export type StateLayerAffordance = StateLayerAffordance.StateLayerAffordance
 export type StateLayerMode = StateLayerMode.StateLayerMode
 export type StatusIndicatorVariant = StatusIndicatorVariant.StatusIndicatorVariant
 export type Theme = Theme.Theme
-export type ThumbnailType = ThumbnailType.ThumbnailType
 export type ThumbnailSize = ThumbnailSize.ThumbnailSize
+export type ThumbnailType = ThumbnailType.ThumbnailType
 export type UserPresence = UserPresence.UserPresence
 export type Visibility = Visibility.Visibility
 -- enums end
@@ -131,11 +159,18 @@ export type BaseMenuItemGroup<Item = BaseMenuItem> = BaseMenu.BaseMenuItemGroup<
 local Button = require(script.Components.Button)
 export type ButtonProps = Button.ButtonProps
 
+local ButtonGroup = require(script.Components.ButtonGroup)
+export type ButtonGroupProps = ButtonGroup.ButtonGroupProps
+export type ButtonGroupItem = ButtonGroup.ButtonGroupItem
+
 local Checkbox = require(script.Components.Checkbox)
 export type CheckboxProps = Checkbox.CheckboxProps
 
 local Coachmark = require(script.Components.Coachmark)
 export type CoachmarkProps = Coachmark.CoachmarkProps
+
+local EducationalTooltip = require(script.Components.EducationalTooltip)
+export type EducationalTooltipProps = EducationalTooltip.EducationalTooltipProps
 
 local Chip = require(script.Components.Chip)
 export type ChipProps = Chip.ChipProps
@@ -170,6 +205,9 @@ export type GridDebugProps = Grid.GridDebugProps
 local Empty = require(script.Components.Empty)
 export type EmptyProps = Empty.EmptyProps
 
+local FeedbackAlert = require(script.Components.FeedbackAlert)
+export type FeedbackAlertProps = FeedbackAlert.FeedbackAlertProps
+
 local Icon = require(script.Components.Icon)
 export type IconProps = Icon.IconProps
 
@@ -187,6 +225,11 @@ export type KeyLabelProps = KeyLabel.KeyLabelProps
 
 local Knob = require(script.Components.Knob)
 export type KnobProps = Knob.KnobProps
+
+local List = require(script.Components.List)
+export type ListProps = List.ListProps
+export type ListItemProps = List.ListItemProps
+export type ListAccessoryProps = List.ListAccessoryProps
 
 local Loading = require(script.Components.Loading)
 export type LoadingProps = Loading.LoadingProps
@@ -215,6 +258,9 @@ local RadioGroup = require(script.Components.RadioGroup)
 export type RadioGroupProps = RadioGroup.RadioGroupProps
 export type RadioGroupItemProps = RadioGroup.RadioGroupItemProps
 
+local SearchInput = require(script.Components.SearchInput)
+export type SearchInputProps = SearchInput.SearchInputProps
+
 local ScrollView = require(script.Components.ScrollView)
 export type ScrollViewProps = ScrollView.ScrollViewProps
 
@@ -225,6 +271,7 @@ local Sheet = require(script.Components.Sheet)
 export type SheetProps = Sheet.SheetProps
 export type SheetActionsProps = Sheet.SheetActionsProps
 export type SheetContentProps = Sheet.SheetContentProps
+export type SheetFullBleedProps = Sheet.SheetFullBleedProps
 export type SheetHeaderProps = Sheet.SheetHeaderProps
 export type SheetRef = Sheet.SheetRef
 
@@ -241,6 +288,9 @@ export type SnackbarAction = Snackbar.SnackbarAction
 local StatusIndicator = require(script.Components.StatusIndicator)
 export type StatusIndicatorProps = StatusIndicator.StatusIndicatorProps
 
+local AlertActions = require(script.Components.AlertActions)
+export type AlertAction = AlertActions.AlertAction
+
 local SystemBanner = require(script.Components.SystemBanner)
 export type SystemBannerProps = SystemBanner.SystemBannerProps
 
@@ -256,6 +306,7 @@ export type TextAreaProps = TextArea.TextAreaProps
 
 local TextInput = require(script.Components.TextInput)
 export type TextInputProps = TextInput.TextInputProps
+export type TextInputRef = Types.TextInputRef
 
 local Toggle = require(script.Components.Toggle)
 export type ToggleProps = Toggle.ToggleProps
@@ -277,6 +328,7 @@ local Foundation = strict({
 	AvatarGroup = AvatarGroup,
 	Badge = Badge,
 	Button = Button,
+	ButtonGroup = ButtonGroup,
 	Checkbox = Checkbox,
 	Chip = Chip,
 	Coachmark = Coachmark,
@@ -285,14 +337,17 @@ local Foundation = strict({
 	Dialog = Dialog,
 	Divider = Divider,
 	Dropdown = Dropdown,
+	EducationalTooltip = EducationalTooltip,
 	Grid = Grid,
 	Empty = Empty,
+	FeedbackAlert = FeedbackAlert,
 	Icon = Icon,
 	IconButton = IconButton,
 	Image = Image,
 	InputLabel = InputLabel,
 	KeyLabel = KeyLabel,
 	Knob = Knob,
+	List = List,
 	Loading = Loading,
 	Menu = Menu,
 	NumberInput = NumberInput,
@@ -301,6 +356,7 @@ local Foundation = strict({
 	Popover = Popover,
 	Progress = Progress,
 	RadioGroup = RadioGroup,
+	SearchInput = SearchInput,
 	ScrollView = ScrollView,
 	SegmentedControl = SegmentedControl,
 	Sheet = Sheet,
@@ -321,6 +377,7 @@ local Foundation = strict({
 	-- Providers
 	FoundationProvider = require(script.Providers.Foundation),
 	OverlayProvider = require(script.Providers.Overlay),
+	ResponsiveProvider = ResponsiveProvider,
 	BackgroundStyleContext = require(script.Providers.Style.BackgroundStyleContext),
 
 	-- Hooks
@@ -331,6 +388,8 @@ local Foundation = strict({
 		useCumulativeBackground = require(script.Utility.useCumulativeBackground),
 		useCursor = require(script.Providers.Cursor.useCursor),
 		useDefaultTags = require(script.Utility.useDefaultTags),
+		useDialogNavigation = require(script.Components.Dialog.useDialogNavigation),
+		useSheetNavigation = require(script.Components.Sheet.useSheetNavigation),
 		useIconSize = require(script.Utility.useIconSize),
 		useMeasurableRef = require(script.Components.Popover.useMeasurableRef),
 		useOverlay = require(script.Providers.Overlay.useOverlay),
@@ -348,6 +407,7 @@ local Foundation = strict({
 
 	-- Enums
 	Enums = {
+		AccessoryType = AccessoryType,
 		AlertSeverity = AlertSeverity,
 		AlertVariant = AlertVariant,
 		AvatarGroupType = AvatarGroupType,
@@ -359,9 +419,9 @@ local Foundation = strict({
 		ButtonVariant = ButtonVariant,
 		-- **DEPRECATED**: CheckboxSize is deprecated. Use InputSize instead.
 		CheckboxSize = require(script.Enums.InputSize),
-		CheckedState = CheckedState,
 		ControlState = ControlState,
 		ChipSize = ChipSize,
+		ChipVariant = ChipVariant,
 		CursorType = CursorType,
 		DateTimePickerVariant = DateTimePickerVariant,
 		Device = Device,
@@ -374,10 +434,14 @@ local Foundation = strict({
 		IconPosition = IconPosition,
 		IconSize = IconSize,
 		IconVariant = IconVariant,
+		InputFocusBehavior = InputFocusBehavior,
 		InputSize = InputSize,
+		InputVariant = InputVariant,
 		InputPlacement = InputPlacement,
 		InputLabelSize = InputLabelSize,
+		ListItemInputType = ListItemInputType,
 		NumberInputControlsVariant = NumberInputControlsVariant,
+		OnChangeCallbackReason = OnChangeCallbackReason,
 		OnCloseCallbackReason = OnCloseCallbackReason,
 		Orientation = Orientation,
 		PopoverAlign = PopoverAlign,
@@ -385,6 +449,7 @@ local Foundation = strict({
 		ProgressShape = ProgressShape,
 		ProgressSize = ProgressSize,
 		Radius = Radius,
+		SearchInputShape = SearchInputShape,
 		-- **DEPRECATED**: ScrollBarVisibility is deprecated. Use Visibility instead.
 		ScrollBarVisibility = require(script.Enums.Visibility),
 		SliderVariant = SliderVariant,
@@ -402,8 +467,14 @@ local Foundation = strict({
 
 	-- Utility
 	Utility = {
+		getStyleSheet = if Flags.FoundationUseStyleSheetRegistry then StyleSheetRegistry.getStyleSheet else nil,
+		addStyleTags = if Flags.FoundationUseStyleSheetRegistry then StyleSheetRegistry.addStyleTags else nil,
+		getTokens = Tokens.getTokens,
+		blendColors = require(script.Utility.blendColors),
 		composeStyleVariant = require(script.Utility.composeStyleVariant),
 		getBuilderIconForKeycode = require(script.Utility.getBuilderIconForKeycode),
+		getBuilderIconForCurrentPlatform = require(script.Utility.getBuilderIconForCurrentPlatform),
+		getBuilderIconVariant = require(script.Utility.getBuilderIconVariant),
 		getGridMetrics = require(script.Utility.getGridMetrics),
 		getRbxThumb = require(script.Utility.getRbxThumb),
 		getIconRichText = require(script.Utility.getIconRichText),

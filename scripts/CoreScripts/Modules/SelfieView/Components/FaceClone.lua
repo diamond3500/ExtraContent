@@ -12,6 +12,7 @@ local EngineFeaturePlayerViewRemoteEventSupport = game:GetEngineFeature("PlayerV
 
 local newTrackerStreamAnimation: TrackerStreamAnimation? = nil
 local cloneStreamTrack: AnimationStreamTrack? = nil
+local FFlagSelfViewNewPoseSynchronization = game:DefineFastFlag("SelfViewNewPoseSynchronization", false)
 local FFlagDebugSelfViewPerfBenchmark = game:DefineFastFlag("DebugSelfViewPerfBenchmark", false)
 local GetFFlagSelfViewVisibilityFix = require(CorePackages.Workspace.Packages.SharedFlags).GetFFlagSelfViewVisibilityFix
 
@@ -42,7 +43,7 @@ local trackStoppedConnections = {}
 local partsOrgTransparency = {}
 
 local cloneAnimator: Animator? = nil
-local cloneAnimationTracks = {}
+local cloneAnimationTracks: { [string]: AnimationTrack? } = {}
 local orgAnimationTracks = {}
 local cachedHeadColor: Color3? = nil
 local cachedHeadSize: Vector3? = nil
@@ -55,7 +56,7 @@ local cloneAnchor: WorldModel? = nil
 local clone: Model? = nil
 local headRef: MeshPart? = nil
 local headClone: MeshPart? = nil
-local headCloneNeck: Motor6D? = nil
+local headCloneNeck: Motor6D | AnimationConstraint | nil = nil
 local headCloneRootFrame: CFrame? = nil
 local wrapperFrame: Frame? = nil
 local outerContainerFrameName: string? = nil
@@ -78,6 +79,7 @@ local Observer = {
 	CharacterAdded = "CharacterAdded",
 	CharacterRemoving = "CharacterRemoving",
 	HumanoidStateChanged = "HumanoidStateChanged",
+	FaceControlsChanged = "FaceControlsChanged",
 }
 
 local Players = game:GetService("Players")
@@ -139,6 +141,15 @@ local function clearClone()
 	stopRenderStepped()
 	clearObserver(Observer.AnimationPlayed)
 	clearObserver(Observer.AnimationPlayedCoreScript)
+	for _, track in cloneAnimationTracks do
+		if track then
+			track:Stop(0)
+		end
+	end
+	if cloneStreamTrack then
+		cloneStreamTrack:Stop(0)
+		cloneStreamTrack = nil
+	end
 
 	cloneAnimator = nil
 	cloneAnimationTracks = {}
@@ -156,6 +167,9 @@ local function syncTrack(animator: Animator, track: AnimationTrack)
 	if track.Animation and track.Animation:IsA("Animation") then
 		--regular animation sync handled further below
 	elseif track.Animation and track.Animation:IsA("TrackerStreamAnimation") then
+		if cloneStreamTrack then
+			cloneStreamTrack:Stop(0)
+		end
 		newTrackerStreamAnimation = Instance.new("TrackerStreamAnimation")
 		assert(newTrackerStreamAnimation ~= nil)
 		if game:GetEngineFeature("UseNewLoadStreamAnimationAPI") then
@@ -337,7 +351,7 @@ local function updateClone(player: Player?)
 
 	--prep sync streaming tracks
 	if cloneAnimator then
-		if not EngineFeatureAnimatorAndADFRefactor then
+		if not EngineFeatureAnimatorAndADFRefactor or not FFlagSelfViewNewPoseSynchronization then
 			-- clear cloned tracks
 			local clonedTracks = cloneAnimator:GetPlayingAnimationTracks()
 			local coreScriptTracks = cloneAnimator:GetPlayingAnimationTracksCoreScript()
@@ -363,7 +377,7 @@ local function updateClone(player: Player?)
 		end
 
 		if animator then
-			if EngineFeatureAnimatorAndADFRefactor then
+			if EngineFeatureAnimatorAndADFRefactor and FFlagSelfViewNewPoseSynchronization then
 				cloneAnimator:SynchronizeWith(animator)
 			else
 				-- clone tracks manually
@@ -436,6 +450,14 @@ local function addHumanoidStateChangedObserver(humanoid: any)
 	end
 end
 
+local function addFaceControlsObserver(faceControls: FaceControls)
+	if not observerInstances[Observer.FaceControlsChanged] then
+		observerInstances[Observer.FaceControlsChanged] = faceControls.InternalFacsOverrideChanged:Connect(function()
+			setCloneDirty(true)
+		end)
+	end
+end
+
 local function characterAdded(character)
 	if viewportFrame == nil or wrapperFrame == nil then
 		return
@@ -460,6 +482,11 @@ local function characterAdded(character)
 		addHumanoidStateChangedObserver(humanoid)
 	end
 
+	local faceControls = character:FindFirstChildWhichIsA("FaceControls", true)
+	if faceControls then
+		addFaceControlsObserver(faceControls)
+	end
+
 	-- listen for updates on the original character's structure
 	observerInstances[Observer.DescendantAdded] = character.DescendantAdded:Connect(function(descendant)
 		if viewportFrame == nil or wrapperFrame == nil then
@@ -474,6 +501,10 @@ local function characterAdded(character)
 		if descendant:IsA("Humanoid") then
 			local humanoid = descendant
 			addHumanoidStateChangedObserver(humanoid)
+		end
+
+		if descendant:IsA("FaceControls") then
+			addFaceControlsObserver(descendant)
 		end
 
 		if ModelUtils.shouldMarkCloneDirtyForDescendant(descendant) then
@@ -758,7 +789,7 @@ function startRenderStepped(player: Player)
 										cloneAnimationTracks[anim.AnimationId] = cloneAnimator:LoadAnimation(anim)
 									end
 									local cloneAnimationTrack = cloneAnimationTracks[anim.AnimationId] --cloneAnimator:LoadAnimation(anim)
-
+									assert(cloneAnimationTrack ~= nil)
 									cloneAnimationTrack:Play()
 									cloneAnimationTrack.TimePosition = value.TimePosition
 									cloneAnimationTrack.Priority = value.Priority
@@ -775,8 +806,9 @@ function startRenderStepped(player: Player)
 							anim = track.Animation
 							if anim then
 								if not orgAnimationTracks[anim.AnimationId] then
-									if cloneAnimationTracks[anim.AnimationId] ~= nil then
-										cloneAnimationTracks[anim.AnimationId]:Stop(0)
+									local cloneAnimationTrack = cloneAnimationTracks[anim.AnimationId]
+									if cloneAnimationTrack ~= nil then
+										cloneAnimationTrack:Stop(0)
 									end
 									cloneAnimationTracks[anim.AnimationId] = nil
 								end
@@ -1005,6 +1037,7 @@ local function Initialize(
 			clearObserver(Observer.HumanoidStateChanged)
 			clearObserver(Observer.CharacterAdded)
 			clearObserver(Observer.CharacterRemoving)
+			clearObserver(Observer.FaceControlsChanged)
 			clearClone()
 		end
 	end)

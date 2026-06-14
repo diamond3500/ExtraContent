@@ -7,7 +7,6 @@ local ScrollView = require(Foundation.Components.ScrollView)
 local View = require(Foundation.Components.View)
 local useScaledValue = require(Foundation.Utility.useScaledValue)
 
-local Flags = require(Foundation.Utility.Flags)
 local useBindable = require(Foundation.Utility.useBindable)
 local withCommonProps = require(Foundation.Utility.withCommonProps)
 local withDefaults = require(Foundation.Utility.withDefaults)
@@ -23,8 +22,8 @@ type ItemId = Types.ItemId
 type OnItemActivated = Types.OnItemActivated
 local InputSize = require(Foundation.Enums.InputSize)
 type InputSize = InputSize.InputSize
-
 local BaseMenuContext = require(script.Parent.BaseMenuContext)
+local useSubmenuHover = require(script.Parent.useSubmenuHover)
 
 local DeclarativeBaseMenuContent = require(script.Parent.DeclarativeBaseMenuContent)
 
@@ -40,6 +39,7 @@ export type BaseMenuProps<Item = BaseMenuItem> = {
 	-- Width of the component. If not specified, the menu is sized based on the content.
 	width: Bindable<UDim?>,
 	onActivated: OnItemActivated?,
+	onNestedLeafActivated: (() -> ())?,
 	-- Makes menu to use the provided width as a minimum width and use autosize instead to grow until the max width.
 	-- If the provided width is bigger than the max width of the menu menu will have the width provided.
 	-- If used with relative width, e.g. UDim.new(0.5, 0), the constraints always kick in.
@@ -80,13 +80,23 @@ local function computeSize(values: {
 end
 
 local function BaseMenu(baseMenuProps: BaseMenuProps, ref: React.Ref<GuiObject>?): React.ReactNode
-	local props = withDefaults(baseMenuProps, defaultProps)
+	local isVisible, setIsVisible = React.useBinding(false)
+	local defaultWithVisible = table.clone(defaultProps)
+	defaultWithVisible.Visible = isVisible
+
+	local props = withDefaults(baseMenuProps, defaultWithVisible)
 	local width = useBindable(props.width) :: React.Binding<UDim?>
 	local maxHeight = useBindable(props.maxHeight) :: React.Binding<number?>
 	local scaledMinWidth = useScaledValue(MIN_WIDTH)
 	local scaledMaxWidth = useScaledValue(MAX_WIDTH)
 	local hasLeading, internalSetHasLeading = React.useState(false)
 	local canvasSize, setCanvasSize = React.useBinding(UDim2.fromScale(0, 1))
+	local submenuHover = useSubmenuHover()
+	React.useEffect(function()
+		task.delay(0, function()
+			setIsVisible(true)
+		end)
+	end, {})
 
 	local setHasLeading = React.useCallback(function()
 		internalSetHasLeading(true)
@@ -138,9 +148,7 @@ local function BaseMenu(baseMenuProps: BaseMenuProps, ref: React.Ref<GuiObject>?
 		})
 	end
 
-	local radiusTag = if Flags.FoundationBaseMenuBorderFix and props.radius ~= nil
-		then radiusToTag[props.radius]
-		else ""
+	local radiusTag = if props.radius ~= nil then radiusToTag[props.radius] else ""
 
 	if props.maxHeight then
 		local automaticSize = React.joinBindings({ autoSize = autoSize, isOverMaxHeight = isOverMaxHeight })
@@ -164,9 +172,7 @@ local function BaseMenu(baseMenuProps: BaseMenuProps, ref: React.Ref<GuiObject>?
 					maxHeight = maxHeight,
 				}):map(computeSize),
 				sizeConstraint = sizeConstraint,
-				tag = {
-					[`stroke-standard stroke-default {radiusTag}`] = Flags.FoundationBaseMenuBorderFix,
-				},
+				tag = `stroke-standard stroke-default {radiusTag}`,
 			}),
 			React.createElement(
 				View,
@@ -177,9 +183,15 @@ local function BaseMenu(baseMenuProps: BaseMenuProps, ref: React.Ref<GuiObject>?
 				React.createElement(BaseMenuContext.Provider, {
 					value = {
 						onActivated = props.onActivated,
+						onNestedLeafActivated = props.onNestedLeafActivated,
 						size = props.size,
 						hasLeading = hasLeading,
 						setHasLeading = setHasLeading,
+						hoverOpenPath = submenuHover.openPath,
+						hoverOpenAtDepth = submenuHover.openAtDepth,
+						hoverCloseAtDepth = submenuHover.closeAtDepth,
+						hoverReset = submenuHover.reset,
+						depth = 1,
 					},
 				}, children)
 			)
@@ -188,10 +200,7 @@ local function BaseMenu(baseMenuProps: BaseMenuProps, ref: React.Ref<GuiObject>?
 		return React.createElement(
 			View,
 			withCommonProps(props, {
-				tag = {
-					[`col`] = true,
-					[`stroke-standard stroke-default {radiusTag}`] = Flags.FoundationBaseMenuBorderFix,
-				},
+				tag = `col stroke-standard stroke-default {radiusTag}`,
 				AutomaticSize = autoSize:map(function(autoSizeValue): Enum.AutomaticSize
 					return if autoSizeValue then Enum.AutomaticSize.XY else Enum.AutomaticSize.Y
 				end),
@@ -206,9 +215,15 @@ local function BaseMenu(baseMenuProps: BaseMenuProps, ref: React.Ref<GuiObject>?
 			React.createElement(BaseMenuContext.Provider, {
 				value = {
 					onActivated = props.onActivated,
+					onNestedLeafActivated = props.onNestedLeafActivated,
 					size = props.size,
 					hasLeading = hasLeading,
 					setHasLeading = setHasLeading,
+					hoverOpenPath = submenuHover.openPath,
+					hoverOpenAtDepth = submenuHover.openAtDepth,
+					hoverCloseAtDepth = submenuHover.closeAtDepth,
+					hoverReset = submenuHover.reset,
+					depth = 1,
 				},
 			}, children)
 		)

@@ -7,13 +7,18 @@ local InputLabelSize = require(Foundation.Enums.InputLabelSize)
 local InputSize = require(Foundation.Enums.InputSize)
 local InternalTextInput = require(Foundation.Components.InternalTextInput)
 local View = require(Foundation.Components.View)
+local useTextInputVariants = require(Foundation.Components.TextInput.useTextInputVariants)
+local useTokens = require(Foundation.Providers.Style.useTokens)
 
 local InputField = require(Foundation.Components.InputField)
 
 local function Story(props)
 	local controls = props.controls
 
-	local text, setText = React.useState("")
+	local tokens = useTokens()
+	local variantProps = useTextInputVariants(tokens, controls.size)
+
+	local text, setText = React.useBinding("")
 
 	local function handleChange(newText: string)
 		setText(newText)
@@ -26,6 +31,7 @@ local function Story(props)
 			label = controls.label,
 			size = controls.labelSize,
 			hint = controls.hint,
+			isDisabled = controls.isDisabled,
 			input = function(ref)
 				return React.createElement(InternalTextInput, {
 					ref = ref,
@@ -33,6 +39,10 @@ local function Story(props)
 					hasError = controls.hasError,
 					isDisabled = controls.isDisabled,
 					size = controls.size,
+					horizontalPadding = {
+						left = variantProps.container.horizontalPadding,
+						right = variantProps.container.horizontalPadding,
+					},
 					onChanged = handleChange,
 					placeholder = controls.placeholder,
 				})

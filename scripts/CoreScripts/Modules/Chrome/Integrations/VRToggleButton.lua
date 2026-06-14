@@ -5,7 +5,7 @@ local CoreGui = game:GetService("CoreGui")
 
 local isSpatial = require(CorePackages.Workspace.Packages.AppCommonLib).isSpatial
 local RobloxGui = CoreGui:WaitForChild("RobloxGui")
-local VRHub = require(RobloxGui.Modules.VR.VRHub)
+local VRHub = require(CorePackages.Workspace.Packages.VrCommon).VRHub
 local SettingsHub = require(RobloxGui.Modules.Settings.SettingsHub)
 local SignalLib = require(CorePackages.Workspace.Packages.AppCommonLib)
 local Signal = SignalLib.Signal
@@ -13,6 +13,9 @@ local ChromeService = require(Chrome.Service)
 local ChromeUtils = require(Chrome.ChromeShared.Service.ChromeUtils)
 local CommonIcon = require(Chrome.Integrations.CommonIcon)
 local MappedSignal = ChromeUtils.MappedSignal
+
+local SharedFlags = require(CorePackages.Workspace.Packages.SharedFlags)
+local FFlagChromeActivatedMappedSignal = SharedFlags.FFlagChromeActivatedMappedSignal
 
 local VrSpatialUi = require(CorePackages.Workspace.Packages.VrSpatialUi)
 local UIManager = VrSpatialUi.UIManager
@@ -37,9 +40,11 @@ local VRToggleButtonIntegration = ChromeService:register({
 	initialAvailability = initialAvailability,
 	id = "vr_toggle_button",
 	label = "Feature.Catalog.Label.Filter.Hide",
-	isActivated = function()
-		return mappedSignal:get()
-	end,
+	isActivated = if FFlagChromeActivatedMappedSignal
+		then mappedSignal
+		else function()
+			return mappedSignal:get()
+		end,
 	activated = function()
 		if VRHub.ShowTopBar then
 			UIManager.getInstance():prepareGuiToggleAnimationState()

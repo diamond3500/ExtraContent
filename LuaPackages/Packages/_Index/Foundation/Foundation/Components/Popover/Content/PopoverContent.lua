@@ -23,6 +23,7 @@ local StateLayerAffordance = require(Foundation.Enums.StateLayerAffordance)
 local ElevationLayer = require(Foundation.Enums.ElevationLayer)
 local Types = require(Foundation.Components.Types)
 local useElevation = require(Foundation.Providers.Elevation.useElevation)
+local OwnerScope = require(Foundation.Providers.Elevation.ElevationProvider).ElevationOwnerScope
 type ElevationLayer = ElevationLayer.ElevationLayer
 
 type Selection = Types.Selection
@@ -78,25 +79,25 @@ local function PopoverContent(contentProps: PopoverContentProps, forwardedRef: R
 	local overlay = useOverlay()
 
 	local tokens = useTokens()
-	local elevation = useElevation(ElevationLayer.Popover, { relativeToOwner = true })
+	local elevation = useElevation(ElevationLayer.Popover, { stackAboveOwner = true })
 
 	local arrowSide = tokens.Size.Size_200
 	local arrowWidth = arrowSide * math.sqrt(2) -- The diagonal of a square is sqrt(2) times the side length
 	local arrowHeight = arrowWidth / 2
 	local backgroundStyle = props.backgroundStyle or tokens.Color.Surface.Surface_100
 
-	local ref = React.useRef(nil)
+	local contentInstance, setContentInstance = React.useState(nil :: GuiObject?)
 	local backdropInstance, setBackdropInstance = React.useState(nil :: GuiObject?)
 	local pointerPosition = usePointerPosition(backdropInstance)
 
 	React.useImperativeHandle(forwardedRef, function()
-		return ref.current
-	end, {})
+		return contentInstance
+	end, { contentInstance })
 
 	local position, isVisible, contentSize, arrowPosition, screenSize, anchorPoint = useFloating(
 		popoverContext.isOpen,
 		popoverContext.anchor,
-		ref.current,
+		contentInstance,
 		overlay,
 		props.side,
 		props.align,
@@ -143,91 +144,83 @@ local function PopoverContent(contentProps: PopoverContentProps, forwardedRef: R
 		end
 	end, {})
 
-	local content = React.createElement(View, {
-		ZIndex = elevation.zIndex,
-		tag = "size-full",
-		Visible = isVisible,
-		testId = `{popoverContext.testId}--container`,
-	}, {
-		Backdrop = if props.onPressedOutside and popoverContext.isOpen
-			then React.createElement(View, {
-				ZIndex = 1,
-				stateLayer = {
-					affordance = StateLayerAffordance.None,
-				},
-				Size = if Flags.FoundationPopoverOversizedBackdrop
-					then UDim2.fromScale(2, 2)
-					else UDim2.fromScale(1, 1),
-				tag = if Flags.FoundationPopoverOversizedBackdrop
-					then "position-center-center anchor-center-center"
-					else nil,
-				ref = backdropCallback,
-				testId = `{popoverContext.testId}--backdrop`,
-			})
-			else nil,
-		Shadow = React.createElement(Image, {
-			AnchorPoint = if Flags.FoundationPopoverOverflow then anchorPoint else nil,
-			Image = SHADOW_IMAGE,
-			Size = contentSize:map(function(value: UDim2)
-				return value + UDim2.fromOffset(SHADOW_SIZE, SHADOW_SIZE)
-			end),
-			Position = if Flags.FoundationPopoverOverflow
-				then React.joinBindings({ position, anchorPoint }):map(function(values: { Vector2 })
+	local shouldRenderPopover = if Flags.FoundationPopoverConditionalRender then popoverContext.isOpen else true
+	local content = if shouldRenderPopover
+		then React.createElement(View, {
+			ZIndex = elevation.zIndex,
+			tag = "size-full",
+			Visible = isVisible,
+			testId = `{popoverContext.testId}--container`,
+		}, {
+			Backdrop = if props.onPressedOutside and popoverContext.isOpen
+				then React.createElement(View, {
+					ZIndex = 1,
+					stateLayer = {
+						affordance = StateLayerAffordance.None,
+					},
+					Size = UDim2.fromScale(2, 2),
+					tag = "position-center-center anchor-center-center",
+					ref = backdropCallback,
+					testId = `{popoverContext.testId}--backdrop`,
+				})
+				else nil,
+			Shadow = React.createElement(Image, {
+				AnchorPoint = anchorPoint,
+				Image = SHADOW_IMAGE,
+				Size = contentSize:map(function(value: UDim2)
+					return value + UDim2.fromOffset(SHADOW_SIZE, SHADOW_SIZE)
+				end),
+				Position = React.joinBindings({ position, anchorPoint }):map(function(values: { Vector2 })
 					local xShift = if values[2].X == 0 then -1 else 1
 					local yShift = if values[2].Y == 0 then -1 else 1
 					return UDim2.fromOffset(
 						values[1].X + SHADOW_SIZE / 2 * xShift,
 						values[1].Y + SHADOW_SIZE / 2 * yShift + SHADOW_VERTICAL_OFFSET
 					)
-				end)
-				else position:map(function(value: Vector2)
-					return UDim2.fromOffset(
-						value.X - SHADOW_SIZE / 2,
-						value.Y - SHADOW_SIZE / 2 + SHADOW_VERTICAL_OFFSET
-					)
 				end),
-			ZIndex = 2,
-			slice = {
-				center = Rect.new(SHADOW_SIZE, SHADOW_SIZE, SHADOW_SIZE + 1, SHADOW_SIZE + 1),
-			},
-			imageStyle = tokens.Color.Extended.Black.Black_20,
-			testId = `{popoverContext.testId}--shadow`,
-		}),
-		Arrow = if hasArrow
-			then React.createElement(View, {
-				Size = UDim2.fromOffset(arrowSide, arrowSide),
-				Position = arrowPosition:map(function(value: Vector2)
+				ZIndex = 2,
+				slice = {
+					center = Rect.new(SHADOW_SIZE, SHADOW_SIZE, SHADOW_SIZE + 1, SHADOW_SIZE + 1),
+				},
+				imageStyle = tokens.Color.Extended.Black.Black_20,
+				testId = `{popoverContext.testId}--shadow`,
+			}),
+			Arrow = if hasArrow
+				then React.createElement(View, {
+					Size = UDim2.fromOffset(arrowSide, arrowSide),
+					Position = arrowPosition:map(function(value: Vector2)
+						return UDim2.fromOffset(value.X, value.Y)
+					end),
+					Rotation = 45,
+					ZIndex = 3,
+					backgroundStyle = backgroundStyle,
+					tag = "anchor-center-center",
+					testId = `{popoverContext.testId}--arrow`,
+				})
+				else nil,
+			Content = React.createElement(View, {
+				AnchorPoint = anchorPoint,
+				Position = position:map(function(value: Vector2)
 					return UDim2.fromOffset(value.X, value.Y)
 				end),
-				Rotation = 45,
-				ZIndex = 3,
+				selection = props.selection,
+				selectionGroup = props.selectionGroup,
+				sizeConstraint = {
+					MaxSize = screenSize,
+				},
+				stateLayer = {
+					affordance = StateLayerAffordance.None,
+				},
+				ZIndex = 4,
+				-- If onPressedOutside is provided, we need to swallow the press event to prevent it from propagating to the backdrop
+				onActivated = if props.onPressedOutside then function() end else nil,
 				backgroundStyle = backgroundStyle,
-				tag = "anchor-center-center",
-				testId = `{popoverContext.testId}--arrow`,
-			})
-			else nil,
-		Content = React.createElement(View, {
-			AnchorPoint = if Flags.FoundationPopoverOverflow then anchorPoint else nil,
-			Position = position:map(function(value: Vector2)
-				return UDim2.fromOffset(value.X, value.Y)
-			end),
-			selection = props.selection,
-			selectionGroup = props.selectionGroup,
-			sizeConstraint = {
-				MaxSize = screenSize,
-			},
-			stateLayer = {
-				affordance = StateLayerAffordance.None,
-			},
-			ZIndex = 4,
-			-- If onPressedOutside is provided, we need to swallow the press event to prevent it from propagating to the backdrop
-			onActivated = if props.onPressedOutside then function() end else nil,
-			backgroundStyle = backgroundStyle,
-			tag = `auto-xy {radiusToTag[props.radius]}`,
-			ref = ref,
-			testId = `{popoverContext.testId}--content`,
-		}, props.children),
-	})
+				tag = `auto-xy {radiusToTag[props.radius]}`,
+				ref = setContentInstance,
+				testId = `{popoverContext.testId}--content`,
+			}, React.createElement(OwnerScope, { owner = elevation }, props.children)),
+		})
+		else nil
 
 	if overlay == nil then
 		return content

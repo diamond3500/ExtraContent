@@ -10,7 +10,10 @@ local View = require(Foundation.Components.View)
 local useTokens = require(Foundation.Providers.Style.useTokens)
 
 local IconSize = require(Foundation.Enums.IconSize)
+local InputFocusBehavior = require(Foundation.Enums.InputFocusBehavior)
 local InputSize = require(Foundation.Enums.InputSize)
+local InputVariant = require(Foundation.Enums.InputVariant)
+local Radius = require(Foundation.Enums.Radius)
 
 local InternalTextInput = require(Foundation.Components.InternalTextInput)
 
@@ -18,7 +21,7 @@ local function Story(props)
 	local controls = props.controls
 	local tokens = useTokens()
 
-	local text, setText = React.useState("")
+	local text, setText = React.useBinding("")
 	local numReturnPressed, setNumReturnPressed = React.useState(0)
 
 	local function handleChange(newText: string)
@@ -46,9 +49,13 @@ local function Story(props)
 			InternalTextInput = React.createElement(InternalTextInput, {
 				text = text,
 				size = controls.size,
+				variant = controls.variant,
 				hasError = controls.hasError,
 				isDisabled = controls.isDisabled,
 				numLines = controls.numLines,
+				focusBehavior = if controls.focusBehavior ~= React.None then controls.focusBehavior else nil,
+				hasClearButton = controls.hasClearButton,
+				radius = if controls.radius ~= React.None then controls.radius else nil,
 				onChanged = handleChange,
 				onReturnPressed = onReturnPressed,
 				placeholder = controls.placeholder,
@@ -124,8 +131,15 @@ return {
 		hasError = false,
 		isDisabled = false,
 		size = Dash.values(InputSize),
+		variant = Dash.values(InputVariant),
 		numLines = 3,
 		width = 400,
+		radius = {
+			React.None,
+			unpack(Dash.values(Radius)),
+		},
+		focusBehavior = { React.None, unpack(Dash.values(InputFocusBehavior)) },
+		hasClearButton = true,
 		placeholder = "Placeholder text",
 		leadingComponentIcon = {
 			"icons/placeholder/placeholderOn_small",

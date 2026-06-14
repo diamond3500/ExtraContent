@@ -1,6 +1,8 @@
 local root = script:FindFirstAncestor("AbuseReportMenu")
 local CorePackages = game:GetService("CorePackages")
 
+local Foundation = require(CorePackages.Packages.Foundation)
+local useTokens = Foundation.Hooks.useTokens
 local UIBlox = require(CorePackages.Packages.UIBlox)
 local React = require(CorePackages.Packages.React)
 local ScrollingListTable = UIBlox.App.Table.ScrollingListTable
@@ -23,18 +25,12 @@ local FocusRoot = FocusNavigationUtils.FocusRoot
 local FocusNavigableSurfaceIdentifierEnum = FocusNavigationUtils.FocusNavigableSurfaceIdentifierEnum
 
 local SharedFlags = require(CorePackages.Workspace.Packages.SharedFlags)
+local FFlagRenameDeprecatedUIBloxTokens = SharedFlags.FFlagRenameDeprecatedUIBloxTokens
+
 local GetFFlagModalSelectorCloseButton = require(root.Flags.GetFFlagModalSelectorCloseButton)
 local GetFFlagLuaAppEnableOpenTypeSupport = SharedFlags.GetFFlagLuaAppEnableOpenTypeSupport
 local isInExperienceUIVREnabled =
 	require(CorePackages.Workspace.Packages.SharedExperimentDefinition).isInExperienceUIVREnabled
-local FFlagFixConsoleReportModalCutoff = game:DefineFastFlag("FixConsoleReportModalCutoff", false)
-
-local Foundation
-local useTokens
-if FFlagFixConsoleReportModalCutoff then
-	Foundation = require(CorePackages.Packages.Foundation)
-	useTokens = Foundation.Hooks.useTokens
-end
 
 local Responsive
 local UIManager
@@ -63,18 +59,16 @@ type Props = {
 	onClose: () -> (),
 }
 
-local TABLE_CELL_HEIGHT = 40
 local MODAL_PADDING = 12
 
 local function ModalBaseSelectorDialog(props: Props)
-	local tokens
-	if FFlagFixConsoleReportModalCutoff then
-		tokens = useTokens()
-	end
+	local tokens = useTokens()
 	local style = useStyle()
 	local theme = style.Theme
 
-	local HEADER_HEIGHT = style.Tokens.Global.Space_500 -- 40 for desktop, 60 for console
+	local HEADER_HEIGHT = (
+		if FFlagRenameDeprecatedUIBloxTokens then style.Tokens.Size.Size_1000 else style.Tokens.Global.Space_500
+	) -- 40 for desktop, 60 for console
 	local listTableHeight
 	if isInExperienceUIVREnabled then
 		local isSpatial = Responsive.useIsSpatial()
@@ -83,19 +77,10 @@ local function ModalBaseSelectorDialog(props: Props)
 			local panelObject = UIManager.getInstance():getPanelObject(PanelType.MoreMenu) :: SurfaceGui
 			viewHeight = panelObject.AbsoluteSize.Y
 		end
-		if FFlagFixConsoleReportModalCutoff then
-			listTableHeight = math.min(#props.cellData * tokens.Size.Size_1000, viewHeight - 80 - MODAL_PADDING * 2)
-		else
-			listTableHeight = math.min(#props.cellData * TABLE_CELL_HEIGHT, viewHeight - 80 - MODAL_PADDING * 2)
-		end
+		listTableHeight = math.min(#props.cellData * tokens.Size.Size_1000, viewHeight - 80 - MODAL_PADDING * 2)
 	else
-		if FFlagFixConsoleReportModalCutoff then
-			listTableHeight =
-				math.min(#props.cellData * tokens.Size.Size_1000, props.viewportHeight - 80 - MODAL_PADDING * 2)
-		else
-			listTableHeight =
-				math.min(#props.cellData * TABLE_CELL_HEIGHT, props.viewportHeight - 80 - MODAL_PADDING * 2)
-		end
+		listTableHeight =
+			math.min(#props.cellData * tokens.Size.Size_1000, props.viewportHeight - 80 - MODAL_PADDING * 2)
 	end
 
 	local modalContentHeight = listTableHeight + MODAL_PADDING * 2
@@ -181,9 +166,7 @@ local function ModalBaseSelectorDialog(props: Props)
 							BackgroundTransparency = 1,
 							Size = UDim2.fromScale(1, 1),
 						}),
-						size = if FFlagFixConsoleReportModalCutoff
-							then UDim2.new(1, 0, 0, tokens.Size.Size_1000)
-							else UDim2.new(1, 0, 0, TABLE_CELL_HEIGHT),
+						size = UDim2.new(1, 0, 0, tokens.Size.Size_1000),
 						userInteractionEnabled = true,
 						onActivated = function()
 							props.onSelect(data.label, data.subLabel, data.identifier)

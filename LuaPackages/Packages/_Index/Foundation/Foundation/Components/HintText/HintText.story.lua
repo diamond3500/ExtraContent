@@ -10,6 +10,7 @@ local function Story(props)
 	return React.createElement(HintText, {
 		text = controls.text,
 		hasError = controls.hasError,
+		isDisabled = controls.isDisabled,
 	})
 end
 
@@ -19,5 +20,6 @@ return {
 	controls = {
 		text = "Helper text",
 		hasError = false,
+		isDisabled = false,
 	},
 }

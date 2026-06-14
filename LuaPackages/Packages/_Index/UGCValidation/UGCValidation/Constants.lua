@@ -5,16 +5,12 @@ local Cryo = require(root.Parent.Cryo)
 
 local ValidationRulesUtil = require(root.util.ValidationRulesUtil)
 local ValidationEnums = require(root.validationSystem.ValidationEnums)
-
-local getFFlagAddUGCValidationForPackage = require(root.flags.getFFlagAddUGCValidationForPackage)
-local getFFlagFixPackageIDFieldName = require(root.flags.getFFlagFixPackageIDFieldName)
-local getFFlagUGCValidateWrapLayersEnabled = require(root.flags.getFFlagUGCValidateWrapLayersEnabled)
-local getFFlagUGCValidationConsolidateGetMeshInfos = require(root.flags.getFFlagUGCValidationConsolidateGetMeshInfos)
 local getFFlagUGCValidationFixConstantsTypoLeg = require(root.flags.getFFlagUGCValidationFixConstantsTypoLeg)
-local getFFlagUGCValidateBindOffset = require(root.flags.getFFlagUGCValidateBindOffset)
-local getFFlagUGCValidationFixBannedNamesTypo = require(root.flags.getFFlagUGCValidationFixBannedNamesTypo)
 local getFFlagUGCValidationEyebrowEyelashSupport = require(root.flags.getFFlagUGCValidationEyebrowEyelashSupport)
 local getFFlagUGCValidateCheckHSROwner = require(root.flags.getFFlagUGCValidateCheckHSROwner)
+local getFFlagUGCValidateCheckTexturePackOwner = require(root.flags.getFFlagUGCValidateCheckTexturePackOwner)
+local getFFlagUGCValidationAnimationPackSupport = require(root.flags.getFFlagUGCValidationAnimationPackSupport)
+local FFlagUGCValidateMakeupDecalUVProperties = game:DefineFastFlag("UGCValidateMakeupDecalUVProperties", false)
 
 -- switch this to Cryo.List.toSet when available
 local function convertArrayToTable(array)
@@ -52,51 +48,52 @@ Constants.R6_BODY_PARTS = {
 	"Left Arm",
 	"Right Arm",
 }
-if getFFlagUGCValidationFixBannedNamesTypo() then
-	Constants.R15_BODY_PARTS = {
-		"Head",
 
-		"UpperTorso",
-		"LowerTorso",
+Constants.R15_BODY_PARTS = {
+	"Head",
 
-		"LeftUpperLeg",
-		"LeftLowerLeg",
-		"LeftFoot",
+	"UpperTorso",
+	"LowerTorso",
 
-		"RightUpperLeg",
-		"RightLowerLeg",
-		"RightFoot",
+	"LeftUpperLeg",
+	"LeftLowerLeg",
+	"LeftFoot",
 
-		"LeftUpperArm",
-		"LeftLowerArm",
-		"LeftHand",
+	"RightUpperLeg",
+	"RightLowerLeg",
+	"RightFoot",
 
-		"RightUpperArm",
-		"RightLowerArm",
-		"RightHand",
-	}
-else
-	Constants.R15_BODY_PARTS = {
-		"UpperTorso",
-		"LowerTorso",
+	"LeftUpperArm",
+	"LeftLowerArm",
+	"LeftHand",
 
-		"LeftUpperLeg",
-		"LeftLowerLeg",
-		"LeftFoot",
+	"RightUpperArm",
+	"RightLowerArm",
+	"RightHand",
+}
 
-		"RightUpperLeg",
-		"RightLowerLeg",
-		"RightFoot",
+Constants.R15_CAGE_PARTS = {
+	"Head_OuterCage",
 
-		"LeftUpperArm",
-		"LeftLowerArm",
-		"LeftHand",
+	"UpperTorso_OuterCage",
+	"LowerTorso_OuterCage",
 
-		"RightUpperArm",
-		"RightLowerArm",
-		"RightHand",
-	}
-end
+	"LeftUpperLeg_OuterCage",
+	"LeftLowerLeg_OuterCage",
+	"LeftFoot_OuterCage",
+
+	"RightUpperLeg_OuterCage",
+	"RightLowerLeg_OuterCage",
+	"RightFoot_OuterCage",
+
+	"LeftUpperArm_OuterCage",
+	"LeftLowerArm_OuterCage",
+	"LeftHand_OuterCage",
+
+	"RightUpperArm_OuterCage",
+	"RightLowerArm_OuterCage",
+	"RightHand_OuterCage",
+}
 
 Constants.NAMED_R15_BODY_PARTS = {}
 for _, bodyPartName in Constants.R15_BODY_PARTS do
@@ -132,7 +129,12 @@ Constants.R15_STANDARD_JOINT_NAMES = {
 	["RightHand"] = true,
 }
 
-for _, bodyPart in Constants.R15_BODY_PARTS do
+Constants.ALLOWED_SKINNING_TRANSFER_JOINT_NAMES = {
+	RBX_Leader = true,
+	RBX_Follower = true,
+}
+
+for _, bodyPart in Constants.R15_BODY_PARTS do -- seems to be redundant since its already listed above. Dont copy this over to a new constants file ..
 	Constants.R15_STANDARD_JOINT_NAMES[bodyPart] = true
 end
 
@@ -219,18 +221,12 @@ for _, name in ipairs(extraBannedNames) do
 	table.insert(Constants.EXTRA_BANNED_NAMES, name)
 end
 
-if getFFlagUGCValidationFixBannedNamesTypo() then
-	Constants.BANNED_NAMES = {}
-	local tables_with_banned_names = { Constants.R6_BODY_PARTS, Constants.R15_BODY_PARTS, Constants.EXTRA_BANNED_NAMES }
-	for _, tab in tables_with_banned_names do
-		for _, name in tab do
-			Constants.BANNED_NAMES[name] = true
-		end
+Constants.BANNED_NAMES = {}
+local tables_with_banned_names = { Constants.R6_BODY_PARTS, Constants.R15_BODY_PARTS, Constants.EXTRA_BANNED_NAMES }
+for _, tab in tables_with_banned_names do
+	for _, name in tab do
+		Constants.BANNED_NAMES[name] = true
 	end
-else
-	Constants.BANNED_NAMES = convertArrayToTable(
-		Cryo.Dictionary.join(Constants.R6_BODY_PARTS, Constants.R15_BODY_PARTS, Constants.EXTRA_BANNED_NAMES)
-	)
 end
 
 Constants.ASSET_STATUS = {
@@ -238,6 +234,8 @@ Constants.ASSET_STATUS = {
 	REVIEW_PENDING = "ReviewPending",
 	MODERATED = "Moderated",
 }
+
+Constants.MAKEUP_INFO = ValidationRulesUtil:getMakeupRules()
 
 -- https://confluence.rbx.com/display/AVATAR/UGC+Accessory+Max+Sizes
 -- Measurements are doubled to account full size
@@ -330,6 +328,12 @@ Constants.PROPERTIES = {
 	Attachment = {
 		Visible = false,
 	},
+	Decal = {
+		Color3 = Color3.new(1, 1, 1),
+		Transparency = 0,
+		UVOffset = if FFlagUGCValidateMakeupDecalUVProperties then Vector2.new(0, 0) else nil,
+		UVScale = if FFlagUGCValidateMakeupDecalUVProperties then Vector2.new(1, 1) else nil,
+	},
 	SpecialMesh = {
 		MeshType = Enum.MeshType.FileMesh,
 		Offset = Vector3.new(0, 0, 0),
@@ -420,7 +424,7 @@ Constants.PROPERTIES = {
 	},
 	WrapLayer = {
 		-- ====== Simple checks ======
-		Enabled = if getFFlagUGCValidateWrapLayersEnabled() then true else nil,
+		Enabled = true,
 
 		-- ====== Extra Context checks ======
 		CageOrigin = {
@@ -445,16 +449,14 @@ Constants.PROPERTIES = {
 			},
 		},
 
-		BindOffset = if getFFlagUGCValidateBindOffset()
-			then {
-				Position = {
-					[Constants.COMPARISON_METHODS.EXACT_EQ] = Vector3.new(0, 0, 0),
-				},
-				Orientation = {
-					[Constants.COMPARISON_METHODS.EXACT_EQ] = Vector3.new(0, 0, 0),
-				},
-			}
-			else nil,
+		BindOffset = {
+			Position = {
+				[Constants.COMPARISON_METHODS.EXACT_EQ] = Vector3.new(0, 0, 0),
+			},
+			Orientation = {
+				[Constants.COMPARISON_METHODS.EXACT_EQ] = Vector3.new(0, 0, 0),
+			},
+		},
 	},
 
 	WrapTarget = {
@@ -482,10 +484,15 @@ Constants.CONTENT_ID_FIELDS = {
 	SpecialMesh = { "MeshId", "TextureId" },
 	MeshPart = { "MeshId", "TextureID" },
 	SurfaceAppearance = { "ColorMap", "MetalnessMap", "NormalMap", "RoughnessMap" },
+	Decal = { "ColorMap", "MetalnessMap", "NormalMap", "RoughnessMap" },
 	WrapLayer = { "CageMeshId", "ReferenceMeshId" },
 	WrapTarget = { "CageMeshId" },
 	Animation = { "AnimationId" },
 }
+
+if getFFlagUGCValidateCheckTexturePackOwner() then
+	table.insert(Constants.CONTENT_ID_FIELDS.SurfaceAppearance, "TexturePack")
+end
 
 if getFFlagUGCValidateCheckHSROwner() then
 	table.insert(Constants.CONTENT_ID_FIELDS.WrapLayer, "HSRAssetId")
@@ -509,6 +516,7 @@ Constants.TEXTURE_CONTENT_ID_FIELDS = {
 	SpecialMesh = { "TextureId" },
 	MeshPart = { "TextureID" },
 	SurfaceAppearance = { "ColorMap", "MetalnessMap", "NormalMap", "RoughnessMap" },
+	Decal = { "ColorMap", "MetalnessMap", "NormalMap", "RoughnessMap" },
 }
 
 Constants.ASSET_RENDER_MESH_MAX_TRIANGLES = {
@@ -537,46 +545,25 @@ Constants.WRAP_TARGET_CAGE_MESH_UV_COUNTS = {
 	RightLowerLeg = 88,
 	RightFoot = 86,
 }
+Constants.PACKAGE_CONTENT_ID_FIELDS = Cryo.Dictionary.join(Constants.CONTENT_ID_FIELDS, {
+	Sound = { "SoundId" },
+	Decal = { "Texture" },
+	VideoFrame = { "Video" },
+	PackageLink = { "PackageId" },
+	CharacterMesh = { "baseTextureAssetId", "overlayTextureAssetId", "meshAssetId" },
+	Tool = { "TextureId" },
+	Sky = { "SkyUp", "SkyLf", "SkyRt", "SkyBk", "SkyFt", "SkyDn", "Sun", "Moon" },
+	Trail = { "texture" },
+	Beam = { "texture" },
+	ShirtGraphic = { "Graphic" },
+	Shirt = { "ShirtTemplate" },
+	Pants = { "PantsTemplate" },
+	AdGui = { "FallbackImage" },
+})
 
-if getFFlagAddUGCValidationForPackage() then
-	Constants.PACKAGE_CONTENT_ID_FIELDS = Cryo.Dictionary.join(
-		Constants.CONTENT_ID_FIELDS,
-		if getFFlagFixPackageIDFieldName()
-			then {
-				Sound = { "SoundId" },
-				Decal = { "Texture" },
-				VideoFrame = { "Video" },
-				PackageLink = { "PackageId" },
-				CharacterMesh = { "OverlayTextureId", "MeshId", "BaseTextureId" },
-				Tool = { "TextureId" },
-				Trail = { "Texture" },
-				Beam = { "Texture" },
-				ShirtGraphic = { "Graphic" },
-				Shirt = { "ShirtTemplate" },
-				Pants = { "PantsTemplate" },
-				AdGui = { "FallbackImage" },
-			}
-			else {
-				Sound = { "SoundId" },
-				Decal = { "Texture" },
-				VideoFrame = { "Video" },
-				PackageLink = { "PackageId" },
-				CharacterMesh = { "baseTextureAssetId", "overlayTextureAssetId", "meshAssetId" },
-				Tool = { "TextureId" },
-				Sky = { "SkyUp", "SkyLf", "SkyRt", "SkyBk", "SkyFt", "SkyDn", "Sun", "Moon" },
-				Trail = { "texture" },
-				Beam = { "texture" },
-				ShirtGraphic = { "Graphic" },
-				Shirt = { "ShirtTemplate" },
-				Pants = { "PantsTemplate" },
-				AdGui = { "FallbackImage" },
-			}
-	)
-
-	Constants.ExperienceAuthHeaderKey = "RBX-ExperienceAuthorization"
-	Constants.ContentType = "Content-Type"
-	Constants.ApplicationJson = "application/json"
-end
+Constants.ExperienceAuthHeaderKey = "RBX-ExperienceAuthorization"
+Constants.ContentType = "Content-Type"
+Constants.ApplicationJson = "application/json"
 
 -- Name of the special attribute that is allowed on root instances
 -- see validateAttributes for more info
@@ -584,18 +571,27 @@ Constants.GUIDAttributeName = "RBXGUID"
 Constants.GUIDAttributeMaxLength = 100
 
 Constants.AlternateMeshIdAttributeName = "RBX_ALT_MESH_ID"
+Constants.MESH_CONTENT_TYPE = {
+	RENDER_MESH = "RenderMesh",
+	OUTER_CAGE = "OuterCage",
+	INNER_CAGE = "InnerCage",
+}
 
-if getFFlagUGCValidationConsolidateGetMeshInfos() then
-	Constants.MESH_CONTENT_TYPE = {
-		RENDER_MESH = "RenderMesh",
-		OUTER_CAGE = "OuterCage",
-		INNER_CAGE = "InnerCage",
-	}
+Constants.MESH_CONTENT_TYPE_TO_FIELD_NAME = {
+	[Constants.MESH_CONTENT_TYPE.RENDER_MESH] = "MeshId",
+	[Constants.MESH_CONTENT_TYPE.OUTER_CAGE] = "CageMeshId",
+	[Constants.MESH_CONTENT_TYPE.INNER_CAGE] = "ReferenceMeshId",
+}
 
-	Constants.MESH_CONTENT_TYPE_TO_FIELD_NAME = {
-		[Constants.MESH_CONTENT_TYPE.RENDER_MESH] = "MeshId",
-		[Constants.MESH_CONTENT_TYPE.OUTER_CAGE] = "CageMeshId",
-		[Constants.MESH_CONTENT_TYPE.INNER_CAGE] = "ReferenceMeshId",
+if getFFlagUGCValidationAnimationPackSupport() then
+	Constants.ANIMATION_ASSET_INFO = {
+		[Enum.AssetType.ClimbAnimation] = { modelName = "ClimbAnimation", stringValueNames = { "climb" } },
+		[Enum.AssetType.FallAnimation] = { modelName = "FallAnimation", stringValueNames = { "fall" } },
+		[Enum.AssetType.IdleAnimation] = { modelName = "IdleAnimation", stringValueNames = { "idle" } },
+		[Enum.AssetType.JumpAnimation] = { modelName = "JumpAnimation", stringValueNames = { "jump" } },
+		[Enum.AssetType.RunAnimation] = { modelName = "RunAnimation", stringValueNames = { "run" } },
+		[Enum.AssetType.SwimAnimation] = { modelName = "SwimAnimation", stringValueNames = { "swim", "swimidle" } },
+		[Enum.AssetType.WalkAnimation] = { modelName = "WalkAnimation", stringValueNames = { "walk" } },
 	}
 end
 
@@ -608,11 +604,30 @@ Constants.AllAssetUploadCategories = {
 	ValidationEnums.UploadCategory.EMOTE_ANIMATION,
 }
 
+if getFFlagUGCValidationAnimationPackSupport() then
+	table.insert(Constants.AllAssetUploadCategories, ValidationEnums.UploadCategory.ANIMATION)
+end
+
+-- MAKEUP is included here so DescendantIdsAllowed (and other dependency-driven
+-- modules) run against makeup assets. Legacy validateMakeupAsset.lua:14 calls
+-- validateDependencies, which under the old system covered creator + moderation
+-- for makeup. Without MAKEUP in this list, makeup uploads silently lose that
+-- coverage under the migration flag.
+Constants.AllAssetUploadCategoriesIncludingMakeup = {}
+for _, category in Constants.AllAssetUploadCategories do
+	table.insert(Constants.AllAssetUploadCategoriesIncludingMakeup, category)
+end
+table.insert(Constants.AllAssetUploadCategoriesIncludingMakeup, ValidationEnums.UploadCategory.MAKEUP)
+
 Constants.AllBundleUploadCategories = {
 	-- For tests that run on all bundles
 	ValidationEnums.UploadCategory.FULL_BODY,
 	ValidationEnums.UploadCategory.BOTH_SHOES,
 }
+
+if getFFlagUGCValidationAnimationPackSupport() then
+	table.insert(Constants.AllBundleUploadCategories, ValidationEnums.UploadCategory.ANIMATION_PACK)
+end
 
 Constants.AllUploadCategories = {} -- For tests that run every upload
 for _, category in ValidationEnums.UploadCategory do
